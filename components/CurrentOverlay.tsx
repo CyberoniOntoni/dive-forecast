@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
-import type { NowcastGlance } from "@/lib/nowcast-glance";
+import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
 
 export type SiteGlance = {
@@ -57,6 +57,8 @@ export function CurrentOverlay({
 }) {
   const [expanded, setExpanded] = useState(false);
   const countLabel = siteCountLabel(siteGlances.length);
+  // Equal ranks stay in the name order already on the list.
+  const ranked = siteGlances.toSorted((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
 
   function toggleSheet() {
     // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
@@ -112,7 +114,7 @@ export function CurrentOverlay({
         </div>
         <nav aria-label="Dive sites">
           <ul className="pb-2">
-            {siteGlances.map(({ site, glance }) => (
+            {ranked.map(({ site, glance }) => (
               <SiteRow key={site.id} site={site} glance={glance} />
             ))}
           </ul>
@@ -154,13 +156,13 @@ function CurrentBits({ glance }: { glance: NowcastGlance }) {
   if (!hasForecast(glance)) {
     return <span className="shrink-0 text-xs text-foam/70">unavailable</span>;
   }
-  const color = glance.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+  const color = glance.color ?? undefined;
   return (
     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs" style={{ opacity: glance.opacity }}>
       <span className="font-medium" style={{ color }}>
         {glance.direction}
       </span>
-      <span>{glance.label}</span>
+      <span style={{ color }}>{glance.label}</span>
       <span>{glance.confidence}</span>
     </span>
   );

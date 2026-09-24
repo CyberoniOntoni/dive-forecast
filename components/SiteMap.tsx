@@ -8,7 +8,7 @@ import "leaflet/dist/leaflet.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
-import type { Direction, Site } from "@/lib/types";
+import type { Site } from "@/lib/types";
 
 type Point = { lat: number; lon: number };
 type LeafletLib = typeof import("leaflet");
@@ -25,9 +25,9 @@ type MapProps = {
 
 type ArrowFields = {
   bearing: number;
-  direction: Direction;
   opacity: number;
   label: string;
+  color: string;
 };
 
 /** Leaflet tooltip and pin aria-label are HTML, so a site name cannot inject markup. */
@@ -44,19 +44,18 @@ function pinHtml(glance: NowcastGlance, showStrength: boolean): string {
   const spoken = escapeHtml(glance.spoken);
   const arrow = arrowFields(glance);
   if (!arrow) return missingPin(spoken);
-  const color = arrow.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
   const strengthMark = showStrength ? strengthBadge(escapeHtml(arrow.label)) : "";
-  return arrowPin(spoken, arrow.opacity, arrow.bearing, color, strengthMark);
+  return arrowPin(spoken, arrow.opacity, arrow.bearing, arrow.color, strengthMark);
 }
 
-/** One empty glance keeps the dot pin. The forecast fields are null together. */
+/** One empty glance keeps the dot pin. Color is the glance token, including stop. */
 function arrowFields(glance: NowcastGlance): ArrowFields | null {
-  if (!hasForecast(glance)) return null;
+  if (!hasForecast(glance) || glance.color == null) return null;
   return {
     bearing: glance.arrowBearing,
-    direction: glance.direction,
     opacity: glance.opacity,
     label: glance.label,
+    color: glance.color,
   };
 }
 
