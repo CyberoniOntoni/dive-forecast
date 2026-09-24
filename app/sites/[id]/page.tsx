@@ -38,6 +38,7 @@ export default async function SitePage({
         key={`forecast-${site.id}`}
         hours={forecast.hours}
         unavailable={forecast.unavailable}
+        stale={forecast.stale}
         inwardBearingDeg={forecast.inwardBearingDeg}
         notice={forecast.notice}
         fetchedAt={fetchedStamp(forecast.fetchedAt)}

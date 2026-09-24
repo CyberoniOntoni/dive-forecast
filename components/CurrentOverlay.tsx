@@ -9,6 +9,8 @@ import type { Site } from "@/lib/types";
 export type SiteGlance = {
   site: Site;
   glance: NowcastGlance;
+  /** Short fetch age when the series is stale. Null when the call is fresh or missing. */
+  age: string | null;
 };
 
 type Point = { lat: number; lon: number };
@@ -114,8 +116,8 @@ export function CurrentOverlay({
         </div>
         <nav aria-label="Dive sites">
           <ul className="pb-2">
-            {ranked.map(({ site, glance }) => (
-              <SiteRow key={site.id} site={site} glance={glance} />
+            {ranked.map((item) => (
+              <SiteRow key={item.site.id} {...item} />
             ))}
           </ul>
         </nav>
@@ -124,16 +126,17 @@ export function CurrentOverlay({
   );
 }
 
-function SiteRow({ site, glance }: SiteGlance) {
+function SiteRow({ site, glance, age }: SiteGlance) {
+  const title = age ? `${glance.spoken}, ${age}` : glance.spoken;
   return (
     <li className="border-b border-foam/10 last:border-b-0">
       <Link
         href={`/sites/${site.id}`}
-        title={glance.spoken}
+        title={title}
         className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
         <span className="min-w-0 flex-1 truncate font-medium">{site.name}</span>
-        <CurrentBits glance={glance} />
+        <CurrentBits glance={glance} age={age} />
       </Link>
     </li>
   );
@@ -152,7 +155,7 @@ export function hasForecast(
   return glance.confidence != null;
 }
 
-function CurrentBits({ glance }: { glance: NowcastGlance }) {
+function CurrentBits({ glance, age }: { glance: NowcastGlance; age: string | null }) {
   if (!hasForecast(glance)) {
     return <span className="shrink-0 text-xs text-foam/70">unavailable</span>;
   }
@@ -164,6 +167,7 @@ function CurrentBits({ glance }: { glance: NowcastGlance }) {
       </span>
       <span style={{ color }}>{glance.label}</span>
       <span>{glance.confidence}</span>
+      {age ? <span className="tabular-nums text-foam/70">{age}</span> : null}
     </span>
   );
 }

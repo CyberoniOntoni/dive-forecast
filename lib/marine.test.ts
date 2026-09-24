@@ -104,6 +104,7 @@ describe("seaward current", () => {
           const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
           expect(sampled.ok).toBe(true);
           if (!sampled.ok) return;
+          expect(sampled.stale).toBe(false);
           expect(sampled.hours[0].seaLevelM).toBe(9);
           expect(sampled.hours[0].currentVelocityMs).toBe(0.8);
           expect(sampled.hours[0].currentDirectionDeg).toBe(200);
@@ -125,6 +126,7 @@ describe("seaward current", () => {
           const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
           expect(sampled.ok).toBe(true);
           if (!sampled.ok) return;
+          expect(sampled.stale).toBe(false);
           expect(sampled.hours).toHaveLength(2);
           expect(sampled.hours[0].seaLevelM).toBe(0.42);
           expect(sampled.hours[0].currentVelocityMs).toBe(0.1);
@@ -146,6 +148,7 @@ describe("seaward current", () => {
           const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
           expect(sampled.ok).toBe(true);
           if (!sampled.ok) return;
+          expect(sampled.stale).toBe(false);
           expect(sampled.hours[0].seaLevelM).toBe(0.42);
           expect(sampled.hours[0].currentVelocityMs).toBe(0.1);
           expect(sampled.hours[1].seaLevelM).toBe(0.5);
@@ -236,6 +239,72 @@ describe("marine cache", () => {
       vi.unstubAllGlobals();
       vi.restoreAllMocks();
       forgetMarineCache(lat, lon);
+    }
+  });
+});
+
+describe("stale marine cache", () => {
+  it("returns a cache older than 6 hours when the network fails", async () => {
+    const lat = 2.2222;
+    const lon = 73.4444;
+    const bearing = 90;
+    const fallbackLat = 2.8;
+    const fallbackLon = 74.1;
+    const point = seawardPoint(lat, lon, bearing);
+    const cachedHours = [
+      { time: maldivesWall(Date.now()), seaLevelM: 0.77, currentVelocityMs: 0.3, currentDirectionDeg: 40 },
+    ];
+    const fetchedAt = Date.now() - 7 * HOUR;
+    const seawardName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+    let fetches = 0;
+    vi.spyOn(fs, "readFileSync").mockImplementation((file) => {
+      if (path.basename(String(file)) === seawardName) return JSON.stringify({ fetchedAt, hours: cachedHours });
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return new Response(null, { status: 404 });
+    });
+    try {
+      const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
+      expect(fetches).toBeGreaterThan(0);
+      expect(sampled).toEqual({ ok: true, hours: cachedHours, fetchedAt, stale: true });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+
+  it("stays unavailable when no cache file exists and the network fails", async () => {
+    const lat = 2.3333;
+    const lon = 73.5555;
+    const bearing = 90;
+    const fallbackLat = 2.9;
+    const fallbackLon = 74.2;
+    const point = seawardPoint(lat, lon, bearing);
+    let fetches = 0;
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return new Response(null, { status: 404 });
+    });
+    try {
+      const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
+      expect(fetches).toBeGreaterThan(0);
+      expect(sampled).toEqual({ ok: false, unavailable: true });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
     }
   });
 });

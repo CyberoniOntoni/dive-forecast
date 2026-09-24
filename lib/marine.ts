@@ -19,7 +19,7 @@ const MARINE_ENDPOINTS = [
 ];
 
 export type MarineFetch =
-  | { ok: true; hours: MarineHour[]; fetchedAt: number }
+  | { ok: true; hours: MarineHour[]; fetchedAt: number; stale: boolean }
   | { ok: false; unavailable: true };
 
 type HourlyColumns = {
@@ -33,6 +33,7 @@ type HourlyColumns = {
 /**
  * Open-Meteo at the 3 km seaward point, for both sea level and current.
  * A failed or stale seaward fetch uses the fallback point instead.
+ * When both fail or their hours are stale, the cache is used past the 6-hour TTL.
  */
 export async function siteMarineHours(
   lat: number,
@@ -43,8 +44,16 @@ export async function siteMarineHours(
 ): Promise<MarineFetch> {
   const point = seawardPoint(lat, lon, inwardBearingDeg);
   const seaward = await fetchMarine(point.lat, point.lon);
-  if (seaward.ok && !marineSeriesStale(seaward.hours)) return seaward;
-  return fetchMarine(fallbackLat, fallbackLon);
+  if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
+  const fallback = await fetchMarine(fallbackLat, fallbackLon);
+  if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
+  const cached = readCachedHours(point.lat, point.lon) ?? readCachedHours(fallbackLat, fallbackLon);
+  if (!cached) return { ok: false, unavailable: true };
+  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
+}
+
+function freshMarine(fetched: { hours: MarineHour[]; fetchedAt: number }): MarineFetch {
+  return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: false };
 }
 
 /** About 3 km seaward of the site, opposite its inward bearing. */
@@ -67,13 +76,13 @@ export async function fetchMarine(lat: number, lon: number): Promise<MarineFetch
 
   const fetchedAt = Date.now();
   writeCache(lat, lon, hours, fetchedAt);
-  return { ok: true, hours, fetchedAt };
+  return { ok: true, hours, fetchedAt, stale: false };
 }
 
 function freshCachedFetch(lat: number, lon: number): MarineFetch | null {
   const cached = readFreshCache(lat, lon);
   if (!cached) return null;
-  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt };
+  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
 }
 
 export function marineHoursFromApi(body: unknown): MarineHour[] | null {
@@ -156,12 +165,17 @@ async function readMarineEndpoint(url: string): Promise<MarineHour[] | null> {
 }
 
 function readFreshCache(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
+  const cached = readCachedHours(lat, lon);
+  if (!cached || Date.now() - cached.fetchedAt > CACHE_TTL_MS) return null;
+  return cached;
+}
+
+function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
   try {
     const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
     const raw = fs.readFileSync(path.join(CACHE_DIR, name), "utf8");
     const parsed = JSON.parse(raw) as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
     if (typeof parsed.fetchedAt !== "number") return null;
-    if (Date.now() - parsed.fetchedAt > CACHE_TTL_MS) return null;
     // Older cache files still store the Open-Meteo body. Parse that once; stored hours are already parsed.
     const hours = Array.isArray(parsed.hours)
       ? (parsed.hours as MarineHour[])

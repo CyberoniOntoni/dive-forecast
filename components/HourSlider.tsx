@@ -22,6 +22,7 @@ export function HourSlider({
   inwardBearingDeg,
   notice,
   fetchedAt = null,
+  stale = false,
   maldivesWall,
   initialIndex,
 }: {
@@ -30,6 +31,8 @@ export function HourSlider({
   inwardBearingDeg: number | null;
   notice: string;
   fetchedAt?: { wall: string; iso: string } | null;
+  /** True when these hours are the last cached series. */
+  stale?: boolean;
   maldivesWall: string;
   initialIndex: number;
 }) {
@@ -91,9 +94,15 @@ export function HourSlider({
         </div>
       </div>
       <ResidualLine hours={hours} selected={selected} />
-      {fetchedAt ? (
+      {stale || fetchedAt ? (
         <p className="mt-3 text-xs leading-5 text-foam/80">
-          Fetched <time dateTime={fetchedAt.iso}>{fetchedCaption(fetchedAt.wall)}</time> Maldives
+          {stale ? "This series is old." : null}
+          {stale && fetchedAt ? " " : null}
+          {fetchedAt ? (
+            <>
+              Fetched <time dateTime={fetchedAt.iso}>{fetchedCaption(fetchedAt.wall)}</time> Maldives
+            </>
+          ) : null}
         </p>
       ) : null}
 

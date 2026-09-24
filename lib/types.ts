@@ -78,10 +78,12 @@ export type HourForecast = {
 export type SiteForecast = {
   hours: HourForecast[];
   unavailable: boolean;
+  /** True when these hours are the last cached series, not a fresh fetch. */
+  stale: boolean;
   notice: string;
   /** Bearing used for the monsoon nudge and the site arrow. */
   inwardBearingDeg: number | null;
-  /** Unix ms when the marine series was cached. Null when the forecast is unavailable. */
+  /** Unix ms when the marine series was cached. Null when no cache exists. */
   fetchedAt: number | null;
 };
 

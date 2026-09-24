@@ -26,6 +26,8 @@ export type NowcastGlance = {
   opacity: number | null;
   /** var(--stop), var(--incoming), or var(--outgoing). Null when there is no forecast. */
   color: string | null;
+  /** Unix ms when the marine series was fetched. Null when this hour has no forecast. */
+  fetchedAt: number | null;
 };
 
 function noForecastGlance(name: string): NowcastGlance {
@@ -38,12 +40,14 @@ function noForecastGlance(name: string): NowcastGlance {
     confidence: null,
     opacity: null,
     color: null,
+    fetchedAt: null,
   };
 }
 
 /** Incoming follows the inward bearing. Outgoing is 180? opposite. Not the ocean vector. */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
-  if (!nowcast || nowcast.unavailable || !nowcast.hour) return noForecastGlance(name);
+  // A stale hour still has direction and strength. Empty only when there is no hour.
+  if (!nowcast?.hour) return noForecastGlance(name);
 
   const hour = nowcast.hour;
   const label = strengthLabel(hour.strength);
@@ -59,6 +63,7 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
     color: glanceColor(hour.direction, hour.strength),
+    fetchedAt: nowcast.fetchedAt ?? null,
   };
 }
 

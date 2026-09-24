@@ -97,6 +97,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
   return {
     hours: loaded.hours,
     unavailable: loaded.unavailable,
+    stale: loaded.stale,
     notice: FORECAST_NOTICE,
     inwardBearingDeg: loaded.bearing,
     fetchedAt: loaded.fetchedAt,
@@ -104,7 +105,14 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
 }
 
 function unavailableForecast(): SiteForecast {
-  return { hours: [], unavailable: true, notice: FORECAST_NOTICE, inwardBearingDeg: null, fetchedAt: null };
+  return {
+    hours: [],
+    unavailable: true,
+    stale: false,
+    notice: FORECAST_NOTICE,
+    inwardBearingDeg: null,
+    fetchedAt: null,
+  };
 }
 
 async function loadStoredSite(site: Site) {
