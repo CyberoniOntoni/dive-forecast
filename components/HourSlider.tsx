@@ -90,6 +90,7 @@ export function HourSlider({
           </p>
         </div>
       </div>
+      <ResidualLine hours={hours} selected={selected} />
       {fetchedAt ? (
         <p className="mt-3 text-xs leading-5 text-foam/80">
           Fetched <time dateTime={fetchedAt.iso}>{fetchedCaption(fetchedAt.wall)}</time> Maldives
@@ -137,6 +138,53 @@ export function HourSlider({
       <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
     </section>
   );
+}
+
+/** Stored residual metres. The line is not a new tide. */
+function ResidualLine({ hours, selected }: { hours: HourForecast[]; selected: number }) {
+  const points = residualPoints(hours);
+  if (points == null) return null;
+  const mark = points[Math.min(selected, points.length - 1)];
+  const drawn = points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+  return (
+    <div className="relative mx-6 mt-5 h-16" aria-hidden="true">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full text-foam">
+        <polyline
+          points={drawn}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <span
+        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-foam bg-ink"
+        style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
+      />
+    </div>
+  );
+}
+
+function residualPoints(hours: HourForecast[]): { x: number; y: number }[] | null {
+  if (hours.length === 0) return null;
+  let min = Infinity;
+  let max = -Infinity;
+  for (const hour of hours) {
+    if (!Number.isFinite(hour.levelM)) return null;
+    if (hour.levelM < min) min = hour.levelM;
+    if (hour.levelM > max) max = hour.levelM;
+  }
+  const span = max - min;
+  return hours.map((hour, index) => {
+    const across = hours.length === 1 ? 0.5 : index / (hours.length - 1);
+    const rise = span === 0 ? 0.5 : (hour.levelM - min) / span;
+    return {
+      x: 3 + across * 94,
+      y: 14 + (1 - rise) * 72,
+    };
+  });
 }
 
 /** Incoming follows the atoll inward bearing. Outgoing is 180° opposite. Not the ocean vector. */

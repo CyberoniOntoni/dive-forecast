@@ -8,12 +8,14 @@ const hours: HourForecast[] = [
     direction: "incoming",
     strength: "mild",
     confidence: "low",
+    levelM: 0.1,
   },
   {
     time: "2026-09-23T11:00",
     direction: "outgoing",
     strength: "strong",
     confidence: "low",
+    levelM: -0.1,
   },
 ];
 

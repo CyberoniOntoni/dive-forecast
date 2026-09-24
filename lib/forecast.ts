@@ -122,6 +122,7 @@ type OpenHour = {
   slope: number;
   nudge: number;
   index: number;
+  levelM: number;
 };
 
 // One incoming or outgoing run keeps the peak band. Only the turn is slack.
@@ -197,6 +198,7 @@ function finishRuns(
         contradicted,
         allowHighConfidence,
       }),
+      levelM: hour.levelM,
     };
   };
 
@@ -213,6 +215,8 @@ function finishRuns(
     const shifted = shiftIndex(hours, index, offset);
     const slope = slopeFromResidual(residual, shifted);
     if (slope == null) continue;
+    const levelM = residual[shifted];
+    if (levelM == null) continue;
     const tideDirection = directionFromSlope(slope);
     // A zero residual has no sign. Do not copy the previous hour or the ocean current.
     if (tideDirection == null) continue;
@@ -226,6 +230,7 @@ function finishRuns(
       slope,
       nudge: monsoonNudge(hour, inwardBearingDeg),
       index,
+      levelM,
     };
     if (run.length > 0 && !sameRun(run[run.length - 1], opened)) closeRun();
     run.push(opened);
