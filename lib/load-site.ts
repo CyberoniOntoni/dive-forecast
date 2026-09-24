@@ -1,7 +1,11 @@
+import fs from "fs";
+import path from "path";
 import { inwardBearingDeg } from "./bearing";
 import { forecastHours, residualSlopeWindow } from "./forecast";
 import { marineSeriesStale, siteMarineHours } from "./marine";
 import type { Atoll, HourForecast, MarineHour, Report, Site } from "./types";
+
+const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
 export type SiteLoad = {
   bearing: number | null;
@@ -20,8 +24,27 @@ function forecastedLoad(
   reports: readonly Report[],
   fetchedAt: number,
 ): SiteLoad {
-  const hours = forecastHours({ hours: marineHours, inwardBearingDeg: bearing, reports });
+  const hours = forecastHours({
+    hours: marineHours,
+    inwardBearingDeg: bearing,
+    reports,
+    ...(replayAllowsHigh() ? {} : { allowHighConfidence: false }),
+  });
   return { bearing, hours, unavailable: false, fetchedAt };
+}
+
+/** Missing replay.json or ok true keeps the forecast default. ok false blocks high. */
+function replayAllowsHigh(): boolean {
+  let raw: string;
+  try {
+    raw = fs.readFileSync(REPLAY_PATH, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
+    throw error;
+  }
+  const parsed: unknown = JSON.parse(raw);
+  if (!parsed || typeof parsed !== "object") return true;
+  return (parsed as { ok?: unknown }).ok !== false;
 }
 
 type CheckedMarine =

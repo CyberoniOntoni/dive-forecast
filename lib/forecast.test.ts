@@ -389,6 +389,25 @@ describe("forecastHours", () => {
     expect(tied.map((hour) => hour.direction)).toEqual(edgesOnly.map((hour) => hour.direction));
   });
 
+  it("caps every hour at medium when allowHighConfidence is false", () => {
+    const hours = Array.from({ length: 72 }, (_, index) => ({
+      time: new Date(Date.UTC(2026, 8, 22) + index * 60 * 60 * 1000).toISOString().slice(0, 16),
+      seaLevelM: 0.25 + 0.22 * Math.sin((2 * Math.PI * index) / 12),
+      currentVelocityMs: 0,
+      currentDirectionDeg: 0,
+    }));
+    const reports: Report[] = [0, 1, 2, 3].map((id) => ({
+      id: `cap-${id}`,
+      siteId: "s",
+      time: `2026-08-02T0${id}:00`,
+      direction: "incoming" as const,
+      strength: "strong" as const,
+      slopeM: 0.08,
+    }));
+    const capped = forecastHours({ hours, inwardBearingDeg: 0, reports, allowHighConfidence: false });
+    expect(capped.some((hour) => hour.confidence === "high")).toBe(false);
+  });
+
 });
 
 function outsideWindow(id: string, slopeWindowM: (number | null)[]): Report {
