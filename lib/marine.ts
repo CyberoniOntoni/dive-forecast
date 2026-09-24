@@ -22,11 +22,6 @@ export type MarineFetch =
   | { ok: true; hours: MarineHour[]; fetchedAt: number }
   | { ok: false; unavailable: true };
 
-type CacheEnvelope = {
-  fetchedAt: number;
-  body: unknown;
-};
-
 type HourlyColumns = {
   time: unknown[];
   seaLevelM: unknown[];
@@ -58,50 +53,38 @@ export function seawardPoint(
   lon: number,
   inwardBearingDeg: number,
 ): { lat: number; lon: number } {
-  const outwardBearing = outwardDegrees(inwardBearingDeg);
+  // Opposite the inward bearing. The extra +360 keeps a negative bearing inside 0-360.
+  const outwardBearing = ((inwardBearingDeg + 180) % 360 + 360) % 360;
   return destinationKm(lat, lon, outwardBearing, SEAWARD_KM);
-}
-
-/** Opposite the inward bearing. The extra +360 keeps a negative bearing inside 0-360. */
-function outwardDegrees(inwardBearingDeg: number): number {
-  return ((inwardBearingDeg + 180) % 360 + 360) % 360;
 }
 
 export async function fetchMarine(lat: number, lon: number): Promise<MarineFetch> {
   const cached = freshCachedFetch(lat, lon);
   if (cached) return cached;
 
-  const body = await requestMarine(lat, lon);
-  if (!body) return { ok: false, unavailable: true };
-  const hours = marineHoursFromApi(body);
+  const hours = await requestMarine(lat, lon);
   if (!hours || hours.length === 0) return { ok: false, unavailable: true };
 
   const fetchedAt = Date.now();
-  writeCache(lat, lon, body, fetchedAt);
+  writeCache(lat, lon, hours, fetchedAt);
   return { ok: true, hours, fetchedAt };
 }
 
 function freshCachedFetch(lat: number, lon: number): MarineFetch | null {
   const cached = readFreshCache(lat, lon);
   if (!cached) return null;
-  const hours = marineHoursFromApi(cached.body);
-  if (!hours || hours.length === 0) return null;
-  return { ok: true, hours, fetchedAt: cached.fetchedAt };
+  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt };
 }
 
 export function marineHoursFromApi(body: unknown): MarineHour[] | null {
   const hourly = readHourly(body);
   if (!hourly) return null;
-  return hourly.time.map((time, index) => marineHourAt(hourly, time, index));
-}
-
-function marineHourAt(hourly: HourlyColumns, time: unknown, index: number): MarineHour {
-  return {
+  return hourly.time.map((time, index) => ({
     time: String(time),
     seaLevelM: asNumber(hourly.seaLevelM[index]),
     currentVelocityMs: velocityToMs(asNumber(hourly.velocity[index]), hourly.velocityUnit),
     currentDirectionDeg: asNumber(hourly.direction[index]),
-  };
+  }));
 }
 
 function readHourly(body: unknown): HourlyColumns | null {
@@ -134,11 +117,11 @@ function readHourly(body: unknown): HourlyColumns | null {
   };
 }
 
-async function requestMarine(lat: number, lon: number): Promise<unknown | null> {
+async function requestMarine(lat: number, lon: number): Promise<MarineHour[] | null> {
   const query = marineQuery(lat, lon);
   for (const endpoint of MARINE_ENDPOINTS) {
-    const body = await readMarineEndpoint(`${endpoint}?${query}`);
-    if (body) return body;
+    const hours = await readMarineEndpoint(`${endpoint}?${query}`);
+    if (hours) return hours;
   }
   return null;
 }
@@ -156,7 +139,7 @@ function marineQuery(lat: number, lon: number): string {
   return params.toString();
 }
 
-async function readMarineEndpoint(url: string): Promise<unknown | null> {
+async function readMarineEndpoint(url: string): Promise<MarineHour[] | null> {
   try {
     const response = await fetch(url, {
       headers: {
@@ -166,42 +149,36 @@ async function readMarineEndpoint(url: string): Promise<unknown | null> {
     });
     if (!response.ok) return null;
     const body: unknown = await response.json();
-    if (marineHoursFromApi(body)) return body;
-    return null;
+    return marineHoursFromApi(body);
   } catch {
     return null;
   }
 }
 
-function readFreshCache(lat: number, lon: number): CacheEnvelope | null {
+function readFreshCache(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
   try {
-    const raw = fs.readFileSync(cachePath(lat, lon), "utf8");
-    const parsed = JSON.parse(raw) as CacheEnvelope;
+    const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+    const raw = fs.readFileSync(path.join(CACHE_DIR, name), "utf8");
+    const parsed = JSON.parse(raw) as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
     if (typeof parsed.fetchedAt !== "number") return null;
-    if (cacheExpired(parsed.fetchedAt)) return null;
-    return parsed;
+    if (Date.now() - parsed.fetchedAt > CACHE_TTL_MS) return null;
+    // Older cache files still store the Open-Meteo body. Parse that once; stored hours are already parsed.
+    const hours = Array.isArray(parsed.hours)
+      ? (parsed.hours as MarineHour[])
+      : "body" in parsed
+        ? marineHoursFromApi(parsed.body)
+        : null;
+    if (!hours || hours.length === 0) return null;
+    return { fetchedAt: parsed.fetchedAt, hours };
   } catch {
     return null;
   }
 }
 
-function cacheExpired(fetchedAt: number): boolean {
-  return Date.now() - fetchedAt > CACHE_TTL_MS;
-}
-
-function writeCache(lat: number, lon: number, body: unknown, fetchedAt: number) {
+function writeCache(lat: number, lon: number, hours: MarineHour[], fetchedAt: number) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
-  const envelope: CacheEnvelope = { fetchedAt, body };
-  fs.writeFileSync(cachePath(lat, lon), JSON.stringify(envelope));
-}
-
-function cachePath(lat: number, lon: number): string {
-  return path.join(CACHE_DIR, cacheFileName(lat, lon));
-}
-
-function cacheFileName(lat: number, lon: number): string {
-  const rounded = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`;
-  return rounded.replace(/[^0-9.+_-]/g, "");
+  const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+  fs.writeFileSync(path.join(CACHE_DIR, name), JSON.stringify({ fetchedAt, hours }));
 }
 
 function asNumber(value: unknown): number | null {
@@ -219,19 +196,14 @@ function velocityToMs(value: number | null, unit: string | undefined): number | 
 
 /** Naive times are Maldives wall time. Stale when the newest hour is more than 12 hours before now. */
 export function marineSeriesStale(hours: readonly MarineHour[], now = Date.now()): boolean {
-  const newest = newestHourMs(hours);
-  if (!Number.isFinite(newest)) return true;
-  return now - newest > SERIES_STALE_MS;
-}
-
-function newestHourMs(hours: readonly MarineHour[]): number {
   let newest = Number.NEGATIVE_INFINITY;
   for (const hour of hours) {
     const ms = marineHourUtcMs(hour.time);
     if (!Number.isFinite(ms)) continue;
     if (ms > newest) newest = ms;
   }
-  return newest;
+  if (!Number.isFinite(newest)) return true;
+  return now - newest > SERIES_STALE_MS;
 }
 
 function marineHourUtcMs(value: string): number {

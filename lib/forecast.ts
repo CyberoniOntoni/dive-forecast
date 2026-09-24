@@ -113,6 +113,37 @@ type OpenHour = {
   index: number;
 };
 
+// One incoming or outgoing run keeps the peak band. Only the turn is slack.
+function peakBand(open: OpenHour[]) {
+  const slackTurn = (slope: number) => Math.abs(slope) < SLACK_SLOPE_M;
+  let peak = 0;
+  for (const hour of open) {
+    if (slackTurn(hour.slope)) continue;
+    peak = Math.max(peak, bandIndex(hour.strength));
+  }
+  if (peak > 0) {
+    const band = STRENGTHS[peak];
+    for (const hour of open) {
+      hour.strength = slackTurn(hour.slope) ? "slack" : band;
+    }
+  }
+}
+
+// Monsoon past half saturation steps the run one band toward that flow. Slack stays slack.
+function meanNudge(open: OpenHour[]) {
+  let nudge = 0;
+  for (const hour of open) nudge += hour.nudge;
+  nudge /= open.length;
+  if (Math.abs(nudge) >= NUDGE_BAND) {
+    const favored: Direction = nudge > 0 ? "incoming" : "outgoing";
+    const withTide = open[0].direction === favored;
+    for (const hour of open) {
+      if (hour.strength === "slack") continue;
+      hour.strength = shiftStrength(hour.strength, withTide ? 1 : -1);
+    }
+  }
+}
+
 /** One walk over the series. Each closed run is peak band, then mean nudge, then report pull. */
 function finishRuns(
   hours: readonly MarineHour[],
@@ -125,37 +156,6 @@ function finishRuns(
 ): HourForecast[] {
   const finished: HourForecast[] = [];
   let run: OpenHour[] = [];
-
-  // One incoming or outgoing run keeps the peak band. Only the turn is slack.
-  const peakBand = (open: OpenHour[]) => {
-    const slackTurn = (slope: number) => Math.abs(slope) < SLACK_SLOPE_M;
-    let peak = 0;
-    for (const hour of open) {
-      if (slackTurn(hour.slope)) continue;
-      peak = Math.max(peak, bandIndex(hour.strength));
-    }
-    if (peak > 0) {
-      const band = STRENGTHS[peak];
-      for (const hour of open) {
-        hour.strength = slackTurn(hour.slope) ? "slack" : band;
-      }
-    }
-  };
-
-  // Monsoon past half saturation steps the run one band toward that flow. Slack stays slack.
-  const meanNudge = (open: OpenHour[]) => {
-    let nudge = 0;
-    for (const hour of open) nudge += hour.nudge;
-    nudge /= open.length;
-    if (Math.abs(nudge) >= NUDGE_BAND) {
-      const favored: Direction = nudge > 0 ? "incoming" : "outgoing";
-      const withTide = open[0].direction === favored;
-      for (const hour of open) {
-        if (hour.strength === "slack") continue;
-        hour.strength = shiftStrength(hour.strength, withTide ? 1 : -1);
-      }
-    }
-  };
 
   // A report fades for six hours and must not cut the run.
   const reportPull = (hour: OpenHour): HourForecast => {

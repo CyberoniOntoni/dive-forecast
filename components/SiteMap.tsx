@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { CurrentOverlay, type SiteGlance } from "@/components/CurrentOverlay";
+import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Direction, Site } from "@/lib/types";
@@ -49,17 +49,9 @@ function pinHtml(glance: NowcastGlance, showStrength: boolean): string {
   return arrowPin(spoken, arrow.opacity, arrow.bearing, color, strengthMark);
 }
 
-/** Any missing forecast field keeps the dot pin. Confidence is required even though the pin does not print it. */
+/** One empty glance keeps the dot pin. The forecast fields are null together. */
 function arrowFields(glance: NowcastGlance): ArrowFields | null {
-  if (
-    glance.arrowBearing == null ||
-    glance.direction == null ||
-    glance.opacity == null ||
-    glance.label == null ||
-    glance.confidence == null
-  ) {
-    return null;
-  }
+  if (!hasForecast(glance)) return null;
   return {
     bearing: glance.arrowBearing,
     direction: glance.direction,
@@ -217,77 +209,78 @@ function glancesFor(sites: readonly Site[], nowcasts: readonly SiteNowcast[]): S
     glance: nowcastGlance(site.name, byId.get(site.id), true),
   }));
 }
-/** Leaflet touches window, so this component is built only after the client import. */
-function createLeafletMap(L: LeafletLib) {
-  function MapCanvas({ siteGlances, draft, adding, onPick, onOpen }: MapProps) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const mapRef = useRef<LeafletMapType | null>(null);
-    const markersRef = useRef<Marker[]>([]);
-    const draftMarkerRef = useRef<CircleMarker | null>(null);
-    // Empty deps create the map once. This ref is the site list from that first render.
-    const siteGlancesRef = useRef(siteGlances);
-    // Listeners are bound once, so they read the latest pick, open, and add-mode flags here.
-    const onPickRef = useRef(onPick);
-    const onOpenRef = useRef(onOpen);
-    const addingRef = useRef(adding);
-    // 0 until the map exists, so marker effects wait for mount.
-    const [mapEpoch, setMapEpoch] = useState(0);
-    const [zoom, setZoom] = useState(0);
-    // Strength word on the pin from zoom 10. The tooltip keeps the full spoken line.
-    const showStrength = zoom >= 10;
-
-    useEffect(() => {
-      onPickRef.current = onPick;
-      onOpenRef.current = onOpen;
-      addingRef.current = adding;
-    }, [onPick, onOpen, adding]);
-
-    useEffect(() => {
-      const container = containerRef.current;
-      if (!container || mapRef.current) return;
-      const mounted = mountDiveMap(L, container, siteGlancesRef.current, {
-        isAdding: () => addingRef.current,
-        onPick: (point) => onPickRef.current(point),
-        onZoom: (next) => setZoom(next),
-      });
-      mapRef.current = mounted.map;
-      setMapEpoch((epoch) => epoch + 1);
-      return () => {
-        mounted.destroy();
-        mapRef.current = null;
-        markersRef.current = [];
-        draftMarkerRef.current = null;
-      };
-    }, []);
-
-    useEffect(() => {
-      const map = mapRef.current;
-      if (!map || mapEpoch === 0) return;
-      for (const marker of markersRef.current) marker.remove();
-      markersRef.current = placeSiteMarkers(L, map, siteGlances, showStrength, (id) => {
-        onOpenRef.current(id);
-      });
-    }, [siteGlances, mapEpoch, showStrength]);
-
-    useEffect(() => {
-      const map = mapRef.current;
-      if (!map || mapEpoch === 0) return;
-      draftMarkerRef.current?.remove();
-      draftMarkerRef.current = null;
-      if (!draft) return;
-      draftMarkerRef.current = placeDraftPin(L, map, draft);
-    }, [draft, mapEpoch]);
-
-    return <div ref={containerRef} className="dive-map absolute inset-0" />;
-  }
-
-  return MapCanvas;
-}
-
+/** Leaflet touches window. dynamic() is the only loader; the canvas is created on mount. */
 const LeafletMap = dynamic(
   async () => {
     const L = leafletApi(await import("leaflet"));
-    return { default: createLeafletMap(L) };
+
+    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen }: MapProps) {
+      const containerRef = useRef<HTMLDivElement>(null);
+      const mapRef = useRef<LeafletMapType | null>(null);
+      const markersRef = useRef<Marker[]>([]);
+      const draftMarkerRef = useRef<CircleMarker | null>(null);
+      const onPickRef = useRef(onPick);
+      const onOpenRef = useRef(onOpen);
+      const addingRef = useRef(adding);
+      const destroyRef = useRef<(() => void) | null>(null);
+      // 0 until the map exists, so marker effects wait for mount.
+      const [mapEpoch, setMapEpoch] = useState(0);
+      const [zoom, setZoom] = useState(0);
+      // Strength word on the pin from zoom 10. The tooltip keeps the full spoken line.
+      const showStrength = zoom >= 10;
+
+      useEffect(() => {
+        onPickRef.current = onPick;
+        onOpenRef.current = onOpen;
+        addingRef.current = adding;
+      }, [onPick, onOpen, adding]);
+
+      // One canvas, from the sites on screen now. A later list only replaces markers.
+      useEffect(() => {
+        const container = containerRef.current;
+        if (!container || mapRef.current) return;
+        const mounted = mountDiveMap(L, container, siteGlances, {
+          isAdding: () => addingRef.current,
+          onPick: (point) => onPickRef.current(point),
+          onZoom: (next) => setZoom(next),
+        });
+        mapRef.current = mounted.map;
+        destroyRef.current = mounted.destroy;
+        setMapEpoch((epoch) => epoch + 1);
+      }, [siteGlances]);
+
+      useEffect(() => {
+        return () => {
+          destroyRef.current?.();
+          destroyRef.current = null;
+          mapRef.current = null;
+          markersRef.current = [];
+          draftMarkerRef.current = null;
+        };
+      }, []);
+
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0) return;
+        for (const marker of markersRef.current) marker.remove();
+        markersRef.current = placeSiteMarkers(L, map, siteGlances, showStrength, (id) => {
+          onOpenRef.current(id);
+        });
+      }, [siteGlances, mapEpoch, showStrength]);
+
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0) return;
+        draftMarkerRef.current?.remove();
+        draftMarkerRef.current = null;
+        if (!draft) return;
+        draftMarkerRef.current = placeDraftPin(L, map, draft);
+      }, [draft, mapEpoch]);
+
+      return <div ref={containerRef} className="dive-map absolute inset-0" />;
+    }
+
+    return { default: MapCanvas };
   },
   {
     ssr: false,

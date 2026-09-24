@@ -23,7 +23,7 @@ export default async function SitePage({
   const maldivesWall = toMaldivesWall(new Date().toISOString());
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 px-4 py-5 sm:px-8 sm:py-8">
+    <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
       <Link
         href="/"
         className="inline-flex min-h-11 w-fit items-center self-start rounded-md border border-foam/25 bg-ink px-4 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
