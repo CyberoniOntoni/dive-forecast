@@ -1,8 +1,8 @@
 "use server";
 
 import { nearestAtoll } from "./bearing";
-import { FORECAST_NOTICE, residualSlopeWindow, toMaldivesWall } from "./forecast";
-import { loadSite } from "./load-site";
+import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
+import { loadSite, slopeWindowForSite } from "./load-site";
 import {
   addReport as persistReport,
   addUserSite,
@@ -81,9 +81,9 @@ export async function addReport(input: {
 
 async function reportSlopeWindow(site: Site, time: string): Promise<(number | null)[] | null> {
   try {
-    const loaded = await loadStoredSite(site);
-    if (loaded.unavailable) return null;
-    return residualSlopeWindow(loaded.marineHours, time);
+    const catalog = readCatalog();
+    const atoll = catalog.atolls.find((item) => item.id === site.atollId);
+    return await slopeWindowForSite(site, catalog.sites, atoll, time);
   } catch {
     return null;
   }

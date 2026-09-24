@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours } from "./marine";
+import { fetchMarine, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours } from "./marine";
 import type { MarineHour } from "./types";
 
 const NOW = Date.UTC(2026, 8, 24, 12, 0, 0);
@@ -155,6 +155,87 @@ describe("seaward current", () => {
     } finally {
       forgetMarineCache(point.lat, point.lon);
       forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+});
+
+describe("marine cache", () => {
+  it("caches parsed hours and returns them without requesting or parsing again", async () => {
+    const lat = 1.1111;
+    const lon = 73.2222;
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    let cachedRaw: string | null = null;
+    let writtenPath = "";
+    let fetches = 0;
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      if (cachedRaw == null) throw new Error("cache miss");
+      return cachedRaw;
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation((file, data) => {
+      writtenPath = String(file);
+      cachedRaw = String(data);
+    });
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return jsonResponse(body);
+    });
+    try {
+      const first = await fetchMarine(lat, lon);
+      expect(first.ok).toBe(true);
+      if (!first.ok || cachedRaw == null) return;
+      const stored = JSON.parse(cachedRaw) as { fetchedAt: number; hours: MarineHour[]; body?: unknown };
+      expect(stored.body).toBeUndefined();
+      expect(stored.fetchedAt).toBe(first.fetchedAt);
+      expect(stored.hours).toEqual(first.hours);
+      expect(stored.hours).toEqual(marineHoursFromApi(body));
+      const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+      expect(path.basename(writtenPath)).toBe(name);
+      expect(fetches).toBe(1);
+
+      const again = await fetchMarine(lat, lon);
+      expect(fetches).toBe(1);
+      expect(again).toEqual(first);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
+  it("parses an older cache body once and ignores that body when hours are already stored", async () => {
+    const lat = 1.5555;
+    const lon = 73.6666;
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    const cachedHours = [hour(fresh)];
+    let fetches = 0;
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => JSON.stringify({ fetchedAt: Date.now(), body }));
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return new Response(null, { status: 404 });
+    });
+    try {
+      const fromBody = await fetchMarine(lat, lon);
+      expect(fetches).toBe(0);
+      expect(fromBody.ok).toBe(true);
+      if (!fromBody.ok) return;
+      expect(fromBody.hours).toEqual(marineHoursFromApi(body));
+
+      vi.mocked(fs.readFileSync).mockImplementation(() =>
+        JSON.stringify({ fetchedAt: Date.now(), hours: cachedHours, body }),
+      );
+      const fromHours = await fetchMarine(lat, lon);
+      expect(fetches).toBe(0);
+      expect(fromHours.ok).toBe(true);
+      if (!fromHours.ok) return;
+      expect(fromHours.hours).toEqual(cachedHours);
+      expect(fromHours.hours).not.toEqual(marineHoursFromApi(body));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
     }
   });
 });

@@ -137,20 +137,31 @@ function SiteRow({ site, glance }: SiteGlance) {
   );
 }
 
-/** The list does not require an arrow bearing. A missing label, direction, confidence, or opacity stays unavailable. */
+/** nowcastGlance sets label, bearing, direction, confidence, and opacity together, or leaves them all null. */
+export function hasForecast(
+  glance: NowcastGlance,
+): glance is NowcastGlance & {
+  label: string;
+  arrowBearing: number;
+  direction: NonNullable<NowcastGlance["direction"]>;
+  confidence: NonNullable<NowcastGlance["confidence"]>;
+  opacity: number;
+} {
+  return glance.confidence != null;
+}
+
 function CurrentBits({ glance }: { glance: NowcastGlance }) {
-  const { label, direction, confidence, opacity } = glance;
-  if (!label || !direction || !confidence || opacity == null) {
+  if (!hasForecast(glance)) {
     return <span className="shrink-0 text-xs text-foam/70">unavailable</span>;
   }
-  const color = direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+  const color = glance.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
   return (
-    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs" style={{ opacity }}>
+    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs" style={{ opacity: glance.opacity }}>
       <span className="font-medium" style={{ color }}>
-        {direction}
+        {glance.direction}
       </span>
-      <span>{label}</span>
-      <span>{confidence}</span>
+      <span>{glance.label}</span>
+      <span>{glance.confidence}</span>
     </span>
   );
 }
