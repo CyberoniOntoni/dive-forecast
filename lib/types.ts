@@ -71,6 +71,8 @@ export type HourForecast = {
   direction: Direction;
   strength: Strength;
   confidence: Confidence;
+  /** Residual sea level at this hour, metres, after the 25-hour mean. */
+  levelM: number;
 };
 
 export type SiteForecast = {
