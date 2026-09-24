@@ -13,12 +13,24 @@ export type SiteGlance = {
 
 type Point = { lat: number; lon: number };
 
+function siteCountLabel(count: number): string {
+  const noun = count === 1 ? "site" : "sites";
+  return `${count} ${noun}`;
+}
+
+function chevronTurn(expanded: boolean): string {
+  return expanded ? "rotate(135deg)" : "rotate(-45deg)";
+}
 function maldivesHourTitle(wall: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(wall);
   if (!match) return "Maldives hour";
   return `${match[4]}:${match[5]} Maldives`;
 }
 
+/** Phone: bottom sheet. Wide window: a fixed column beside the map, not an overlay. */
+const SHEET_CLASS = "now-sheet absolute inset-x-0 bottom-0 z-[500] max-h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-2xl border border-foam/20 bg-ink pb-[env(safe-area-inset-bottom)] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:pb-0 lg:shadow-none";
+
+/* Open phone sheet stays at most half the viewport so the map stays visible. 50dvh is the fallback when clamp is unavailable. */
 const SHEET_STYLE = `
 @media (max-width: 1023px) {
   .now-sheet[data-open="true"] {
@@ -44,9 +56,10 @@ export function CurrentOverlay({
   onAdded: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const countLabel = `${siteGlances.length} ${siteGlances.length === 1 ? "site" : "sites"}`;
+  const countLabel = siteCountLabel(siteGlances.length);
 
   function toggleSheet() {
+    // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
     if (expanded) onAddingChange(false);
     setExpanded((open) => !open);
   }
@@ -55,7 +68,7 @@ export function CurrentOverlay({
     <aside
       aria-label="Currents now"
       data-open={expanded ? "true" : "false"}
-      className="now-sheet absolute inset-x-0 bottom-0 z-[500] max-h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-2xl border border-foam/20 bg-ink pb-[env(safe-area-inset-bottom)] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:pb-0 lg:shadow-none"
+      className={SHEET_CLASS}
     >
       <style>{SHEET_STYLE}</style>
       <div className="sticky top-0 z-10 border-b border-foam/15 bg-ink lg:hidden">
@@ -72,7 +85,7 @@ export function CurrentOverlay({
             <span
               aria-hidden="true"
               className="inline-block h-2 w-2 border-r-2 border-t-2 border-current"
-              style={{ transform: expanded ? "rotate(135deg)" : "rotate(-45deg)" }}
+              style={{ transform: chevronTurn(expanded) }}
             />
           </span>
         </button>
@@ -99,39 +112,45 @@ export function CurrentOverlay({
         </div>
         <nav aria-label="Dive sites">
           <ul className="pb-2">
-            {siteGlances.map(({ site, glance }) => {
-              return (
-                <li key={site.id} className="border-b border-foam/10 last:border-b-0">
-                  <Link
-                    href={`/sites/${site.id}`}
-                    title={glance.spoken}
-                    className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
-                  >
-                    <span className="min-w-0 flex-1 truncate font-medium">{site.name}</span>
-                    {glance.label && glance.direction && glance.confidence && glance.opacity != null ? (
-                      <span
-                        className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs"
-                        style={{ opacity: glance.opacity }}
-                      >
-                        <span
-                          className="font-medium"
-                          style={{ color: glance.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)" }}
-                        >
-                          {glance.direction}
-                        </span>
-                        <span>{glance.label}</span>
-                        <span>{glance.confidence}</span>
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-xs text-foam/70">unavailable</span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
+            {siteGlances.map(({ site, glance }) => (
+              <SiteRow key={site.id} site={site} glance={glance} />
+            ))}
           </ul>
         </nav>
       </div>
     </aside>
+  );
+}
+
+function SiteRow({ site, glance }: SiteGlance) {
+  return (
+    <li className="border-b border-foam/10 last:border-b-0">
+      <Link
+        href={`/sites/${site.id}`}
+        title={glance.spoken}
+        className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
+      >
+        <span className="min-w-0 flex-1 truncate font-medium">{site.name}</span>
+        <CurrentBits glance={glance} />
+      </Link>
+    </li>
+  );
+}
+
+/** The list does not require an arrow bearing. A missing label, direction, confidence, or opacity stays unavailable. */
+function CurrentBits({ glance }: { glance: NowcastGlance }) {
+  const { label, direction, confidence, opacity } = glance;
+  if (!label || !direction || !confidence || opacity == null) {
+    return <span className="shrink-0 text-xs text-foam/70">unavailable</span>;
+  }
+  const color = direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+  return (
+    <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs" style={{ opacity }}>
+      <span className="font-medium" style={{ color }}>
+        {direction}
+      </span>
+      <span>{label}</span>
+      <span>{confidence}</span>
+    </span>
   );
 }

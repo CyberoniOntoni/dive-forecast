@@ -5,6 +5,10 @@ import { rateSite } from "@/lib/actions";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
 
+function scoreButtonClass(selected: boolean): string {
+  const tone = selected ? "border-foam bg-foam text-ink" : "border-foam/20 bg-ink text-foam";
+  return `min-h-11 flex-1 rounded-md border text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-60 ${tone}`;
+}
 export function RatingForm({
   siteId,
   score,
@@ -54,11 +58,7 @@ export function RatingForm({
               aria-pressed={selected}
               disabled={pending}
               onClick={() => choose(value)}
-              className={`min-h-11 flex-1 rounded-md border text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-60 ${
-                selected
-                  ? "border-foam bg-foam text-ink"
-                  : "border-foam/20 bg-ink text-foam"
-              }`}
+              className={scoreButtonClass(selected)}
             >
               {value}
             </button>

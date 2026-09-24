@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Direction, HourForecast, Strength } from "@/lib/types";
+import type { Confidence, Direction, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
   slack: "Slack",
@@ -11,6 +11,10 @@ const STRENGTH_LABEL: Record<Strength, string> = {
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+const RANGE_TRACK = "h-11 w-full min-w-0 cursor-pointer appearance-none bg-transparent bg-[linear-gradient(transparent_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_25px,transparent_25px)]";
+const RANGE_FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-incoming disabled:cursor-default";
+const RANGE_THUMB = "[&::-moz-range-thumb]:h-11 [&::-moz-range-thumb]:w-11 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-current [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:h-11 [&::-webkit-slider-thumb]:w-11 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-current";
 
 export function HourSlider({
   hours,
@@ -49,9 +53,9 @@ export function HourSlider({
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
   const bearing = inwardBearingDeg == null ? null : callBearing(hour.direction, inwardBearingDeg);
-  const tone = hour.direction === "incoming" ? "text-incoming" : "text-outgoing";
-  const quiet =
-    hour.confidence === "low" ? "opacity-40" : hour.confidence === "medium" ? "opacity-75" : "opacity-100";
+  const tone = directionTone(hour.direction);
+  const quiet = arrowOpacity(hour.confidence);
+  const way = directionWord(hour.direction);
   const spans = daySpans(hours);
 
   return (
@@ -67,7 +71,7 @@ export function HourSlider({
               className={`h-16 w-16 ${quiet}`}
               style={{ transform: `rotate(${bearing}deg)` }}
               role="img"
-              aria-label={`${hour.direction === "incoming" ? "Incoming" : "Outgoing"} arrow, ${Math.round(bearing)} degrees clockwise from north`}
+              aria-label={arrowLabel(hour.direction, bearing)}
             >
               <path d="M32 4l11 30h-7v26h-8V34h-7L32 4z" fill="currentColor" />
             </svg>
@@ -75,14 +79,14 @@ export function HourSlider({
         )}
         <div className="min-w-0">
           <p className={`text-4xl font-semibold tracking-tight break-words sm:text-6xl ${tone}`}>
-            {hour.direction === "incoming" ? "Incoming" : "Outgoing"}
+            {way}
           </p>
           <p className="mt-2 text-lg text-foam sm:text-xl">{STRENGTH_LABEL[hour.strength]}</p>
-          <p className={`text-sm sm:text-base ${hour.confidence === "low" ? "text-foam/50" : hour.confidence === "medium" ? "text-foam/75" : "text-foam"}`}>
+          <p className={`text-sm sm:text-base ${confidenceText(hour.confidence)}`}>
             {hour.confidence} confidence
           </p>
           <p className="mt-2 font-mono text-sm tabular-nums text-foam/80">
-            {dayName(hour.time.slice(0, 10), today)} {clock(hour.time)}
+            {hourWhen(hour.time, today)}
           </p>
         </div>
       </div>
@@ -98,7 +102,7 @@ export function HourSlider({
             <span
               key={span.date}
               className="min-w-0 truncate"
-              style={{ flex: `0 0 ${((span.end - span.start + 1) / hours.length) * 100}%` }}
+              style={{ flex: dayShare(span, hours.length) }}
             >
               {dayName(span.date, today)}
             </span>
@@ -118,8 +122,8 @@ export function HourSlider({
             aria-valuemin={0}
             aria-valuemax={hours.length - 1}
             aria-valuenow={selected}
-            aria-valuetext={`${dayName(hour.time.slice(0, 10), today)} ${clock(hour.time)}, ${hour.direction}, ${STRENGTH_LABEL[hour.strength]}, ${hour.confidence} confidence`}
-            className={`h-11 w-full min-w-0 cursor-pointer appearance-none bg-transparent bg-[linear-gradient(transparent_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_25px,transparent_25px)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-incoming disabled:cursor-default ${tone} [&::-moz-range-thumb]:h-11 [&::-moz-range-thumb]:w-11 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-current [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:h-11 [&::-webkit-slider-thumb]:w-11 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-current`}
+            aria-valuetext={hourValueText(hour, today)}
+            className={`${RANGE_TRACK} ${RANGE_FOCUS} ${tone} ${RANGE_THUMB}`}
           />
         </label>
         <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs tabular-nums text-foam/70">
@@ -141,21 +145,62 @@ function callBearing(direction: Direction, inwardBearingDeg: number): number {
   return direction === "incoming" ? inward : (inward + 180) % 360;
 }
 
+function directionTone(direction: Direction): string {
+  return direction === "incoming" ? "text-incoming" : "text-outgoing";
+}
+
+function directionWord(direction: Direction): string {
+  return direction === "incoming" ? "Incoming" : "Outgoing";
+}
+
+function arrowOpacity(confidence: Confidence): string {
+  if (confidence === "low") return "opacity-40";
+  if (confidence === "medium") return "opacity-75";
+  return "opacity-100";
+}
+
+function confidenceText(confidence: Confidence): string {
+  if (confidence === "low") return "text-foam/50";
+  if (confidence === "medium") return "text-foam/75";
+  return "text-foam";
+}
+
+function arrowLabel(direction: Direction, bearing: number): string {
+  return `${directionWord(direction)} arrow, ${Math.round(bearing)} degrees clockwise from north`;
+}
+
+function hourWhen(time: string, today: string): string {
+  return `${dayName(time.slice(0, 10), today)} ${clock(time)}`;
+}
+
+function hourValueText(hour: HourForecast, today: string): string {
+  const when = hourWhen(hour.time, today);
+  return `${when}, ${hour.direction}, ${STRENGTH_LABEL[hour.strength]}, ${hour.confidence} confidence`;
+}
+
+function dayShare(span: { start: number; end: number }, hourCount: number): string {
+  const covered = span.end - span.start + 1;
+  return `0 0 ${(covered / hourCount) * 100}%`;
+}
+
 function daySpans(hours: HourForecast[]): { date: string; start: number; end: number }[] {
   const spans: { date: string; start: number; end: number }[] = [];
-  hours.forEach((hour, index) => {
-    const date = hour.time.slice(0, 10);
+  for (let index = 0; index < hours.length; index += 1) {
+    const date = hours[index].time.slice(0, 10);
     const last = spans[spans.length - 1];
-    if (!last || last.date !== date) spans.push({ date, start: index, end: index });
+    if (last == null || last.date !== date) spans.push({ date, start: index, end: index });
     else last.end = index;
-  });
+  }
   return spans;
 }
 
 function addUtcDay(date: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return date;
-  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]) + 1)).toISOString().slice(0, 10);
+  const year = Number(match[1]);
+  const monthIndex = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  return new Date(Date.UTC(year, monthIndex, day + 1)).toISOString().slice(0, 10);
 }
 
 function dayName(date: string, today: string): string {

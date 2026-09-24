@@ -6,7 +6,7 @@ import { ReportForm } from "@/components/ReportForm";
 import { forecastSite, getRating, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
-import type { Site } from "@/lib/types";
+import type { HourForecast, Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +20,7 @@ export default async function SitePage({
   if (!site) notFound();
 
   const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id)]);
-  const inwardBearingDeg = forecast.inwardBearingDeg;
-  const fetchedAt = forecast.fetchedAt;
-  const fetchedWall = fetchedAt == null ? null : toMaldivesWall(new Date(fetchedAt).toISOString());
-  const fetchedIso = fetchedAt == null ? null : new Date(fetchedAt).toISOString();
   const maldivesWall = toMaldivesWall(new Date().toISOString());
-  const nearestHour = nearestForecastHour(forecast.hours, maldivesWall);
-  const initialIndex =
-    nearestHour == null ? 0 : Math.max(0, forecast.hours.findIndex((hour) => hour.time === nearestHour.time));
 
   return (
     <main className="mx-auto flex w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 px-4 py-5 sm:px-8 sm:py-8">
@@ -45,11 +38,11 @@ export default async function SitePage({
         key={`forecast-${site.id}`}
         hours={forecast.hours}
         unavailable={forecast.unavailable}
-        inwardBearingDeg={inwardBearingDeg}
+        inwardBearingDeg={forecast.inwardBearingDeg}
         notice={forecast.notice}
-        fetchedAt={fetchedWall && fetchedIso ? { wall: fetchedWall, iso: fetchedIso } : null}
+        fetchedAt={fetchedStamp(forecast.fetchedAt)}
         maldivesWall={maldivesWall}
-        initialIndex={initialIndex}
+        initialIndex={startingIndex(forecast.hours, maldivesWall)}
       />
       <div className="flex min-w-0 flex-col gap-4">
         <RatingForm key={`rating-${site.id}`} siteId={site.id} score={rating ? rating.score : null} />
@@ -59,6 +52,20 @@ export default async function SitePage({
   );
 }
 
+function startingIndex(hours: readonly HourForecast[], maldivesWall: string): number {
+  const nearest = nearestForecastHour(hours, maldivesWall);
+  if (nearest == null) return 0;
+  return Math.max(0, hours.findIndex((hour) => hour.time === nearest.time));
+}
+
+/** An empty wall or ISO is treated as no fetch time. */
+function fetchedStamp(fetchedAt: number | null): { wall: string; iso: string } | null {
+  if (fetchedAt == null) return null;
+  const iso = new Date(fetchedAt).toISOString();
+  const wall = toMaldivesWall(iso);
+  if (!wall || !iso) return null;
+  return { wall, iso };
+}
 type SourceLink = { href: string; label: string };
 
 function PublishedFacts({ site }: { site: Site }) {
@@ -86,35 +93,54 @@ function publishedLine(site: Site): { text: string; sources: SourceLink[] } | nu
   const top = positiveMetres(site.diveTopM);
   const max = positiveMetres(site.diveMaxM);
   const width = positiveMetres(site.channelWidthM);
-  const depth = positiveMetres(site.channelDepthM);
-  const bits: string[] = [];
-
-  if (top != null && max != null && top !== max) {
-    bits.push(`${formatMetres(Math.min(top, max))}–${formatMetres(Math.max(top, max))} m`);
-  } else if (top != null || max != null) {
-    const only = top ?? max;
-    if (only != null) bits.push(`${formatMetres(only)} m`);
-  }
-
-  const channel: string[] = [];
-  if (width != null) channel.push(`${formatMetres(width)} m wide`);
-  if (depth != null) channel.push(`${formatMetres(depth)} m deep`);
-  if (channel.length > 0) bits.push(`channel ${channel.join(", ")}`);
-  if (bits.length === 0) return null;
-
-  const depthHref = top != null || max != null ? httpUrl(site.depthSourceUrl) : null;
-  const channelHref = width != null || depth != null ? httpUrl(site.channelSourceUrl) : null;
-  const sources: SourceLink[] = [];
-  if (depthHref && channelHref && depthHref !== channelHref) {
-    sources.push({ href: depthHref, label: "Depth" }, { href: channelHref, label: "Channel" });
-  } else if (depthHref || channelHref) {
-    sources.push({ href: (depthHref ?? channelHref) as string, label: "Source" });
-  }
-
-  const text = bits.join(", ");
-  return { text: text.charAt(0).toUpperCase() + text.slice(1), sources };
+  const channelDepth = positiveMetres(site.channelDepthM);
+  const phrases = [depthPhrase(top, max), channelPhrase(width, channelDepth)].filter(
+    (phrase): phrase is string => phrase != null,
+  );
+  if (phrases.length === 0) return null;
+  const text = phrases.join(", ");
+  const hasDiveDepth = top != null || max != null;
+  const hasChannel = width != null || channelDepth != null;
+  return {
+    text: text.charAt(0).toUpperCase() + text.slice(1),
+    sources: publishedSources(hasDiveDepth, hasChannel, site),
+  };
 }
 
+function depthPhrase(top: number | null, max: number | null): string | null {
+  if (top != null) {
+    if (max != null) {
+      if (top !== max) {
+        return `${formatMetres(Math.min(top, max))}–${formatMetres(Math.max(top, max))} m`;
+      }
+    }
+  }
+  const only = top ?? max;
+  if (only == null) return null;
+  return `${formatMetres(only)} m`;
+}
+
+function channelPhrase(width: number | null, depth: number | null): string | null {
+  const parts: string[] = [];
+  if (width != null) parts.push(`${formatMetres(width)} m wide`);
+  if (depth != null) parts.push(`${formatMetres(depth)} m deep`);
+  if (parts.length === 0) return null;
+  return `channel ${parts.join(", ")}`;
+}
+
+function publishedSources(hasDiveDepth: boolean, hasChannel: boolean, site: Site): SourceLink[] {
+  const depthHref = hasDiveDepth ? httpUrl(site.depthSourceUrl) : null;
+  const channelHref = hasChannel ? httpUrl(site.channelSourceUrl) : null;
+  if (depthHref == null || channelHref == null || depthHref === channelHref) {
+    const href = depthHref ?? channelHref;
+    if (!href) return [];
+    return [{ href, label: "Source" }];
+  }
+  return [
+    { href: depthHref, label: "Depth" },
+    { href: channelHref, label: "Channel" },
+  ];
+}
 function positiveMetres(value: number | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   return value;
@@ -123,7 +149,7 @@ function positiveMetres(value: number | undefined): number | null {
 function formatMetres(value: number): string {
   if (Number.isInteger(value)) return String(value);
   const rounded = Math.round(value * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  return String(rounded);
 }
 
 function httpUrl(value: string | undefined): string | null {

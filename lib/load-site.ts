@@ -15,6 +15,16 @@ function unavailableLoad(bearing: number | null): SiteLoad {
   return { bearing, hours: [], marineHours: [], unavailable: true, fetchedAt: null };
 }
 
+function forecastedLoad(
+  bearing: number,
+  marineHours: MarineHour[],
+  reports: readonly Report[],
+  fetchedAt: number,
+): SiteLoad {
+  const hours = forecastHours({ hours: marineHours, inwardBearingDeg: bearing, reports });
+  return { bearing, hours, marineHours, unavailable: false, fetchedAt };
+}
+
 /** Inward bearing, marine fetch, one stale check, and forecast hours. A missing atoll is unavailable. */
 export async function loadSite(
   site: Site,
@@ -23,14 +33,11 @@ export async function loadSite(
   reports: readonly Report[],
 ): Promise<SiteLoad> {
   if (!atoll) return unavailableLoad(null);
-  const bearing = inwardBearingDeg(site, mates, { lat: atoll.oceanLat, lon: atoll.oceanLon });
-  const marine = await siteMarineHours(site.lat, site.lon, bearing, atoll.oceanLat, atoll.oceanLon);
+
+  const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
+  const bearing = inwardBearingDeg(site, mates, outside);
+  const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon);
   if (!marine.ok || marineSeriesStale(marine.hours)) return unavailableLoad(bearing);
-  return {
-    bearing,
-    hours: forecastHours({ hours: marine.hours, inwardBearingDeg: bearing, reports }),
-    marineHours: marine.hours,
-    unavailable: false,
-    fetchedAt: marine.fetchedAt,
-  };
+
+  return forecastedLoad(bearing, marine.hours, reports, marine.fetchedAt);
 }

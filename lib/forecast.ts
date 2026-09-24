@@ -113,6 +113,7 @@ type OpenHour = {
   index: number;
 };
 
+/** One walk over the series. Each closed run is peak band, then mean nudge, then report pull. */
 function finishRuns(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
@@ -125,59 +126,72 @@ function finishRuns(
   const finished: HourForecast[] = [];
   let run: OpenHour[] = [];
 
-  const closeRun = () => {
-    if (run.length === 0) return;
-    // One incoming or outgoing run keeps the peak band. Only the turn is slack.
+  // One incoming or outgoing run keeps the peak band. Only the turn is slack.
+  const peakBand = (open: OpenHour[]) => {
+    const slackTurn = (slope: number) => Math.abs(slope) < SLACK_SLOPE_M;
     let peak = 0;
-    let nudge = 0;
-    for (const hour of run) {
-      nudge += hour.nudge;
-      if (Math.abs(hour.slope) < SLACK_SLOPE_M) continue;
+    for (const hour of open) {
+      if (slackTurn(hour.slope)) continue;
       peak = Math.max(peak, bandIndex(hour.strength));
     }
     if (peak > 0) {
       const band = STRENGTHS[peak];
-      for (const hour of run) {
-        hour.strength = Math.abs(hour.slope) < SLACK_SLOPE_M ? "slack" : band;
+      for (const hour of open) {
+        hour.strength = slackTurn(hour.slope) ? "slack" : band;
       }
     }
-    nudge /= run.length;
+  };
+
+  // Monsoon past half saturation steps the run one band toward that flow. Slack stays slack.
+  const meanNudge = (open: OpenHour[]) => {
+    let nudge = 0;
+    for (const hour of open) nudge += hour.nudge;
+    nudge /= open.length;
     if (Math.abs(nudge) >= NUDGE_BAND) {
-      const withTide = nudge > 0 ? run[0].direction === "incoming" : run[0].direction === "outgoing";
-      for (const hour of run) {
+      const favored: Direction = nudge > 0 ? "incoming" : "outgoing";
+      const withTide = open[0].direction === favored;
+      for (const hour of open) {
         if (hour.strength === "slack") continue;
         hour.strength = shiftStrength(hour.strength, withTide ? 1 : -1);
       }
     }
-    // A report fades for six hours and must not cut the run.
-    for (const hour of run) {
-      const pull = recentPull(hours[hour.index], classified);
-      const tideSlope = slopeFromResidual(residual, hour.index);
-      const turned = Boolean(pull && slopesOpposite(pull.item.pullSlope, tideSlope));
-      const contradicted = Boolean(pull && pull.item.report.direction !== hour.direction);
-      let called = hour.direction;
-      let strength = hour.strength;
-      if (pull) {
-        if (!turned) called = pull.item.report.direction;
-        const steps = Math.round(pull.weight * (bandIndex(pull.item.report.strength) - bandIndex(strength)));
-        strength = shiftStrength(strength, steps);
-      }
-      finished.push({
-        time: hour.time,
-        direction: called,
-        strength,
-        confidence: confidenceFor({
-          classified,
-          hours,
-          residual,
-          offset,
-          direction: called,
-          strength,
-          tideDirection: hour.direction,
-          contradicted,
-        }),
-      });
+  };
+
+  // A report fades for six hours and must not cut the run.
+  const reportPull = (hour: OpenHour): HourForecast => {
+    const pull = recentPull(hours[hour.index], classified);
+    const tideSlope = slopeFromResidual(residual, hour.index);
+    const turned = Boolean(pull && slopesOpposite(pull.item.pullSlope, tideSlope));
+    const contradicted = Boolean(pull && pull.item.report.direction !== hour.direction);
+    let direction = hour.direction;
+    let strength = hour.strength;
+    if (pull) {
+      if (!turned) direction = pull.item.report.direction;
+      const gap = bandIndex(pull.item.report.strength) - bandIndex(strength);
+      strength = shiftStrength(strength, Math.round(pull.weight * gap));
     }
+    return {
+      time: hour.time,
+      direction,
+      strength,
+      confidence: confidenceFor({
+        classified,
+        hours,
+        residual,
+        offset,
+        direction,
+        strength,
+        tideDirection: hour.direction,
+        contradicted,
+      }),
+    };
+  };
+
+  const closeRun = () => {
+    if (run.length === 0) return;
+    peakBand(run);
+    meanNudge(run);
+    for (const hour of run) finished.push(reportPull(hour));
     run = [];
   };
 
@@ -191,12 +205,11 @@ function finishRuns(
     if (tideDirection == null) continue;
     const stats = days.get(hours[shifted].time.slice(0, 10));
     if (!stats || stats.range == null || stats.maxAbs == null) continue;
-    let strength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
-    strength = applySpeed(strength, speedFactor);
+    const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
     const opened: OpenHour = {
       time: hour.time,
       direction: tideDirection,
-      strength,
+      strength: applySpeed(tideStrength, speedFactor),
       slope,
       nudge: monsoonNudge(hour, inwardBearingDeg),
       index,

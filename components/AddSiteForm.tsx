@@ -15,11 +15,12 @@ export function AddSiteForm({
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const pinCopy = describePin(point);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!point) {
-      setError("Click the map to set the pin.");
+      setError(pinCopy);
       return;
     }
     const trimmed = name.trim();
@@ -56,11 +57,7 @@ export function AddSiteForm({
           className="min-h-11 rounded-md border border-foam/25 bg-ink px-3 text-base font-normal text-foam outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         />
       </label>
-      <p className="text-sm leading-5 text-foam/80">
-        {point
-          ? `Pin ${point.lat.toFixed(5)}, ${point.lon.toFixed(5)}. Click the map again to move it.`
-          : "Click the map to set the pin."}
-      </p>
+      <p className="text-sm leading-5 text-foam/80">{pinCopy}</p>
       {error ? <p className="text-sm text-outgoing">{error}</p> : null}
       <button
         type="submit"
@@ -71,4 +68,11 @@ export function AddSiteForm({
       </button>
     </form>
   );
+}
+
+function describePin(point: Point | null): string {
+  if (!point) return "Click the map to set the pin.";
+  const lat = point.lat.toFixed(5);
+  const lon = point.lon.toFixed(5);
+  return `Pin ${lat}, ${lon}. Click the map again to move it.`;
 }

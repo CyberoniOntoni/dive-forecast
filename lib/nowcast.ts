@@ -20,18 +20,18 @@ export function nearestForecastHour(
   const target = parseWall(maldivesWall);
   if (Number.isNaN(target)) return null;
 
-  let best: HourForecast | null = null;
-  let bestAbs = Number.POSITIVE_INFINITY;
+  let closest: HourForecast | null = null;
+  let closestDistance = Number.POSITIVE_INFINITY;
   for (const hour of hours) {
-    const ms = parseWall(hour.time);
-    if (Number.isNaN(ms)) continue;
-    const delta = Math.abs(ms - target);
-    if (delta < bestAbs) {
-      best = hour;
-      bestAbs = delta;
+    const hourMs = parseWall(hour.time);
+    if (Number.isNaN(hourMs)) continue;
+    const distance = Math.abs(hourMs - target);
+    if (distance < closestDistance) {
+      closest = hour;
+      closestDistance = distance;
     }
   }
-  return best;
+  return closest;
 }
 
 export async function nowcastSites(
@@ -40,17 +40,25 @@ export async function nowcastSites(
   maldivesWall: string,
 ): Promise<SiteNowcast[]> {
   const atollById = new Map(atolls.map((atoll) => [atoll.id, atoll]));
+  // The map list can include a pin the diver just added. The centroid uses the published catalog.
   const mates = readCatalog().sites;
-  return Promise.all(
-    sites.map(async (site) => {
-      const loaded = await loadSite(site, mates, atollById.get(site.atollId), reportsForSite(site.id));
-      return {
-        siteId: site.id,
-        atollId: site.atollId,
-        inwardBearingDeg: loaded.bearing ?? 0,
-        hour: loaded.unavailable ? null : nearestForecastHour(loaded.hours, maldivesWall),
-        unavailable: loaded.unavailable,
-      };
-    }),
-  );
+  return Promise.all(sites.map((site) => nowcastOne(site, mates, atollById.get(site.atollId), maldivesWall)));
+}
+
+async function nowcastOne(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll | undefined,
+  maldivesWall: string,
+): Promise<SiteNowcast> {
+  const loaded = await loadSite(site, mates, atoll, reportsForSite(site.id));
+  const hour = loaded.unavailable ? null : nearestForecastHour(loaded.hours, maldivesWall);
+  return {
+    siteId: site.id,
+    atollId: site.atollId,
+    // A missing atoll has no bearing. The pin still needs a number, and it draws no arrow.
+    inwardBearingDeg: loaded.bearing ?? 0,
+    hour,
+    unavailable: loaded.unavailable,
+  };
 }

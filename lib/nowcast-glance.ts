@@ -24,35 +24,37 @@ export type NowcastGlance = {
   opacity: number | null;
 };
 
-function forecastHour(nowcast: SiteNowcast | undefined) {
-  if (!nowcast || nowcast.unavailable) return null;
-  return nowcast.hour;
+function noForecastGlance(name: string): NowcastGlance {
+  return {
+    label: null,
+    spoken: name,
+    arrowBearing: null,
+    direction: null,
+    confidence: null,
+    opacity: null,
+  };
 }
 
-/** Incoming follows the inward bearing. Outgoing is 180° opposite. Not the ocean vector. */
+/** Incoming follows the inward bearing. Outgoing is 180? opposite. Not the ocean vector. */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
-  const hour = forecastHour(nowcast);
-  if (!hour || !nowcast) {
-    return {
-      label: null,
-      spoken: name,
-      arrowBearing: null,
-      direction: null,
-      confidence: null,
-      opacity: null,
-    };
-  }
+  if (!nowcast || nowcast.unavailable || !nowcast.hour) return noForecastGlance(name);
+
+  const hour = nowcast.hour;
   const label = strengthLabel(hour.strength);
   const spoken = showStrength
     ? `${name}, ${hour.direction}, ${label}, ${hour.confidence}`
     : `${name}, ${hour.direction}, ${hour.confidence}`;
-  const arrowBearing = hour.direction === "incoming" ? nowcast.inwardBearingDeg : nowcast.inwardBearingDeg + 180;
   return {
     label,
     spoken,
-    arrowBearing,
+    arrowBearing: passArrowBearing(nowcast.inwardBearingDeg, hour.direction),
     direction: hour.direction,
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
   };
+}
+
+function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {
+  if (direction === "incoming") return inwardBearingDeg;
+  return inwardBearingDeg + 180;
 }

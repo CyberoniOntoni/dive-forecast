@@ -13,23 +13,36 @@ export function readCatalog(): Catalog {
 export function readStore(): StoreData {
   try {
     const raw = fs.readFileSync(STORE_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Partial<StoreData>;
-    return {
-      reports: Array.isArray(parsed.reports) ? parsed.reports : [],
-      ratings: Array.isArray(parsed.ratings) ? parsed.ratings : [],
-      sites: Array.isArray(parsed.sites) ? parsed.sites : [],
-    };
+    return normalizeStore(JSON.parse(raw));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { reports: [], ratings: [], sites: [] };
+    if (isMissingFile(error)) return emptyStore();
     throw error;
   }
 }
 
+function emptyStore(): StoreData {
+  return { reports: [], ratings: [], sites: [] };
+}
+
+function normalizeStore(parsed: unknown): StoreData {
+  const record = parsed as Partial<StoreData>;
+  return {
+    reports: Array.isArray(record.reports) ? record.reports : [],
+    ratings: Array.isArray(record.ratings) ? record.ratings : [],
+    sites: Array.isArray(record.sites) ? record.sites : [],
+  };
+}
+
+function isMissingFile(error: unknown): boolean {
+  return (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
 export function listMergedSites(): Site[] {
-  const catalog = readCatalog();
-  const store = readStore();
-  const seen = new Set(catalog.sites.map((site) => site.id));
-  return [...catalog.sites, ...store.sites.filter((site) => !seen.has(site.id))];
+  const published = readCatalog().sites;
+  const added = readStore().sites;
+  const publishedIds = new Set(published.map((site) => site.id));
+  const onlyAdded = added.filter((site) => !publishedIds.has(site.id));
+  return [...published, ...onlyAdded];
 }
 
 export function findSite(id: string): Site | null {
@@ -71,4 +84,3 @@ function writeStore(store: StoreData) {
   fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
   fs.writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`);
 }
-

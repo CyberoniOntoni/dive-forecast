@@ -9,6 +9,7 @@ import { readCatalog } from "@/lib/store";
 async function SiteMapSection() {
   await connection();
   const sites = await listSites();
+  // Nowcasts need each site's atoll. The list also includes pins the user added.
   const atolls = readCatalog().atolls;
   const maldivesWall = toMaldivesWall(new Date().toISOString());
   const nowcasts = await nowcastSites(sites, atolls, maldivesWall);
