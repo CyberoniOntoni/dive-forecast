@@ -7,6 +7,8 @@
   --foam: #f5fbfc;
   --incoming: #8ef6e4;
   --outgoing: #ffd089;
+  /* Too strong. Not the incoming teal or the outgoing amber. */
+  --stop: #ff7a8a;
   --glass: rgba(14, 62, 82, 0.9);
   --background: var(--ink);
   --foreground: var(--foam);
@@ -19,6 +21,7 @@
   --color-foam: var(--foam);
   --color-incoming: var(--incoming);
   --color-outgoing: var(--outgoing);
+  --color-stop: var(--stop);
   --color-glass: var(--glass);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
@@ -31,6 +34,7 @@
     --foam: #dce8ee;
     --incoming: #3ecfb8;
     --outgoing: #e0a24a;
+    --stop: #d45266;
     --glass: rgba(8, 22, 32, 0.88);
     --background: var(--ink);
     --foreground: var(--foam);

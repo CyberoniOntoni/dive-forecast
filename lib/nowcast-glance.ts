@@ -20,8 +20,12 @@ export type NowcastGlance = {
   /** Degrees clockwise from north. Null when there is no arrow. */
   arrowBearing: number | null;
   direction: Direction | null;
+  /** Slack, mild, strong, or too strong. Null when this hour has no forecast. */
+  strength: Strength | null;
   confidence: Confidence | null;
   opacity: number | null;
+  /** var(--stop), var(--incoming), or var(--outgoing). Null when there is no forecast. */
+  color: string | null;
 };
 
 function noForecastGlance(name: string): NowcastGlance {
@@ -30,8 +34,10 @@ function noForecastGlance(name: string): NowcastGlance {
     spoken: name,
     arrowBearing: null,
     direction: null,
+    strength: null,
     confidence: null,
     opacity: null,
+    color: null,
   };
 }
 
@@ -49,9 +55,32 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
     spoken,
     arrowBearing: passArrowBearing(nowcast.inwardBearingDeg, hour.direction),
     direction: hour.direction,
+    strength: hour.strength,
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
+    color: glanceColor(hour.direction, hour.strength),
   };
+}
+
+/** Smaller is earlier. Too strong, strong, mild, slack, then no forecast. One band shares a rank. */
+const STRENGTH_RANK: Record<Strength, number> = {
+  too_strong: 0,
+  strong: 1,
+  mild: 2,
+  slack: 3,
+};
+
+const NO_FORECAST_RANK = 4;
+
+export function glanceRank(glance: NowcastGlance): number {
+  if (glance.strength == null) return NO_FORECAST_RANK;
+  return STRENGTH_RANK[glance.strength];
+}
+
+/** Too strong is the stop token. Every other band keeps incoming or outgoing. Not a second hex. */
+export function glanceColor(direction: Direction, strength: Strength): string {
+  if (strength === "too_strong") return "var(--stop)";
+  return direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
 }
 
 function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {

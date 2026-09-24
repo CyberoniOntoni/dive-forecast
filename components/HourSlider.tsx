@@ -81,7 +81,7 @@ export function HourSlider({
           <p className={`text-4xl font-semibold tracking-tight break-words sm:text-6xl ${tone}`}>
             {way}
           </p>
-          <p className="mt-2 text-lg text-foam sm:text-xl">{STRENGTH_LABEL[hour.strength]}</p>
+          <p className={`mt-2 text-lg sm:text-xl ${strengthTone(hour.strength)}`}>{STRENGTH_LABEL[hour.strength]}</p>
           <p className={`text-sm sm:text-base ${confidenceText(hour.confidence)}`}>
             {hour.confidence} confidence
           </p>
@@ -195,6 +195,11 @@ function callBearing(direction: Direction, inwardBearingDeg: number): number {
 
 function directionTone(direction: Direction): string {
   return direction === "incoming" ? "text-incoming" : "text-outgoing";
+}
+
+/** Too strong uses the shared stop token. Other bands stay foam. */
+function strengthTone(strength: Strength): string {
+  return strength === "too_strong" ? "text-stop" : "text-foam";
 }
 
 function directionWord(direction: Direction): string {
