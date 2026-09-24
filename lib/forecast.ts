@@ -18,6 +18,7 @@ export type ForecastInput = {
   hours: MarineHour[];
   inwardBearingDeg: number;
   reports?: readonly Report[];
+  allowHighConfidence?: boolean;
 };
 
 type DayTide = { range: number | null; maxAbs: number | null };
@@ -43,7 +44,17 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
   const days = dayTides(hours, residual);
   const offset = fitPhaseOffset(classified, hours, residual);
   const speedFactor = fitSpeedFactor(classified, hours, residual, days);
-  return finishRuns(hours, residual, input.inwardBearingDeg, offset, speedFactor, days, classified);
+  const allowHighConfidence = input.allowHighConfidence ?? true;
+  return finishRuns(
+    hours,
+    residual,
+    input.inwardBearingDeg,
+    offset,
+    speedFactor,
+    days,
+    classified,
+    allowHighConfidence,
+  );
 }
 
 /** One pass: in-series, one stored slope, a real slope window, or unusable. */
@@ -154,6 +165,7 @@ function finishRuns(
   speedFactor: number,
   days: ReadonlyMap<string, DayTide>,
   classified: readonly ClassifiedReport[],
+  allowHighConfidence: boolean,
 ): HourForecast[] {
   const finished: HourForecast[] = [];
   let run: OpenHour[] = [];
@@ -184,6 +196,7 @@ function finishRuns(
         strength,
         tideDirection: hour.direction,
         contradicted,
+        allowHighConfidence,
       }),
       levelM: hour.levelM,
     };
@@ -331,6 +344,7 @@ function confidenceFor(input: {
   strength: Strength;
   tideDirection: Direction | null;
   contradicted: boolean;
+  allowHighConfidence: boolean;
 }): "low" | "medium" | "high" {
   if (input.classified.length === 0 || input.contradicted || input.tideDirection == null) return "low";
   const similar = input.classified.filter((item) => {
@@ -340,7 +354,9 @@ function confidenceFor(input: {
   if (similar.length < 2) return "low";
   const directionAgree = similar.filter((item) => item.report.direction === input.direction).length / similar.length;
   const strengthAgree = similar.filter((item) => item.report.strength === input.strength).length / similar.length;
-  if (directionAgree === 1 && strengthAgree >= 0.6 && similar.length >= 4) return "high";
+  if (directionAgree === 1 && strengthAgree >= 0.6 && similar.length >= 4) {
+    return input.allowHighConfidence ? "high" : "medium";
+  }
   if (directionAgree >= 0.8) return "medium";
   return "low";
 }

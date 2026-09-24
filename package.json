@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "replay": "vite-node scripts/replay.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
