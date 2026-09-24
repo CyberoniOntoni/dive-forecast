@@ -40,12 +40,24 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-function pinHtml(glance: NowcastGlance, showStrength: boolean): string {
-  const spoken = escapeHtml(glance.spoken);
+function pinHtml(glance: NowcastGlance, showStrength: boolean, age: string | null): string {
+  const spoken = escapeHtml(withAge(glance.spoken, age));
   const arrow = arrowFields(glance);
   if (!arrow) return missingPin(spoken);
-  const strengthMark = showStrength ? strengthBadge(escapeHtml(arrow.label)) : "";
+  const note = pinNote(showStrength ? arrow.label : "", age);
+  const strengthMark = note ? strengthBadge(escapeHtml(note)) : "";
   return arrowPin(spoken, arrow.opacity, arrow.bearing, arrow.color, strengthMark);
+}
+
+/** Strength stays the zoomed-in word. A stale age is added and does not replace it. */
+function pinNote(strength: string, age: string | null): string {
+  if (age && strength) return `${strength} ${age}`;
+  return age ?? strength;
+}
+
+function withAge(spoken: string, age: string | null): string {
+  if (!age) return spoken;
+  return `${spoken}, ${age}`;
 }
 
 /** One empty glance keeps the dot pin. Color is the glance token, including stop. */
@@ -166,18 +178,18 @@ function placeSiteMarkers(
   showStrength: boolean,
   onOpen: (id: string) => void,
 ): Marker[] {
-  return siteGlances.map(({ site, glance }) => {
+  return siteGlances.map(({ site, glance, age }) => {
     const marker = L.marker([site.lat, site.lon], {
       icon: L.divIcon({
         className: "dive-pin",
-        html: pinHtml(glance, showStrength),
+        html: pinHtml(glance, showStrength, age),
         iconSize: [PIN_SIZE, PIN_SIZE],
         iconAnchor: [PIN_SIZE / 2, PIN_SIZE / 2],
       }),
       bubblingMouseEvents: false,
       keyboard: true,
     });
-    marker.bindTooltip(escapeHtml(glance.spoken), { direction: "top" });
+    marker.bindTooltip(escapeHtml(withAge(glance.spoken, age)), { direction: "top" });
     marker.on("click", () => {
       onOpen(site.id);
     });
@@ -200,13 +212,49 @@ function placeDraftPin(L: LeafletLib, map: LeafletMapType, draft: Point): Circle
   return marker;
 }
 
-function glancesFor(sites: readonly Site[], nowcasts: readonly SiteNowcast[]): SiteGlance[] {
+function glancesFor(
+  sites: readonly Site[],
+  nowcasts: readonly SiteNowcast[],
+  maldivesWall: string,
+): SiteGlance[] {
   const byId = new Map(nowcasts.map((item) => [item.siteId, item]));
   // Spoken line includes strength. The pin hides that word when zoomed out.
-  return sites.map((site) => ({
-    site,
-    glance: nowcastGlance(site.name, byId.get(site.id), true),
-  }));
+  return sites.map((site) => {
+    const nowcast = byId.get(site.id);
+    const glance = nowcastGlance(site.name, nowcast, true);
+    const stale = glance.confidence != null && nowcast?.stale === true;
+    return {
+      site,
+      glance,
+      age: stale ? (shortSeriesAge(glance.fetchedAt, maldivesWall) ?? "old") : null,
+    };
+  });
+}
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+/** Maldives is UTC+5. The wall clock is those digits with no zone. */
+const MALDIVES_OFFSET_MS = 5 * HOUR_MS;
+
+/** Minutes, hours, or days since the marine fetch. */
+function shortSeriesAge(fetchedAt: number | null, maldivesWall: string): string | null {
+  if (fetchedAt == null || !Number.isFinite(fetchedAt)) return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(maldivesWall);
+  if (!match) return null;
+  const wallMs = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+  );
+  const ageMs = wallMs - MALDIVES_OFFSET_MS - fetchedAt;
+  if (!Number.isFinite(ageMs)) return null;
+  const minutes = Math.floor(Math.max(0, ageMs) / MINUTE_MS);
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 48) return `${hours}h`;
+  return `${Math.floor(hours / 24)}d`;
 }
 /** Leaflet touches window. dynamic() is the only loader; the canvas is created on mount. */
 const LeafletMap = dynamic(
@@ -301,7 +349,10 @@ export function SiteMap({
   const router = useRouter();
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
-  const siteGlances = useMemo(() => glancesFor(sites, nowcasts), [sites, nowcasts]);
+  const siteGlances = useMemo(
+    () => glancesFor(sites, nowcasts, maldivesWall),
+    [sites, nowcasts, maldivesWall],
+  );
 
   function setAddingMode(open: boolean) {
     setAdding(open);

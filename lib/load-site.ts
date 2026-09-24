@@ -11,11 +11,12 @@ export type SiteLoad = {
   bearing: number | null;
   hours: HourForecast[];
   unavailable: boolean;
+  stale: boolean;
   fetchedAt: number | null;
 };
 
 function unavailableLoad(bearing: number | null): SiteLoad {
-  return { bearing, hours: [], unavailable: true, fetchedAt: null };
+  return { bearing, hours: [], unavailable: true, stale: false, fetchedAt: null };
 }
 
 function forecastedLoad(
@@ -23,6 +24,7 @@ function forecastedLoad(
   marineHours: MarineHour[],
   reports: readonly Report[],
   fetchedAt: number,
+  stale: boolean,
 ): SiteLoad {
   const hours = forecastHours({
     hours: marineHours,
@@ -30,7 +32,7 @@ function forecastedLoad(
     reports,
     ...(replayAllowsHigh() ? {} : { allowHighConfidence: false }),
   });
-  return { bearing, hours, unavailable: false, fetchedAt };
+  return { bearing, hours, unavailable: false, stale, fetchedAt };
 }
 
 /** Missing replay.json or ok true keeps the forecast default. ok false blocks high. */
@@ -48,10 +50,10 @@ function replayAllowsHigh(): boolean {
 }
 
 type CheckedMarine =
-  | { ok: true; bearing: number; hours: MarineHour[]; fetchedAt: number }
+  | { ok: true; bearing: number; hours: MarineHour[]; fetchedAt: number; stale: boolean }
   | { ok: false; bearing: number | null };
 
-/** Inward bearing and marine fetch. A stale or failed series is not ok. A missing atoll has no bearing. */
+/** Inward bearing and marine fetch. No cache is not ok. A stale series still has hours. A missing atoll has no bearing. */
 async function checkedMarine(
   site: Site,
   mates: readonly Site[],
@@ -62,12 +64,18 @@ async function checkedMarine(
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const bearing = inwardBearingDeg(site, mates, outside);
   const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon);
-  if (!marine.ok || marineSeriesStale(marine.hours)) return { ok: false, bearing };
+  if (!marine.ok) return { ok: false, bearing };
 
-  return { ok: true, bearing, hours: marine.hours, fetchedAt: marine.fetchedAt };
+  return {
+    ok: true,
+    bearing,
+    hours: marine.hours,
+    fetchedAt: marine.fetchedAt,
+    stale: marine.stale || marineSeriesStale(marine.hours),
+  };
 }
 
-/** Inward bearing, marine fetch, one stale check, and forecast hours. A missing atoll is unavailable. */
+/** Inward bearing, marine fetch, and forecast hours. A missing atoll or cache is unavailable. */
 export async function loadSite(
   site: Site,
   mates: readonly Site[],
@@ -76,10 +84,10 @@ export async function loadSite(
 ): Promise<SiteLoad> {
   const marine = await checkedMarine(site, mates, atoll);
   if (!marine.ok) return unavailableLoad(marine.bearing);
-  return forecastedLoad(marine.bearing, marine.hours, reports, marine.fetchedAt);
+  return forecastedLoad(marine.bearing, marine.hours, reports, marine.fetchedAt, marine.stale);
 }
 
-/** Same fetch and stale check as loadSite. Residual slope window, or null. */
+/** Same fetch as loadSite. Residual slope window, or null when no cache exists. */
 export async function slopeWindowForSite(
   site: Site,
   mates: readonly Site[],
