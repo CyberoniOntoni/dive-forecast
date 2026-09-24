@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Light scheme is a luminous navy so type holds up in sun. Dark scheme drops luminance for night. */
+:root {
+  color-scheme: light;
+  --ink: #16556e;
+  --foam: #f5fbfc;
+  --incoming: #8ef6e4;
+  --outgoing: #ffd089;
+  --glass: rgba(14, 62, 82, 0.9);
+  --background: var(--ink);
+  --foreground: var(--foam);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-foam: var(--foam);
+  --color-incoming: var(--incoming);
+  --color-outgoing: var(--outgoing);
+  --color-glass: var(--glass);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ink: #07151d;
+    --foam: #dce8ee;
+    --incoming: #3ecfb8;
+    --outgoing: #e0a24a;
+    --glass: rgba(8, 22, 32, 0.88);
+    --background: var(--ink);
+    --foreground: var(--foam);
+  }
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ink);
+  color: var(--foam);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+.chart-bar {
+  flex-shrink: 0;
+  border-color: color-mix(in srgb, var(--foam) 18%, transparent);
+  background-color: var(--glass);
+  color: var(--foam);
+  padding: 0.5rem 1rem;
+  backdrop-filter: blur(12px);
+}
+
+.chart-bar-top {
+  border-bottom: 1px solid color-mix(in srgb, var(--foam) 18%, transparent);
+}
+
+.chart-name {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.25rem;
+}
+
+.chart-line {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: color-mix(in srgb, var(--foam) 86%, var(--ink));
+}
+
+.chart-credit {
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.25rem 1rem 0.4rem;
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: color-mix(in srgb, var(--foam) 62%, var(--ink));
+}
+
+.chart-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--foam) 40%, transparent);
+  text-underline-offset: 2px;
+}
+
+.chart-credit a:focus-visible {
+  outline: 2px solid var(--incoming);
+  outline-offset: 2px;
+}
+
+.chart-bar a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--incoming);
+  text-underline-offset: 2px;
+}
+
+.chart-bar a:focus-visible {
+  outline: 2px solid var(--incoming);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--incoming) 45%, var(--ink));
+  color: var(--foam);
+}

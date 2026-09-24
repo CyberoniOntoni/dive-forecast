@@ -1,0 +1,177 @@
+{
+  "atolls": [
+    {
+      "id": "north-male",
+      "name": "North Male Atoll",
+      "oceanLat": 4.45451,
+      "oceanLon": 73.7604,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807044"
+    },
+    {
+      "id": "south-male",
+      "name": "South Male Atoll",
+      "oceanLat": 4.06137,
+      "oceanLon": 73.57458,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807056"
+    },
+    {
+      "id": "north-ari",
+      "name": "North Ari Atoll",
+      "oceanLat": 3.99915,
+      "oceanLon": 72.98935,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807122"
+    },
+    {
+      "id": "south-ari",
+      "name": "South Ari Atoll",
+      "oceanLat": 3.7165,
+      "oceanLon": 73.01695,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807122"
+    },
+    {
+      "id": "rasdhoo",
+      "name": "Rasdhoo Atoll",
+      "oceanLat": 4.3153,
+      "oceanLon": 73.0453,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807123"
+    },
+    {
+      "id": "vaavu",
+      "name": "Vaavu Atoll",
+      "oceanLat": 3.44584,
+      "oceanLon": 73.80908,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807115"
+    },
+    {
+      "id": "lhaviyani",
+      "name": "Lhaviyani Atoll",
+      "oceanLat": 5.32556,
+      "oceanLon": 73.69423,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807029"
+    }
+  ],
+  "sites": [
+    {
+      "id": "kandooma-thila",
+      "name": "Kandooma Thila",
+      "atollId": "south-male",
+      "lat": 3.9075,
+      "lon": 73.47806,
+      "sourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/",
+      "diveTopM": 16,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/"
+    },
+    {
+      "id": "banana-reef",
+      "name": "Banana Reef",
+      "atollId": "north-male",
+      "lat": 4.2341876,
+      "lon": 73.5339507,
+      "sourceUrl": "https://www.openstreetmap.org/way/51828966",
+      "diveTopM": 4,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.diveclubmaldives.com/dive-sites/banana-reef"
+    },
+    {
+      "id": "maaya-thila",
+      "name": "Maaya Thila",
+      "atollId": "north-ari",
+      "lat": 4.0913626,
+      "lon": 72.8619718,
+      "sourceUrl": "https://www.openstreetmap.org/node/8584458555",
+      "diveTopM": 6,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/maaya-thila/"
+    },
+    {
+      "id": "fish-head",
+      "name": "Fish Head (Mushimasmingili Thila)",
+      "atollId": "north-ari",
+      "lat": 3.9359727,
+      "lon": 72.9131414,
+      "sourceUrl": "https://www.openstreetmap.org/node/8584458547",
+      "diveTopM": 8,
+      "diveMaxM": 42,
+      "depthSourceUrl": "https://divebooker.com/mushi-mas-mingili-thila-baz13807"
+    },
+    {
+      "id": "fesdhoo",
+      "name": "Fesdhoo",
+      "atollId": "north-ari",
+      "lat": 3.9994333,
+      "lon": 72.7860333,
+      "sourceUrl": "https://www.openstreetmap.org/node/663869882"
+    },
+    {
+      "id": "rasdhoo-madivaru",
+      "name": "Rasdhoo Madivaru",
+      "atollId": "rasdhoo",
+      "lat": 4.2655597,
+      "lon": 73.000344,
+      "sourceUrl": "https://www.openstreetmap.org/way/19882055",
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/madivaru-corner/"
+    },
+    {
+      "id": "kudarah-thila",
+      "name": "Kudarah Thila",
+      "atollId": "south-ari",
+      "lat": 3.5588012,
+      "lon": 72.9230452,
+      "sourceUrl": "https://www.openstreetmap.org/node/8584302416"
+    },
+    {
+      "id": "miyaru-kandu",
+      "name": "Miyaru Kandu",
+      "atollId": "vaavu",
+      "lat": 3.5996409,
+      "lon": 73.5042226,
+      "sourceUrl": "https://www.openstreetmap.org/node/7151743385"
+    },
+    {
+      "id": "fotteyo-kandu",
+      "name": "Fotteyo Kandu",
+      "atollId": "vaavu",
+      "lat": 3.4877081,
+      "lon": 73.6981134,
+      "sourceUrl": "https://www.openstreetmap.org/node/7151743485",
+      "diveTopM": 8,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu"
+    },
+    {
+      "id": "alimatha-house-reef",
+      "name": "Alimatha house reef",
+      "atollId": "vaavu",
+      "lat": 3.5937501,
+      "lon": 73.497982,
+      "sourceUrl": "https://www.openstreetmap.org/way/19882140",
+      "diveTopM": 3,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/alimatha-house-reef/"
+    }
+  ],
+  "channels": [
+    {
+      "name": "Vaadhoo Kandu",
+      "channelWidthM": 5000,
+      "channelDepthM": 400,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "citedSource": "Luthfee 1995"
+    },
+    {
+      "name": "Hani Kandu",
+      "channelWidthM": 3000,
+      "channelDepthM": 160,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "citedSource": "Luthfee 1995"
+    }
+  ],
+  "innerSea": {
+    "minDepthM": 300,
+    "maxDepthM": 500,
+    "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+    "citedSource": "Purdy and Bertram 1993"
+  }
+}
