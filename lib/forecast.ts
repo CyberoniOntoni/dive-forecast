@@ -22,7 +22,7 @@ export type ForecastInput = {
   allowHighConfidence?: boolean;
 };
 
-type DayTide = { range: number | null; maxAbs: number | null };
+type TideStats = { range: number | null; maxAbs: number | null };
 
 type ClassifiedBase = {
   report: Report;
@@ -41,10 +41,11 @@ type ClassifiedReport =
 export function forecastHours(input: ForecastInput): HourForecast[] {
   const hours = input.hours;
   const residual = residualSeries(hours);
-  const classified = (input.reports ?? []).map((report) => classifyReport(report, hours, residual));
-  const days = dayTides(hours, residual);
+  const classified = (input.reports ?? []).map((report) => classifyReport(report, hours));
   const offset = fitPhaseOffset(classified, hours, residual);
-  const speedFactor = fitSpeedFactor(classified, hours, residual, days, offset);
+  applyPullSlopes(classified, hours, residual, offset);
+  const tides = centeredTides(hours, residual);
+  const speedFactor = fitSpeedFactor(classified, hours, residual, tides, offset);
   const allowHighConfidence = input.allowHighConfidence ?? true;
   return finishRuns(
     hours,
@@ -52,26 +53,22 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     input.inwardBearingDeg,
     offset,
     speedFactor,
-    days,
+    tides,
     classified,
     allowHighConfidence,
   );
 }
 
 /** One pass: in-series, one stored slope, a real slope window, or unusable. */
-function classifyReport(
-  report: Report,
-  hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
-): ClassifiedReport {
+function classifyReport(report: Report, hours: readonly MarineHour[]): ClassifiedReport {
   const slopes = storedWindow(report);
   const finite = slopes
     ? slopes.filter((slope): slope is number => typeof slope === "number" && Number.isFinite(slope))
     : [];
   const seriesIndex = nearestIndex(hours, parseWall(report.time));
   const storedHourSlope = hourSlope(slopes, report);
-  const seriesSlope = seriesIndex >= 0 ? slopeFromResidual(residual, seriesIndex) : null;
-  const pullSlope = seriesSlope != null ? seriesSlope : storedHourSlope;
+  // In-series pull is filled after the offset fit. Stored slope is only outside this series.
+  const pullSlope = seriesIndex < 0 ? storedHourSlope : null;
   const failed = report.slopeM === null && finite.length === 0;
   const base = { report, seriesIndex, storedHourSlope, pullSlope, failed };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
@@ -90,30 +87,48 @@ function hourSlope(slopes: readonly (number | null)[] | null, report: Report): n
   return typeof report.slopeM === "number" && Number.isFinite(report.slopeM) ? report.slopeM : null;
 }
 
-/** Each calendar day keeps one range and one steepest residual slope. */
-function dayTides(hours: readonly MarineHour[], residual: readonly (number | null)[]): Map<string, DayTide> {
-  const buckets = new Map<string, { levels: number[]; maxAbs: number }>();
-  for (let index = 0; index < hours.length; index += 1) {
-    const level = residual[index];
-    const slope = slopeFromResidual(residual, index);
-    if (level == null && slope == null) continue;
-    const day = hours[index].time.slice(0, 10);
-    let bucket = buckets.get(day);
-    if (!bucket) {
-      bucket = { levels: [] as number[], maxAbs: -1 };
-      buckets.set(day, bucket);
+/** Lagged residual slope at an in-series report. Outside reports keep the stored slope. */
+function applyPullSlopes(
+  classified: readonly ClassifiedReport[],
+  hours: readonly MarineHour[],
+  residual: readonly (number | null)[],
+  offset: number,
+): void {
+  for (const item of classified) {
+    if (item.seriesIndex < 0) {
+      item.pullSlope = item.storedHourSlope;
+      continue;
     }
-    if (level != null) bucket.levels.push(level);
-    if (slope != null) bucket.maxAbs = Math.max(bucket.maxAbs, Math.abs(slope));
+    item.pullSlope = slopeFromResidual(residual, shiftIndex(hours, item.seriesIndex, offset));
   }
-  const table = new Map<string, DayTide>();
-  for (const [day, bucket] of buckets) {
-    table.set(day, {
-      range: bucket.levels.length < 2 ? null : Math.max(...bucket.levels) - Math.min(...bucket.levels),
-      maxAbs: bucket.maxAbs < 0 ? null : bucket.maxAbs,
-    });
+}
+
+/** Residual range and steepest slope over the 25 hours centered on each displayed hour. */
+function centeredTides(hours: readonly MarineHour[], residual: readonly (number | null)[]): TideStats[] {
+  return hours.map((_, index) => tideWindow(hours, residual, index));
+}
+
+function tideWindow(
+  hours: readonly MarineHour[],
+  residual: readonly (number | null)[],
+  index: number,
+): TideStats {
+  const center = parseWall(hours[index].time);
+  if (Number.isNaN(center)) return { range: null, maxAbs: null };
+  const levels: number[] = [];
+  let maxAbs = -1;
+  for (let other = 0; other < hours.length; other += 1) {
+    const at = parseWall(hours[other].time);
+    if (Number.isNaN(at) || Math.abs(at - center) > MEAN_HALF_HOURS * HOUR_MS) continue;
+    const level = residual[other];
+    if (level != null) levels.push(level);
+    const slope = slopeFromResidual(residual, other);
+    if (slope != null) maxAbs = Math.max(maxAbs, Math.abs(slope));
   }
-  return table;
+  return {
+    range: levels.length < 2 ? null : Math.max(...levels) - Math.min(...levels),
+    maxAbs: maxAbs < 0 ? null : maxAbs,
+  };
 }
 
 type OpenHour = {
@@ -164,7 +179,7 @@ function finishRuns(
   inwardBearingDeg: number,
   offset: number,
   speedFactor: number,
-  days: ReadonlyMap<string, DayTide>,
+  tides: readonly TideStats[],
   classified: readonly ClassifiedReport[],
   allowHighConfidence: boolean,
 ): HourForecast[] {
@@ -222,8 +237,8 @@ function finishRuns(
     const tideDirection = directionFromSlope(slope);
     // A zero residual has no sign. Do not copy the previous hour or the ocean current.
     if (tideDirection == null) continue;
-    const stats = days.get(hours[shifted].time.slice(0, 10));
-    if (!stats || stats.range == null || stats.maxAbs == null) continue;
+    const stats = tides[index];
+    if (stats.range == null || stats.maxAbs == null) continue;
     const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
     const opened: OpenHour = {
       time: hour.time,
@@ -324,12 +339,12 @@ function fitSpeedFactor(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
-  days: ReadonlyMap<string, DayTide>,
+  tides: readonly TideStats[],
   offset: number,
 ): number {
   const ratios: number[] = [];
   for (const item of classified) {
-    const prior = speedPrior(item, hours, residual, days, offset);
+    const prior = speedPrior(item, hours, residual, tides, offset);
     if (!prior) continue;
     ratios.push((bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5));
   }
@@ -412,7 +427,7 @@ function speedPrior(
   item: ClassifiedReport,
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
-  days: ReadonlyMap<string, DayTide>,
+  tides: readonly TideStats[],
   offset: number,
 ): Strength | null {
   if (item.failed) return null;
@@ -420,8 +435,8 @@ function speedPrior(
     const index = shiftIndex(hours, item.seriesIndex, offset);
     const slope = slopeFromResidual(residual, index);
     if (slope == null) return null;
-    const stats = days.get(hours[index].time.slice(0, 10));
-    if (!stats || stats.range == null || stats.maxAbs == null) return null;
+    const stats = tides[item.seriesIndex];
+    if (stats.range == null || stats.maxAbs == null) return null;
     return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
   }
   if (item.storedHourSlope == null) return null;
@@ -457,6 +472,8 @@ function monsoonNudge(hour: MarineHour, inwardBearingDeg: number): number {
 
 function residualSeries(hours: readonly MarineHour[]): (number | null)[] {
   const times = hours.map((hour) => parseWall(hour.time));
+  // A series spanning 24 hours drops an hour unless both sides reach 12 hours and 18 samples exist.
+  const strict = reachesMeanSpan(times);
   return hours.map((hour, index) => {
     const level = hour.seaLevelM;
     if (level == null || !Number.isFinite(level) || Number.isNaN(times[index])) return null;
@@ -467,19 +484,33 @@ function residualSeries(hours: readonly MarineHour[]): (number | null)[] {
     for (let other = 0; other < hours.length; other += 1) {
       if (Number.isNaN(times[other])) continue;
       const delta = times[other] - times[index];
-      if (Math.abs(delta) > MEAN_HALF_HOURS * HOUR_MS) continue;
-      if (delta <= -MEAN_HALF_HOURS * HOUR_MS) spansBefore = true;
-      if (delta >= MEAN_HALF_HOURS * HOUR_MS) spansAfter = true;
       const sample = hours[other].seaLevelM;
+      const finite = sample != null && Number.isFinite(sample);
+      if (finite && delta <= -MEAN_HALF_HOURS * HOUR_MS) spansBefore = true;
+      if (finite && delta >= MEAN_HALF_HOURS * HOUR_MS) spansAfter = true;
+      if (Math.abs(delta) > MEAN_HALF_HOURS * HOUR_MS) continue;
       if (sample == null || !Number.isFinite(sample)) continue;
       sum += sample;
       count += 1;
     }
-    // A full 25-hour window with fewer than 18 finite samples is skipped. Interior hours stay.
-    if (spansBefore && spansAfter && count < MIN_MEAN_SAMPLES) return null;
-    if (count === 0) return null;
+    if (strict) {
+      if (!spansBefore || !spansAfter || count < MIN_MEAN_SAMPLES) return null;
+    } else if ((spansBefore && spansAfter && count < MIN_MEAN_SAMPLES) || count === 0) {
+      return null;
+    }
     return level - sum / count;
   });
+}
+
+function reachesMeanSpan(times: readonly number[]): boolean {
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const time of times) {
+    if (Number.isNaN(time)) continue;
+    if (time < min) min = time;
+    if (time > max) max = time;
+  }
+  return max - min >= 2 * MEAN_HALF_HOURS * HOUR_MS;
 }
 
 function slopeFromResidual(residual: readonly (number | null)[], index: number): number | null {
