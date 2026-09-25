@@ -538,6 +538,71 @@ describe("forecastHours", () => {
     expect(strengthAt(forecast, "2026-09-23T23:00")).toBe("strong");
     expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("strong");
   });
+
+  it("a shoulder whose run peak is strong and whose raw hour is mild has speed prior strong", () => {
+    const slopes = [0.03, 0.11, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08];
+    const levels = [0];
+    for (const slope of slopes) levels.push(levels[levels.length - 1] + slope);
+    const hours = marineFromLevels("2026-09-23T00:00", levels);
+    const shoulder = "2026-09-23T00:00";
+    const peak = "2026-09-23T01:00";
+    const later = "2026-09-23T08:00";
+    const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const matched = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [1, 2].map((id) => ({
+        id: `band-${id}`,
+        siteId: "s",
+        time: shoulder,
+        direction: "incoming" as const,
+        strength: "strong" as const,
+      })),
+    });
+    const lowered = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [1, 2].map((id) => ({
+        id: `low-${id}`,
+        siteId: "s",
+        time: shoulder,
+        direction: "incoming" as const,
+        strength: "mild" as const,
+      })),
+    });
+    expect(strengthAt(plain, peak)).toBe("strong");
+    expect(strengthAt(plain, shoulder)).toBe("strong");
+    expect(strengthAt(plain, later)).toBe("strong");
+    expect(strengthAt(matched, later)).toBe("strong");
+    expect(strengthAt(matched, shoulder)).toBe("strong");
+    expect(strengthAt(lowered, later)).not.toBe("strong");
+  });
+
+  it("a non-zero offset whose lagged time is past the series produces no forecast hour at that clock time", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", lagLevels);
+    const edge = hours[hours.length - 1].time;
+    const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const lagged = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))],
+    });
+    expect(plain.find((hour) => hour.time === edge)).toBeDefined();
+    expect(lagged.find((hour) => hour.time === edge)).toBeUndefined();
+  });
+
+  it("one running hour with several slack hours still steps one band when that running hour's nudge is past 0.5", () => {
+    const levels = [0, 0.4, 0.401, 0.402, 0.403, 0.404];
+    const calm = marineFromLevels("2026-09-23T00:00", levels);
+    const driven = calm.map((hour, index) =>
+      index === 0 ? { ...hour, currentVelocityMs: 0.3, currentDirectionDeg: 0 } : hour,
+    );
+    const plain = forecastHours({ hours: calm, inwardBearingDeg: 0, reports: [] });
+    const nudged = forecastHours({ hours: driven, inwardBearingDeg: 0, reports: [] });
+    expect(strengthAt(plain, "2026-09-23T00:00")).toBe("mild");
+    expect(strengthAt(nudged, "2026-09-23T00:00")).toBe("strong");
+    expect(nudged.filter((hour) => hour.strength === "slack").length).toBeGreaterThanOrEqual(3);
+  });
 });
 
 function outgoingAtLag(lag: number): (number | null)[] {
