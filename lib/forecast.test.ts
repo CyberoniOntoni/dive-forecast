@@ -430,7 +430,80 @@ describe("forecastHours", () => {
     const capped = forecastHours({ hours, inwardBearingDeg: 0, reports, allowHighConfidence: false });
     expect(capped.some((hour) => hour.confidence === "high")).toBe(false);
   });
+
+  it("non-zero offset keeps levelM on the clock hour and direction on the lagged slope", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const lagged = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))],
+    });
+    const clock = "2026-09-23T19:00";
+    const later = "2026-09-23T21:00";
+    const clockLevel = levelAt(plain, clock);
+    const laterLevel = levelAt(plain, later);
+    expect(directionAt(plain, clock)).toBe("outgoing");
+    expect(directionAt(lagged, clock)).toBe("incoming");
+    expect(clockLevel).toEqual(expect.any(Number));
+    expect(laterLevel).toEqual(expect.any(Number));
+    expect(levelAt(lagged, clock)).toBe(clockLevel);
+    expect(clockLevel).not.toBeCloseTo(laterLevel as number);
+  });
+
+  it("a report of outgoing does not hold after the lagged slope has turned even if the unshifted slope has not", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    const windows = [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))];
+    const clock = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const lagged = forecastHours({ hours, inwardBearingDeg: 0, reports: windows });
+    const pulled = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [
+        ...windows,
+        { id: "live", siteId: "s", time: "2026-09-23T15:00", direction: "outgoing", strength: "mild" },
+      ],
+    });
+    const hour = "2026-09-23T20:00";
+    expect(directionAt(clock, hour)).toBe("outgoing");
+    expect(directionAt(lagged, hour)).toBe("incoming");
+    expect(directionAt(pulled, hour)).toBe("incoming");
+  });
+
+  it("two reports that match the lagged band leave the speed factor at 1", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    const windows = [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))];
+    const control = forecastHours({ hours, inwardBearingDeg: 0, reports: windows });
+    const fitted = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [
+        ...windows,
+        { id: "m1", siteId: "s", time: "2026-09-23T18:00", direction: "outgoing", strength: "mild" },
+        { id: "m2", siteId: "s", time: "2026-09-24T06:00", direction: "outgoing", strength: "mild" },
+      ],
+    });
+    const hour = "2026-09-24T16:00";
+    expect(directionAt(fitted, hour)).toBe(directionAt(control, hour));
+    expect(strengthAt(control, hour)).toBe("too_strong");
+    expect(strengthAt(fitted, hour)).toBe(strengthAt(control, hour));
+  });
 });
+
+function outgoingAtLag(lag: number): (number | null)[] {
+  const slopes = Array<number | null>(13).fill(null);
+  slopes[6] = 0.08;
+  slopes[6 + lag] = -0.08;
+  return slopes;
+}
+
+function levelAt(forecast: { time: string; levelM: number }[], time: string): number | undefined {
+  return forecast.find((hour) => hour.time.startsWith(time))?.levelM;
+}
+
+function sineTide(count: number): number[] {
+  return Array.from({ length: count }, (_, hour) => 0.55 * Math.sin((2 * Math.PI * hour) / 12));
+}
 
 function outsideWindow(id: string, slopeWindowM: (number | null)[]): Report {
   return {

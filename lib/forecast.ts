@@ -8,6 +8,7 @@ const TIE_M = 0.005;
 const SLACK_SLOPE_M = 0.02;
 const FADE_HOURS = 6;
 const MEAN_HALF_HOURS = 12;
+const MIN_MEAN_SAMPLES = 18;
 const WINDOW_HALF_HOURS = 6;
 const WINDOW_HOURS = WINDOW_HALF_HOURS * 2 + 1;
 const HOUR_MATCH_MS = 45 * 60 * 1000;
@@ -43,7 +44,7 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
   const classified = (input.reports ?? []).map((report) => classifyReport(report, hours, residual));
   const days = dayTides(hours, residual);
   const offset = fitPhaseOffset(classified, hours, residual);
-  const speedFactor = fitSpeedFactor(classified, hours, residual, days);
+  const speedFactor = fitSpeedFactor(classified, hours, residual, days, offset);
   const allowHighConfidence = input.allowHighConfidence ?? true;
   return finishRuns(
     hours,
@@ -173,8 +174,8 @@ function finishRuns(
   // A report fades for six hours and must not cut the run.
   const reportPull = (hour: OpenHour): HourForecast => {
     const pull = recentPull(hours[hour.index], classified);
-    const tideSlope = slopeFromResidual(residual, hour.index);
-    const turned = Boolean(pull && slopesOpposite(pull.item.pullSlope, tideSlope));
+    // hour.slope is the lagged slope. The unshifted slope can still share the report's sign.
+    const turned = Boolean(pull && slopesOpposite(pull.item.pullSlope, hour.slope));
     const contradicted = Boolean(pull && pull.item.report.direction !== hour.direction);
     let direction = hour.direction;
     let strength = hour.strength;
@@ -212,11 +213,12 @@ function finishRuns(
 
   for (let index = 0; index < hours.length; index += 1) {
     const hour = hours[index];
+    // Displayed residual stays on this clock hour. Direction and strength use the lagged slope.
+    const levelM = residual[index];
+    if (levelM == null) continue;
     const shifted = shiftIndex(hours, index, offset);
     const slope = slopeFromResidual(residual, shifted);
     if (slope == null) continue;
-    const levelM = residual[shifted];
-    if (levelM == null) continue;
     const tideDirection = directionFromSlope(slope);
     // A zero residual has no sign. Do not copy the previous hour or the ocean current.
     if (tideDirection == null) continue;
@@ -323,10 +325,11 @@ function fitSpeedFactor(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
   days: ReadonlyMap<string, DayTide>,
+  offset: number,
 ): number {
   const ratios: number[] = [];
   for (const item of classified) {
-    const prior = speedPrior(item, hours, residual, days);
+    const prior = speedPrior(item, hours, residual, days, offset);
     if (!prior) continue;
     ratios.push((bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5));
   }
@@ -410,12 +413,14 @@ function speedPrior(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
   days: ReadonlyMap<string, DayTide>,
+  offset: number,
 ): Strength | null {
   if (item.failed) return null;
   if (item.seriesIndex >= 0) {
-    const slope = slopeFromResidual(residual, item.seriesIndex);
+    const index = shiftIndex(hours, item.seriesIndex, offset);
+    const slope = slopeFromResidual(residual, index);
     if (slope == null) return null;
-    const stats = days.get(hours[item.seriesIndex].time.slice(0, 10));
+    const stats = days.get(hours[index].time.slice(0, 10));
     if (!stats || stats.range == null || stats.maxAbs == null) return null;
     return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
   }
@@ -457,14 +462,21 @@ function residualSeries(hours: readonly MarineHour[]): (number | null)[] {
     if (level == null || !Number.isFinite(level) || Number.isNaN(times[index])) return null;
     let sum = 0;
     let count = 0;
+    let spansBefore = false;
+    let spansAfter = false;
     for (let other = 0; other < hours.length; other += 1) {
+      if (Number.isNaN(times[other])) continue;
+      const delta = times[other] - times[index];
+      if (Math.abs(delta) > MEAN_HALF_HOURS * HOUR_MS) continue;
+      if (delta <= -MEAN_HALF_HOURS * HOUR_MS) spansBefore = true;
+      if (delta >= MEAN_HALF_HOURS * HOUR_MS) spansAfter = true;
       const sample = hours[other].seaLevelM;
-      if (sample == null || !Number.isFinite(sample) || Number.isNaN(times[other])) continue;
-      if (Math.abs(times[other] - times[index]) <= MEAN_HALF_HOURS * HOUR_MS) {
-        sum += sample;
-        count += 1;
-      }
+      if (sample == null || !Number.isFinite(sample)) continue;
+      sum += sample;
+      count += 1;
     }
+    // A full 25-hour window with fewer than 18 finite samples is skipped. Interior hours stay.
+    if (spansBefore && spansAfter && count < MIN_MEAN_SAMPLES) return null;
     if (count === 0) return null;
     return level - sum / count;
   });
