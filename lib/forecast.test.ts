@@ -4,9 +4,11 @@ import type { MarineHour, Report } from "./types";
 
 const DAY = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3];
 
-const series: MarineHour[] = Array.from({ length: 48 }, (_, index) => ({
-  time: wallTime(index),
-  seaLevelM: DAY[index % 24],
+const series: MarineHour[] = marineFromLevels(
+  "2026-09-22T00:00",
+  Array.from({ length: 72 }, (_, index) => DAY[index % 24]),
+).map((hour) => ({
+  ...hour,
   currentVelocityMs: 5.4 / 3.6,
   currentDirectionDeg: 270,
 }));
@@ -90,7 +92,7 @@ describe("forecastHours", () => {
   });
 
   it("historical-report slopeM moves the phase offset off 0 and a null slope does not train", () => {
-    const hours = marineFromLevels("2026-09-23T00:00", semidiurnalLevels(48));
+    const hours = marineFromLevels("2026-09-22T00:00", semidiurnalLevels(72));
     const contradicting: Report[] = [
       { id: "h1", siteId: "s", time: "2026-08-01T03:00", direction: "outgoing", strength: "mild", slopeM: 0.08 },
       { id: "h2", siteId: "s", time: "2026-08-01T09:00", direction: "outgoing", strength: "mild", slopeM: 0.04 },
@@ -125,7 +127,7 @@ describe("forecastHours", () => {
   });
 
   it("historical-report speed factor compares abs(slopeM) with the slack threshold", () => {
-    const hours = marineFromLevels("2026-09-23T00:00", [...springDay(), ...springDay()]);
+    const hours = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
     expect(strengthAt(plain, "2026-09-23T00:00")).toBe("slack");
     expect(strengthAt(plain, "2026-09-23T01:00")).toBe("too_strong");
@@ -150,7 +152,7 @@ describe("forecastHours", () => {
   });
 
   it("hourly-strength follows the slope up to the day's range envelope", () => {
-    const spring = marineFromLevels("2026-09-23T00:00", [...springDay(), ...springDay()]);
+    const spring = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const forecast = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [] });
     expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("slack");
     expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("too_strong");
@@ -488,6 +490,54 @@ describe("forecastHours", () => {
     expect(strengthAt(control, hour)).toBe("too_strong");
     expect(strengthAt(fitted, hour)).toBe(strengthAt(control, hour));
   });
+
+  it("drops the first and last hours of a long series and keeps an interior hour", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", sineTide(48));
+    const forecast = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    expect(forecast.find((hour) => hour.time === hours[0].time)).toBeUndefined();
+    expect(forecast.find((hour) => hour.time === hours[hours.length - 1].time)).toBeUndefined();
+    expect(forecast.find((hour) => hour.time === hours[24].time)).toBeDefined();
+  });
+
+  it("keeps an outgoing report when only the unshifted slope has turned, then drops it once the lagged slope turns", () => {
+    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    const windows = [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))];
+    const clock = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const lagged = forecastHours({ hours, inwardBearingDeg: 0, reports: windows });
+    const pulled = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [
+        ...windows,
+        { id: "live", siteId: "s", time: "2026-09-23T14:00", direction: "outgoing", strength: "mild", slopeM: null },
+      ],
+    });
+    const still = "2026-09-23T14:00";
+    const dropped = "2026-09-23T19:00";
+    expect(directionAt(clock, still)).toBe("incoming");
+    expect(directionAt(lagged, still)).toBe("outgoing");
+    expect(directionAt(pulled, still)).toBe("outgoing");
+    expect(directionAt(lagged, dropped)).toBe("incoming");
+    expect(directionAt(pulled, dropped)).toBe("incoming");
+  });
+
+  it("keeps a midnight flood on the surrounding tide instead of a three-hour calendar fragment", () => {
+    const levels = Array.from({ length: 72 }, (_, hour) => {
+      if (hour < 23) return 0.2;
+      if (hour === 23) return 0.45;
+      if (hour === 24) return 0.7;
+      if (hour === 25) return 0.9;
+      return 1;
+    });
+    const forecast = forecastHours({
+      hours: marineFromLevels("2026-09-23T00:00", levels),
+      inwardBearingDeg: 0,
+      reports: [],
+    });
+    expect(directionAt(forecast, "2026-09-24T01:00")).toBe("incoming");
+    expect(strengthAt(forecast, "2026-09-23T23:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("strong");
+  });
 });
 
 function outgoingAtLag(lag: number): (number | null)[] {
@@ -521,20 +571,12 @@ function directionAt(forecast: { time: string; direction: string }[], time: stri
   return forecast.find((hour) => hour.time.startsWith(time))?.direction;
 }
 
-function wallTime(index: number): string {
-  const day = index < 24 ? "2026-09-23" : "2026-09-24";
-  const hour = String(index % 24).padStart(2, "0");
-  return `${day}T${hour}:00`;
-}
-
 function repeatingHours(): MarineHour[] {
   const cycle = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.4, 0.3, 0.2, 0.1, 0, 0.1];
-  return Array.from({ length: 48 }, (_, index) => ({
-    time: wallTime(index),
-    seaLevelM: cycle[index % 12],
-    currentVelocityMs: 0,
-    currentDirectionDeg: 0,
-  }));
+  return marineFromLevels(
+    "2026-09-22T00:00",
+    Array.from({ length: 72 }, (_, index) => cycle[index % 12]),
+  );
 }
 
 function strengthAt(forecast: { time: string; strength: string }[], time: string): string | undefined {
