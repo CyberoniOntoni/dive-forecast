@@ -1,24 +1,28 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { addReportAction, addSite, rateSite } from "./actions";
+import { addReport, addReportAction, addSite, rateSite } from "./actions";
 import { setStorePath } from "./store";
 
-const LIVE_STORE = path.join(process.cwd(), "data", "store.json");
+const DATA_DIR = path.join(process.cwd(), "data");
+const LIVE_STORE = path.join(DATA_DIR, "store.json");
 
-let tempDir = "";
+let testFile = "";
 let liveSnapshot = "";
 
 beforeEach(() => {
   liveSnapshot = fs.readFileSync(LIVE_STORE, "utf8");
-  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dive-actions-"));
-  setStorePath(path.join(tempDir, "store.json"));
+  testFile = `.store-test-${crypto.randomUUID()}.json`;
+  setStorePath(testFile);
 });
 
 afterEach(() => {
-  setStorePath(LIVE_STORE);
-  fs.rmSync(tempDir, { recursive: true, force: true });
+  for (const name of fs.readdirSync(DATA_DIR)) {
+    if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || /^\.store\..+\.tmp$/.test(name)) {
+      fs.rmSync(path.join(DATA_DIR, name), { recursive: true, force: true });
+    }
+  }
+  setStorePath("store.json");
   expect(fs.readFileSync(LIVE_STORE, "utf8")).toBe(liveSnapshot);
 });
 
@@ -64,6 +68,14 @@ describe("rateSite", () => {
     await expect(rateSite("banana-reef", 3.5)).rejects.toThrow();
     await expect(rateSite("banana-reef", 6)).rejects.toThrow();
     await expect(rateSite("banana-reef", 0)).rejects.toThrow();
+  });
+});
+
+describe("addReport", () => {
+  it("rejects null with Error and not TypeError", async () => {
+    const fromNull = await rejection(addReport(null));
+    expect(fromNull).toBeInstanceOf(Error);
+    expect(fromNull).not.toBeInstanceOf(TypeError);
   });
 });
 

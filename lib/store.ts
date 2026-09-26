@@ -27,7 +27,11 @@ export function readStore(): StoreData {
   } catch (error) {
     if (isMissingFile(error)) return emptyStore();
     if (error instanceof SyntaxError) {
-      fs.renameSync(file, `${file}.corrupt.${Date.now()}`);
+      try {
+        fs.renameSync(file, `${file}.corrupt.${Date.now()}`);
+      } catch (renameError) {
+        console.error("Failed to quarantine corrupt store file", renameError);
+      }
       return emptyStore();
     }
     throw error;

@@ -58,25 +58,21 @@ export async function getRating(siteId: string): Promise<Rating | null> {
   return ratingForSite(siteId);
 }
 
-export async function addReport(input: {
-  siteId: string;
-  time: string;
-  direction: Direction;
-  strength: Strength;
-}): Promise<Report> {
-  const site = findSite(input.siteId);
+export async function addReport(input: unknown): Promise<Report> {
+  const body = requireReportInput(input);
+  const site = findSite(body.siteId as string);
   if (!site) throw new Error("Unknown site");
-  requireDirection(input.direction);
-  requireStrength(input.strength);
+  requireDirection(body.direction as Direction);
+  requireStrength(body.strength as Strength);
 
-  const time = toMaldivesWall(input.time);
+  const time = toMaldivesWall(body.time as string);
   const slopeWindowM = await reportSlopeWindow(site, time);
   const report: Report = {
     id: crypto.randomUUID(),
-    siteId: input.siteId,
+    siteId: body.siteId as string,
     time,
-    direction: input.direction,
-    strength: input.strength,
+    direction: body.direction as Direction,
+    strength: body.strength as Strength,
     slopeM: slopeWindowM ? slopeWindowM[REPORT_HOUR_INDEX] : null,
   };
   if (slopeWindowM) report.slopeWindowM = slopeWindowM;
@@ -157,6 +153,16 @@ function newUserSite(name: string, lat: number, lon: number, atollId: string): S
 function requireSiteInput(input: unknown): { name: unknown; lat: unknown; lon: unknown } {
   if (input === null || typeof input !== "object") throw new Error("Site is required");
   return input as { name: unknown; lat: unknown; lon: unknown };
+}
+
+function requireReportInput(input: unknown): {
+  siteId: unknown;
+  time: unknown;
+  direction: unknown;
+  strength: unknown;
+} {
+  if (input === null || typeof input !== "object") throw new Error("Report is required");
+  return input as { siteId: unknown; time: unknown; direction: unknown; strength: unknown };
 }
 
 function requireSiteName(name: unknown): string {

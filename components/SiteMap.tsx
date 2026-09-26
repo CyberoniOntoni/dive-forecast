@@ -297,6 +297,7 @@ const LeafletMap = dynamic(
         mapRef.current = mounted.map;
         setMapEpoch((epoch) => epoch + 1);
         return mounted.destroy;
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- W4 mounts the canvas once; marker sync is the next effect.
       }, []);
 
       useEffect(() => {

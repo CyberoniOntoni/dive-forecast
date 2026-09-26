@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addReport, addUserSite, readStore, saveRating, setStorePath } from "./store";
 import type { Report, Site } from "./types";
 
@@ -64,6 +64,23 @@ describe("readStore", () => {
     expect(corrupt).toHaveLength(1);
     expect(fs.readFileSync(path.join(DATA_DIR, corrupt[0]), "utf8")).toBe(truncated);
     expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(false);
+  });
+
+  it("returns empty store when quarantine rename fails", () => {
+    const truncated = '{"reports":[{"id":"r1"';
+    fs.writeFileSync(path.join(DATA_DIR, testFile), truncated);
+    const renameError = new Error("rename failed");
+    vi.spyOn(fs, "renameSync").mockImplementation(() => {
+      throw renameError;
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect(readStore()).toEqual({ reports: [], ratings: [], sites: [] });
+      expect(errorSpy).toHaveBeenCalledWith("Failed to quarantine corrupt store file", renameError);
+      expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 
   it("throws other IO errors", () => {
