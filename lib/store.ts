@@ -3,11 +3,15 @@ import path from "path";
 import type { Catalog, Rating, Report, Site, StoreData } from "./types";
 
 const CATALOG_PATH = path.join(process.cwd(), "data", "sites.json");
-const DEFAULT_STORE_PATH = path.join(process.cwd(), "data", "store.json");
-let storePath = DEFAULT_STORE_PATH;
+const DEFAULT_STORE_FILE = "store.json";
+let storeFile = DEFAULT_STORE_FILE;
 
 export function setStorePath(filePath: string) {
-  storePath = filePath;
+  const base = path.basename(filePath);
+  if (!base || base === "." || base === "..") {
+    throw new Error("Store file must be a name under data/");
+  }
+  storeFile = base;
 }
 
 export function readCatalog(): Catalog {
@@ -16,13 +20,14 @@ export function readCatalog(): Catalog {
 }
 
 export function readStore(): StoreData {
+  const file = path.join(process.cwd(), "data", storeFile);
   try {
-    const raw = fs.readFileSync(storePath, "utf8");
+    const raw = fs.readFileSync(file, "utf8");
     return normalizeStore(JSON.parse(raw));
   } catch (error) {
     if (isMissingFile(error)) return emptyStore();
     if (error instanceof SyntaxError) {
-      fs.renameSync(storePath, `${storePath}.corrupt.${Date.now()}`);
+      fs.renameSync(file, `${file}.corrupt.${Date.now()}`);
       return emptyStore();
     }
     throw error;
@@ -108,12 +113,13 @@ function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
 }
 
 function writeStore(store: StoreData) {
-  const dir = path.dirname(storePath);
+  const file = path.join(process.cwd(), "data", storeFile);
+  const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const tmpPath = path.join(dir, `.store.${process.pid}.${crypto.randomUUID()}.tmp`);
   try {
     fs.writeFileSync(tmpPath, `${JSON.stringify(store, null, 2)}\n`);
-    fs.renameSync(tmpPath, storePath);
+    fs.renameSync(tmpPath, file);
   } catch (error) {
     fs.rmSync(tmpPath, { force: true });
     throw error;

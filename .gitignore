@@ -44,3 +44,5 @@ next-env.d.ts
 /data/marine-cache
 /data/incoming
 /data/replay.json
+/data/.store-test-*
+/data/.store.*.tmp

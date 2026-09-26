@@ -1,24 +1,28 @@
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addReport, addUserSite, readStore, saveRating, setStorePath } from "./store";
 import type { Report, Site } from "./types";
 
-const LIVE_STORE = path.join(process.cwd(), "data", "store.json");
+const DATA_DIR = path.join(process.cwd(), "data");
+const LIVE_STORE = path.join(DATA_DIR, "store.json");
 
-let tempDir = "";
+let testFile = "";
 let liveSnapshot = "";
 
 beforeEach(() => {
   liveSnapshot = fs.readFileSync(LIVE_STORE, "utf8");
-  tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "dive-store-"));
-  setStorePath(path.join(tempDir, "store.json"));
+  testFile = `.store-test-${crypto.randomUUID()}.json`;
+  setStorePath(testFile);
 });
 
 afterEach(() => {
-  setStorePath(LIVE_STORE);
-  fs.rmSync(tempDir, { recursive: true, force: true });
+  for (const name of fs.readdirSync(DATA_DIR)) {
+    if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || /^\.store\..+\.tmp$/.test(name)) {
+      fs.rmSync(path.join(DATA_DIR, name), { recursive: true, force: true });
+    }
+  }
+  setStorePath("store.json");
   expect(fs.readFileSync(LIVE_STORE, "utf8")).toBe(liveSnapshot);
 });
 
@@ -44,7 +48,7 @@ function sampleSite(id: string): Site {
 }
 
 function tmpLeftovers() {
-  return fs.readdirSync(tempDir).filter((name) => /^\.store\..*\.tmp$/.test(name));
+  return fs.readdirSync(DATA_DIR).filter((name) => /^\.store\..*\.tmp$/.test(name));
 }
 
 describe("readStore", () => {
@@ -54,16 +58,16 @@ describe("readStore", () => {
 
   it("quarantines truncated JSON and returns an empty store", () => {
     const truncated = '{"reports":[{"id":"r1"';
-    fs.writeFileSync(path.join(tempDir, "store.json"), truncated);
+    fs.writeFileSync(path.join(DATA_DIR, testFile), truncated);
     expect(readStore()).toEqual({ reports: [], ratings: [], sites: [] });
-    const corrupt = fs.readdirSync(tempDir).filter((name) => name.startsWith("store.json.corrupt."));
+    const corrupt = fs.readdirSync(DATA_DIR).filter((name) => name.startsWith(`${testFile}.corrupt.`));
     expect(corrupt).toHaveLength(1);
-    expect(fs.readFileSync(path.join(tempDir, corrupt[0]), "utf8")).toBe(truncated);
-    expect(fs.existsSync(path.join(tempDir, "store.json"))).toBe(false);
+    expect(fs.readFileSync(path.join(DATA_DIR, corrupt[0]), "utf8")).toBe(truncated);
+    expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(false);
   });
 
   it("throws other IO errors", () => {
-    fs.mkdirSync(path.join(tempDir, "store.json"));
+    fs.mkdirSync(path.join(DATA_DIR, testFile));
     expect(() => readStore()).toThrow();
   });
 });
@@ -72,7 +76,7 @@ describe("writeStore", () => {
   it("leaves no leftover .store.*.tmp after a write", async () => {
     await addReport(sampleReport("r1"));
     expect(tmpLeftovers()).toEqual([]);
-    expect(fs.existsSync(path.join(tempDir, "store.json"))).toBe(true);
+    expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(true);
   });
 });
 
