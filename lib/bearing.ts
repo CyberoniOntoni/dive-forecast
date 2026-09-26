@@ -78,6 +78,6 @@ function toDegrees(radians: number): number {
   return (radians * 180) / Math.PI;
 }
 
-function wrapDegrees(degrees: number): number {
-  return (degrees + 360) % 360;
+export function wrapDegrees(degrees: number): number {
+  return ((degrees % 360) + 360) % 360;
 }

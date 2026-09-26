@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { fetchMarine, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours } from "./marine";
+import { fetchMarine, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours, wrapLongitude } from "./marine";
 import type { MarineHour } from "./types";
 
 const NOW = Date.UTC(2026, 8, 24, 12, 0, 0);
@@ -241,6 +241,148 @@ describe("marine cache", () => {
       forgetMarineCache(lat, lon);
     }
   });
+
+  it("-0 and 0 share one cache key", async () => {
+    const files = new Map<string, string>();
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    let fetches = 0;
+    vi.spyOn(fs, "readFileSync").mockImplementation((file) => {
+      const raw = files.get(path.basename(String(file)));
+      if (raw == null) throw new Error("cache miss");
+      return raw;
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation((file, data) => {
+      files.set(path.basename(String(file)), String(data));
+    });
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return jsonResponse(body);
+    });
+    try {
+      const first = await fetchMarine(0, 0);
+      const second = await fetchMarine(-0, -0);
+      expect(first.ok).toBe(true);
+      expect(second).toEqual(first);
+      expect(fetches).toBe(1);
+      expect([...files.keys()]).toEqual(["0.0000_0.0000."]);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(0, 0);
+      forgetMarineCache(-0, -0);
+    }
+  });
+});
+
+describe("wrapLongitude", () => {
+  it("wrapLongitude(-550) is inside [-180, 180]", () => {
+    expect(wrapLongitude(-550)).toBeGreaterThanOrEqual(-180);
+    expect(wrapLongitude(-550)).toBeLessThanOrEqual(180);
+  });
+});
+
+describe("marine fetch", () => {
+  it("writeCache throw does not make a successful fetch unavailable", async () => {
+    const lat = 1.0101;
+    const lon = 73.0101;
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => {
+      throw new Error("disk full");
+    });
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", async () => jsonResponse(body));
+    try {
+      await expect(fetchMarine(lat, lon)).resolves.toMatchObject({
+        ok: true,
+        stale: false,
+        hours: marineHoursFromApi(body),
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
+  it("first endpoint is marine-api", async () => {
+    const lat = 1.0202;
+    const lon = 73.0202;
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    const urls: string[] = [];
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      urls.push(String(input));
+      return jsonResponse(body);
+    });
+    try {
+      const result = await fetchMarine(lat, lon);
+      expect(result.ok).toBe(true);
+      expect(urls[0].startsWith("https://marine-api.open-meteo.com/v1/marine?")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
+  it("HTTP 429 is unavailable without throw", async () => {
+    const lat = 1.0303;
+    const lon = 73.0303;
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 429 }));
+    try {
+      await expect(fetchMarine(lat, lon)).resolves.toEqual({ ok: false, unavailable: true });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
+  it("fetch init includes a timeout signal", async () => {
+    const lat = 1.0404;
+    const lon = 73.0404;
+    const fresh = maldivesWall(Date.now());
+    const body = marineApiBody([fresh], [0.42], [0.1], [10]);
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    let init: RequestInit | undefined;
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async (_input: RequestInfo | URL, options?: RequestInit) => {
+      init = options;
+      return jsonResponse(body);
+    });
+    try {
+      const result = await fetchMarine(lat, lon);
+      expect(result.ok).toBe(true);
+      expect(timeout).toHaveBeenCalledWith(8000);
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
 });
 
 describe("stale marine cache", () => {
@@ -358,7 +500,7 @@ function nearPoint(lat: number, lon: number, otherLat: number, otherLon: number)
 }
 
 function forgetMarineCache(lat: number, lon: number) {
-  const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+  const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
   fs.rmSync(path.join(process.cwd(), "data", "marine-cache", name), { force: true });
 }
 

@@ -32,10 +32,6 @@ export function RatingForm({
     });
   }
 
-  const averageText = shownScore == null ? "—" : shownScore.toFixed(1);
-  // The store keeps one rating per site.
-  const count = shownScore == null ? 0 : 1;
-
   return (
     <section
       className="flex flex-col gap-3 rounded-2xl border border-foam/15 bg-glass p-4 sm:p-5"
@@ -46,7 +42,7 @@ export function RatingForm({
       </h2>
       <p className="text-sm text-foam/80">This rating does not change the current.</p>
       <p className="text-sm text-foam">
-        Average {averageText} · {count} {count === 1 ? "rating" : "ratings"}
+        Your rating {shownScore ?? "—"}
       </p>
       <div className="flex gap-2" role="group" aria-label="Rate this dive site from 1 to 5">
         {SCORES.map((value) => {

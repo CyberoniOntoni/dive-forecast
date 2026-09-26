@@ -1,4 +1,4 @@
-﻿import { STRENGTHS, type Direction, type HourForecast, type MarineHour, type Report, type Strength } from "./types";
+import { STRENGTHS, type Direction, type HourForecast, type MarineHour, type Report, type Strength } from "./types";
 
 export const FORECAST_NOTICE =
   "The 8 km grid is weak in passes. Direction comes from the tide slope plus reports, not from the current at the dive pin.";
@@ -67,7 +67,7 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
 }
 
 /** One pass: in-series, one stored slope, a real slope window, or unusable. */
-function classifyReport(report: Report, hours: readonly MarineHour[]): ClassifiedReport {
+export function classifyReport(report: Report, hours: readonly MarineHour[]): ClassifiedReport {
   const slopes = storedWindow(report);
   const finite = slopes
     ? slopes.filter((slope): slope is number => typeof slope === "number" && Number.isFinite(slope))
@@ -79,7 +79,10 @@ function classifyReport(report: Report, hours: readonly MarineHour[]): Classifie
   const failed = report.slopeM === null && finite.length === 0;
   const base = { report, seriesIndex, storedHourSlope, pullSlope, failed };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
-  if (slopes && finite.length === 1) return { ...base, kind: "single-slope", slope: finite[0] };
+  const centerSlope = slopes ? slopes[WINDOW_HALF_HOURS] : null;
+  if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
+    return { ...base, kind: "single-slope", slope: centerSlope };
+  }
   // A failed fetch stores no window and a null slope. It must not train, even inside this series.
   if (report.slopeM === null) return { ...base, kind: "unusable" };
   if (seriesIndex >= 0) return { ...base, kind: "in-series", index: seriesIndex };
@@ -116,7 +119,7 @@ function centeredTides(hours: readonly MarineHour[], residual: readonly (number 
   return hours.map((_, index) => tideWindow(hours, residual, index));
 }
 
-function tideWindow(
+export function tideWindow(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
   index: number,
@@ -125,16 +128,19 @@ function tideWindow(
   if (Number.isNaN(center)) return { range: null, maxAbs: null };
   const levels: number[] = [];
   let maxAbs = -1;
+  let slots = 0;
   for (let other = 0; other < hours.length; other += 1) {
     const at = parseWall(hours[other].time);
     if (Number.isNaN(at) || Math.abs(at - center) > MEAN_HALF_HOURS * HOUR_MS) continue;
+    slots += 1;
     const level = residual[other];
     if (level != null) levels.push(level);
     const slope = slopeFromResidual(residual, other);
     if (slope != null) maxAbs = Math.max(maxAbs, Math.abs(slope));
   }
+  // W12: a 25-hour window needs 12 finite residuals. A short series keeps the 2-sample floor.
   return {
-    range: levels.length < 2 ? null : Math.max(...levels) - Math.min(...levels),
+    range: levels.length < (slots >= 12 ? 12 : 2) ? null : Math.max(...levels) - Math.min(...levels),
     maxAbs: maxAbs < 0 ? null : maxAbs,
   };
 }
@@ -259,16 +265,20 @@ function settledHours(
     const shifted = shiftIndex(hours, index, offset);
     if (shifted < 0) continue;
     const slope = slopeFromResidual(residual, shifted);
-    if (slope == null) continue;
+    if (slope == null || !Number.isFinite(slope)) continue;
     const tideDirection = directionFromSlope(slope);
-    // A zero residual has no sign. Do not copy the previous hour or the ocean current.
-    if (tideDirection == null) continue;
+    // C8: exact-zero slope is slack. Direction is the next signed lagged slope, never the previous hour or the ocean current.
+    let effectiveDirection = tideDirection;
+    if (effectiveDirection == null) {
+      effectiveDirection = nextSignedDirection(hours, residual, offset, index);
+      if (effectiveDirection == null) continue;
+    }
     const stats = tides[index];
     if (stats.range == null || stats.maxAbs == null) continue;
     const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
     const opened: OpenHour = {
       time: hour.time,
-      direction: tideDirection,
+      direction: effectiveDirection,
       strength: applySpeed(tideStrength, speedFactor),
       slope,
       nudge: monsoonNudge(hour, inwardBearingDeg),
@@ -293,10 +303,9 @@ export function toMaldivesWall(value: string): string {
     if (Number.isNaN(date.getTime())) throw new Error("Bad time");
     return new Date(date.getTime() + 5 * HOUR_MS).toISOString().slice(0, 16);
   }
-  if (!/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.test(value)) {
-    throw new Error("Bad time");
-  }
-  return value.slice(0, 16);
+  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value);
+  if (!match) throw new Error("Bad time");
+  return `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}`;
 }
 
 /** Residual sea-level change over the hour nearest `time`, or null when that hour is missing. */
@@ -408,12 +417,13 @@ function recentPull(
   classified: readonly ClassifiedReport[],
 ): { item: ClassifiedReport; weight: number } | null {
   const hourMs = parseWall(hour.time);
+  if (!Number.isFinite(hourMs)) return null;
   let best: { item: ClassifiedReport; weight: number } | null = null;
   for (const item of classified) {
     const reportMs = parseWall(item.report.time);
     if (Number.isNaN(reportMs)) continue;
     const since = (hourMs - reportMs) / HOUR_MS;
-    if (since < 0 || since >= FADE_HOURS) continue;
+    if (!Number.isFinite(since) || since < 0 || since >= FADE_HOURS) continue;
     if (!best || reportMs >= parseWall(best.item.report.time)) {
       best = { item, weight: 1 - since / FADE_HOURS };
     }
@@ -602,6 +612,24 @@ function directionFromSlope(slope: number): Direction | null {
   return slope > 0 ? "incoming" : "outgoing";
 }
 
+/** Later clock hours only. Same lag and residual slope as this hour. Never the previous hour or the ocean current. */
+function nextSignedDirection(
+  hours: readonly MarineHour[],
+  residual: readonly (number | null)[],
+  offset: number,
+  index: number,
+): Direction | null {
+  for (let later = index + 1; later < hours.length; later += 1) {
+    const shifted = shiftIndex(hours, later, offset);
+    if (shifted < 0) continue;
+    const slope = slopeFromResidual(residual, shifted);
+    if (slope == null) continue;
+    const direction = directionFromSlope(slope);
+    if (direction != null) return direction;
+  }
+  return null;
+}
+
 function strengthFromRange(range: number): Strength {
   if (range < 0.35) return "slack";
   if (range < 0.6) return "mild";
@@ -620,7 +648,8 @@ function hourlyStrength(absSlope: number, maxAbsSlope: number, envelope: Strengt
   return STRENGTHS[index];
 }
 
-function applySpeed(strength: Strength, factor: number): Strength {
+export function applySpeed(strength: Strength, factor: number): Strength {
+  if (strength === "slack") return "slack";
   const next = Math.round((bandIndex(strength) + 0.5) * factor - 0.5);
   return STRENGTHS[Math.max(0, Math.min(STRENGTHS.length - 1, next))];
 }

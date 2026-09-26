@@ -1,22 +1,23 @@
-import { refresh } from "next/cache";
-import { addReport } from "@/lib/actions";
-import type { Direction, Strength } from "@/lib/types";
+"use client";
+
+import { useActionState, useRef } from "react";
+import { addReportAction, type ReportActionState } from "@/lib/actions";
 
 const CHOICE =
   "flex min-h-11 items-center gap-2 rounded-md border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
 
+const INITIAL: ReportActionState = { success: false, error: null };
+
 export function ReportForm({ siteId }: { siteId: string }) {
-  async function submit(formData: FormData) {
-    "use server";
-    const time = String(formData.get("time") ?? "").trim();
-    const direction = String(formData.get("direction") ?? "");
-    const strength = String(formData.get("strength") ?? "");
-    if (!time) throw new Error("Time is required");
-    if (!isDirection(direction)) throw new Error("Bad direction");
-    if (!isStrength(strength)) throw new Error("Bad strength");
-    await addReport({ siteId, time, direction, strength });
-    refresh();
-  }
+  const formRef = useRef<HTMLFormElement>(null);
+  const [state, formAction, pending] = useActionState(
+    async (_prev: ReportActionState, formData: FormData) => {
+      const next = await addReportAction(siteId, formData);
+      if (next.success) formRef.current?.reset();
+      return next;
+    },
+    INITIAL,
+  );
 
   return (
     <section
@@ -29,7 +30,7 @@ export function ReportForm({ siteId }: { siteId: string }) {
       <p className="text-sm leading-6 text-foam/80">
         Time is Maldives wall time. Saving a report updates the hours above.
       </p>
-      <form action={submit} className="flex min-w-0 flex-col gap-4">
+      <form ref={formRef} action={formAction} className="flex min-w-0 flex-col gap-4">
         <label className="flex min-w-0 flex-col gap-1 text-sm text-foam" htmlFor="report-time">
           Time in the water
           <input
@@ -74,21 +75,24 @@ export function ReportForm({ siteId }: { siteId: string }) {
             </label>
           </div>
         </fieldset>
+        {state.error ? (
+          <p role="alert" className="text-sm text-outgoing">
+            {state.error}
+          </p>
+        ) : null}
+        {state.success ? (
+          <p role="status" className="text-sm text-foam">
+            Report added.
+          </p>
+        ) : null}
         <button
           type="submit"
-          className="min-h-11 w-full rounded-md bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming sm:w-auto"
+          disabled={pending}
+          className="min-h-11 w-full rounded-md bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50 sm:w-auto"
         >
-          Add report
+          {pending ? "Adding…" : "Add report"}
         </button>
       </form>
     </section>
   );
-}
-
-function isDirection(value: string): value is Direction {
-  return value === "incoming" || value === "outgoing";
-}
-
-function isStrength(value: string): value is Strength {
-  return value === "slack" || value === "mild" || value === "strong" || value === "too_strong";
 }

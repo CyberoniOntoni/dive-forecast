@@ -15,7 +15,9 @@ export type SiteNowcast = {
   fetchedAt?: number | null;
 };
 
-/** Closest hour to a Maldives wall clock. Equal distance keeps the earlier hour. */
+const MAX_NOWCAST_DELTA_MS = 90 * 60 * 1000;
+
+/** Closest hour to a Maldives wall clock. Equal distance keeps the earlier hour. Farther than 90 minutes is none. */
 export function nearestForecastHour(
   hours: readonly HourForecast[],
   maldivesWall: string,
@@ -35,6 +37,7 @@ export function nearestForecastHour(
       closestDistance = distance;
     }
   }
+  if (closestDistance > MAX_NOWCAST_DELTA_MS) return null;
   return closest;
 }
 

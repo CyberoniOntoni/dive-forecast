@@ -25,6 +25,8 @@ import {
 
 const REPORT_HOUR_INDEX = 6;
 
+export type ReportActionState = { success: boolean; error: string | null };
+
 export async function listSites(): Promise<Site[]> {
   return listMergedSites();
 }
@@ -34,17 +36,19 @@ export async function getSite(id: string): Promise<Site | null> {
 }
 
 export async function addSite(input: { name: string; lat: number; lon: number }): Promise<Site> {
-  const name = requireSiteName(input.name);
-  requireLatitude(input.lat);
-  requireLongitude(input.lon);
+  const body = requireSiteInput(input);
+  const name = requireSiteName(body.name);
+  const lat = requireLatitude(body.lat);
+  const lon = requireLongitude(body.lon);
   const atolls = readCatalog().atolls;
   if (atolls.length === 0) throw new Error("No atolls");
 
-  const atoll = nearestAtoll(input.lat, input.lon, atolls);
-  return addUserSite(newUserSite(name, input.lat, input.lon, atoll.id));
+  const atoll = nearestAtoll(lat, lon, atolls);
+  return addUserSite(newUserSite(name, lat, lon, atoll.id));
 }
 
 export async function rateSite(siteId: string, score: number): Promise<Rating> {
+  requireSiteId(siteId);
   if (!findSite(siteId)) throw new Error("Unknown site");
   requireRatingScore(score);
   return saveRating({ siteId, score, updatedAt: new Date().toISOString() });
@@ -77,6 +81,24 @@ export async function addReport(input: {
   };
   if (slopeWindowM) report.slopeWindowM = slopeWindowM;
   return persistReport(report);
+}
+
+export async function addReportAction(siteId: string, formData: FormData): Promise<ReportActionState> {
+  try {
+    const time = String(formData.get("time") ?? "").trim();
+    const direction = String(formData.get("direction") ?? "");
+    const strength = String(formData.get("strength") ?? "");
+    await addReport({
+      siteId,
+      time,
+      direction: direction as Direction,
+      strength: strength as Strength,
+    });
+    return { success: true, error: null };
+  } catch (caught) {
+    const error = caught instanceof Error ? caught.message : "Could not add that report.";
+    return { success: false, error };
+  }
 }
 
 async function reportSlopeWindow(site: Site, time: string): Promise<(number | null)[] | null> {
@@ -132,18 +154,35 @@ function newUserSite(name: string, lat: number, lon: number, atollId: string): S
   };
 }
 
-function requireSiteName(name: string): string {
+function requireSiteInput(input: unknown): { name: unknown; lat: unknown; lon: unknown } {
+  if (input === null || typeof input !== "object") throw new Error("Site is required");
+  return input as { name: unknown; lat: unknown; lon: unknown };
+}
+
+function requireSiteName(name: unknown): string {
+  if (typeof name !== "string") throw new Error("Site name is required");
   const trimmed = name.trim();
   if (!trimmed) throw new Error("Site name is required");
+  if (trimmed.length > 80) throw new Error("Site name must be 1 to 80 characters");
   return trimmed;
 }
 
-function requireLatitude(lat: number): void {
-  if (!Number.isFinite(lat) || lat < -90 || lat > 90) throw new Error("Bad latitude");
+function requireLatitude(lat: unknown): number {
+  if (typeof lat !== "number" || !Number.isFinite(lat) || lat < -2 || lat > 9) {
+    throw new Error("Latitude is outside Maldives bounds [-2, 9]");
+  }
+  return lat;
 }
 
-function requireLongitude(lon: number): void {
-  if (!Number.isFinite(lon) || lon < -180 || lon > 180) throw new Error("Bad longitude");
+function requireLongitude(lon: unknown): number {
+  if (typeof lon !== "number" || !Number.isFinite(lon) || lon < 71 || lon > 76) {
+    throw new Error("Longitude is outside Maldives bounds [71, 76]");
+  }
+  return lon;
+}
+
+function requireSiteId(siteId: unknown): asserts siteId is string {
+  if (typeof siteId !== "string" || !siteId.trim()) throw new Error("Site id is required");
 }
 
 function requireRatingScore(score: number): void {

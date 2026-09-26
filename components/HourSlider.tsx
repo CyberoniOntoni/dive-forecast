@@ -52,7 +52,7 @@ export function HourSlider({
     );
   }
 
-  const selected = Math.min(index, hours.length - 1);
+  const selected = clampHourIndex(index, hours.length);
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
   const bearing = inwardBearingDeg == null ? null : callBearing(hour.direction, inwardBearingDeg);
@@ -147,6 +147,11 @@ export function HourSlider({
       <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
     </section>
   );
+}
+
+/** W7: after the empty/unavailable branch, keep the slider index inside the hours. */
+export function clampHourIndex(index: number, hourCount: number): number {
+  return Math.max(0, Math.min(index, hourCount - 1));
 }
 
 /** Stored residual metres. The line is not a new tide. */

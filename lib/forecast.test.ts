@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { forecastHours, residualSlopeWindow, seaLevelSlopeAt } from "./forecast";
-import type { MarineHour, Report } from "./types";
+import {
+  applySpeed,
+  classifyReport,
+  forecastHours,
+  residualSlopeWindow,
+  seaLevelSlopeAt,
+  tideWindow,
+  toMaldivesWall,
+} from "./forecast";
+import { STRENGTHS, type MarineHour, type Report } from "./types";
 
 const DAY = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3];
 
@@ -60,8 +68,13 @@ describe("forecastHours", () => {
     for (let index = 0; index < series.length; index += 1) {
       const slope = seaLevelSlopeAt(series, series[index].time);
       const hour = forecast.find((item) => item.time === series[index].time);
-      if (slope == null || slope === 0) {
+      if (slope == null) {
         expect(hour).toBeUndefined();
+        continue;
+      }
+      // C8: exact-zero slope is slack with the following run sign, not omitted.
+      if (slope === 0) {
+        if (hour) expect(hour.strength).toBe("slack");
         continue;
       }
       expect(hour?.direction).toBe(slope > 0 ? "incoming" : "outgoing");
@@ -602,6 +615,73 @@ describe("forecastHours", () => {
     expect(strengthAt(plain, "2026-09-23T00:00")).toBe("mild");
     expect(strengthAt(nudged, "2026-09-23T00:00")).toBe("strong");
     expect(nudged.filter((hour) => hour.strength === "slack").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("an exact-zero residual hour is present with slack and the following run sign", () => {
+    const levels = Array.from({ length: 48 }, (_, hour) => 0.125 * hour);
+    levels[19] = levels[18];
+    levels[31] = levels[6];
+    const hours = marineFromLevels("2026-09-23T00:00", levels);
+    const zeroHour = "2026-09-23T18:00";
+    expect(seaLevelSlopeAt(hours, zeroHour)).toBe(0);
+    const forecast = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const slack = forecast.find((hour) => hour.time.startsWith(zeroHour));
+    const later = forecast.find((hour) => hour.time > zeroHour);
+    expect(slack?.strength).toBe("slack");
+    expect(slack?.direction).toBe(later?.direction);
+    expect(slack?.direction === "incoming" || slack?.direction === "outgoing").toBe(true);
+  });
+
+  it("applySpeed slack times 2 stays slack", () => {
+    expect(applySpeed("slack", 2)).toBe("slack");
+  });
+
+  it("malformed hour time cannot yield strength outside STRENGTHS", () => {
+    const hours = [
+      ...marineFromLevels(
+        "2026-09-23T00:00",
+        Array.from({ length: 14 }, (_, index) => 0.05 * index),
+      ),
+      { time: "not-a-clock", seaLevelM: 0.8, currentVelocityMs: 0, currentDirectionDeg: 0 },
+    ];
+    const forecast = forecastHours({
+      hours,
+      inwardBearingDeg: 0,
+      reports: [{ id: "r", siteId: "s", time: "2026-09-23T03:00", direction: "incoming", strength: "mild" }],
+    });
+    expect(forecast.length).toBeGreaterThan(0);
+    expect(forecast.every((hour) => (STRENGTHS as readonly string[]).includes(hour.strength))).toBe(true);
+  });
+
+  it("a 25-hour window with only 2 finite residuals has no range", () => {
+    const hours = marineFromLevels(
+      "2026-09-23T00:00",
+      Array.from({ length: 25 }, () => 0.4),
+    );
+    const residual = hours.map((_, index) => (index === 12 || index === 13 ? 0.1 : null));
+    expect(tideWindow(hours, residual, 12).range).toBeNull();
+  });
+
+  it("a window whose only finite slope is at index 0 is not single-slope with that slope", () => {
+    const slopeWindowM = Array<number | null>(13).fill(null);
+    slopeWindowM[0] = 0.08;
+    const item = classifyReport(
+      {
+        id: "w13",
+        siteId: "s",
+        time: "2026-08-01T00:00",
+        direction: "outgoing",
+        strength: "mild",
+        slopeM: null,
+        slopeWindowM,
+      },
+      [],
+    );
+    expect(item.kind === "single-slope" && item.slope === 0.08).toBe(false);
+  });
+
+  it("toMaldivesWall of 2026-09-23 10:00 equals 2026-09-23T10:00", () => {
+    expect(toMaldivesWall("2026-09-23 10:00")).toBe("2026-09-23T10:00");
   });
 });
 

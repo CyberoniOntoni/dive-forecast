@@ -10,12 +10,12 @@ const SEAWARD_KM = 3;
 const EARTH_RADIUS_KM = 6371;
 
 /**
- * api.open-meteo.com/v1/marine returns 404. The marine API is served at
- * marine-api.open-meteo.com, so a miss there falls back to the live host.
+ * marine-api.open-meteo.com is the live marine host. api.open-meteo.com/v1/marine
+ * returns 404 and is the fallback.
  */
 const MARINE_ENDPOINTS = [
-  "https://api.open-meteo.com/v1/marine",
   "https://marine-api.open-meteo.com/v1/marine",
+  "https://api.open-meteo.com/v1/marine",
 ];
 
 export type MarineFetch =
@@ -155,8 +155,14 @@ async function readMarineEndpoint(url: string): Promise<MarineHour[] | null> {
         Accept: "application/json",
         "User-Agent": "dive-current/0.1 (Maldives dive-site forecast prototype)",
       },
+      signal: AbortSignal.timeout(8000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      if (response.status === 429 || response.status >= 500) {
+        console.warn("Marine fetch HTTP", response.status);
+      }
+      return null;
+    }
     const body: unknown = await response.json();
     return marineHoursFromApi(body);
   } catch {
@@ -170,10 +176,13 @@ function readFreshCache(lat: number, lon: number): { fetchedAt: number; hours: M
   return cached;
 }
 
+function cacheName(lat: number, lon: number): string {
+  return `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+}
+
 function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
   try {
-    const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
-    const raw = fs.readFileSync(path.join(CACHE_DIR, name), "utf8");
+    const raw = fs.readFileSync(path.join(CACHE_DIR, cacheName(lat, lon)), "utf8");
     const parsed = JSON.parse(raw) as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
     if (typeof parsed.fetchedAt !== "number") return null;
     // Older cache files still store the Open-Meteo body. Parse that once; stored hours are already parsed.
@@ -190,9 +199,12 @@ function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: 
 }
 
 function writeCache(lat: number, lon: number, hours: MarineHour[], fetchedAt: number) {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  const name = `${lat.toFixed(4)}_${lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
-  fs.writeFileSync(path.join(CACHE_DIR, name), JSON.stringify({ fetchedAt, hours }));
+  try {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(CACHE_DIR, cacheName(lat, lon)), JSON.stringify({ fetchedAt, hours }));
+  } catch (error) {
+    console.warn("Failed to write marine cache", error);
+  }
 }
 
 function asNumber(value: unknown): number | null {
@@ -274,6 +286,6 @@ function toDegrees(radians: number): number {
 }
 
 /** Keeps a longitude inside -180 to 180, which is the range the marine request uses. */
-function wrapLongitude(degrees: number): number {
-  return ((degrees + 540) % 360) - 180;
+export function wrapLongitude(degrees: number): number {
+  return ((((degrees + 180) % 360) + 360) % 360) - 180;
 }

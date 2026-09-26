@@ -49,6 +49,15 @@ function pinHtml(glance: NowcastGlance, showStrength: boolean, age: string | nul
   return arrowPin(spoken, arrow.opacity, arrow.bearing, arrow.color, strengthMark);
 }
 
+function pinIcon(L: LeafletLib, glance: NowcastGlance, showStrength: boolean, age: string | null) {
+  return L.divIcon({
+    className: "dive-pin",
+    html: pinHtml(glance, showStrength, age),
+    iconSize: [PIN_SIZE, PIN_SIZE],
+    iconAnchor: [PIN_SIZE / 2, PIN_SIZE / 2],
+  });
+}
+
 /** Strength stays the zoomed-in word. A stale age is added and does not replace it. */
 function pinNote(strength: string, age: string | null): string {
   if (age && strength) return `${strength} ${age}`;
@@ -180,12 +189,7 @@ function placeSiteMarkers(
 ): Marker[] {
   return siteGlances.map(({ site, glance, age }) => {
     const marker = L.marker([site.lat, site.lon], {
-      icon: L.divIcon({
-        className: "dive-pin",
-        html: pinHtml(glance, showStrength, age),
-        iconSize: [PIN_SIZE, PIN_SIZE],
-        iconAnchor: [PIN_SIZE / 2, PIN_SIZE / 2],
-      }),
+      icon: pinIcon(L, glance, showStrength, age),
       bubblingMouseEvents: false,
       keyboard: true,
     });
@@ -269,7 +273,6 @@ const LeafletMap = dynamic(
       const onPickRef = useRef(onPick);
       const onOpenRef = useRef(onOpen);
       const addingRef = useRef(adding);
-      const destroyRef = useRef<(() => void) | null>(null);
       // 0 until the map exists, so marker effects wait for mount.
       const [mapEpoch, setMapEpoch] = useState(0);
       const [zoom, setZoom] = useState(0);
@@ -282,33 +285,34 @@ const LeafletMap = dynamic(
         addingRef.current = adding;
       }, [onPick, onOpen, adding]);
 
-      // One canvas, from the sites on screen now. A later list only replaces markers.
+      // W4: one canvas; this effect returns mounted.destroy. Marker updates stay below.
       useEffect(() => {
         const container = containerRef.current;
-        if (!container || mapRef.current) return;
+        if (!container) return;
         const mounted = mountDiveMap(L, container, siteGlances, {
           isAdding: () => addingRef.current,
           onPick: (point) => onPickRef.current(point),
           onZoom: (next) => setZoom(next),
         });
         mapRef.current = mounted.map;
-        destroyRef.current = mounted.destroy;
         setMapEpoch((epoch) => epoch + 1);
-      }, [siteGlances]);
-
-      useEffect(() => {
-        return () => {
-          destroyRef.current?.();
-          destroyRef.current = null;
-          mapRef.current = null;
-          markersRef.current = [];
-          draftMarkerRef.current = null;
-        };
+        return mounted.destroy;
       }, []);
 
       useEffect(() => {
         const map = mapRef.current;
         if (!map || mapEpoch === 0) return;
+        // W11: same-length list setIcon in place; rebuild only when the count changes.
+        if (markersRef.current.length === siteGlances.length) {
+          for (let index = 0; index < siteGlances.length; index++) {
+            const marker = markersRef.current[index];
+            const item = siteGlances[index];
+            if (!marker || !item) continue;
+            marker.setIcon(pinIcon(L, item.glance, showStrength, item.age));
+            marker.setTooltipContent(escapeHtml(withAge(item.glance.spoken, item.age)));
+          }
+          return;
+        }
         for (const marker of markersRef.current) marker.remove();
         markersRef.current = placeSiteMarkers(L, map, siteGlances, showStrength, (id) => {
           onOpenRef.current(id);
