@@ -44,7 +44,7 @@ function noForecastGlance(name: string): NowcastGlance {
   };
 }
 
-/** Incoming follows the inward bearing. Outgoing is 180? opposite. Not the ocean vector. */
+/** Incoming follows the inward bearing. Outgoing is 180 opposite, wrapped to 0-360. Not the ocean vector. */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
   // A stale hour still has direction and strength. Empty only when there is no hour.
   if (!nowcast?.hour) return noForecastGlance(name);
@@ -88,7 +88,8 @@ export function glanceColor(direction: Direction, strength: Strength): string {
   return direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
 }
 
-function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {
+export function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {
   if (direction === "incoming") return inwardBearingDeg;
-  return inwardBearingDeg + 180;
+  // W5: wrap so 270 outgoing is 90, not 450.
+  return ((inwardBearingDeg + 180) % 360 + 360) % 360;
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { glanceColor, glanceRank, nowcastGlance } from "./nowcast-glance";
+import { glanceColor, glanceRank, nowcastGlance, passArrowBearing } from "./nowcast-glance";
 import type { SiteNowcast } from "./nowcast";
 import type { Direction, Strength } from "./types";
 
@@ -58,5 +58,32 @@ describe("glanceRank", () => {
     expect(tooStrong.color).not.toMatch(/#/);
     expect(strong.color).not.toMatch(/#/);
     expect(mild.color).not.toMatch(/#/);
+  });
+});
+
+describe("passArrowBearing", () => {
+  it("wraps outgoing 270 to 90, not 450", () => {
+    // W5: outgoing is ((inwardBearingDeg + 180) % 360 + 360) % 360
+    expect(passArrowBearing(270, "outgoing")).toBe(90);
+    expect(passArrowBearing(270, "outgoing")).not.toBe(450);
+    expect(passArrowBearing(90, "outgoing")).toBe(270);
+    expect(passArrowBearing(270, "incoming")).toBe(270);
+  });
+
+  it("sets glance arrowBearing from the wrapped outgoing bearing", () => {
+    const nowcast: SiteNowcast = {
+      siteId: "West",
+      atollId: "atoll",
+      inwardBearingDeg: 270,
+      unavailable: false,
+      hour: {
+        time: "2026-09-23T10:00",
+        direction: "outgoing",
+        strength: "mild",
+        confidence: "low",
+        levelM: 0.1,
+      },
+    };
+    expect(nowcastGlance("West", nowcast, true).arrowBearing).toBe(90);
   });
 });

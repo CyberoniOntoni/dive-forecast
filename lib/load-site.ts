@@ -35,18 +35,15 @@ function forecastedLoad(
   return { bearing, hours, unavailable: false, stale, fetchedAt };
 }
 
-/** Missing replay.json or ok true keeps the forecast default. ok false blocks high. */
+/** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
 function replayAllowsHigh(): boolean {
-  let raw: string;
   try {
-    raw = fs.readFileSync(REPLAY_PATH, "utf8");
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return true;
-    throw error;
+    const parsed: unknown = JSON.parse(fs.readFileSync(REPLAY_PATH, "utf8"));
+    if (!parsed || typeof parsed !== "object") return true;
+    return (parsed as { ok?: unknown }).ok !== false;
+  } catch {
+    return true;
   }
-  const parsed: unknown = JSON.parse(raw);
-  if (!parsed || typeof parsed !== "object") return true;
-  return (parsed as { ok?: unknown }).ok !== false;
 }
 
 type CheckedMarine =

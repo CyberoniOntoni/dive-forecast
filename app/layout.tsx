@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import type { ReactNode } from "react";
 import { Attribution } from "@/components/Attribution";
 import "./globals.css";
 
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   description: "Per-site Maldives current forecast from the tide slope and dive reports.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html
       lang="en"

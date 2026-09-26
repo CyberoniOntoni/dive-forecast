@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HourSlider } from "@/components/HourSlider";
@@ -9,6 +10,18 @@ import { nearestForecastHour } from "@/lib/nowcast";
 import type { HourForecast, Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const site = await getSite(id);
+  return {
+    title: site ? `${site.name} · Dive current` : "Site not found · Dive current",
+  };
+}
 
 export default async function SitePage({
   params,
@@ -81,6 +94,8 @@ function PublishedFacts({ site }: { site: Site }) {
         <a
           key={source.label}
           href={source.href}
+          target="_blank"
+          rel="noopener noreferrer"
           className="ml-2 whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           {source.label}

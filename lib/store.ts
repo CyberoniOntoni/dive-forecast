@@ -3,7 +3,16 @@ import path from "path";
 import type { Catalog, Rating, Report, Site, StoreData } from "./types";
 
 const CATALOG_PATH = path.join(process.cwd(), "data", "sites.json");
-const STORE_PATH = path.join(process.cwd(), "data", "store.json");
+const DEFAULT_STORE_FILE = "store.json";
+let storeFile = DEFAULT_STORE_FILE;
+
+export function setStorePath(filePath: string) {
+  const base = path.basename(filePath);
+  if (!base || base === "." || base === "..") {
+    throw new Error("Store file must be a name under data/");
+  }
+  storeFile = base;
+}
 
 export function readCatalog(): Catalog {
   const raw = fs.readFileSync(CATALOG_PATH, "utf8");
@@ -11,11 +20,20 @@ export function readCatalog(): Catalog {
 }
 
 export function readStore(): StoreData {
+  const file = path.join(process.cwd(), "data", storeFile);
   try {
-    const raw = fs.readFileSync(STORE_PATH, "utf8");
+    const raw = fs.readFileSync(file, "utf8");
     return normalizeStore(JSON.parse(raw));
   } catch (error) {
     if (isMissingFile(error)) return emptyStore();
+    if (error instanceof SyntaxError) {
+      try {
+        fs.renameSync(file, `${file}.corrupt.${Date.now()}`);
+      } catch (renameError) {
+        console.error("Failed to quarantine corrupt store file", renameError);
+      }
+      return emptyStore();
+    }
     throw error;
   }
 }
@@ -57,30 +75,57 @@ export function ratingForSite(siteId: string): Rating | null {
   return readStore().ratings.find((rating) => rating.siteId === siteId) ?? null;
 }
 
-export function addUserSite(site: Site): Site {
-  const store = readStore();
-  store.sites.push(site);
-  writeStore(store);
-  return site;
+export async function addUserSite(site: Site): Promise<Site> {
+  return mutateStore((store) => {
+    if (store.sites.some((existing) => existing.id === site.id)) return site;
+    store.sites.push(site);
+    return site;
+  });
 }
 
-export function addReport(report: Report): Report {
-  const store = readStore();
-  store.reports.push(report);
-  writeStore(store);
-  return report;
+export async function addReport(report: Report): Promise<Report> {
+  return mutateStore((store) => {
+    store.reports.push(report);
+    return report;
+  });
 }
 
-export function saveRating(rating: Rating): Rating {
-  const store = readStore();
-  const index = store.ratings.findIndex((item) => item.siteId === rating.siteId);
-  if (index >= 0) store.ratings[index] = rating;
-  else store.ratings.push(rating);
-  writeStore(store);
-  return rating;
+export async function saveRating(rating: Rating): Promise<Rating> {
+  return mutateStore((store) => {
+    const index = store.ratings.findIndex((item) => item.siteId === rating.siteId);
+    if (index >= 0) store.ratings[index] = rating;
+    else store.ratings.push(rating);
+    return rating;
+  });
+}
+
+let mutationChain: Promise<unknown> = Promise.resolve();
+
+/** Process-local: this queue does not coordinate other Node processes. */
+function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
+  const run = mutationChain.then(() => {
+    const store = readStore();
+    const result = mutate(store);
+    writeStore(store);
+    return result;
+  });
+  mutationChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
 }
 
 function writeStore(store: StoreData) {
-  fs.mkdirSync(path.dirname(STORE_PATH), { recursive: true });
-  fs.writeFileSync(STORE_PATH, `${JSON.stringify(store, null, 2)}\n`);
+  const file = path.join(process.cwd(), "data", storeFile);
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: true });
+  const tmpPath = path.join(dir, `.store.${process.pid}.${crypto.randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(tmpPath, `${JSON.stringify(store, null, 2)}\n`);
+    fs.renameSync(tmpPath, file);
+  } catch (error) {
+    fs.rmSync(tmpPath, { force: true });
+    throw error;
+  }
 }

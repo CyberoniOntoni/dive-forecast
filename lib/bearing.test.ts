@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inwardBearingDeg } from "./bearing";
+import { inwardBearingDeg, wrapDegrees } from "./bearing";
 import { forecastHours } from "./forecast";
 import type { MarineHour, Site } from "./types";
 
@@ -45,5 +45,14 @@ describe("inwardBearingDeg", () => {
   it("bears from an outside point toward the pin when that is the only seeded site", () => {
     const pin = seeded("pin", 0, 2);
     expect(inwardBearingDeg(pin, [pin], { lat: 0, lon: -2 })).toBeCloseTo(90, 5);
+  });
+});
+
+describe("wrapDegrees", () => {
+  it("maps -450 into [0, 360)", () => {
+    // W6: ((degrees % 360) + 360) % 360, not (degrees + 360) % 360
+    const wrapped = wrapDegrees(-450);
+    expect(wrapped).toBeGreaterThanOrEqual(0);
+    expect(wrapped).toBeLessThan(360);
   });
 });

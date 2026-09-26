@@ -1,62 +1,86 @@
 import fs from "fs";
 import path from "path";
-import { marineHoursFromApi } from "../lib/marine";
+import { inwardBearingDeg } from "../lib/bearing";
+import { marineHoursFromApi, seawardPoint } from "../lib/marine";
 import { replayReports } from "../lib/replay";
-import { readStore } from "../lib/store";
-import type { MarineHour } from "../lib/types";
+import { listMergedSites, readCatalog, readStore } from "../lib/store";
+import type { Atoll, MarineHour, Report, Site } from "../lib/types";
 
 const CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const OUT_PATH = path.join(process.cwd(), "data", "replay.json");
 
 function main(): void {
   const reports = readStore().reports;
-  const hours = newestCachedHours();
-  if (!hours || reports.length === 0) {
+  if (reports.length === 0) {
     writeOk(true);
     process.exit(0);
   }
-  const result = replayReports({ hours, inwardBearingDeg: 0, reports });
-  writeOk(result.ok);
-  process.exit(result.ok ? 0 : 1);
+
+  const sites = listMergedSites();
+  const catalog = readCatalog();
+  const siteById = new Map(sites.map((site) => [site.id, site]));
+  const atollById = new Map(catalog.atolls.map((atoll) => [atoll.id, atoll]));
+
+  let allOk = true;
+  for (const siteReports of groupBySiteId(reports).values()) {
+    const site = siteById.get(siteReports[0].siteId);
+    if (!site) continue;
+    const atoll = atollById.get(site.atollId);
+    if (!atoll) continue;
+    if (scoreSite(site, catalog.sites, atoll, siteReports) === false) allOk = false;
+  }
+
+  writeOk(allOk);
+  process.exit(allOk ? 0 : 1);
+}
+
+function groupBySiteId(reports: readonly Report[]): Map<string, Report[]> {
+  const grouped = new Map<string, Report[]>();
+  for (const report of reports) {
+    const list = grouped.get(report.siteId);
+    if (list) list.push(report);
+    else grouped.set(report.siteId, [report]);
+  }
+  return grouped;
+}
+
+/** C10: this pin's seaward cache, then its atoll sample. No file skips the site. */
+function scoreSite(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll,
+  reports: readonly Report[],
+): boolean | null {
+  const bearing = inwardBearingDeg(site, mates, { lat: atoll.oceanLat, lon: atoll.oceanLon });
+  const seaward = seawardPoint(site.lat, site.lon, bearing);
+  const hours = cachedHoursAt(seaward.lat, seaward.lon) ?? cachedHoursAt(atoll.oceanLat, atoll.oceanLon);
+  if (!hours) return null;
+  return replayReports({ hours, inwardBearingDeg: bearing, reports }).ok;
 }
 
 function writeOk(ok: boolean): void {
-  fs.mkdirSync(path.dirname(OUT_PATH), { recursive: true });
-  fs.writeFileSync(OUT_PATH, `${JSON.stringify({ ok }, null, 2)}\n`);
+  const dir = path.dirname(OUT_PATH);
+  fs.mkdirSync(dir, { recursive: true });
+  const tmpPath = path.join(dir, `.replay.${process.pid}.${crypto.randomUUID()}.tmp`);
+  try {
+    fs.writeFileSync(tmpPath, `${JSON.stringify({ ok }, null, 2)}\n`);
+    fs.renameSync(tmpPath, OUT_PATH);
+  } catch (error) {
+    fs.rmSync(tmpPath, { force: true });
+    throw error;
+  }
 }
 
-type CachedHours = { hours: MarineHour[]; fetchedAt: number; mtimeMs: number };
-
-function newestCachedHours(): MarineHour[] | null {
-  let names: string[];
+function cachedHoursAt(lat: number, lon: number): MarineHour[] | null {
+  const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(
+    /[^0-9.+_-]/g,
+    "",
+  );
   try {
-    names = fs.readdirSync(CACHE_DIR);
+    return parseCachedHours(fs.readFileSync(path.join(CACHE_DIR, name), "utf8"))?.hours ?? null;
   } catch {
     return null;
   }
-  let best: CachedHours | null = null;
-  for (const name of names) {
-    const full = path.join(CACHE_DIR, name);
-    let stat: fs.Stats;
-    let raw: string;
-    try {
-      stat = fs.statSync(full);
-      if (!stat.isFile()) continue;
-      raw = fs.readFileSync(full, "utf8");
-    } catch {
-      continue;
-    }
-    const parsed = parseCachedHours(raw);
-    if (!parsed) continue;
-    const candidate = { hours: parsed.hours, fetchedAt: parsed.fetchedAt, mtimeMs: stat.mtimeMs };
-    if (!best || isNewer(candidate, best)) best = candidate;
-  }
-  return best?.hours ?? null;
-}
-
-function isNewer(left: CachedHours, right: CachedHours): boolean {
-  if (left.mtimeMs !== right.mtimeMs) return left.mtimeMs > right.mtimeMs;
-  return left.fetchedAt > right.fetchedAt;
 }
 
 function parseCachedHours(raw: string): { hours: MarineHour[]; fetchedAt: number } | null {

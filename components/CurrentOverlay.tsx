@@ -39,6 +39,10 @@ const SHEET_STYLE = `
     max-height: 50dvh !important;
     max-height: clamp(11rem, calc(100% - 50dvh), 50dvh) !important;
   }
+  /* W10: add form needs more sheet; closed sheet still leaves half the map. */
+  .now-sheet[data-open="true"][data-adding="true"] {
+    max-height: 85dvh !important;
+  }
 }
 `;
 
@@ -59,8 +63,8 @@ export function CurrentOverlay({
 }) {
   const [expanded, setExpanded] = useState(false);
   const countLabel = siteCountLabel(siteGlances.length);
-  // Equal ranks stay in the name order already on the list.
-  const ranked = siteGlances.toSorted((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
+  // W9: copy then sort. Equal ranks stay in the name order already on the list.
+  const ranked = [...siteGlances].sort((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
 
   function toggleSheet() {
     // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
@@ -72,6 +76,7 @@ export function CurrentOverlay({
     <aside
       aria-label="Currents now"
       data-open={expanded ? "true" : "false"}
+      data-adding={adding ? "true" : undefined}
       className={SHEET_CLASS}
     >
       <style>{SHEET_STYLE}</style>
@@ -132,6 +137,7 @@ function SiteRow({ site, glance, age }: SiteGlance) {
     <li className="border-b border-foam/10 last:border-b-0">
       <Link
         href={`/sites/${site.id}`}
+        prefetch={false}
         title={title}
         className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
