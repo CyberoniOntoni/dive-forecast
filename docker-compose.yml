@@ -1,0 +1,39 @@
+# Dive-current — production-oriented compose for a Docker host
+# Usage:
+#   docker compose up -d --build
+#   curl -sI "http://127.0.0.1:${DIVE_CURRENT_PORT:-3000}/"
+#
+# Point your reverse proxy at the host port from DIVE_CURRENT_PORT (default 3000).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: dive-current:latest
+    container_name: dive-current
+    ports:
+      - "${DIVE_CURRENT_PORT:-3000}:3000"
+    mem_limit: 768m
+    memswap_limit: 768m
+    environment:
+      NODE_ENV: production
+      NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=512}
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+    volumes:
+      # Persist reports, ratings, user pins, marine cache, replay.json
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok||r.status===404?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
