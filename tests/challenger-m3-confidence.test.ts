@@ -44,9 +44,10 @@ describe("Adversarial Verification of Milestone 3: Confidence Scoring & Regulari
     const baseDate = "2026-07-20T00:00";
     const hours = makeTidalSeries(baseDate, 72, 12, 0.6);
 
-    // Target hour at 2026-07-21T03:00 (index 27)
-    // Sin slope at index 27 (phase = 27*pi/6 = 4.5*pi = 0.5*pi => cos > 0 => rising / incoming tide)
-    const targetHourStr = "2026-07-21T03:00";
+    // Target hour at 2026-07-21T01:00 (index 25)
+    // Sin series period 12h: forward residual at i=25 is positive (rising) => incoming.
+    // Do not use i=27 (peak / falling) — that yields outgoing and breaks the baseline.
+    const targetHourStr = "2026-07-21T01:00";
     const targetMs = Date.parse(targetHourStr + ":00Z");
 
     // Establish baseline high confidence using 4 agreeing concordant reports outside 7-day window

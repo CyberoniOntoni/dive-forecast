@@ -8,6 +8,8 @@ import { listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
 
 export const CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
+/** Committed fixture caches so CI can score benchmark reports without live Open-Meteo files. */
+export const BENCHMARK_CACHE_DIR = path.join(process.cwd(), "data", "benchmark-marine-cache");
 export const REPLAY_OUT_PATH = path.join(process.cwd(), "data", "replay.json");
 export const BENCHMARK_OUT_PATH = path.join(process.cwd(), "data", "benchmark-results.json");
 export const BENCHMARK_DATASET_PATH = path.join(process.cwd(), "data", "benchmark-reports.json");
@@ -392,25 +394,24 @@ function groupBySiteId(reports: readonly Report[]): Map<string, Report[]> {
 }
 
 function cachedHoursAt(lat: number, lon: number): MarineHour[] | null {
-  const key = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(
-    /[^0-9.+_-]/g,
-    "",
-  );
-  const candidates = [
-    path.join(CACHE_DIR, key),
-    path.join(CACHE_DIR, `${key}json`),
-    path.join(CACHE_DIR, `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`),
-  ];
+  const latPart = (lat === 0 ? 0 : lat).toFixed(4);
+  const lonPart = (lon === 0 ? 0 : lon).toFixed(4);
+  // Prefer real .json names. Also accept the old stripped key that ended in ".".
+  const names = [`${latPart}_${lonPart}.json`, `${latPart}_${lonPart}.`];
+  const dirs = [CACHE_DIR, BENCHMARK_CACHE_DIR];
 
-  for (const filePath of candidates) {
-    try {
-      if (fs.existsSync(filePath)) {
-        const raw = fs.readFileSync(filePath, "utf8");
-        const parsed = parseCachedHours(raw);
-        if (parsed?.hours && parsed.hours.length > 0) return parsed.hours;
+  for (const dir of dirs) {
+    for (const name of names) {
+      const filePath = path.join(dir, name);
+      try {
+        if (fs.existsSync(filePath)) {
+          const raw = fs.readFileSync(filePath, "utf8");
+          const parsed = parseCachedHours(raw);
+          if (parsed?.hours && parsed.hours.length > 0) return parsed.hours;
+        }
+      } catch {
+        // Continue to next candidate
       }
-    } catch {
-      // Continue to next candidate
     }
   }
   return null;
@@ -489,14 +490,4 @@ export function writeAtomicJson(targetPath: string, data: unknown): void {
   }
 }
 
-// Execute when invoked directly as CLI script
-const isImportedByBenchmark =
-  process.env.npm_lifecycle_event === "benchmark" ||
-  (new Error().stack?.includes("benchmark") ?? false);
 
-if (!isImportedByBenchmark) {
-  main().catch((err) => {
-    console.error("Replay run failed with uncaught exception:", err);
-    process.exit(1);
-  });
-}

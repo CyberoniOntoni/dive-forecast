@@ -200,7 +200,7 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
       const replayMtimeBefore = fs.statSync(REPLAY_OUT_PATH).mtimeMs;
       const benchMtimeBefore = fs.statSync(BENCHMARK_OUT_PATH).mtimeMs;
 
-      const res = runCliSubprocess("scripts/replay.ts", ["--benchmark", "--site", "non-existent-site-id"]);
+      const res = runCliSubprocess("scripts/replay-cli.ts", ["--benchmark", "--site", "non-existent-site-id"]);
 
       expect(res.status).toBe(1);
       expect(res.stderr).toContain('Error: Site "non-existent-site-id" was not found in catalog or dataset.');
@@ -227,14 +227,14 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
     });
 
     it("verifies scripts/replay.ts exits with code 1 on catalog site missing reports", () => {
-      const res = runCliSubprocess("scripts/replay.ts", ["--benchmark", "--site", "banana-reef"]);
+      const res = runCliSubprocess("scripts/replay-cli.ts", ["--benchmark", "--site", "banana-reef"]);
 
       expect(res.status).toBe(1);
       expect(res.stderr).toContain('Error: Site "banana-reef" was not found in catalog or dataset.');
     });
 
     it("verifies scripts/replay.ts exits with code 0 on valid site (rasdhoo-madivaru)", () => {
-      const res = runCliSubprocess("scripts/replay.ts", ["--benchmark", "--site", "rasdhoo-madivaru"]);
+      const res = runCliSubprocess("scripts/replay-cli.ts", ["--benchmark", "--site", "rasdhoo-madivaru"]);
 
       expect(res.status).toBe(0);
       expect(res.stdout).toContain("Rasdhoo Madivaru");
