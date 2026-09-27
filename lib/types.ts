@@ -4,6 +4,8 @@ export type Strength = (typeof STRENGTHS)[number];
 export type Direction = "incoming" | "outgoing";
 export type Confidence = "low" | "medium" | "high";
 
+export type { OceanDrift } from "./seasonal";
+
 export type Atoll = {
   id: string;
   name: string;
@@ -26,12 +28,21 @@ export type Site = {
   diveMaxM?: number;
   /** Source for the published dive top and maximum. */
   depthSourceUrl?: string;
-  /** Published channel width, metres. Display only; never changes the band. */
+  /** Published channel width, metres. Used for hydrodynamic pass constriction modeling. */
   channelWidthM?: number;
-  /** Published channel depth, metres. Display only; never changes the band. */
+  /** Published channel depth, metres. Used for hydrodynamic pass constriction modeling. */
   channelDepthM?: number;
   /** Source for the published channel width and depth. */
   channelSourceUrl?: string;
+};
+
+export type ForecastInput = {
+  hours: MarineHour[];
+  inwardBearingDeg: number;
+  reports?: readonly Report[];
+  allowHighConfidence?: boolean;
+  channelWidthM?: number;
+  channelDepthM?: number;
 };
 
 export type Report = {
@@ -87,9 +98,26 @@ export type SiteForecast = {
   fetchedAt: number | null;
 };
 
+export type ChannelMeasurement = {
+  name: string;
+  channelWidthM: number;
+  channelDepthM: number;
+  channelSourceUrl?: string;
+  citedSource?: string;
+};
+
+export type InnerSeaBathymetry = {
+  minDepthM: number;
+  maxDepthM: number;
+  sourceUrl?: string;
+  citedSource?: string;
+};
+
 export type Catalog = {
   atolls: Atoll[];
   sites: Site[];
+  channels?: ChannelMeasurement[];
+  innerSea?: InnerSeaBathymetry;
 };
 
 export type StoreData = {

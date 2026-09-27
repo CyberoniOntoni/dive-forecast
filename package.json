@@ -6,9 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --ignore-pattern \".agents/**\" --ignore-pattern \"tests/**\"",
     "test": "vitest run",
-    "replay": "vite-node scripts/replay.ts"
+    "replay": "vite-node scripts/replay-cli.ts",
+    "benchmark": "vite-node scripts/benchmark.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

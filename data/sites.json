@@ -67,7 +67,10 @@
       "sourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/",
       "diveTopM": 16,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/",
+      "channelWidthM": 800,
+      "channelDepthM": 40,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
     },
     {
       "id": "banana-reef",
@@ -119,7 +122,10 @@
       "sourceUrl": "https://www.openstreetmap.org/way/19882055",
       "diveTopM": 15,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll"
+      "depthSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
+      "channelWidthM": 600,
+      "channelDepthM": 40,
+      "channelSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll"
     },
     {
       "id": "kudarah-thila",
@@ -141,7 +147,10 @@
       "sourceUrl": "https://www.openstreetmap.org/node/7151743385",
       "diveTopM": 5,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb"
+      "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
+      "channelWidthM": 700,
+      "channelDepthM": 40,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
     },
     {
       "id": "fotteyo-kandu",
@@ -152,7 +161,10 @@
       "sourceUrl": "https://www.openstreetmap.org/node/7151743485",
       "diveTopM": 8,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu"
+      "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu",
+      "channelWidthM": 1200,
+      "channelDepthM": 55,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
     },
     {
       "id": "alimatha-house-reef",
@@ -235,7 +247,10 @@
       "lon": 73.47811,
       "sourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
+      "channelWidthM": 900,
+      "channelDepthM": 35,
+      "channelSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/"
     },
     {
       "id": "kuda-giri",
@@ -256,7 +271,10 @@
       "lon": 73.534713,
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 31,
-      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html"
+      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
+      "channelWidthM": 1500,
+      "channelDepthM": 45,
+      "channelSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html"
     },
     {
       "id": "nassimo-thila",
@@ -310,7 +328,24 @@
       "sourceUrl": "https://www.openstreetmap.org/node/7151724888",
       "diveTopM": 5,
       "diveMaxM": 25,
-      "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb"
+      "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
+      "channelWidthM": 500,
+      "channelDepthM": 30,
+      "channelSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb"
+    },
+    {
+      "id": "vaadhoo-caves",
+      "name": "Vaadhoo Caves",
+      "atollId": "south-male",
+      "lat": 4.1221,
+      "lon": 73.4485,
+      "sourceUrl": "https://www.padi.com/dive-site/maldives/vaadhoo-caves/",
+      "diveTopM": 10,
+      "diveMaxM": 30,
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/vaadhoo-caves/",
+      "channelWidthM": 5000,
+      "channelDepthM": 400,
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
     }
   ],
   "channels": [

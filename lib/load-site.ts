@@ -25,11 +25,15 @@ function forecastedLoad(
   reports: readonly Report[],
   fetchedAt: number,
   stale: boolean,
+  channelWidthM?: number,
+  channelDepthM?: number,
 ): SiteLoad {
   const hours = forecastHours({
     hours: marineHours,
     inwardBearingDeg: bearing,
     reports,
+    channelWidthM,
+    channelDepthM,
     ...(replayAllowsHigh() ? {} : { allowHighConfidence: false }),
   });
   return { bearing, hours, unavailable: false, stale, fetchedAt };
@@ -81,7 +85,15 @@ export async function loadSite(
 ): Promise<SiteLoad> {
   const marine = await checkedMarine(site, mates, atoll);
   if (!marine.ok) return unavailableLoad(marine.bearing);
-  return forecastedLoad(marine.bearing, marine.hours, reports, marine.fetchedAt, marine.stale);
+  return forecastedLoad(
+    marine.bearing,
+    marine.hours,
+    reports,
+    marine.fetchedAt,
+    marine.stale,
+    site.channelWidthM,
+    site.channelDepthM,
+  );
 }
 
 /** Same fetch as loadSite. Residual slope window, or null when no cache exists. */

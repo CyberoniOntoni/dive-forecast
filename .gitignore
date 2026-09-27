@@ -46,3 +46,6 @@ next-env.d.ts
 /data/replay.json
 /data/.store-test-*
 /data/.store.*.tmp
+
+# agents
+/.agents/

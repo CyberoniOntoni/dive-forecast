@@ -1,0 +1,639 @@
+{
+  "version": "1.0.0",
+  "updatedAt": "2026-09-26T21:00:00Z",
+  "description": "Curated benchmark fixture dataset for Maldives dive site current forecast backtesting",
+  "metadata": {
+    "totalReports": 51,
+    "totalScenarios": 10,
+    "sitesCovered": [
+      "rasdhoo-madivaru",
+      "miyaru-kandu",
+      "kandooma-thila",
+      "fotteyo-kandu",
+      "alimatha-house-reef",
+      "kuredu-express",
+      "embudhoo-express"
+    ],
+    "timeWindows": {
+      "cachedSeries": [
+        "2026-09-23T00:00 to 2026-09-25T23:00",
+        "2026-09-26T00:00 to 2026-09-28T23:00"
+      ],
+      "historicalWindowDays": 730
+    }
+  },
+  "scenarios": [
+    {
+      "id": "SC-CANON-FLOOD",
+      "category": "peak_flood_flow",
+      "name": "Canonical Passes Peak Flood Flow",
+      "description": "Peak rising tide producing incoming flow through constricted atoll passes",
+      "siteId": "rasdhoo-madivaru",
+      "targetTime": "2026-09-27T08:00",
+      "expectedDirection": "incoming",
+      "expectedStrength": "too_strong",
+      "testFocus": "Directional accuracy and velocity saturation during rising tide"
+    },
+    {
+      "id": "SC-CANON-EBB",
+      "category": "peak_ebb_flow",
+      "name": "Canonical Passes Peak Ebb Flow",
+      "description": "Peak falling tide draining lagoon through deep outer channels",
+      "siteId": "fotteyo-kandu",
+      "targetTime": "2026-09-24T15:00",
+      "expectedDirection": "outgoing",
+      "expectedStrength": "too_strong",
+      "testFocus": "Directional accuracy during peak falling slope"
+    },
+    {
+      "id": "SC-SLACK-TURNS",
+      "category": "slack_turn_transition",
+      "name": "Slack Water Turn Zero-Crossings",
+      "description": "Current speed minimums at high and low tide turning points",
+      "siteId": "rasdhoo-madivaru",
+      "targetTime": "2026-09-27T06:00",
+      "expectedStrength": "slack",
+      "testFocus": "Slack timing deviation error (MAE in minutes)"
+    },
+    {
+      "id": "SC-NOISE-DAMP",
+      "category": "noisy_contradiction",
+      "name": "Consensus Outlier Dampening",
+      "description": "Isolated contradictory report suppressed by agreeing consensus",
+      "siteId": "kandooma-thila",
+      "targetTime": "2026-09-27T09:00",
+      "expectedDirection": "incoming",
+      "testFocus": "Anti-jump regularizer and consensus ratio >= 60%"
+    },
+    {
+      "id": "SC-SPLIT-5050",
+      "category": "noisy_contradiction",
+      "name": "Balanced Opposing Reports",
+      "description": "Equal opposing diver reports suppressing confidence to low",
+      "siteId": "rasdhoo-madivaru",
+      "targetTime": "2026-09-27T02:00",
+      "expectedConfidenceMax": "low",
+      "testFocus": "Confidence suppression without erratic phase flipping"
+    },
+    {
+      "id": "SC-GATE-CONTRA",
+      "category": "noisy_contradiction",
+      "name": "Hard Confidence Safety Gate",
+      "description": "Recent report contradicting predicted direction forbids high confidence",
+      "siteId": "miyaru-kandu",
+      "targetTime": "2026-09-27T09:00",
+      "expectedConfidenceMax": "medium",
+      "testFocus": "False-high-confidence rate must remain 0%"
+    },
+    {
+      "id": "SC-TEMPORAL-DECAY",
+      "category": "temporal_decay",
+      "name": "Temporal Weighting Decay",
+      "description": "Fresh report (weight ~1.0) dominates ancient 730d report (weight < 0.004)",
+      "siteId": "kandooma-thila",
+      "targetTime": "2026-09-27T08:00",
+      "expectedDirection": "incoming",
+      "testFocus": "Half-life exponential weighting (t_half = 90 days)"
+    },
+    {
+      "id": "SC-CONSTRICTION-DIFF",
+      "category": "channel_constriction",
+      "name": "Hydrodynamic Channel Constriction Differentiation",
+      "description": "Constricted pass exhibits higher velocity band than open lagoon reef under same slope",
+      "siteId": "fotteyo-kandu",
+      "targetTime": "2026-09-24T09:00",
+      "expectedStrength": "too_strong",
+      "testFocus": "Channel constriction scaling (Ac = W x D)"
+    },
+    {
+      "id": "SC-UNANIMOUS-HIGHCONF",
+      "category": "canonical_passes",
+      "name": "Unanimous Multi-Report High Confidence",
+      "description": "Multiple agreeing concordant reports unlock high confidence",
+      "siteId": "rasdhoo-madivaru",
+      "targetTime": "2026-09-27T08:00",
+      "expectedConfidenceMin": "high",
+      "testFocus": "Confidence elevation under validated conditions"
+    },
+    {
+      "id": "SC-GEOGRAPHIC-BREADTH",
+      "category": "canonical_passes",
+      "name": "Archipelago Geographical Coverage",
+      "description": "Multi-atoll pass representation across North/South Male, Vaavu, Rasdhoo, Lhaviyani",
+      "siteId": "kuredu-express",
+      "targetTime": "2026-09-27T08:00",
+      "expectedDirection": "incoming",
+      "testFocus": "Spatial generalization across Maldives atolls"
+    }
+  ],
+  "reports": [
+    {
+      "id": "bm-rasdhoo-flood-01",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T07:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Early morning rising tide incoming flow at outer corner"
+    },
+    {
+      "id": "bm-rasdhoo-flood-02",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T08:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Peak incoming current, hammerhead point"
+    },
+    {
+      "id": "bm-rasdhoo-flood-03",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T09:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Continuing strong flood flow"
+    },
+    {
+      "id": "bm-rasdhoo-flood-04",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T10:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Tapering incoming flow approaching high slack"
+    },
+    {
+      "id": "bm-rasdhoo-ebb-01",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T01:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Night ebb flow exiting corner channel"
+    },
+    {
+      "id": "bm-rasdhoo-ebb-02",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T03:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Peak falling slope outgoing current"
+    },
+    {
+      "id": "bm-rasdhoo-ebb-03",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T04:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Strong outflow towards oceanic drop-off"
+    },
+    {
+      "id": "bm-rasdhoo-slack-01",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T06:00",
+      "direction": "outgoing",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Low tide turn zero-crossing before morning flood"
+    },
+    {
+      "id": "bm-rasdhoo-split-pos",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T02:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-SPLIT-5050",
+      "notes": "Opposing report A for 50/50 contradiction test"
+    },
+    {
+      "id": "bm-rasdhoo-split-neg",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-09-27T02:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "scenarioId": "SC-SPLIT-5050",
+      "notes": "Opposing report B for 50/50 contradiction test"
+    },
+    {
+      "id": "bm-miyaru-flood-01",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T07:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Vaavu eastern pass incoming oceanic flow"
+    },
+    {
+      "id": "bm-miyaru-flood-02",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T08:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Peak grey reef shark hook-in current"
+    },
+    {
+      "id": "bm-miyaru-flood-03",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T09:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Heavy incoming flow through pass constriction"
+    },
+    {
+      "id": "bm-miyaru-flood-04",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T10:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Decelerating incoming current"
+    },
+    {
+      "id": "bm-miyaru-ebb-01",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T02:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Outgoing channel current washing out to ocean"
+    },
+    {
+      "id": "bm-miyaru-ebb-02",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T03:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Peak nighttime ebb flow"
+    },
+    {
+      "id": "bm-miyaru-ebb-03",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T04:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "High-velocity outflow"
+    },
+    {
+      "id": "bm-miyaru-slack-01",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-27T06:00",
+      "direction": "outgoing",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Low tide slack turn before flood"
+    },
+    {
+      "id": "bm-miyaru-gate-contra",
+      "siteId": "miyaru-kandu",
+      "time": "2026-09-26T21:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "scenarioId": "SC-GATE-CONTRA",
+      "notes": "Recent 1-day contradiction testing hard confidence safety gate"
+    },
+    {
+      "id": "bm-kandooma-flood-01",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T07:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "South Male channel incoming surge over thila"
+    },
+    {
+      "id": "bm-kandooma-flood-02",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T08:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Peak eagle ray dive incoming flow"
+    },
+    {
+      "id": "bm-kandooma-concord-1",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T08:45",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-NOISE-DAMP",
+      "notes": "Concordant report 1 for consensus dampening"
+    },
+    {
+      "id": "bm-kandooma-concord-2",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T09:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-NOISE-DAMP",
+      "notes": "Concordant report 2 for consensus dampening"
+    },
+    {
+      "id": "bm-kandooma-concord-3",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T09:15",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-NOISE-DAMP",
+      "notes": "Concordant report 3 for consensus dampening"
+    },
+    {
+      "id": "bm-kandooma-noise-outlier",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T09:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "scenarioId": "SC-NOISE-DAMP",
+      "isOutlier": true,
+      "notes": "Noisy outlier contradicting 3 incoming reports (75% consensus ratio)"
+    },
+    {
+      "id": "bm-kandooma-ebb-01",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T02:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Early ebb current pushing out of South Male channel"
+    },
+    {
+      "id": "bm-kandooma-ebb-02",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T03:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Peak outgoing current at corner"
+    },
+    {
+      "id": "bm-kandooma-ebb-03",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T04:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Strong outgoing flow"
+    },
+    {
+      "id": "bm-kandooma-slack-01",
+      "siteId": "kandooma-thila",
+      "time": "2026-09-27T06:00",
+      "direction": "outgoing",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Low tide turn zero-crossing"
+    },
+    {
+      "id": "bm-kandooma-ancient",
+      "siteId": "kandooma-thila",
+      "time": "2024-09-27T08:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "slopeM": -0.11,
+      "slopeWindowM": [
+        -0.02,
+        -0.05,
+        -0.08,
+        -0.1,
+        -0.11,
+        -0.11,
+        -0.11,
+        -0.09,
+        -0.07,
+        -0.04,
+        -0.01,
+        0.02,
+        0.05
+      ],
+      "scenarioId": "SC-TEMPORAL-DECAY",
+      "notes": "730-day-old historical report with negligible weight (< 0.004)"
+    },
+    {
+      "id": "bm-fotteyo-flood-01",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T07:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Vaavu eastern rim deep pass rising tide flood"
+    },
+    {
+      "id": "bm-fotteyo-flood-02",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T08:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Constricted pass incoming current amplification"
+    },
+    {
+      "id": "bm-fotteyo-flood-03",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T09:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CONSTRICTION-DIFF",
+      "notes": "Peak incoming flow testing constriction amplification against Alimatha"
+    },
+    {
+      "id": "bm-fotteyo-flood-04",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T10:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-FLOOD",
+      "notes": "Strong flood flow persisting past peak slope"
+    },
+    {
+      "id": "bm-fotteyo-slack-high-01",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T00:00",
+      "direction": "outgoing",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "High water slack turn at midnight"
+    },
+    {
+      "id": "bm-fotteyo-slack-low-01",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T06:00",
+      "direction": "incoming",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Low water slack turn before morning flood"
+    },
+    {
+      "id": "bm-fotteyo-ebb-01",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T14:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Afternoon ebb flow exiting pass"
+    },
+    {
+      "id": "bm-fotteyo-ebb-02",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T15:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Peak falling slope outgoing current"
+    },
+    {
+      "id": "bm-fotteyo-ebb-03",
+      "siteId": "fotteyo-kandu",
+      "time": "2026-09-24T16:00",
+      "direction": "outgoing",
+      "strength": "too_strong",
+      "scenarioId": "SC-CANON-EBB",
+      "notes": "Heavy outflow towards deep ocean"
+    },
+    {
+      "id": "bm-alimatha-flood-01",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T07:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-CONSTRICTION-DIFF",
+      "notes": "Unconstricted lagoon reef moderate incoming flow"
+    },
+    {
+      "id": "bm-alimatha-flood-02",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T09:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-CONSTRICTION-DIFF",
+      "notes": "Unconstricted site producing lower speed band than Fotteyo Kandu"
+    },
+    {
+      "id": "bm-alimatha-slack-01",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T06:00",
+      "direction": "incoming",
+      "strength": "slack",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Morning calm slack water on house reef"
+    },
+    {
+      "id": "bm-alimatha-slack-02",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T18:00",
+      "direction": "incoming",
+      "strength": "too_strong",
+      "scenarioId": "SC-SLACK-TURNS",
+      "notes": "Sunset night dive transition window"
+    },
+    {
+      "id": "bm-alimatha-ebb-01",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T02:00",
+      "direction": "outgoing",
+      "strength": "mild",
+      "scenarioId": "SC-CONSTRICTION-DIFF",
+      "notes": "Gentle ebb on unconstricted lagoon reef flat"
+    },
+    {
+      "id": "bm-alimatha-ebb-02",
+      "siteId": "alimatha-house-reef",
+      "time": "2026-09-24T03:00",
+      "direction": "outgoing",
+      "strength": "mild",
+      "scenarioId": "SC-CONSTRICTION-DIFF",
+      "notes": "Mild falling tide outflow"
+    },
+    {
+      "id": "bm-kuredu-flood-01",
+      "siteId": "kuredu-express",
+      "time": "2026-09-27T08:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-GEOGRAPHIC-BREADTH",
+      "notes": "Lhaviyani channel incoming pass flow"
+    },
+    {
+      "id": "bm-kuredu-ebb-01",
+      "siteId": "kuredu-express",
+      "time": "2026-09-27T03:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "scenarioId": "SC-GEOGRAPHIC-BREADTH",
+      "notes": "Lhaviyani channel outgoing current"
+    },
+    {
+      "id": "bm-embudhoo-flood-01",
+      "siteId": "embudhoo-express",
+      "time": "2026-09-27T08:00",
+      "direction": "incoming",
+      "strength": "strong",
+      "scenarioId": "SC-GEOGRAPHIC-BREADTH",
+      "notes": "Wide South Male pass incoming flow"
+    },
+    {
+      "id": "bm-embudhoo-ebb-01",
+      "siteId": "embudhoo-express",
+      "time": "2026-09-27T03:00",
+      "direction": "outgoing",
+      "strength": "strong",
+      "scenarioId": "SC-GEOGRAPHIC-BREADTH",
+      "notes": "Wide South Male pass outgoing flow"
+    },
+    {
+      "id": "bm-decay-historical-90d",
+      "siteId": "kandooma-thila",
+      "time": "2026-06-29T08:00",
+      "direction": "outgoing",
+      "strength": "mild",
+      "slopeM": -0.06,
+      "slopeWindowM": [
+        -0.01,
+        -0.03,
+        -0.05,
+        -0.06,
+        -0.06,
+        -0.05,
+        -0.03,
+        -0.01,
+        0.01,
+        0.03,
+        0.05,
+        0.06,
+        0.06
+      ],
+      "scenarioId": "SC-TEMPORAL-DECAY",
+      "notes": "90-day-old report at exactly 1 half-life (weight 0.50)"
+    },
+    {
+      "id": "bm-decay-historical-180d",
+      "siteId": "rasdhoo-madivaru",
+      "time": "2026-03-31T08:00",
+      "direction": "outgoing",
+      "strength": "mild",
+      "slopeM": -0.08,
+      "slopeWindowM": [
+        -0.02,
+        -0.04,
+        -0.06,
+        -0.08,
+        -0.08,
+        -0.07,
+        -0.05,
+        -0.02,
+        0.01,
+        0.04,
+        0.07,
+        0.08,
+        0.08
+      ],
+      "scenarioId": "SC-TEMPORAL-DECAY",
+      "notes": "180-day-old report at exactly 2 half-lives (weight 0.25)"
+    }
+  ]
+}

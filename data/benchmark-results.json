@@ -1,0 +1,119 @@
+{
+  "ok": true,
+  "failures": 0,
+  "strengthMismatches": 21,
+  "metrics": {
+    "totalReports": 44,
+    "directionalAccuracyPct": 90.91,
+    "slackTimingDeviationMins": 30,
+    "falseHighConfidenceRatePct": 0,
+    "confidenceBreakdown": {
+      "high": {
+        "count": 3,
+        "accuracyPct": 100
+      },
+      "medium": {
+        "count": 17,
+        "accuracyPct": 88.24
+      },
+      "low": {
+        "count": 24,
+        "accuracyPct": 91.67
+      }
+    }
+  },
+  "datasetName": "data/benchmark-reports.json",
+  "evaluatedAt": "2026-09-27T07:00:29.457Z",
+  "siteResults": [
+    {
+      "siteId": "rasdhoo-madivaru",
+      "siteName": "Rasdhoo Madivaru",
+      "atollName": "Rasdhoo Atoll",
+      "evaluatedReports": 10,
+      "slackReports": 1,
+      "slackDeviationSumMins": 30,
+      "failures": 0,
+      "strengthMismatches": 5,
+      "directionalMatches": 9,
+      "directionalAccuracyPct": 90,
+      "slackTimingDeviationMins": 30,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    },
+    {
+      "siteId": "miyaru-kandu",
+      "siteName": "Miyaru Kandu",
+      "atollName": "Vaavu Atoll",
+      "evaluatedReports": 9,
+      "slackReports": 1,
+      "slackDeviationSumMins": 30,
+      "failures": 0,
+      "strengthMismatches": 3,
+      "directionalMatches": 7,
+      "directionalAccuracyPct": 77.78,
+      "slackTimingDeviationMins": 30,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    },
+    {
+      "siteId": "kandooma-thila",
+      "siteName": "Kandooma Thila",
+      "atollName": "South Male Atoll",
+      "evaluatedReports": 10,
+      "slackReports": 1,
+      "slackDeviationSumMins": 30,
+      "failures": 0,
+      "strengthMismatches": 4,
+      "directionalMatches": 9,
+      "directionalAccuracyPct": 90,
+      "slackTimingDeviationMins": 30,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    },
+    {
+      "siteId": "fotteyo-kandu",
+      "siteName": "Fotteyo Kandu",
+      "atollName": "Vaavu Atoll",
+      "evaluatedReports": 9,
+      "slackReports": 2,
+      "slackDeviationSumMins": 60,
+      "failures": 0,
+      "strengthMismatches": 6,
+      "directionalMatches": 9,
+      "directionalAccuracyPct": 100,
+      "slackTimingDeviationMins": 30,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    },
+    {
+      "siteId": "alimatha-house-reef",
+      "siteName": "Alimatha house reef",
+      "atollName": "Vaavu Atoll",
+      "evaluatedReports": 6,
+      "slackReports": 1,
+      "slackDeviationSumMins": 30,
+      "failures": 0,
+      "strengthMismatches": 3,
+      "directionalMatches": 6,
+      "directionalAccuracyPct": 100,
+      "slackTimingDeviationMins": 30,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    },
+    {
+      "siteId": "embudhoo-express",
+      "siteName": "Embudhoo Express",
+      "atollName": "South Male Atoll",
+      "evaluatedReports": 0,
+      "slackReports": 0,
+      "slackDeviationSumMins": 0,
+      "failures": 0,
+      "strengthMismatches": 0,
+      "directionalMatches": 0,
+      "directionalAccuracyPct": 0,
+      "slackTimingDeviationMins": 0,
+      "falseHighConfidenceRatePct": 0,
+      "ok": true
+    }
+  ]
+}
