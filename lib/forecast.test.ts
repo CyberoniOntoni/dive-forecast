@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applySpeed,
   classifyReport,
+  constrictionFactor,
   forecastHours,
   residualSlopeWindow,
   seaLevelSlopeAt,
@@ -759,3 +760,249 @@ function springDay(): number[] {
   }
   return levels;
 }
+
+describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
+  describe("constrictionFactor calculation & boundaries", () => {
+    it("returns 1.0 for undefined or missing dimensions", () => {
+      expect(constrictionFactor(undefined, undefined)).toBe(1.0);
+      expect(constrictionFactor(1500, undefined)).toBe(1.0);
+      expect(constrictionFactor(undefined, 80)).toBe(1.0);
+    });
+
+    it("returns 1.0 for non-positive or non-finite dimensions", () => {
+      expect(constrictionFactor(0, 80)).toBe(1.0);
+      expect(constrictionFactor(1500, 0)).toBe(1.0);
+      expect(constrictionFactor(-500, 40)).toBe(1.0);
+      expect(constrictionFactor(500, -30)).toBe(1.0);
+      expect(constrictionFactor(Number.NaN, 40)).toBe(1.0);
+      expect(constrictionFactor(500, Number.POSITIVE_INFINITY)).toBe(1.0);
+    });
+
+    it("computes exact reference channel constriction as 1.0", () => {
+      // Reference channel: 5000m x 400m = 2,000,000 m^2
+      expect(constrictionFactor(5000, 400)).toBe(1.0);
+    });
+
+    it("computes realistic intermediate constriction (e.g. Hani Kandu)", () => {
+      // 3000m x 160m = 480,000 m^2 -> (2,000,000 / 480,000)^0.35 ≈ 1.646
+      const factor = constrictionFactor(3000, 160);
+      expect(factor).toBeGreaterThan(1.64);
+      expect(factor).toBeLessThan(1.65);
+    });
+
+    it("clamps massive channels to minimum C_min = 1.0", () => {
+      // 10,000m x 1,000m = 10,000,000 m^2
+      expect(constrictionFactor(10000, 1000)).toBe(1.0);
+    });
+
+    it("clamps very narrow passes to maximum C_max = 2.5", () => {
+      // 500m x 30m = 15,000 m^2 -> (2,000,000 / 15,000)^0.35 ≈ 5.54 -> clamped to 2.5
+      expect(constrictionFactor(500, 30)).toBe(2.5);
+    });
+  });
+
+  // Moderate tidal cycle: amplitude 0.26m -> range 0.52m (open water baseline is 'mild')
+  function moderateTidalSeries(count = 72): MarineHour[] {
+    const origin = Date.UTC(2026, 8, 23, 0, 0);
+    return Array.from({ length: count }, (_, hour) => ({
+      time: new Date(origin + hour * 3600 * 1000).toISOString().slice(0, 16),
+      seaLevelM: 0.5 + 0.26 * Math.sin((2 * Math.PI * hour) / 12),
+      currentVelocityMs: 0,
+      currentDirectionDeg: 0,
+    }));
+  }
+
+  it("Acceptance Criterion: constricted channel produces strictly stronger current rating at peak tidal flow than unconstricted open site under identical sea-level slopes", () => {
+    const series = moderateTidalSeries(72);
+    const peakHourTime = "2026-09-24T03:00"; // Peak rising slope (maximum tidal flow)
+
+    // Baseline: Unconstricted open water site (dimensions omitted)
+    const openForecast = forecastHours({
+      hours: series,
+      inwardBearingDeg: 0,
+      reports: [],
+    });
+
+    // Constricted pass site: e.g. 1500m width, 80m depth (Ac = 120,000 m^2 -> C_constrict = 2.5)
+    const constrictedForecast = forecastHours({
+      hours: series,
+      inwardBearingDeg: 0,
+      reports: [],
+      channelWidthM: 1500,
+      channelDepthM: 80,
+    });
+
+    const openPeak = openForecast.find((h) => h.time.startsWith(peakHourTime));
+    const constrictedPeak = constrictedForecast.find((h) => h.time.startsWith(peakHourTime));
+
+    expect(openPeak).toBeDefined();
+    expect(constrictedPeak).toBeDefined();
+
+    // Baseline open water is 'mild' under moderate 0.52m range
+    expect(openPeak?.strength).toBe("mild");
+
+    // Constricted pass is amplified to 'strong' or 'too_strong'
+    expect(["strong", "too_strong"]).toContain(constrictedPeak?.strength);
+
+    // Explicit rank comparison: constricted must be strictly greater than open
+    const openRank = STRENGTHS.indexOf(openPeak!.strength);
+    const constrictedRank = STRENGTHS.indexOf(constrictedPeak!.strength);
+    expect(constrictedRank).toBeGreaterThan(openRank);
+  });
+
+  it("produces progressive amplification for narrow vs wide channels under identical conditions", () => {
+    const series = moderateTidalSeries(72);
+    const peakHourTime = "2026-09-24T03:00";
+
+    // Wide pass: Vaadhoo Kandu (5000m x 400m = 2,000,000 m^2, C = 1.0)
+    const wideForecast = forecastHours({
+      hours: series,
+      inwardBearingDeg: 0,
+      reports: [],
+      channelWidthM: 5000,
+      channelDepthM: 400,
+    });
+
+    // Moderate pass: Hani Kandu (3000m x 160m = 480,000 m^2, C ≈ 1.65)
+    const moderateForecast = forecastHours({
+      hours: series,
+      inwardBearingDeg: 0,
+      reports: [],
+      channelWidthM: 3000,
+      channelDepthM: 160,
+    });
+
+    // Narrow cut: (600m x 35m = 21,000 m^2, C = 2.5 clamped)
+    const narrowForecast = forecastHours({
+      hours: series,
+      inwardBearingDeg: 0,
+      reports: [],
+      channelWidthM: 600,
+      channelDepthM: 35,
+    });
+
+    const wideStrength = wideForecast.find((h) => h.time.startsWith(peakHourTime))?.strength;
+    const moderateStrength = moderateForecast.find((h) => h.time.startsWith(peakHourTime))?.strength;
+    const narrowStrength = narrowForecast.find((h) => h.time.startsWith(peakHourTime))?.strength;
+
+    expect(STRENGTHS.indexOf(wideStrength!)).toBeLessThanOrEqual(STRENGTHS.indexOf(moderateStrength!));
+    expect(STRENGTHS.indexOf(moderateStrength!)).toBeLessThanOrEqual(STRENGTHS.indexOf(narrowStrength!));
+    expect(STRENGTHS.indexOf(narrowStrength!)).toBeGreaterThan(STRENGTHS.indexOf(wideStrength!));
+  });
+
+  describe("Boundary & Edge Cases", () => {
+    const series = moderateTidalSeries(72);
+
+    it("treats undefined and partial dimensions as unconstricted baseline", () => {
+      const omitted = forecastHours({ hours: series, inwardBearingDeg: 0 });
+      const bothUndefined = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: undefined,
+        channelDepthM: undefined,
+      });
+      const widthOnly = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: 1500,
+        channelDepthM: undefined,
+      });
+      const depthOnly = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: undefined,
+        channelDepthM: 80,
+      });
+
+      expect(bothUndefined).toEqual(omitted);
+      expect(widthOnly).toEqual(omitted);
+      expect(depthOnly).toEqual(omitted);
+    });
+
+    it("handles zero, negative, and NaN dimensions safely", () => {
+      const omitted = forecastHours({ hours: series, inwardBearingDeg: 0 });
+      const zeroInput = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: 0,
+        channelDepthM: 0,
+      });
+      const negativeInput = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: -500,
+        channelDepthM: 40,
+      });
+      const nanInput = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: Number.NaN,
+        channelDepthM: 40,
+      });
+
+      expect(zeroInput).toEqual(omitted);
+      expect(negativeInput).toEqual(omitted);
+      expect(nanInput).toEqual(omitted);
+    });
+
+    it("preserves slack water at turn-of-tide crests even in heavily constricted channels", () => {
+      const crestSeries = Array.from({ length: 48 }, (_, i) => ({
+        time: new Date(Date.UTC(2026, 8, 23, i)).toISOString().slice(0, 16),
+        seaLevelM: 0.5 + 0.1 * Math.sin((2 * Math.PI * i) / 12),
+        currentVelocityMs: 0,
+        currentDirectionDeg: 0,
+      }));
+
+      const unconstricted = forecastHours({ hours: crestSeries, inwardBearingDeg: 0 });
+      const constricted = forecastHours({
+        hours: crestSeries,
+        inwardBearingDeg: 0,
+        channelWidthM: 500,
+        channelDepthM: 20,
+      });
+
+      const crestHour = "2026-09-23T15:00";
+      const unconstrictedCrest = unconstricted.find((h) => h.time.startsWith(crestHour));
+      const constrictedCrest = constricted.find((h) => h.time.startsWith(crestHour));
+
+      expect(unconstrictedCrest?.strength).toBe("slack");
+      expect(constrictedCrest?.strength).toBe("slack");
+    });
+
+    it("dead flat tides produce slack conditions across all hours regardless of constriction", () => {
+      const flatSeries = Array.from({ length: 48 }, (_, i) => ({
+        time: new Date(Date.UTC(2026, 8, 23, i)).toISOString().slice(0, 16),
+        seaLevelM: 0.4,
+        currentVelocityMs: 0,
+        currentDirectionDeg: 0,
+      }));
+
+      const constricted = forecastHours({
+        hours: flatSeries,
+        inwardBearingDeg: 0,
+        channelWidthM: 300,
+        channelDepthM: 20,
+      });
+
+      for (const h of constricted) {
+        expect(h.strength).toBe("slack");
+      }
+    });
+
+    it("never inverts or modifies tidal direction due to channel constriction", () => {
+      const open = forecastHours({ hours: series, inwardBearingDeg: 0 });
+      const constricted = forecastHours({
+        hours: series,
+        inwardBearingDeg: 0,
+        channelWidthM: 1000,
+        channelDepthM: 50,
+      });
+
+      expect(constricted.length).toBe(open.length);
+      for (let i = 0; i < open.length; i++) {
+        expect(constricted[i].direction).toBe(open[i].direction);
+      }
+    });
+  });
+});
+

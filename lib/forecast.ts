@@ -1,4 +1,17 @@
-import { STRENGTHS, type Direction, type HourForecast, type MarineHour, type Report, type Strength } from "./types";
+import {
+  STRENGTHS,
+  type Direction,
+  type ForecastInput,
+  type HourForecast,
+  type MarineHour,
+  type Report,
+  type Strength,
+} from "./types";
+
+import { getMaldivesMonsoonDrift, type OceanDrift } from "./seasonal";
+
+export type { ForecastInput, OceanDrift };
+export { getMaldivesMonsoonDrift };
 
 export const FORECAST_NOTICE =
   "The 8 km grid is weak in passes. Direction comes from the tide slope plus reports, not from the current at the dive pin.";
@@ -15,12 +28,42 @@ const HOUR_MATCH_MS = 45 * 60 * 1000;
 const NUDGE_BAND = 0.5;
 const NUDGE_SATURATION_MS = 0.4;
 
-export type ForecastInput = {
-  hours: MarineHour[];
-  inwardBearingDeg: number;
-  reports?: readonly Report[];
-  allowHighConfidence?: boolean;
-};
+export const REF_CHANNEL_AREA_M2 = 2_000_000;
+export const CONSTRICTION_EXPONENT = 0.35;
+export const CONSTRICTION_MIN = 1.0;
+export const CONSTRICTION_MAX = 2.5;
+
+export const REPORT_HALF_LIFE_DAYS = 90;
+export const REPORT_HALF_LIFE_MS = REPORT_HALF_LIFE_DAYS * 24 * 60 * 60 * 1000;
+export const LAG_PENALTY_LAMBDA = 0.05;
+export const CONSENSUS_RATIO_THRESHOLD = 0.6;
+export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Exponential temporal decay weight: 2^(-delta_days / 90) */
+export function reportTemporalWeight(reportTime: string, referenceTimeMs: number): number {
+  const reportMs = parseWall(reportTime);
+  if (!Number.isFinite(reportMs)) return 0;
+  if (!Number.isFinite(referenceTimeMs)) return 1.0;
+  const deltaMs = Math.max(0, referenceTimeMs - reportMs);
+  return Math.pow(2, -deltaMs / REPORT_HALF_LIFE_MS);
+}
+
+export function constrictionFactor(channelWidthM?: number, channelDepthM?: number): number {
+  if (
+    channelWidthM == null ||
+    channelDepthM == null ||
+    !Number.isFinite(channelWidthM) ||
+    !Number.isFinite(channelDepthM) ||
+    channelWidthM <= 0 ||
+    channelDepthM <= 0
+  ) {
+    return 1.0;
+  }
+  const area = channelWidthM * channelDepthM;
+  if (area <= 0) return 1.0;
+  const raw = Math.pow(REF_CHANNEL_AREA_M2 / area, CONSTRICTION_EXPONENT);
+  return Math.min(CONSTRICTION_MAX, Math.max(CONSTRICTION_MIN, raw));
+}
 
 type TideStats = { range: number | null; maxAbs: number | null };
 
@@ -30,6 +73,7 @@ type ClassifiedBase = {
   storedHourSlope: number | null;
   pullSlope: number | null;
   failed: boolean;
+  temporalWeight: number;
 };
 
 type ClassifiedReport =
@@ -40,6 +84,7 @@ type ClassifiedReport =
 
 export function forecastHours(input: ForecastInput): HourForecast[] {
   const hours = input.hours;
+  const constriction = constrictionFactor(input.channelWidthM, input.channelDepthM);
   const residual = residualSeries(hours);
   const classified = (input.reports ?? []).map((report) => classifyReport(report, hours));
   const offset = fitPhaseOffset(classified, hours, residual);
@@ -52,6 +97,7 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     tides,
     offset,
     input.inwardBearingDeg,
+    constriction,
   );
   const allowHighConfidence = input.allowHighConfidence ?? true;
   return finishRuns(
@@ -63,6 +109,7 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     tides,
     classified,
     allowHighConfidence,
+    constriction,
   );
 }
 
@@ -77,7 +124,9 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   // In-series pull is filled after the offset fit. Stored slope is only outside this series.
   const pullSlope = seriesIndex < 0 ? storedHourSlope : null;
   const failed = report.slopeM === null && finite.length === 0;
-  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed };
+  const referenceTimeMs = hours.length > 0 ? parseWall(hours[0].time) : Number.NaN;
+  const temporalWeight = reportTemporalWeight(report.time, referenceTimeMs);
+  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed, temporalWeight };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
   const centerSlope = slopes ? slopes[WINDOW_HALF_HOURS] : null;
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
@@ -202,40 +251,32 @@ function finishRuns(
   tides: readonly TideStats[],
   classified: readonly ClassifiedReport[],
   allowHighConfidence: boolean,
+  constriction: number = 1.0,
 ): HourForecast[] {
   // A report fades for six hours and must not cut the run.
   const reportPull = (hour: OpenHour): HourForecast => {
-    const pull = recentPull(hours[hour.index], classified);
-    // hour.slope is the lagged slope. The unshifted slope can still share the report's sign.
-    const turned = Boolean(pull && slopesOpposite(pull.item.pullSlope, hour.slope));
-    const contradicted = Boolean(pull && pull.item.report.direction !== hour.direction);
-    let direction = hour.direction;
-    let strength = hour.strength;
-    if (pull) {
-      if (!turned) direction = pull.item.report.direction;
-      const gap = bandIndex(pull.item.report.strength) - bandIndex(strength);
-      strength = shiftStrength(strength, Math.round(pull.weight * gap));
-    }
+    const pull = aggregateReportPull(hour, hours, classified);
     return {
       time: hour.time,
-      direction,
-      strength,
+      direction: pull.direction,
+      strength: pull.strength,
       confidence: confidenceFor({
         classified,
         hours,
         residual,
         offset,
-        direction,
-        strength,
+        direction: pull.direction,
+        strength: pull.strength,
         tideDirection: hour.direction,
-        contradicted,
+        contradicted: pull.contradicted,
         allowHighConfidence,
+        hourTime: hour.time,
       }),
       levelM: hour.levelM,
     };
   };
 
-  return settledHours(hours, residual, inwardBearingDeg, offset, speedFactor, tides).map(reportPull);
+  return settledHours(hours, residual, inwardBearingDeg, offset, speedFactor, tides, constriction).map(reportPull);
 }
 
 /** Open hours after peak band and mean nudge, before the report pull. */
@@ -246,6 +287,7 @@ function settledHours(
   offset: number,
   speedFactor: number,
   tides: readonly TideStats[],
+  constriction: number = 1.0,
 ): OpenHour[] {
   const settled: OpenHour[] = [];
   let run: OpenHour[] = [];
@@ -275,7 +317,12 @@ function settledHours(
     }
     const stats = tides[index];
     if (stats.range == null || stats.maxAbs == null) continue;
-    const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
+    const tideStrength = hourlyStrength(
+      Math.abs(slope),
+      stats.maxAbs,
+      strengthFromRange(stats.range, constriction),
+      constriction,
+    );
     const opened: OpenHour = {
       time: hour.time,
       direction: effectiveDirection,
@@ -340,18 +387,41 @@ function fitPhaseOffset(
   if (voters.length < 2) return 0;
 
   let bestK = 0;
-  let bestScore = -1;
-  const scores = new Map<number, number>();
+  let bestRegularizedScore = Number.NEGATIVE_INFINITY;
+  const rawScores = new Map<number, number>();
+  const matchCounts = new Map<number, number>();
+
   for (let k = -WINDOW_HALF_HOURS; k <= WINDOW_HALF_HOURS; k += 1) {
-    let score = 0;
-    for (const voter of voters) score += phaseScore(voter, hours, residual, k);
-    scores.set(k, score);
-    if (score > bestScore || (score === bestScore && Math.abs(k) < Math.abs(bestK))) {
-      bestScore = score;
+    let weightedScore = 0;
+    let count = 0;
+    for (const voter of voters) {
+      if (phaseScore(voter, hours, residual, k) > 0) {
+        weightedScore += voter.temporalWeight;
+        count += 1;
+      }
+    }
+    rawScores.set(k, weightedScore);
+    matchCounts.set(k, count);
+
+    const regularized = weightedScore - LAG_PENALTY_LAMBDA * Math.abs(k);
+    if (
+      regularized > bestRegularizedScore ||
+      (regularized === bestRegularizedScore && Math.abs(k) < Math.abs(bestK)) ||
+      (regularized === bestRegularizedScore && Math.abs(k) === Math.abs(bestK) && k > bestK)
+    ) {
+      bestRegularizedScore = regularized;
       bestK = k;
     }
   }
-  if (bestK !== 0 && bestScore >= 2 && bestScore > (scores.get(0) ?? 0)) return bestK;
+
+  const zeroRaw = rawScores.get(0) ?? 0;
+  const zeroRegularized = zeroRaw - LAG_PENALTY_LAMBDA * 0;
+  const bestCount = matchCounts.get(bestK) ?? 0;
+  const bestRaw = rawScores.get(bestK) ?? 0;
+
+  if (bestK !== 0 && bestCount >= 2 && bestRaw >= 0.5 && bestRegularizedScore > zeroRegularized) {
+    return bestK;
+  }
   return 0;
 }
 
@@ -374,16 +444,27 @@ function fitSpeedFactor(
   tides: readonly TideStats[],
   offset: number,
   inwardBearingDeg: number,
+  constriction: number = 1.0,
 ): number {
-  const ratios: number[] = [];
+  let weightedRatioSum = 0;
+  let totalWeight = 0;
+  let count = 0;
+
   for (const item of classified) {
-    const prior = speedPrior(item, hours, residual, tides, offset, inwardBearingDeg);
+    const prior = speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction);
     if (!prior) continue;
-    ratios.push((bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5));
+    const reportPhase = tideDirectionAtLag(item, hours, residual, offset);
+    if (reportPhase != null && reportPhase !== item.report.direction) continue;
+    const ratio = (bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5);
+    const w = item.temporalWeight;
+    weightedRatioSum += ratio * w;
+    totalWeight += w;
+    count += 1;
   }
-  if (ratios.length < 2) return 1;
-  const mean = ratios.reduce((sum, ratio) => sum + ratio, 0) / ratios.length;
-  return Math.min(2, Math.max(0.5, mean));
+
+  if (count < 2 || totalWeight <= 0) return 1;
+  const weightedMean = weightedRatioSum / totalWeight;
+  return Math.min(2, Math.max(0.5, weightedMean));
 }
 
 function confidenceFor(input: {
@@ -396,39 +477,136 @@ function confidenceFor(input: {
   tideDirection: Direction | null;
   contradicted: boolean;
   allowHighConfidence: boolean;
+  hourTime?: string;
 }): "low" | "medium" | "high" {
   if (input.classified.length === 0 || input.contradicted || input.tideDirection == null) return "low";
+
+  const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
+
+  // Hard safety invariant: check if ANY recent report (<= 7 days) contradicts predicted direction
+  const hasRecentContradiction =
+    Number.isFinite(targetHourMs) &&
+    input.classified.some((item) => {
+      if (item.kind === "unusable") return false;
+      const repMs = parseWall(item.report.time);
+      if (!Number.isFinite(repMs) || Math.abs(targetHourMs - repMs) > SEVEN_DAYS_MS) return false;
+      const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
+      if (reportPhase != null && reportPhase === input.tideDirection && item.report.direction !== input.direction) {
+        return true;
+      }
+      if (Math.abs(targetHourMs - repMs) < HOUR_MS && item.report.direction !== input.direction) {
+        return true;
+      }
+      return false;
+    });
+
   const similar = input.classified.filter((item) => {
     const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
     return reportPhase != null && reportPhase === input.tideDirection;
   });
   if (similar.length < 2) return "low";
-  const directionAgree = similar.filter((item) => item.report.direction === input.direction).length / similar.length;
-  const strengthAgree = similar.filter((item) => item.report.strength === input.strength).length / similar.length;
-  if (directionAgree === 1 && strengthAgree >= 0.6 && similar.length >= 4) {
+
+  const totalWeight = similar.reduce((sum, item) => sum + item.temporalWeight, 0);
+  const dirAgreeWeight = similar
+    .filter((item) => item.report.direction === input.direction)
+    .reduce((sum, item) => sum + item.temporalWeight, 0);
+  const strAgreeWeight = similar
+    .filter((item) => item.report.strength === input.strength)
+    .reduce((sum, item) => sum + item.temporalWeight, 0);
+
+  const directionAgree = totalWeight > 0 ? dirAgreeWeight / totalWeight : 0;
+  const strengthAgree = totalWeight > 0 ? strAgreeWeight / totalWeight : 0;
+  const directionUnanimous = similar.every((item) => item.report.direction === input.direction);
+
+  if (
+    directionUnanimous &&
+    strengthAgree >= 0.6 &&
+    similar.length >= 4 &&
+    !hasRecentContradiction
+  ) {
     return input.allowHighConfidence ? "high" : "medium";
   }
   if (directionAgree >= 0.8) return "medium";
   return "low";
 }
 
-function recentPull(
-  hour: MarineHour,
+type AggregatedPull = {
+  direction: Direction;
+  strength: Strength;
+  contradicted: boolean;
+};
+
+export function aggregateReportPull(
+  hour: OpenHour,
+  hours: readonly MarineHour[],
   classified: readonly ClassifiedReport[],
-): { item: ClassifiedReport; weight: number } | null {
+): AggregatedPull {
   const hourMs = parseWall(hour.time);
-  if (!Number.isFinite(hourMs)) return null;
-  let best: { item: ClassifiedReport; weight: number } | null = null;
+  if (!Number.isFinite(hourMs)) {
+    return { direction: hour.direction, strength: hour.strength, contradicted: false };
+  }
+
+  let incomingWeight = 0;
+  let outgoingWeight = 0;
+  const activeReports: { item: ClassifiedReport; weight: number }[] = [];
+
   for (const item of classified) {
+    if (item.kind === "unusable") continue;
     const reportMs = parseWall(item.report.time);
     if (Number.isNaN(reportMs)) continue;
-    const since = (hourMs - reportMs) / HOUR_MS;
-    if (!Number.isFinite(since) || since < 0 || since >= FADE_HOURS) continue;
-    if (!best || reportMs >= parseWall(best.item.report.time)) {
-      best = { item, weight: 1 - since / FADE_HOURS };
+    const sinceHours = (hourMs - reportMs) / HOUR_MS;
+    if (!Number.isFinite(sinceHours) || sinceHours < 0 || sinceHours >= FADE_HOURS) continue;
+
+    const fadeWeight = 1 - sinceHours / FADE_HOURS;
+    const decayWeight = item.temporalWeight;
+    const weight = fadeWeight * decayWeight;
+    if (weight <= 0) continue;
+
+    const turned = slopesOpposite(item.pullSlope, hour.slope);
+    if (turned) {
+      continue;
     }
+
+    if (item.report.direction === "incoming") {
+      incomingWeight += weight;
+    } else if (item.report.direction === "outgoing") {
+      outgoingWeight += weight;
+    }
+    activeReports.push({ item, weight });
   }
-  return best;
+
+  const totalWeight = incomingWeight + outgoingWeight;
+  if (totalWeight === 0) {
+    return { direction: hour.direction, strength: hour.strength, contradicted: false };
+  }
+
+  const hasConflict = incomingWeight > 0 && outgoingWeight > 0;
+  let direction = hour.direction;
+  let strength = hour.strength;
+
+  if (incomingWeight > outgoingWeight && incomingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "incoming";
+    const concordant = activeReports.filter((r) => r.item.report.direction === "incoming");
+    const sumBand = concordant.reduce((sum, r) => sum + r.weight * bandIndex(r.item.report.strength), 0);
+    const avgTargetBand = sumBand / incomingWeight;
+    const gap = avgTargetBand - bandIndex(hour.strength);
+    const effectiveWeight = Math.min(1, incomingWeight);
+    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
+  } else if (outgoingWeight > incomingWeight && outgoingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "outgoing";
+    const concordant = activeReports.filter((r) => r.item.report.direction === "outgoing");
+    const sumBand = concordant.reduce((sum, r) => sum + r.weight * bandIndex(r.item.report.strength), 0);
+    const avgTargetBand = sumBand / outgoingWeight;
+    const gap = avgTargetBand - bandIndex(hour.strength);
+    const effectiveWeight = Math.min(1, outgoingWeight);
+    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
+  } else {
+    direction = hour.direction;
+    strength = hour.strength;
+  }
+
+  const contradicted = hasConflict || direction !== hour.direction;
+  return { direction, strength, contradicted };
 }
 
 /** Tide direction at a lag. An in-series miss is outside the series, not the unshifted hour. */
@@ -465,12 +643,13 @@ function speedPrior(
   tides: readonly TideStats[],
   offset: number,
   inwardBearingDeg: number,
+  constriction: number = 1.0,
 ): Strength | null {
   if (item.failed) return null;
   if (item.seriesIndex >= 0) {
     // A fitted lag is the lagged slope's own band. Peak band would treat a matching report as a miss.
-    if (offset !== 0) return laggedSlopeBand(item, hours, residual, tides, offset);
-    return shownStrength(hours, residual, inwardBearingDeg, offset, tides, item.seriesIndex);
+    if (offset !== 0) return laggedSlopeBand(item, hours, residual, tides, offset, constriction);
+    return shownStrength(hours, residual, inwardBearingDeg, offset, tides, item.seriesIndex, constriction);
   }
   if (item.storedHourSlope == null) return null;
   if (Math.abs(item.storedHourSlope) < SLACK_SLOPE_M) return "slack";
@@ -483,6 +662,7 @@ function laggedSlopeBand(
   residual: readonly (number | null)[],
   tides: readonly TideStats[],
   offset: number,
+  constriction: number = 1.0,
 ): Strength | null {
   const index = shiftIndex(hours, item.seriesIndex, offset);
   if (index < 0) return null;
@@ -490,7 +670,12 @@ function laggedSlopeBand(
   if (slope == null) return null;
   const stats = tides[item.seriesIndex];
   if (stats.range == null || stats.maxAbs == null) return null;
-  return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range));
+  return hourlyStrength(
+    Math.abs(slope),
+    stats.maxAbs,
+    strengthFromRange(stats.range, constriction),
+    constriction,
+  );
 }
 
 /** Clock-hour strength after peak band and mean nudge, before the report pull. Factor 1, so the fit is not circular. */
@@ -501,8 +686,9 @@ function shownStrength(
   offset: number,
   tides: readonly TideStats[],
   index: number,
+  constriction: number = 1.0,
 ): Strength | null {
-  for (const hour of settledHours(hours, residual, inwardBearingDeg, offset, 1, tides)) {
+  for (const hour of settledHours(hours, residual, inwardBearingDeg, offset, 1, tides, constriction)) {
     if (hour.index === index) return hour.strength;
   }
   return null;
@@ -527,10 +713,32 @@ function opposite(direction: Direction): Direction {
   return direction === "incoming" ? "outgoing" : "incoming";
 }
 
+export function resolveHourDrift(hour: MarineHour): OceanDrift {
+  if (
+    hour.currentVelocityMs != null &&
+    hour.currentDirectionDeg != null &&
+    Number.isFinite(hour.currentVelocityMs) &&
+    Number.isFinite(hour.currentDirectionDeg)
+  ) {
+    return {
+      velocityMs: hour.currentVelocityMs,
+      directionDeg: hour.currentDirectionDeg,
+    };
+  }
+  const timeMs = parseWall(hour.time);
+  const date = Number.isFinite(timeMs) ? new Date(timeMs) : new Date(hour.time);
+  return getMaldivesMonsoonDrift(date);
+}
+
+export function monsoonInwardFlux(drift: OceanDrift, inwardBearingDeg: number): number {
+  const radians = ((drift.directionDeg - inwardBearingDeg) * Math.PI) / 180;
+  return drift.velocityMs * Math.cos(radians);
+}
+
 function monsoonNudge(hour: MarineHour, inwardBearingDeg: number): number {
-  if (hour.currentVelocityMs == null || hour.currentDirectionDeg == null) return 0;
-  const radians = ((hour.currentDirectionDeg - inwardBearingDeg) * Math.PI) / 180;
-  const inward = hour.currentVelocityMs * Math.cos(radians);
+  if (hour.currentVelocityMs === 0) return 0;
+  const drift = resolveHourDrift(hour);
+  const inward = monsoonInwardFlux(drift, inwardBearingDeg);
   return Math.max(-1, Math.min(1, inward / NUDGE_SATURATION_MS));
 }
 
@@ -630,20 +838,29 @@ function nextSignedDirection(
   return null;
 }
 
-function strengthFromRange(range: number): Strength {
-  if (range < 0.35) return "slack";
-  if (range < 0.6) return "mild";
-  if (range < 0.85) return "strong";
+export function strengthFromRange(range: number, constriction: number = 1.0): Strength {
+  const effectiveRange = range * constriction;
+  if (effectiveRange < 0.35) return "slack";
+  if (range < 0.35) return "mild";
+  if (effectiveRange < 0.6) return "mild";
+  if (effectiveRange < 0.85) return "strong";
   return "too_strong";
 }
 
 /** Slack inside 5 mm, and below 0.02 m. The steepest hour takes the envelope. */
-function hourlyStrength(absSlope: number, maxAbsSlope: number, envelope: Strength): Strength {
+export function hourlyStrength(
+  absSlope: number,
+  maxAbsSlope: number,
+  envelope: Strength,
+  constriction: number = 1.0,
+): Strength {
   const top = bandIndex(envelope);
   if (absSlope <= TIE_M || absSlope < SLACK_SLOPE_M || top <= 0) return "slack";
-  const span = maxAbsSlope - SLACK_SLOPE_M;
+  const effSlope = absSlope * constriction;
+  const effMaxSlope = maxAbsSlope * constriction;
+  const span = effMaxSlope - SLACK_SLOPE_M;
   if (!(span > 0)) return envelope;
-  const t = Math.min(1, Math.max(0, (absSlope - SLACK_SLOPE_M) / span));
+  const t = Math.min(1, Math.max(0, (effSlope - SLACK_SLOPE_M) / span));
   const index = Math.min(top, Math.max(1, Math.ceil(t * top - 1e-9)));
   return STRENGTHS[index];
 }
