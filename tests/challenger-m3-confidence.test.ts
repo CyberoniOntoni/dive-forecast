@@ -18,7 +18,8 @@ function makeTidalSeries(
   periodHours: number = 12,
   amplitudeM: number = 0.6,
 ): MarineHour[] {
-  const startMs = Date.parse(startDateStr);
+  // Parse as UTC so CI (TZ=UTC) and local machines share the same hour index → slope.
+  const startMs = Date.parse(/Z$/i.test(startDateStr) ? startDateStr : `${startDateStr}:00Z`);
   return Array.from({ length: numHours }, (_, i) => {
     const time = new Date(startMs + i * 3600 * 1000).toISOString().slice(0, 16);
     const phase = (2 * Math.PI * i) / periodHours;

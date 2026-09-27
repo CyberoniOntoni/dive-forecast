@@ -483,21 +483,15 @@ function confidenceFor(input: {
 
   const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
 
-  // Hard safety invariant: check if ANY recent report (<= 7 days) contradicts predicted direction
+  // Hard safety invariant: any report within 7 days with the opposite direction
+  // blocks high confidence (includes future clock-skew within the window).
   const hasRecentContradiction =
     Number.isFinite(targetHourMs) &&
     input.classified.some((item) => {
       if (item.kind === "unusable") return false;
       const repMs = parseWall(item.report.time);
       if (!Number.isFinite(repMs) || Math.abs(targetHourMs - repMs) > SEVEN_DAYS_MS) return false;
-      const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
-      if (reportPhase != null && reportPhase === input.tideDirection && item.report.direction !== input.direction) {
-        return true;
-      }
-      if (Math.abs(targetHourMs - repMs) < HOUR_MS && item.report.direction !== input.direction) {
-        return true;
-      }
-      return false;
+      return item.report.direction !== input.direction;
     });
 
   const similar = input.classified.filter((item) => {
