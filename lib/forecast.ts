@@ -388,6 +388,13 @@ export function residualSlopeWindow(hours: readonly MarineHour[], time: string):
   return window;
 }
 
+/** Residual range over the 25 hours around `time`, or null when that hour is missing or has no full window. */
+export function residualRangeAt(hours: readonly MarineHour[], time: string): number | null {
+  const index = nearestIndex(hours, parseWall(time), HOUR_MATCH_MS);
+  if (index < 0) return null;
+  return tideWindow(hours, residualSeries(hours), index).range;
+}
+
 function fitPhaseOffset(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
@@ -678,9 +685,25 @@ function speedPrior(
     if (offset !== 0) return laggedSlopeBand(item, hours, residual, tides, offset, constriction);
     return shownStrength(hours, residual, inwardBearingDeg, offset, tides, item.seriesIndex, constriction);
   }
+  return storedPrior(item, offset, constriction);
+}
+
+/**
+ * Band the model would have given a report outside this series, from what was saved with it.
+ * A report with its day's range and a slope window is graded like an in-series hour, at the fitted lag.
+ * An older report has no range, so all it can say is slack or flowing, and flowing counts as mild.
+ */
+function storedPrior(item: ClassifiedReport, offset: number, constriction: number): Strength | null {
   if (item.storedHourSlope == null) return null;
-  if (Math.abs(item.storedHourSlope) < SLACK_SLOPE_M) return "slack";
-  return "mild";
+  const range = item.report.rangeM;
+  if (item.kind !== "slope-window" || typeof range !== "number" || !Number.isFinite(range)) {
+    return Math.abs(item.storedHourSlope) < SLACK_SLOPE_M ? "slack" : "mild";
+  }
+  const slope = item.slopes[WINDOW_HALF_HOURS + offset];
+  if (typeof slope !== "number") return null;
+  // Thirteen hours span more than a half cycle, so the window holds this run's steepest hour.
+  const maxAbs = Math.max(...item.slopes.map((value) => (typeof value === "number" ? Math.abs(value) : 0)));
+  return hourlyStrength(Math.abs(slope), maxAbs, strengthFromRange(range, constriction), constriction);
 }
 
 function laggedSlopeBand(

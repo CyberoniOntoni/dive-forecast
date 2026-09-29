@@ -4,6 +4,7 @@ import {
   classifyReport,
   constrictionFactor,
   forecastHours,
+  residualRangeAt,
   residualSlopeWindow,
   seaLevelSlopeAt,
   tideWindow,
@@ -143,6 +144,38 @@ describe("forecastHours", () => {
     expect(
       confidenceWith({ id: "slack", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "slack", slopeM: 0.08 }),
     ).toBe("high");
+  });
+
+  it("grades an old report from its saved range and window instead of calling every flowing hour mild", () => {
+    // 12-hour sine of amplitude 0.35 m: a 0.7 m range, so the envelope is strong and the steepest hours are strong.
+    const sine = (index: number) => 0.35 * Math.sin((2 * Math.PI * index) / 12);
+    const levels = Array.from({ length: 72 }, (_, index) => sine(index));
+    const hours = marineFromLevels("2026-09-22T00:00", levels);
+    const lastMonth = marineFromLevels("2026-08-22T00:00", levels);
+    // Two dives a month ago at the steepest rising hours, reported strong, which is what the model would have said.
+    const reports: Report[] = ["2026-08-23T12:00", "2026-08-24T00:00"].map((time, id) => {
+      const slopeWindowM = residualSlopeWindow(lastMonth, time)!;
+      return {
+        id: `peak-${id}`,
+        siteId: "s",
+        time,
+        direction: "incoming",
+        strength: "strong",
+        slopeM: slopeWindowM[6],
+        slopeWindowM,
+        rangeM: residualRangeAt(lastMonth, time),
+      };
+    });
+    expect(reports.every((report) => report.rangeM != null && report.rangeM > 0.55)).toBe(true);
+
+    const strengths = (list: Report[]) =>
+      forecastHours({ hours, inwardBearingDeg: 0, reports: list }).map((hour) => hour.strength);
+    const plain = strengths([]);
+    // Agreeing reports leave the bands alone.
+    expect(strengths(reports)).toEqual(plain);
+    // Without the range the prior is mild, so the same reports read as "stronger than the model" and lift the series.
+    const legacy = strengths(reports.map((report) => ({ ...report, rangeM: undefined })));
+    expect(legacy.some((band, index) => STRENGTHS.indexOf(band) > STRENGTHS.indexOf(plain[index]))).toBe(true);
   });
 
   it("uses a learned phase offset on the next day instead of the fresh-report pull", () => {

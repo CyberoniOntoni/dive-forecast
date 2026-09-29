@@ -3,7 +3,7 @@
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
 import { forecastAtReport } from "./forecast-log";
-import { loadSite, slopeWindowForSite } from "./load-site";
+import { loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import {
   addReport as persistReport,
   addUserSite,
@@ -69,7 +69,7 @@ export async function addReport(input: unknown): Promise<Report> {
   requireStrength(body.strength as Strength);
 
   const time = toMaldivesWall(body.time as string);
-  const slopeWindowM = await reportSlopeWindow(site, time);
+  const tide = await reportTide(site, time);
   const predicted = await predictionAtReport(site, time);
   const report: Report = {
     id: crypto.randomUUID(),
@@ -77,9 +77,12 @@ export async function addReport(input: unknown): Promise<Report> {
     time,
     direction: body.direction as Direction,
     strength: body.strength as Strength,
-    slopeM: slopeWindowM ? slopeWindowM[REPORT_HOUR_INDEX] : null,
+    slopeM: tide ? tide.slopeWindowM[REPORT_HOUR_INDEX] : null,
   };
-  if (slopeWindowM) report.slopeWindowM = slopeWindowM;
+  if (tide) {
+    report.slopeWindowM = tide.slopeWindowM;
+    if (tide.rangeM != null) report.rangeM = tide.rangeM;
+  }
   if (predicted) report.predicted = predicted;
   return persistReport(report);
 }
@@ -115,11 +118,11 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
   }
 }
 
-async function reportSlopeWindow(site: Site, time: string): Promise<(number | null)[] | null> {
+async function reportTide(site: Site, time: string): Promise<ReportTide | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    return await slopeWindowForSite(site, catalog.sites, atoll, time);
+    return await reportTideForSite(site, catalog.sites, atoll, time);
   } catch {
     return null;
   }

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadSite, slopeWindowForSite } from "./load-site";
+import { loadSite, reportTideForSite } from "./load-site";
 import * as Marine from "./marine";
 import type { Atoll, MarineHour, Site } from "./types";
 
@@ -109,7 +109,7 @@ describe("loadSite", () => {
   });
 });
 
-describe("slopeWindowForSite", () => {
+describe("reportTideForSite", () => {
   const atoll: Atoll = {
     id: "north-male",
     name: "North Male Atoll",
@@ -128,14 +128,15 @@ describe("slopeWindowForSite", () => {
   };
 
   it("returns null when atoll is missing", async () => {
-    const window = await slopeWindowForSite(site, [site], undefined, "2026-09-23T10:00");
-    expect(window).toBeNull();
+    const tide = await reportTideForSite(site, [site], undefined, "2026-09-23T10:00");
+    expect(tide).toBeNull();
   });
 
-  it("returns 13-hour slope window when marine fetch succeeds", async () => {
+  it("returns the 13-hour slope window and the day's residual range when marine fetch succeeds", async () => {
+    // 12-hour sine of amplitude 0.4 m on a rising mean: the 25-hour residual range is about 0.8 m.
     const syntheticHours: MarineHour[] = Array.from({ length: 72 }, (_, i) => ({
       time: new Date(Date.UTC(2026, 8, 23, i)).toISOString().slice(0, 16),
-      seaLevelM: 0.1 * i,
+      seaLevelM: 0.01 * i + 0.4 * Math.sin((2 * Math.PI * i) / 12),
       currentVelocityMs: 0,
       currentDirectionDeg: 0,
     }));
@@ -147,8 +148,9 @@ describe("slopeWindowForSite", () => {
       stale: false,
     });
 
-    const window = await slopeWindowForSite(site, [site], atoll, "2026-09-24T12:00");
-    expect(window).toHaveLength(13);
-    expect(window?.every((slope) => typeof slope === "number")).toBe(true);
+    const tide = await reportTideForSite(site, [site], atoll, "2026-09-24T12:00");
+    expect(tide?.slopeWindowM).toHaveLength(13);
+    expect(tide?.slopeWindowM.every((slope) => typeof slope === "number")).toBe(true);
+    expect(tide?.rangeM).toBeCloseTo(0.8, 1);
   });
 });
