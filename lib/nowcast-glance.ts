@@ -28,6 +28,8 @@ export type NowcastGlance = {
   color: string | null;
   /** Unix ms when the marine series was fetched. Null when this hour has no forecast. */
   fetchedAt: number | null;
+  /** True when the arrow heading comes from the fallback heuristic, not a measurement or the atoll rim. */
+  estimatedHeading: boolean;
 };
 
 function noForecastGlance(name: string): NowcastGlance {
@@ -41,22 +43,26 @@ function noForecastGlance(name: string): NowcastGlance {
     opacity: null,
     color: null,
     fetchedAt: null,
+    estimatedHeading: false,
   };
 }
 
 /** Incoming follows the inward bearing. Outgoing is 180 opposite, wrapped to 0-360. Not the ocean vector. */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
   // A stale hour still has direction and strength. Empty only when there is no hour.
-  if (!nowcast?.hour) return noForecastGlance(name);
+  if (!nowcast?.hour || nowcast.inwardBearingDeg == null) return noForecastGlance(name);
 
   const hour = nowcast.hour;
   const label = strengthLabel(hour.strength);
-  const spoken = showStrength
+  const estimatedHeading = nowcast.bearingSource === "fallback";
+  const base = showStrength
     ? `${name}, ${hour.direction}, ${label}, ${hour.confidence}`
     : `${name}, ${hour.direction}, ${hour.confidence}`;
+  const spoken = estimatedHeading ? `${base}, heading estimated` : base;
   return {
     label,
     spoken,
+    estimatedHeading,
     arrowBearing: passArrowBearing(nowcast.inwardBearingDeg, hour.direction),
     direction: hour.direction,
     strength: hour.strength,

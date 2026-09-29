@@ -119,6 +119,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     stale: loaded.stale,
     notice: FORECAST_NOTICE,
     inwardBearingDeg: loaded.bearing,
+    bearingSource: loaded.bearingSource,
     fetchedAt: loaded.fetchedAt,
   };
 }
@@ -130,6 +131,7 @@ function unavailableForecast(): SiteForecast {
     stale: false,
     notice: FORECAST_NOTICE,
     inwardBearingDeg: null,
+    bearingSource: null,
     fetchedAt: null,
   };
 }

@@ -105,6 +105,8 @@ export type SiteForecast = {
   notice: string;
   /** Bearing used for the monsoon nudge and the site arrow. */
   inwardBearingDeg: number | null;
+  /** Where that bearing came from. Null when there is no bearing. */
+  bearingSource: BearingSource | null;
   /** Unix ms when the marine series was cached. Null when no cache exists. */
   fetchedAt: number | null;
 };
