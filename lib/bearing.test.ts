@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { inwardBearingDeg, resolveBearing, wrapDegrees } from "./bearing";
+import fs from "fs";
+import path from "path";
+import { atollForPin, inwardBearingDeg, resolveBearing, wrapDegrees } from "./bearing";
 import { forecastHours } from "./forecast";
-import type { MarineHour, Site } from "./types";
+import type { Catalog, MarineHour, Site } from "./types";
 
 function seeded(id: string, lat: number, lon: number, atollId = "cross"): Site {
   return { id, name: id, atollId, lat, lon, sourceUrl: "https://example.com/seed" };
@@ -83,6 +85,38 @@ describe("resolveBearing", () => {
       inwardBearingDeg(a, [a, { ...b, inwardBearingDeg: undefined }, c], outside),
       9,
     );
+  });
+});
+
+describe("atollForPin", () => {
+  const { atolls } = JSON.parse(
+    fs.readFileSync(path.join(process.cwd(), "data", "sites.json"), "utf8"),
+  ) as Catalog;
+
+  it("matches a pin on a seeded reef to its own atoll", () => {
+    expect(atollForPin(4.2342, 73.534, atolls)?.id).toBe("north-male");
+    expect(atollForPin(3.5996, 73.5042, atolls)?.id).toBe("vaavu");
+    expect(atollForPin(5.5585, 73.4781, atolls)?.id).toBe("lhaviyani");
+  });
+
+  it("matches a pin just outside its outline", () => {
+    // Miyaru Kandu sits about 26 m outside the OSM outline.
+    expect(atollForPin(3.5996, 73.5042, atolls)?.id).toBe("vaavu");
+  });
+
+  it("splits North and South Ari, which share one outline, by the nearer ocean point", () => {
+    expect(atollForPin(3.9994, 72.786, atolls)?.id).toBe("north-ari");
+    expect(atollForPin(3.5955, 72.7189, atolls)?.id).toBe("south-ari");
+  });
+
+  it("returns null for a pin in an unseeded atoll instead of handing it to a far one", () => {
+    // Baa Atoll, about 60 km north of Lhaviyani's nearest neighbor outline.
+    expect(atollForPin(5.2, 72.95, atolls)).toBeNull();
+    expect(atollForPin(0.5, 73.0, atolls)).toBeNull();
+  });
+
+  it("returns null with no atolls", () => {
+    expect(atollForPin(4.2, 73.5, [])).toBeNull();
   });
 });
 

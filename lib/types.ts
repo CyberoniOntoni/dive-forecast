@@ -6,6 +6,9 @@ export type Confidence = "low" | "medium" | "high";
 
 export type { OceanDrift } from "./seasonal";
 
+/** atollId of a pin that is not in or near a seeded atoll. It has no forecast and draws no arrow. */
+export const UNSEEDED_ATOLL_ID = "unseeded";
+
 export type Atoll = {
   id: string;
   name: string;

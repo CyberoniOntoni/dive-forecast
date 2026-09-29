@@ -1,4 +1,4 @@
-import { rimInwardBearing, type RimRing } from "./rim";
+import { rimDistanceKm, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
 /**
@@ -73,6 +73,28 @@ function bearingClockwiseFromNorth(lat1: number, lon1: number, lat2: number, lon
     Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(deltaLon);
   const degrees = toDegrees(Math.atan2(east, north));
   return wrapDegrees(degrees);
+}
+
+/** A pin farther than this from every stored atoll outline is not in a seeded atoll. */
+export const ATOLL_MATCH_KM = 5;
+
+/**
+ * The seeded atoll a new pin belongs to, or null when it is not in or near one.
+ * Matches by distance to the stored outline, so a pin in an unseeded atoll is not handed to a far one.
+ * Atolls that share an outline (North and South Ari) are split by the nearer ocean point.
+ * With no outlines stored at all, falls back to the nearest ocean point.
+ */
+export function atollForPin(lat: number, lon: number, atolls: Atoll[]): Atoll | null {
+  const withRim = atolls.flatMap((atoll) => {
+    const ring = rimForAtoll(atoll);
+    return ring ? [{ atoll, km: rimDistanceKm({ lat, lon }, ring) }] : [];
+  });
+  if (withRim.length === 0) return atolls.length > 0 ? nearestAtoll(lat, lon, atolls) : null;
+  const close = withRim.filter((item) => item.km <= ATOLL_MATCH_KM);
+  if (close.length === 0) return null;
+  const best = Math.min(...close.map((item) => item.km));
+  const tied = close.filter((item) => item.km - best < 1e-6).map((item) => item.atoll);
+  return nearestAtoll(lat, lon, tied);
 }
 
 export function nearestAtoll(lat: number, lon: number, atolls: Atoll[]): Atoll {

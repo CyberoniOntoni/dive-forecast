@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addUserSite, readStore, saveRating, setStorePath } from "./store";
-import type { Report, Site } from "./types";
+import { addReport, addUserSite, listMergedSites, readStore, saveRating, setStorePath } from "./store";
+import { UNSEEDED_ATOLL_ID, type Report, type Site } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LIVE_STORE = path.join(DATA_DIR, "store.json");
@@ -121,5 +121,17 @@ describe("mutateStore", () => {
     expect(readStore().ratings).toEqual([
       { siteId: "banana-reef", score: 5, updatedAt: "2026-09-23T11:00:00.000Z" },
     ]);
+  });
+});
+
+describe("listMergedSites atoll for app-added pins", () => {
+  it("re-derives a stored pin's atoll from where it sits", async () => {
+    const wrong = { ...sampleSite("pin-a"), atollId: "vaavu", lat: 4.2342, lon: 73.534, sourceUrl: "user" };
+    const far = { ...sampleSite("pin-b"), atollId: "vaavu", lat: 5.2, lon: 72.95, sourceUrl: "user" };
+    await addUserSite(wrong);
+    await addUserSite(far);
+    const merged = listMergedSites();
+    expect(merged.find((site) => site.id === "pin-a")?.atollId).toBe("north-male");
+    expect(merged.find((site) => site.id === "pin-b")?.atollId).toBe(UNSEEDED_ATOLL_ID);
   });
 });

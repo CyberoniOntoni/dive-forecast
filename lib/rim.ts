@@ -52,8 +52,7 @@ export function rimInwardBearing(site: Pick<Site, "lat" | "lon">, ring: RimRing)
     const dy = to[1] - from[1];
     const length = Math.hypot(dx, dy);
     if (length === 0) continue;
-    const along = Math.max(0, Math.min(1, ((pin[0] - from[0]) * dx + (pin[1] - from[1]) * dy) / (length * length)));
-    const foot: [number, number] = [from[0] + along * dx, from[1] + along * dy];
+    const foot = footOnSegment(pin, from, to);
     const distance = Math.hypot(pin[0] - foot[0], pin[1] - foot[1]);
     nearest = Math.min(nearest, distance);
     if (distance >= SMOOTH_KM) continue;
@@ -67,6 +66,33 @@ export function rimInwardBearing(site: Pick<Site, "lat" | "lon">, ring: RimRing)
   }
   if (nearest > RIM_NEAR_KM || (sumX === 0 && sumY === 0)) return null;
   return (((Math.atan2(sumX, sumY) * 180) / Math.PI) % 360 + 360) % 360;
+}
+
+/** Km from the pin to the outline, 0 when the pin is inside it. */
+export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): number {
+  if (pointInRing(site.lat, site.lon, ring)) return 0;
+  const points = ring.map(([lat, lon]) => toKm(lat, lon, site.lat));
+  const pin = toKm(site.lat, site.lon, site.lat);
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + 1 < points.length; index += 1) {
+    const foot = footOnSegment(pin, points[index], points[index + 1]);
+    nearest = Math.min(nearest, Math.hypot(pin[0] - foot[0], pin[1] - foot[1]));
+  }
+  return nearest;
+}
+
+/** Closest point to `pin` on the segment from `from` to `to`, all in km. */
+function footOnSegment(
+  pin: readonly [number, number],
+  from: readonly [number, number],
+  to: readonly [number, number],
+): [number, number] {
+  const dx = to[0] - from[0];
+  const dy = to[1] - from[1];
+  const lengthSq = dx * dx + dy * dy;
+  if (lengthSq === 0) return [from[0], from[1]];
+  const along = Math.max(0, Math.min(1, ((pin[0] - from[0]) * dx + (pin[1] - from[1]) * dy) / lengthSq));
+  return [from[0] + along * dx, from[1] + along * dy];
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */

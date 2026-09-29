@@ -1,6 +1,6 @@
 "use server";
 
-import { nearestAtoll } from "./bearing";
+import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
 import { loadSite, slopeWindowForSite } from "./load-site";
 import {
@@ -15,6 +15,7 @@ import {
 } from "./store";
 import {
   STRENGTHS,
+  UNSEEDED_ATOLL_ID,
   type Direction,
   type Rating,
   type Report,
@@ -43,8 +44,8 @@ export async function addSite(input: { name: string; lat: number; lon: number })
   const atolls = readCatalog().atolls;
   if (atolls.length === 0) throw new Error("No atolls");
 
-  const atoll = nearestAtoll(lat, lon, atolls);
-  return addUserSite(newUserSite(name, lat, lon, atoll.id));
+  const atoll = atollForPin(lat, lon, atolls);
+  return addUserSite(newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID));
 }
 
 export async function rateSite(siteId: string, score: number): Promise<Rating> {
