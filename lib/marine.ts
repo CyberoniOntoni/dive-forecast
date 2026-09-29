@@ -148,7 +148,9 @@ function marineQuery(lat: number, lon: number): string {
     cell_selection: "sea",
     timezone: "Indian/Maldives",
     past_days: "1",
-    forecast_days: "2",
+    // The residual needs 12 hours on each side, so the last 12 fetched hours are never shown.
+    // Three days keeps all of tomorrow on the page.
+    forecast_days: "3",
   });
   return params.toString();
 }
