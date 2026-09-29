@@ -103,4 +103,4 @@ export type ReplayResult = {
 - `lib/replay.ts`: Quantitative backtesting and replay evaluation harness.
 - `scripts/replay.ts`: CLI entrypoint for running benchmark replay.
 - `data/sites.json`: Dive site catalog and channel measurements.
-- `data/benchmark-reports.json`: Canonical diver report benchmark dataset.
+- `data/benchmark-reports.json`: Curated benchmark scenarios used as test fixtures. Not real dive observations, so it says nothing about forecast accuracy.
