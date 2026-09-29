@@ -49,7 +49,7 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
 
       expect(result.ok).toBe(true);
       expect(result.failures).toBe(0);
-      expect(result.metrics.totalReports).toBe(44);
+      expect(result.metrics.totalReports).toBe(46);
       expect(result.metrics.directionalAccuracyPct).toBeGreaterThan(80);
       expect(result.metrics.slackTimingDeviationMins).toBeGreaterThanOrEqual(0);
       expect(result.datasetName).toContain("benchmark-reports.json");

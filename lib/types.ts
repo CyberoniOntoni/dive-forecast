@@ -34,7 +34,15 @@ export type Site = {
   channelDepthM?: number;
   /** Source for the published channel width and depth. */
   channelSourceUrl?: string;
+  /**
+   * Measured inward channel axis, degrees clockwise from north: the heading of water entering the lagoon.
+   * When set it replaces the mate-centroid / outside-point heuristic.
+   */
+  inwardBearingDeg?: number;
 };
+
+/** Where a resolved bearing came from. */
+export type BearingSource = "override" | "fallback";
 
 export type ForecastInput = {
   hours: MarineHour[];

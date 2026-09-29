@@ -1,0 +1,869 @@
+{
+  "fetchedAt": 1790674556997,
+  "hours": [
+    {
+      "time": "2026-09-25T00:00",
+      "seaLevelM": 0.67,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 81
+    },
+    {
+      "time": "2026-09-25T01:00",
+      "seaLevelM": 0.65,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T02:00",
+      "seaLevelM": 0.56,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T03:00",
+      "seaLevelM": 0.42,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-25T04:00",
+      "seaLevelM": 0.27,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-25T05:00",
+      "seaLevelM": 0.17,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-25T06:00",
+      "seaLevelM": 0.11,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-25T07:00",
+      "seaLevelM": 0.14,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T08:00",
+      "seaLevelM": 0.24,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T09:00",
+      "seaLevelM": 0.4,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 81
+    },
+    {
+      "time": "2026-09-25T10:00",
+      "seaLevelM": 0.57,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-25T11:00",
+      "seaLevelM": 0.71,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-25T12:00",
+      "seaLevelM": 0.78,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-25T13:00",
+      "seaLevelM": 0.76,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-25T14:00",
+      "seaLevelM": 0.65,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T15:00",
+      "seaLevelM": 0.48,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T16:00",
+      "seaLevelM": 0.3,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T17:00",
+      "seaLevelM": 0.14,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T18:00",
+      "seaLevelM": 0.04,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T19:00",
+      "seaLevelM": 0.04,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-25T20:00",
+      "seaLevelM": 0.13,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 79
+    },
+    {
+      "time": "2026-09-25T21:00",
+      "seaLevelM": 0.29,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 81
+    },
+    {
+      "time": "2026-09-25T22:00",
+      "seaLevelM": 0.47,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-25T23:00",
+      "seaLevelM": 0.64,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-26T00:00",
+      "seaLevelM": 0.75,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 81
+    },
+    {
+      "time": "2026-09-26T01:00",
+      "seaLevelM": 0.77,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 79
+    },
+    {
+      "time": "2026-09-26T02:00",
+      "seaLevelM": 0.69,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T03:00",
+      "seaLevelM": 0.53,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T04:00",
+      "seaLevelM": 0.35,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 117
+    },
+    {
+      "time": "2026-09-26T05:00",
+      "seaLevelM": 0.2,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 117
+    },
+    {
+      "time": "2026-09-26T06:00",
+      "seaLevelM": 0.09,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 117
+    },
+    {
+      "time": "2026-09-26T07:00",
+      "seaLevelM": 0.07,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-26T08:00",
+      "seaLevelM": 0.14,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 104
+    },
+    {
+      "time": "2026-09-26T09:00",
+      "seaLevelM": 0.3,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T10:00",
+      "seaLevelM": 0.49,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T11:00",
+      "seaLevelM": 0.67,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T12:00",
+      "seaLevelM": 0.77,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T13:00",
+      "seaLevelM": 0.79,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T14:00",
+      "seaLevelM": 0.72,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 101
+    },
+    {
+      "time": "2026-09-26T15:00",
+      "seaLevelM": 0.55,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-26T16:00",
+      "seaLevelM": 0.35,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 117
+    },
+    {
+      "time": "2026-09-26T17:00",
+      "seaLevelM": 0.16,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 153
+    },
+    {
+      "time": "2026-09-26T18:00",
+      "seaLevelM": 0.03,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 180
+    },
+    {
+      "time": "2026-09-26T19:00",
+      "seaLevelM": -0.01,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 180
+    },
+    {
+      "time": "2026-09-26T20:00",
+      "seaLevelM": 0.06,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 135
+    },
+    {
+      "time": "2026-09-26T21:00",
+      "seaLevelM": 0.22,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T22:00",
+      "seaLevelM": 0.44,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-26T23:00",
+      "seaLevelM": 0.66,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T00:00",
+      "seaLevelM": 0.82,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T01:00",
+      "seaLevelM": 0.88,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T02:00",
+      "seaLevelM": 0.84,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T03:00",
+      "seaLevelM": 0.7,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T04:00",
+      "seaLevelM": 0.51,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 180
+    },
+    {
+      "time": "2026-09-27T05:00",
+      "seaLevelM": 0.32,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 225
+    },
+    {
+      "time": "2026-09-27T06:00",
+      "seaLevelM": 0.16,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 225
+    },
+    {
+      "time": "2026-09-27T07:00",
+      "seaLevelM": 0.09,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 180
+    },
+    {
+      "time": "2026-09-27T08:00",
+      "seaLevelM": 0.12,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 135
+    },
+    {
+      "time": "2026-09-27T09:00",
+      "seaLevelM": 0.25,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T10:00",
+      "seaLevelM": 0.44,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T11:00",
+      "seaLevelM": 0.63,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T12:00",
+      "seaLevelM": 0.78,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T13:00",
+      "seaLevelM": 0.84,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T14:00",
+      "seaLevelM": 0.8,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T15:00",
+      "seaLevelM": 0.65,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T16:00",
+      "seaLevelM": 0.45,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-27T17:00",
+      "seaLevelM": 0.24,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 270
+    },
+    {
+      "time": "2026-09-27T18:00",
+      "seaLevelM": 0.07,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 270
+    },
+    {
+      "time": "2026-09-27T19:00",
+      "seaLevelM": -0.01,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 270
+    },
+    {
+      "time": "2026-09-27T20:00",
+      "seaLevelM": 0.02,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 315
+    },
+    {
+      "time": "2026-09-27T21:00",
+      "seaLevelM": 0.16,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 0
+    },
+    {
+      "time": "2026-09-27T22:00",
+      "seaLevelM": 0.38,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 27
+    },
+    {
+      "time": "2026-09-27T23:00",
+      "seaLevelM": 0.63,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-28T00:00",
+      "seaLevelM": 0.84,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-28T01:00",
+      "seaLevelM": 0.96,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-28T02:00",
+      "seaLevelM": 0.96,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 27
+    },
+    {
+      "time": "2026-09-28T03:00",
+      "seaLevelM": 0.86,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 0
+    },
+    {
+      "time": "2026-09-28T04:00",
+      "seaLevelM": 0.67,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 0
+    },
+    {
+      "time": "2026-09-28T05:00",
+      "seaLevelM": 0.46,
+      "currentVelocityMs": 0.08333333333333333,
+      "currentDirectionDeg": 315
+    },
+    {
+      "time": "2026-09-28T06:00",
+      "seaLevelM": 0.26,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 270
+    },
+    {
+      "time": "2026-09-28T07:00",
+      "seaLevelM": 0.13,
+      "currentVelocityMs": 0,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-28T08:00",
+      "seaLevelM": 0.1,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-28T09:00",
+      "seaLevelM": 0.18,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-28T10:00",
+      "seaLevelM": 0.34,
+      "currentVelocityMs": 0.22222222222222224,
+      "currentDirectionDeg": 63
+    },
+    {
+      "time": "2026-09-28T11:00",
+      "seaLevelM": 0.54,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 68
+    },
+    {
+      "time": "2026-09-28T12:00",
+      "seaLevelM": 0.72,
+      "currentVelocityMs": 0.3333333333333333,
+      "currentDirectionDeg": 63
+    },
+    {
+      "time": "2026-09-28T13:00",
+      "seaLevelM": 0.82,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 59
+    },
+    {
+      "time": "2026-09-28T14:00",
+      "seaLevelM": 0.81,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 59
+    },
+    {
+      "time": "2026-09-28T15:00",
+      "seaLevelM": 0.69,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 53
+    },
+    {
+      "time": "2026-09-28T16:00",
+      "seaLevelM": 0.5,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 56
+    },
+    {
+      "time": "2026-09-28T17:00",
+      "seaLevelM": 0.27,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 27
+    },
+    {
+      "time": "2026-09-28T18:00",
+      "seaLevelM": 0.07,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 27
+    },
+    {
+      "time": "2026-09-28T19:00",
+      "seaLevelM": -0.06,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 0
+    },
+    {
+      "time": "2026-09-28T20:00",
+      "seaLevelM": -0.08,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 27
+    },
+    {
+      "time": "2026-09-28T21:00",
+      "seaLevelM": 0.01,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-28T22:00",
+      "seaLevelM": 0.21,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-28T23:00",
+      "seaLevelM": 0.46,
+      "currentVelocityMs": 0.22222222222222224,
+      "currentDirectionDeg": 45
+    },
+    {
+      "time": "2026-09-29T00:00",
+      "seaLevelM": 0.7,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 53
+    },
+    {
+      "time": "2026-09-29T01:00",
+      "seaLevelM": 0.88,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 53
+    },
+    {
+      "time": "2026-09-29T02:00",
+      "seaLevelM": 0.95,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 53
+    },
+    {
+      "time": "2026-09-29T03:00",
+      "seaLevelM": 0.9,
+      "currentVelocityMs": 0.22222222222222224,
+      "currentDirectionDeg": 63
+    },
+    {
+      "time": "2026-09-29T04:00",
+      "seaLevelM": 0.75,
+      "currentVelocityMs": 0.22222222222222224,
+      "currentDirectionDeg": 63
+    },
+    {
+      "time": "2026-09-29T05:00",
+      "seaLevelM": 0.55,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 56
+    },
+    {
+      "time": "2026-09-29T06:00",
+      "seaLevelM": 0.33,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-29T07:00",
+      "seaLevelM": 0.18,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-29T08:00",
+      "seaLevelM": 0.1,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 76
+    },
+    {
+      "time": "2026-09-29T09:00",
+      "seaLevelM": 0.12,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 79
+    },
+    {
+      "time": "2026-09-29T10:00",
+      "seaLevelM": 0.25,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-29T11:00",
+      "seaLevelM": 0.42,
+      "currentVelocityMs": 0.41666666666666663,
+      "currentDirectionDeg": 83
+    },
+    {
+      "time": "2026-09-29T12:00",
+      "seaLevelM": 0.6,
+      "currentVelocityMs": 0.4722222222222222,
+      "currentDirectionDeg": 77
+    },
+    {
+      "time": "2026-09-29T13:00",
+      "seaLevelM": 0.72,
+      "currentVelocityMs": 0.41666666666666663,
+      "currentDirectionDeg": 83
+    },
+    {
+      "time": "2026-09-29T14:00",
+      "seaLevelM": 0.75,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 82
+    },
+    {
+      "time": "2026-09-29T15:00",
+      "seaLevelM": 0.68,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 81
+    },
+    {
+      "time": "2026-09-29T16:00",
+      "seaLevelM": 0.51,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 79
+    },
+    {
+      "time": "2026-09-29T17:00",
+      "seaLevelM": 0.29,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-29T18:00",
+      "seaLevelM": 0.07,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-29T19:00",
+      "seaLevelM": -0.1,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-29T20:00",
+      "seaLevelM": -0.17,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-29T21:00",
+      "seaLevelM": -0.12,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-29T22:00",
+      "seaLevelM": 0.03,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 63
+    },
+    {
+      "time": "2026-09-29T23:00",
+      "seaLevelM": 0.26,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 72
+    },
+    {
+      "time": "2026-09-30T00:00",
+      "seaLevelM": 0.52,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 76
+    },
+    {
+      "time": "2026-09-30T01:00",
+      "seaLevelM": 0.72,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 68
+    },
+    {
+      "time": "2026-09-30T02:00",
+      "seaLevelM": 0.84,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 68
+    },
+    {
+      "time": "2026-09-30T03:00",
+      "seaLevelM": 0.85,
+      "currentVelocityMs": 0.2777777777777778,
+      "currentDirectionDeg": 68
+    },
+    {
+      "time": "2026-09-30T04:00",
+      "seaLevelM": 0.76,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 76
+    },
+    {
+      "time": "2026-09-30T05:00",
+      "seaLevelM": 0.6,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 76
+    },
+    {
+      "time": "2026-09-30T06:00",
+      "seaLevelM": 0.4,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-30T07:00",
+      "seaLevelM": 0.23,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 90
+    },
+    {
+      "time": "2026-09-30T08:00",
+      "seaLevelM": 0.12,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-30T09:00",
+      "seaLevelM": 0.1,
+      "currentVelocityMs": 0.19444444444444442,
+      "currentDirectionDeg": 104
+    },
+    {
+      "time": "2026-09-30T10:00",
+      "seaLevelM": 0.18,
+      "currentVelocityMs": 0.25,
+      "currentDirectionDeg": 101
+    },
+    {
+      "time": "2026-09-30T11:00",
+      "seaLevelM": 0.32,
+      "currentVelocityMs": 0.3611111111111111,
+      "currentDirectionDeg": 98
+    },
+    {
+      "time": "2026-09-30T12:00",
+      "seaLevelM": 0.5,
+      "currentVelocityMs": 0.41666666666666663,
+      "currentDirectionDeg": 97
+    },
+    {
+      "time": "2026-09-30T13:00",
+      "seaLevelM": 0.63,
+      "currentVelocityMs": 0.41666666666666663,
+      "currentDirectionDeg": 97
+    },
+    {
+      "time": "2026-09-30T14:00",
+      "seaLevelM": 0.7,
+      "currentVelocityMs": 0.41666666666666663,
+      "currentDirectionDeg": 97
+    },
+    {
+      "time": "2026-09-30T15:00",
+      "seaLevelM": 0.67,
+      "currentVelocityMs": 0.3055555555555556,
+      "currentDirectionDeg": 108
+    },
+    {
+      "time": "2026-09-30T16:00",
+      "seaLevelM": 0.55,
+      "currentVelocityMs": 0.22222222222222224,
+      "currentDirectionDeg": 117
+    },
+    {
+      "time": "2026-09-30T17:00",
+      "seaLevelM": 0.37,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 124
+    },
+    {
+      "time": "2026-09-30T18:00",
+      "seaLevelM": 0.17,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 153
+    },
+    {
+      "time": "2026-09-30T19:00",
+      "seaLevelM": -0.02,
+      "currentVelocityMs": 0.1388888888888889,
+      "currentDirectionDeg": 180
+    },
+    {
+      "time": "2026-09-30T20:00",
+      "seaLevelM": -0.12,
+      "currentVelocityMs": 0.16666666666666666,
+      "currentDirectionDeg": 198
+    },
+    {
+      "time": "2026-09-30T21:00",
+      "seaLevelM": -0.12,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 207
+    },
+    {
+      "time": "2026-09-30T22:00",
+      "seaLevelM": -0.02,
+      "currentVelocityMs": 0.11111111111111112,
+      "currentDirectionDeg": 207
+    },
+    {
+      "time": "2026-09-30T23:00",
+      "seaLevelM": 0.17,
+      "currentVelocityMs": 0.05555555555555556,
+      "currentDirectionDeg": 180
+    }
+  ]
+}
