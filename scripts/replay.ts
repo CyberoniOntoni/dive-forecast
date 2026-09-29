@@ -133,6 +133,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
         totalReports: 0,
         directionalAccuracyPct: 0,
         slackTimingDeviationMins: 0,
+        slackReports: 0,
         falseHighConfidenceRatePct: 0,
         confidenceBreakdown: {
           high: { count: 0, accuracyPct: 0 },
@@ -193,9 +194,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     const m = res.metrics;
     const siteTotal = m.totalReports;
     const siteMatches = Math.round((m.directionalAccuracyPct / 100) * siteTotal);
-    const evaluatedSlackCount = siteReports.filter(
-      (r) => r.strength === "slack" && hours.some((h) => Math.abs(parseWall(h.time) - parseWall(r.time)) <= 90 * 60 * 1000),
-    ).length;
+    const evaluatedSlackCount = m.slackReports;
     const siteSlackDevSum = m.slackTimingDeviationMins * evaluatedSlackCount;
 
     totalReports += siteTotal;
@@ -241,6 +240,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     totalReports,
     directionalAccuracyPct: overallAccuracy,
     slackTimingDeviationMins: overallSlackMae,
+    slackReports: totalSlackCount,
     falseHighConfidenceRatePct: overallFalseHigh,
     confidenceBreakdown: {
       high: {
@@ -465,12 +465,6 @@ function storedHours(value: unknown): MarineHour[] | null {
 
 function numberOrNull(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function parseWall(value: string): number {
-  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value);
-  if (!match) return Number.NaN;
-  return Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]);
 }
 
 function round2(val: number): number {

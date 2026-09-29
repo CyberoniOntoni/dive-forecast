@@ -127,6 +127,30 @@ describe("replayReports", () => {
       expect(result.metrics.slackTimingDeviationMins).toBeLessThanOrEqual(60);
     });
 
+    it("leaves a slack report out of slack timing when the forecast has no slack or turn", () => {
+      // A cubic rise leaves a residual that falls steadily: every shown hour is flowing out, with no slack and no turn.
+      const start = Date.UTC(2026, 8, 22, 0, 0);
+      const oneWay: MarineHour[] = Array.from({ length: 72 }, (_, index) => ({
+        time: new Date(start + index * 60 * 60 * 1000).toISOString().slice(0, 16),
+        seaLevelM: 0.001 * (index - 36) ** 3,
+        currentVelocityMs: 0,
+        currentDirectionDeg: 0,
+      }));
+      const shown = forecastHours({ hours: oneWay, inwardBearingDeg: 0 });
+      expect(shown.length).toBeGreaterThan(0);
+      expect(shown.every((hour) => hour.strength !== "slack" && hour.direction === "outgoing")).toBe(true);
+
+      const result = replayReports({
+        hours: oneWay,
+        inwardBearingDeg: 0,
+        reports: [{ id: "no-turn", siteId: "s", time: "2026-09-23T12:00", direction: "outgoing", strength: "slack" }],
+      });
+
+      expect(result.metrics.totalReports).toBe(1);
+      expect(result.metrics.slackReports).toBe(0);
+      expect(result.metrics.slackTimingDeviationMins).toBe(0);
+    });
+
     it("evaluates slack condition reports without false directional penalties", () => {
       const slackOpposite: Report = {
         id: "slack-opp",

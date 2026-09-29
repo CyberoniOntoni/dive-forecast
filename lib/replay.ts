@@ -8,6 +8,8 @@ export type BenchmarkMetrics = {
   totalReports: number;
   directionalAccuracyPct: number;
   slackTimingDeviationMins: number;
+  /** Slack reports behind slackTimingDeviationMins. One with no predicted slack or turn in the series is left out. */
+  slackReports: number;
   falseHighConfidenceRatePct: number;
   confidenceBreakdown: {
     high: { count: number; accuracyPct: number };
@@ -110,6 +112,7 @@ export function replayReports(input: ReplayInput): ReplayResult {
     totalReports,
     directionalAccuracyPct,
     slackTimingDeviationMins,
+    slackReports: slackDeviationsMins.length,
     falseHighConfidenceRatePct,
     confidenceBreakdown: {
       high: {
@@ -148,7 +151,7 @@ function isDirectionMatch(hour: HourForecast, report: Report): boolean {
   return hour.direction === report.direction;
 }
 
-/** Measure deviation in minutes to nearest predicted slack window or slope zero-crossing */
+/** Minutes to the nearest predicted slack hour or turn. Null when the forecast has neither, so there is nothing to time. */
 function nearestSlackDeviationMins(
   forecast: readonly HourForecast[],
   reportTime: string,
@@ -179,7 +182,7 @@ function nearestSlackDeviationMins(
     }
   }
 
-  if (slackTimesMs.length === 0) return 0;
+  if (slackTimesMs.length === 0) return null;
 
   let minDiffMs = Number.POSITIVE_INFINITY;
   for (const sMs of slackTimesMs) {
@@ -189,7 +192,7 @@ function nearestSlackDeviationMins(
     }
   }
 
-  return Number.isFinite(minDiffMs) ? minDiffMs / (60 * 1000) : 0;
+  return Number.isFinite(minDiffMs) ? minDiffMs / (60 * 1000) : null;
 }
 
 function round2(value: number): number {
