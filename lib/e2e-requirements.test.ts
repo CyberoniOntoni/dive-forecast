@@ -1073,12 +1073,13 @@ describe("Tier 3: Cross-Feature Combinations", () => {
     };
 
     const forecast = forecastHours(input as Parameters<typeof forecastHours>[0]);
-    const peakHour = findHour(forecast, "2026-07-15T03:00");
+    // Each hour has its own band, so look at the strongest hour of the day.
+    const order = ["slack", "mild", "strong", "too_strong"];
+    const day = forecast.filter((hour) => hour.time.startsWith("2026-07-15"));
+    const peakHour = day.reduce((best, hour) => (order.indexOf(hour.strength) > order.indexOf(best.strength) ? hour : best));
 
-    expect(peakHour).toBeDefined();
-    if (peakHour) {
-      expect(["strong", "too_strong"]).toContain(peakHour.strength);
-    }
+    expect(day.length).toBeGreaterThan(0);
+    expect(peakHour.strength).toBe("too_strong");
   });
 
   it("T3.C5: Monsoon Opposing Ebb + Calibrated Confidence: opposing hydrodynamic forces depress confidence", () => {

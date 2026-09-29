@@ -144,7 +144,7 @@ describe("forecastHours", () => {
     const hours = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
     expect(strengthAt(plain, "2026-09-23T00:00")).toBe("slack");
-    expect(strengthAt(plain, "2026-09-23T01:00")).toBe("too_strong");
+    expect(strengthAt(plain, "2026-09-23T03:00")).toBe("too_strong");
 
     const slackPrior: Report[] = [
       { id: "s1", siteId: "s", time: "2026-07-01T00:00", direction: "incoming", strength: "too_strong", slopeM: 0.01 },
@@ -158,7 +158,7 @@ describe("forecastHours", () => {
       { id: "t2", siteId: "s", time: "2026-07-02T06:00", direction: "outgoing", strength: "slack", slopeM: -0.08 },
     ];
     const slower = forecastHours({ hours, inwardBearingDeg: 0, reports: steepPrior });
-    expect(strengthAt(slower, "2026-09-23T01:00")).not.toBe("too_strong");
+    expect(strengthAt(slower, "2026-09-23T03:00")).not.toBe("too_strong");
 
     const missing = slackPrior.map((report) => ({ ...report, slopeM: null }));
     const unchanged = forecastHours({ hours, inwardBearingDeg: 0, reports: missing });
@@ -168,10 +168,12 @@ describe("forecastHours", () => {
   it("hourly-strength follows the slope up to the day's range envelope", () => {
     const spring = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const forecast = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [] });
+    // The rise steepens 0.01, 0.05, 0.11, 0.2 m/hour, so the band climbs with it.
     expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("slack");
-    expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("too_strong");
-    expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("too_strong");
+    expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("mild");
+    expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("strong");
     expect(strengthAt(forecast, "2026-09-23T03:00")).toBe("too_strong");
+    expect(strengthAt(forecast, "2026-09-23T04:00")).toBe("too_strong");
 
     const neap = marineFromLevels("2026-09-23T00:00", [0, 0.08, 0.16, 0.24, 0.3, 0.3]);
     const neapForecast = forecastHours({ hours: neap, inwardBearingDeg: 0, reports: [] });
@@ -219,20 +221,27 @@ describe("forecastHours", () => {
     expect(directionAt(forecast, "2026-09-24T06:00")).toBe("outgoing");
   });
 
-  it("holds one strength for an incoming run instead of a new band every hour", () => {
+  it("a run eases in and out: strength rises to the steepest hour, then falls away with no dips", () => {
     const forecast = forecastHours({
-      hours: marineFromLevels("2026-09-23T00:00", semidiurnalLevels(24)),
+      hours: marineFromLevels("2026-09-22T00:00", sineTide(72)),
       inwardBearingDeg: 0,
       reports: [],
     });
-    const directions = forecast.map((hour) => hour.direction);
-    let changes = 0;
-    for (let index = 1; index < directions.length; index += 1) {
-      if (directions[index] !== directions[index - 1]) changes += 1;
+    const band = (strength: string) => STRENGTHS.indexOf(strength as (typeof STRENGTHS)[number]);
+    // Hours 00:00 to 06:00 are one rising then falling stretch of a 12 hour sine tide.
+    const stretch = forecast.filter((hour) => hour.time >= "2026-09-23T00:00" && hour.time <= "2026-09-23T06:00");
+    // Within one run of a direction the band is unimodal: it never falls and then rises again.
+    for (const direction of ["incoming", "outgoing"]) {
+      const bands = stretch.filter((hour) => hour.direction === direction).map((hour) => band(hour.strength));
+      const peak = bands.indexOf(Math.max(...bands));
+      for (let index = 1; index <= peak; index += 1) expect(bands[index]).toBeGreaterThanOrEqual(bands[index - 1]);
+      for (let index = peak + 1; index < bands.length; index += 1) expect(bands[index]).toBeLessThanOrEqual(bands[index - 1]);
     }
-    expect(changes).toBeLessThanOrEqual(4);
-    const incoming = forecast.filter((hour) => hour.direction === "incoming" && hour.strength !== "slack");
-    expect(new Set(incoming.map((hour) => hour.strength)).size).toBe(1);
+    // A 12 hour sine sampled hourly only lands in two bands; the spring-day test above covers the full climb.
+    expect(new Set(stretch.map((hour) => hour.strength)).size).toBeGreaterThanOrEqual(2);
+    // The steepest hour (the sine crosses zero at 00:00) carries the top band, and the crest hour is weaker.
+    expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("too_strong");
+    expect(band(strengthAt(forecast, "2026-09-23T03:00")!)).toBeLessThan(band("too_strong"));
   });
 
   it("a near-zero residual is slack and does not copy the previous direction", () => {
@@ -549,11 +558,13 @@ describe("forecastHours", () => {
       reports: [],
     });
     expect(directionAt(forecast, "2026-09-24T01:00")).toBe("incoming");
+    // The flood peaks either side of midnight and tapers after: the bands follow one tide, not the calendar day.
     expect(strengthAt(forecast, "2026-09-23T23:00")).toBe("strong");
-    expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-24T00:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("mild");
   });
 
-  it("a shoulder whose run peak is strong and whose raw hour is mild has speed prior strong", () => {
+  it("a report is judged against the model's band at its own hour: agreeing changes nothing, stronger raises later hours", () => {
     const slopes = [0.03, 0.11, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08];
     const levels = [0];
     for (const slope of slopes) levels.push(levels[levels.length - 1] + slope);
@@ -562,34 +573,27 @@ describe("forecastHours", () => {
     const peak = "2026-09-23T01:00";
     const later = "2026-09-23T08:00";
     const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
-    const matched = forecastHours({
-      hours,
-      inwardBearingDeg: 0,
-      reports: [1, 2].map((id) => ({
-        id: `band-${id}`,
+    const reportsAt = (strength: "mild" | "strong") =>
+      [1, 2].map((id) => ({
+        id: `${strength}-${id}`,
         siteId: "s",
         time: shoulder,
         direction: "incoming" as const,
-        strength: "strong" as const,
-      })),
-    });
-    const lowered = forecastHours({
-      hours,
-      inwardBearingDeg: 0,
-      reports: [1, 2].map((id) => ({
-        id: `low-${id}`,
-        siteId: "s",
-        time: shoulder,
-        direction: "incoming" as const,
-        strength: "mild" as const,
-      })),
-    });
+        strength,
+      }));
+    const agreeing = forecastHours({ hours, inwardBearingDeg: 0, reports: reportsAt("mild") });
+    const stronger = forecastHours({ hours, inwardBearingDeg: 0, reports: reportsAt("strong") });
+    // The shoulder hour is on the slow edge of the rise, so the model calls it mild and the peak strong.
+    expect(strengthAt(plain, shoulder)).toBe("mild");
     expect(strengthAt(plain, peak)).toBe("strong");
-    expect(strengthAt(plain, shoulder)).toBe("strong");
     expect(strengthAt(plain, later)).toBe("strong");
-    expect(strengthAt(matched, later)).toBe("strong");
-    expect(strengthAt(matched, shoulder)).toBe("strong");
-    expect(strengthAt(lowered, later)).not.toBe("strong");
+    // A report that matches the model's mild at that hour leaves everything alone.
+    expect(strengthAt(agreeing, shoulder)).toBe("mild");
+    expect(strengthAt(agreeing, later)).toBe("strong");
+    // A report of strong there says the model runs weak, so later hours rise.
+    expect(STRENGTHS.indexOf(strengthAt(stronger, later) as (typeof STRENGTHS)[number])).toBeGreaterThan(
+      STRENGTHS.indexOf("strong"),
+    );
   });
 
   it("a non-zero offset whose lagged time is past the series produces no forecast hour at that clock time", () => {
@@ -777,25 +781,33 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
     });
 
     it("computes exact reference channel constriction as 1.0", () => {
-      // Reference channel: 5000m x 400m = 2,000,000 m^2
+      // Reference channel: a typical pass, 210m x 150m = 31,500 m^2
+      expect(constrictionFactor(210, 150)).toBe(1.0);
+    });
+
+    it("computes realistic intermediate constriction (a narrower dive-site pass)", () => {
+      // 500m x 30m = 15,000 m^2 -> (31,500 / 15,000)^0.35 ≈ 1.297
+      const factor = constrictionFactor(500, 30);
+      expect(factor).toBeGreaterThan(1.29);
+      expect(factor).toBeLessThan(1.30);
+    });
+
+    it("clamps wide channels to minimum C_min = 1.0", () => {
+      // Vaadhoo Kandu is 5000m x 400m, far wider than a pass, and 10,000m x 1,000m is wider still.
       expect(constrictionFactor(5000, 400)).toBe(1.0);
-    });
-
-    it("computes realistic intermediate constriction (e.g. Hani Kandu)", () => {
-      // 3000m x 160m = 480,000 m^2 -> (2,000,000 / 480,000)^0.35 ≈ 1.646
-      const factor = constrictionFactor(3000, 160);
-      expect(factor).toBeGreaterThan(1.64);
-      expect(factor).toBeLessThan(1.65);
-    });
-
-    it("clamps massive channels to minimum C_min = 1.0", () => {
-      // 10,000m x 1,000m = 10,000,000 m^2
       expect(constrictionFactor(10000, 1000)).toBe(1.0);
     });
 
-    it("clamps very narrow passes to maximum C_max = 2.5", () => {
-      // 500m x 30m = 15,000 m^2 -> (2,000,000 / 15,000)^0.35 ≈ 5.54 -> clamped to 2.5
-      expect(constrictionFactor(500, 30)).toBe(2.5);
+    it("clamps very narrow cuts to maximum C_max = 2.5", () => {
+      // 100m x 10m = 1,000 m^2 -> (31,500 / 1,000)^0.35 ≈ 3.35 -> clamped to 2.5
+      expect(constrictionFactor(100, 10)).toBe(2.5);
+    });
+
+    it("does not pin measured dive-site passes at the maximum", () => {
+      // The published dive-site channels are 500 to 1500 m wide and 30 to 55 m deep.
+      for (const [width, depth] of [[500, 30], [600, 40], [700, 40], [800, 40], [900, 35], [1200, 55], [1500, 45]]) {
+        expect(constrictionFactor(width, depth)).toBeLessThan(1.5);
+      }
     });
   });
 
@@ -812,7 +824,7 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
 
   it("Acceptance Criterion: constricted channel produces strictly stronger current rating at peak tidal flow than unconstricted open site under identical sea-level slopes", () => {
     const series = moderateTidalSeries(72);
-    const peakHourTime = "2026-09-24T03:00"; // Peak rising slope (maximum tidal flow)
+    const peakHourTime = "2026-09-24T00:00"; // Steepest rising slope of the sine tide (maximum tidal flow)
 
     // Baseline: Unconstricted open water site (dimensions omitted)
     const openForecast = forecastHours({
@@ -821,13 +833,13 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
       reports: [],
     });
 
-    // Constricted pass site: e.g. 1500m width, 80m depth (Ac = 120,000 m^2 -> C_constrict = 2.5)
+    // Constricted pass site: e.g. 300m width, 20m depth (Ac = 6,000 m^2 -> C_constrict ≈ 1.79)
     const constrictedForecast = forecastHours({
       hours: series,
       inwardBearingDeg: 0,
       reports: [],
-      channelWidthM: 1500,
-      channelDepthM: 80,
+      channelWidthM: 300,
+      channelDepthM: 20,
     });
 
     const openPeak = openForecast.find((h) => h.time.startsWith(peakHourTime));
@@ -850,7 +862,7 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
 
   it("produces progressive amplification for narrow vs wide channels under identical conditions", () => {
     const series = moderateTidalSeries(72);
-    const peakHourTime = "2026-09-24T03:00";
+    const peakHourTime = "2026-09-24T00:00"; // Steepest rising slope
 
     // Wide pass: Vaadhoo Kandu (5000m x 400m = 2,000,000 m^2, C = 1.0)
     const wideForecast = forecastHours({
@@ -861,22 +873,22 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
       channelDepthM: 400,
     });
 
-    // Moderate pass: Hani Kandu (3000m x 160m = 480,000 m^2, C ≈ 1.65)
+    // Moderate pass: (500m x 30m = 15,000 m^2, C ≈ 1.30)
     const moderateForecast = forecastHours({
       hours: series,
       inwardBearingDeg: 0,
       reports: [],
-      channelWidthM: 3000,
-      channelDepthM: 160,
+      channelWidthM: 500,
+      channelDepthM: 30,
     });
 
-    // Narrow cut: (600m x 35m = 21,000 m^2, C = 2.5 clamped)
+    // Narrow cut: (300m x 20m = 6,000 m^2, C ≈ 1.79)
     const narrowForecast = forecastHours({
       hours: series,
       inwardBearingDeg: 0,
       reports: [],
-      channelWidthM: 600,
-      channelDepthM: 35,
+      channelWidthM: 300,
+      channelDepthM: 20,
     });
 
     const wideStrength = wideForecast.find((h) => h.time.startsWith(peakHourTime))?.strength;

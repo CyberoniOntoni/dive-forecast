@@ -2,7 +2,7 @@
 
 Maldives dive-site current forecast for guides and liveaboard crews. Open a site, move the time slider, and read incoming or outgoing, strength, and confidence before the site goes on the board.
 
-The forecast uses Open-Meteo sea level and ocean current, sampled about 3 km seaward of each pin. A 25-hour mean is removed before the slope is taken. Each incoming or outgoing run keeps one strength. Slack is the turn. A dive report can pull the next few hours, and it stores the tide around that hour so the pass can learn a lag. A site rating does not change the current.
+The forecast uses Open-Meteo sea level and ocean current, sampled about 3 km seaward of each pin. A 25-hour mean is removed before the slope is taken. Strength follows the tide's rate of change hour by hour, so each run eases in from slack, peaks at the steepest hour, and eases out. Slack is the turn. A dive report can pull the next few hours by how far it differed from the forecast at its own hour, and it stores the tide around that hour so the pass can learn a lag. A site rating does not change the current.
 
 ## Run
 
