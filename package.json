@@ -10,6 +10,7 @@
     "test": "vitest run",
     "replay": "vite-node scripts/replay-cli.ts",
     "benchmark": "vite-node scripts/benchmark.ts",
+    "verify": "vite-node scripts/verify-reports.ts",
     "bearings": "vite-node scripts/bearings.ts"
   },
   "dependencies": {

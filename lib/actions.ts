@@ -2,6 +2,7 @@
 
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
+import { forecastAtReport } from "./forecast-log";
 import { loadSite, slopeWindowForSite } from "./load-site";
 import {
   addReport as persistReport,
@@ -17,6 +18,7 @@ import {
   STRENGTHS,
   UNSEEDED_ATOLL_ID,
   type Direction,
+  type ForecastAtReport,
   type Rating,
   type Report,
   type Site,
@@ -68,6 +70,7 @@ export async function addReport(input: unknown): Promise<Report> {
 
   const time = toMaldivesWall(body.time as string);
   const slopeWindowM = await reportSlopeWindow(site, time);
+  const predicted = await predictionAtReport(site, time);
   const report: Report = {
     id: crypto.randomUUID(),
     siteId: body.siteId as string,
@@ -77,6 +80,7 @@ export async function addReport(input: unknown): Promise<Report> {
     slopeM: slopeWindowM ? slopeWindowM[REPORT_HOUR_INDEX] : null,
   };
   if (slopeWindowM) report.slopeWindowM = slopeWindowM;
+  if (predicted) report.predicted = predicted;
   return persistReport(report);
 }
 
@@ -95,6 +99,19 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
   } catch (caught) {
     const error = caught instanceof Error ? caught.message : "Could not add that report.";
     return { success: false, error };
+  }
+}
+
+/** The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report. */
+async function predictionAtReport(site: Site, time: string): Promise<ForecastAtReport | null> {
+  try {
+    const catalog = readCatalog();
+    const atoll = catalog.atolls.find((item) => item.id === site.atollId);
+    const shown = await loadSite(site, catalog.sites, atoll, reportsForSite(site.id));
+    const modelOnly = await loadSite(site, catalog.sites, atoll, []);
+    return forecastAtReport(shown, modelOnly, time);
+  } catch {
+    return null;
   }
 }
 
