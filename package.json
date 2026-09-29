@@ -9,7 +9,8 @@
     "lint": "eslint --ignore-pattern \".agents/**\" --ignore-pattern \"tests/**\"",
     "test": "vitest run",
     "replay": "vite-node scripts/replay-cli.ts",
-    "benchmark": "vite-node scripts/benchmark.ts"
+    "benchmark": "vite-node scripts/benchmark.ts",
+    "bearings": "vite-node scripts/bearings.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

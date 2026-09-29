@@ -20,7 +20,7 @@ npm run build
 
 ## Map
 
-Seeded sites are in `data/sites.json`, with a source for each coordinate. Published dive depths are stored only when a page printed them. Channel width and depth are stored only for a named channel with a printed measurement.
+Seeded sites are in `data/sites.json`, with a source for each coordinate. See `ADDING_SITES.md` before adding one. Published dive depths are stored only when a page printed them. Channel width and depth are stored only for a named channel with a printed measurement.
 
 `data/marine-cache` holds fetched Open-Meteo hours and is not part of the repo. `data/store.json` holds reports, ratings, and sites added in the app.
 
