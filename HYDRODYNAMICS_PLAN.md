@@ -3,6 +3,8 @@
 **Target System**: `CyberoniOntoni/dive-forecast` / `dive-current`  
 **Purpose**: Rigorous, phased engineering specification to upgrade the forecast engine from an uncoupled tidal breather heuristic to an oceanographically grounded channel pass model. Aligns geometric channel axes, accounts for monsoon-driven through-flow, eliminates speculative parallel physics, and grounds predictions in empirical diver calibration.
 
+
+> **Status (2026-09-29):** Stages A1 and A2 are shipped, merged, and deployed. Stage B is on hold (its gates are in 4.0). Stage C needs diver reports that do not exist yet. Section 3.9 is the findings log; section 6 is the checklist.
 ---
 
 ## 1. Executive Summary & Critical Reality Check
@@ -26,8 +28,8 @@ A scientifically sound model cannot be delivered as an uncalibrated "3-hour patc
 
 | Stage | Scope | Focus & Acceptance Bar | Realistic Effort |
 |---|---|---|---|
-| **Stage A1** | **Explicit Override + Guardrail Test** | Optional `inwardBearingDeg` on `Site`, preferred by `lib/bearing.ts`. Populate the 7 known-bad sites with measured values. Add a seeded-data sanity test so a bad bearing on any current or future site fails CI. Maintain the existing direction contract (slope = direction; ocean = nudge). | **~0.5 – 1 day** (plus measurement time) |
-| **Stage A2** | **Rim-Derived Default (scales to new sites)** | Replace the mate-centroid / `outside → pin` default with the normal to the nearest atoll rim segment, pointing into the lagoon. Needed because more sites, and new atolls, are coming. | **~1 – 2 days** (depends on rim data quality) |
+| **Stage A1** | **Explicit Override + Guardrail Test.** Done. | Optional `inwardBearingDeg` on `Site`, preferred by `lib/bearing.ts`. Populate the 7 known-bad sites with measured values. Add a seeded-data sanity test so a bad bearing on any current or future site fails CI. Maintain the existing direction contract (slope = direction; ocean = nudge). | **~0.5 – 1 day** (plus measurement time) |
+| **Stage A2** | **Rim-Derived Default (scales to new sites).** Done. | Replace the mate-centroid / `outside → pin` default with the normal to the nearest atoll rim segment, pointing into the lagoon. Needed because more sites, and new atolls, are coming. | **~1 – 2 days** (depends on rim data quality) |
 | **Stage B** | **Monsoon Through-Flow Projection** | **ON HOLD.** Blocked on the sign fix in §4.2, a real drift input, and enough reports to calibrate (§4.0 gates). | **~2 – 4 days once unblocked** |
 | **Stage C** | **Empirical Pass Learning** | Learn local pass quirks and opposite-neighbor flow from diver reports so confidence ratings stay honest. | **Ongoing (post-launch)** |
 
@@ -50,7 +52,7 @@ Eliminate the severe centroid/fallback distortions discovered in the audit (wher
 - **User-Added Sites Asymmetry Stated**: When a user adds a custom site without azimuth data, it explicitly falls back to the existing centroid/ocean fallback heuristic.
 
 ### 3.3 Immediate Impact on `monsoonNudge` & Critical Risk Flag
-In [`lib/forecast.ts`](file:///D:/Gork/dive-current/lib/forecast.ts), `monsoonNudge` calculates:
+In [`lib/forecast.ts`](lib/forecast.ts), `monsoonNudge` calculates:
 ```typescript
 const inward = monsoonInwardFlux(drift, inwardBearingDeg);
 return Math.max(-1, Math.min(1, inward / NUDGE_SATURATION_MS));
@@ -59,10 +61,10 @@ Because this uses $\cos(\theta_{\text{drift}} - \theta_{\text{inward}})$, changi
 - **Kuredu Express** ($317^\circ \to 170^\circ$): Under SW Monsoon (drift $90^\circ$), previously $\cos(90^\circ - 317^\circ) = \cos(-227^\circ) = -0.68$ (negative nudge, weakening incoming). Now $\cos(90^\circ - 170^\circ) = \cos(-80^\circ) = +0.17$ (near zero/neutral cross-flow).
 - **Vaavu Passes (CRITICAL RISK TARGET)** ($110^\circ\text{–}126^\circ \to 220^\circ\text{–}230^\circ$): Under SW Monsoon ($90^\circ$), previously $\cos(90^\circ - 120^\circ) = +0.86$ (falsely boosting flood). Now $\cos(90^\circ - 230^\circ) = -0.76$ (correctly opposing flood into the lagoon).
   > [!WARNING]
-  > The Vaavu passes experience a full sign reversal on their strength nudge ($+0.86 \to -0.76$). During peak SW monsoon (June–August), this is large enough to shift strength by a full band (e.g., from `strong` to `mild`). All historical reports for Vaavu during June–August in `data/replay.json` must be explicitly verified against this shift prior to merging Stage A.
+  > The Vaavu passes experience a full sign reversal on their strength nudge ($+0.86 \to -0.76$). During peak SW monsoon (June–August), this is large enough to shift strength by a full band (e.g., from `strong` to `mild`). All historical reports for Vaavu during June–August were to be checked against this shift before merging Stage A. No June–August Vaavu reports exist; the September check is in 3.9. The measured Vaavu bearings are 250° to 280°, so the real nudge is about −0.94 to −0.98, not −0.76.
 
 ### 3.4 Coupling Impact on Open-Meteo Sampling Point (`seawardPoint`)
-In [`lib/marine.ts`](file:///D:/Gork/dive-current/lib/marine.ts), the marine data sampling coordinates are calculated via `seawardPoint(site.lat, site.lon, inwardBearingDeg)`:
+In [`lib/marine.ts`](lib/marine.ts), the marine data sampling coordinates are calculated via `seawardPoint(site.lat, site.lon, inwardBearingDeg)`:
 ```typescript
 const outwardBearing = ((inwardBearingDeg + 180) % 360 + 360) % 360;
 return destinationKm(lat, lon, outwardBearing, 3.0); // 3 km seaward
@@ -73,10 +75,10 @@ return destinationKm(lat, lon, outwardBearing, 3.0); // 3 km seaward
 - **Cache Invalidation**: Because `data/marine-cache` keys files by `lat_lon.json`, fixing the bearing will query a new coordinate. Offline test suites that mock or cache marine hours must be checked to ensure test fixtures provide coverage for the new seaward points.
 
 ### 3.4b Missing-Bearing Contract
-`ForecastInput.inwardBearingDeg` is a required `number` and `lib/nowcast.ts` currently does `loaded.bearing ?? 0`. Define one behavior for sites with no override and no usable rim data (user-added sites in a new atoll): use the fallback heuristic, tag the bearing source as `fallback`, and let the UI show a low-trust marker instead of a confident arrow. Never silently substitute `0`.
+Implemented. A site resolves in order: override, rim-derived, heuristic (`resolveBearing` in `lib/bearing.ts`), and each result carries its `BearingSource`. A heuristic heading is drawn as an outlined arrow with "heading estimated" in the tooltip and an estimate note on the site page. A pin with no atoll (an app-added pin more than 5 km from every stored outline gets `atollId: "unseeded"`) has no bearing, no forecast, and no arrow; `SiteNowcast.inwardBearingDeg` is `number | null` and the old `?? 0` is gone.
 
 ### 3.5 Data Schema Changes
-In [`lib/types.ts`](file:///D:/Gork/dive-current/lib/types.ts):
+In [`lib/types.ts`](lib/types.ts):
 ```typescript
 export type RimFacing = "east" | "west" | "north" | "south" | "inside";
 
@@ -124,38 +126,38 @@ export type ForecastInput = {
 };
 ```
 
-### 3.6 Seeded Sites Geometry Table (Pending Satellite Ruler Measurement)
-The azimuths below are **proposed approximations derived from geographic audit analysis**. Each bearing MUST undergo explicit measurement against satellite imagery (Sentinel-2 / Esri World Imagery) and OpenStreetMap channel cut lines during Task 1 before production merge:
+### 3.6 Seeded Sites Geometry Table
+What each seeded site resolves to today (`npm run bearings` prints the same). **Bearing** is the heading of water entering the lagoon, degrees clockwise from north. **Source** is the `BearingSource`: `override` is stored in `data/sites.json`, `rim-derived` comes from the atoll outline, `heuristic` is the old centroid fallback and is drawn as an outlined arrow. **Audit estimate** is the eyeballed figure from `divesite_audit.md`, kept for comparison only. `rimFacing` is not used by the code yet; it is kept for Stage B.
 
-| Site ID | Atoll | Physical Feature | Proposed Azimuth (`inwardBearingDeg`) | `rimFacing` | Verification Status |
-|---|---|---|---|---|---|
-| `kuredu-express` | Lhaviyani | North rim trench | **165° (SSE)** | `north` | Measured on Esri imagery (2026-09-29), ±15°; pass runs N→S between the two reefs. Audit proposed 170° |
-| `miyaru-kandu` | Vaavu | Northeast rim channel | **280° (W)** | `east` | Measured, ±15°; northernmost of the three passes, runs W-WNW. Audit proposed 230° |
-| `devana-kandu` | Vaavu | Northeast rim channel | **250° (WSW)** | `east` | Measured, ±15°; pin sits on the reef flat between two passes, both read ~250°. Audit proposed 230° |
-| `alimatha-house-reef` | Vaavu | Northeast channel edge | **250° (WSW)** | `east` | Measured, ±15°; pass south of the island reads ~250°. Audit proposed 220° |
-| `kandooma-thila` | South Malé | Cocoa Pass (Biyaadhoo Kandu) | **285° (WNW)** | `east` | Measured, ±15°, from the gap between the two reefs at low zoom. Audit proposed 280° |
-| `kuda-giri` | South Malé | Inner rim drop-off | **285° (WNW)** | `east` | Estimated, not a channel axis: the pin is a wreck in open lagoon water 1.9 km inside the east rim, with no pass in imagery. 285° is the rim's inward direction there (rim normal 282–294°, audit 265°), and it puts the 3 km marine sample point in open ocean. Treat as low-trust |
-| `rasdhoo-madivaru` | Rasdhoo | Southeast corner cut | **330° (NNW)** | `south` | Measured, ±15°, at the reef tip / island gap. Audit proposed 335° |
-| `fotteyo-kandu` | Vaavu | East tip pass | **285° (WNW)** | `east` | Verified accurate in audit (13° diff) |
-| `embudhoo-express` | South Malé | Embudhoo channel | **225° (SW)** | `east` | Verified accurate in audit (9° diff) |
-| `vaadhoo-caves` | South Malé | Vaadhoo Kandu rim | **170° (South)** | `north` | Verified accurate in audit (12° diff) |
-| `hp-reef` | North Malé | Himmafushi pass | **275° (West)** | `east` | Verified accurate in audit (4° diff) |
-| `banana-reef` | North Malé | North Malé pass | **340° (NNW)** | `east` | Verified accurate in audit (3° diff) |
-| `manta-point-lankanfinolhu` | North Malé | Southeast barrier reef | **300° (WNW)** | `east` | Verified accurate in audit (1° diff) |
-| `nassimo-thila` | North Malé | Outer reef thila | **320° (NW)** | `east` | Verified accurate in audit (12° diff) |
-| `kuda-faru` | North Malé | North rim pass | **160° (SSE)** | `north` | Verified accurate in audit (5° diff) |
-| `kuda-haa` | North Malé | Southwest entrance | **30° (NNE)** | `west` | Verified accurate in audit (11° diff) |
-| `fish-head` | North Ari | Internal thila | **315° (NW)** | `inside` | Verified accurate in audit (8° diff) |
-| `maaya-thila` | North Ari | Internal thila | **210° (SSW)** | `inside` | Verified accurate in audit (10° diff) |
-| `fesdhoo` | North Ari | West rim reef | **75° (ENE)** | `west` | Verified accurate in audit (15° diff) |
-| `fesdu-wreck` | North Ari | West rim wreck | **75° (ENE)** | `west` | Same reef area as Fesdhoo (15° diff) |
-| `himandhoo-thila` | North Ari | Southwest pass | **90° (E)** | `west` | Measured (2026-09-29), ±15°; the pin is in a west-to-east gap between two reefs, ocean to the west. The audit's 50° was an estimate |
-| `halaveli-wreck` | North Ari | Internal wreck | **250° (WSW)** | `inside` | Verified accurate in audit (14° diff) |
-| `kudarah-thila` | South Ari | Southeast pass thila | **300° (WNW)** | `east` | Inner channel thila; flood enters from East (20° diff) |
-| `broken-rock` | South Ari | Dhigurah channel cut | **300° (WNW)** | `east` | Canyon in Dhigurah pass; flood enters from East (20° diff) |
-| `rangali-madivaru` | South Ari | West rim pass | **85° (East)** | `west` | Verified accurate in audit (15° diff) |
+| Site ID | Atoll | Bearing | Source | Audit estimate | `rimFacing` | Basis |
+|---|---|---|---|---|---|---|
+| `kuredu-express` | Lhaviyani | **165°** | override | 170° | `north` | Measured on Esri imagery, ±15°. N→S pass between two reefs. |
+| `miyaru-kandu` | Vaavu | **280°** | override | 230° | `east` | Measured, ±15°. Northernmost of the three Vaavu passes, runs W-WNW. |
+| `devana-kandu` | Vaavu | **250°** | override | 230° | `east` | Measured, ±15°. Pin is on the reef flat between two passes; both read ~250°. |
+| `alimatha-house-reef` | Vaavu | **250°** | override | 220° | `east` | Measured, ±15°. Pass south of the island. |
+| `fotteyo-kandu` | Vaavu | **298°** | override | 285° | `east` | Pinned to the old heuristic output. A rim normal would move it 134°; the OSM outline is a thin spike at Vaavu's east tip. |
+| `kandooma-thila` | South Malé | **285°** | override | 280° | `east` | Measured, ±15°, from the gap between the two reefs at low zoom. |
+| `kuda-giri` | South Malé | **285°** | override | 265° | `east` | Estimate, low trust. Open lagoon water 1.9 km inside the east rim, no pass; this is the rim's inward direction. |
+| `embudhoo-express` | South Malé | **216°** | override | 225° | `east` | Pinned to the old heuristic output (a rim normal would move it 28°). |
+| `vaadhoo-caves` | South Malé | **171°** | rim-derived | 170° | `north` | Rim-derived. |
+| `rasdhoo-madivaru` | Rasdhoo | **330°** | override | 335° | `south` | Measured, ±15°, at the reef tip and island gap. |
+| `hp-reef` | North Malé | **271°** | override | 275° | `east` | Pinned to the old heuristic output (a rim normal would move it 51°). |
+| `banana-reef` | North Malé | **337°** | heuristic | 340° | `east` | Heuristic. Open lagoon water 1.8 to 2.3 km inside the North Malé east rim; no pass to measure. |
+| `manta-point-lankanfinolhu` | North Malé | **292°** | rim-derived | 300° | `east` | Rim-derived. |
+| `nassimo-thila` | North Malé | **308°** | heuristic | 320° | `east` | Heuristic. Open lagoon water 1.8 to 2.3 km inside the North Malé east rim; no pass to measure. |
+| `kuda-faru` | North Malé | **155°** | override | 160° | `north` | Pinned to the old heuristic output (a rim normal would move it 60°). |
+| `kuda-haa` | North Malé | **41°** | heuristic | 30° | `west` | Heuristic. Open lagoon water 1.8 to 2.3 km inside the North Malé east rim; no pass to measure. |
+| `fish-head` | North Ari | **307°** | heuristic | 315° | `inside` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `maaya-thila` | North Ari | **200°** | heuristic | 210° | `inside` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `fesdhoo` | North Ari | **90°** | heuristic | 75° | `west` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `fesdu-wreck` | North Ari | **90°** | heuristic | 75° | `west` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `himandhoo-thila` | North Ari | **90°** | override | 50° | `west` | Measured, ±15°. West-to-east gap between two reefs, ocean to the west. |
+| `halaveli-wreck` | North Ari | **236°** | heuristic | 250° | `inside` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `kudarah-thila` | South Ari | **280°** | heuristic | 300° | `east` | Heuristic. Deep open water at a channel mouth; no pass to measure. |
+| `broken-rock` | South Ari | **294°** | rim-derived | 300° | `east` | Rim-derived. Canyon in the Dhigurah pass. |
+| `rangali-madivaru` | South Ari | **92°** | rim-derived | 85° | `west` | Rim-derived. |
 
-> The "Proposed Azimuth" values above are the audit's eyeballed `~` figures, not measurements. Only the 7 discrepant rows need overrides (the "Verified accurate" rows are within ~20° of the heuristic today, and A2 should reproduce them). Do not write any proposed value into `data/sites.json` until it has been measured.
+Summary: 12 overrides (7 measured, 1 low-trust estimate, 4 pinned), 4 rim-derived, 9 heuristic. Measured values are read by eye from Esri World Imagery, so treat them as ±15°. The nine heuristic sites have no channel axis to measure; see 3.9.
 
 ### 3.7 Stage A1 Implementation Steps (override + guardrail)
 1. **Satellite Ruler Measurement**:
@@ -192,10 +194,10 @@ The azimuths below are **proposed approximations derived from geographic audit a
 ## 4. Stage B: Monsoon Through-Flow Modeling (ON HOLD)
 
 ### 4.0 Entry Gates (all must hold before starting)
-1. **Rim sign fixed and tested** (see 4.2). As originally written the coupling was inverted.
-2. **Real drift input.** `getMaldivesMonsoonDrift` in `lib/seasonal.ts` is a hard-coded seasonal curve used only when Open-Meteo hourly current is missing. Calibrating on it means fitting to the calendar, not to an independent signal. Confirm the Open-Meteo current fields are populated and used before calibration; otherwise the "$V_{\text{ocean}} \ge 0.25$ m/s" filter selects almost every May–Oct and Dec–Mar report.
-3. **Enough reports.** Count reports per rim class in `data/store.json` / `data/replay.json`. Three free parameters over ~500 grid points will overfit a small set. Set a minimum (e.g. ≥ 30 reports per rim class, with a held-out split) and do not start below it.
-4. **Stage A merged**, so calibration runs on correct bearings.
+1. **Rim sign fixed and tested** (see 4.2). As originally written the coupling was inverted. *Status: text corrected, no code or test yet.*
+2. **Real drift input.** `getMaldivesMonsoonDrift` in `lib/seasonal.ts` is a hard-coded seasonal curve used only when Open-Meteo hourly current is missing. Calibrating on it means fitting to the calendar, not to an independent signal. Confirm the Open-Meteo current fields are populated and used before calibration; otherwise the "$V_{\text{ocean}} \ge 0.25$ m/s" filter selects almost every May–Oct and Dec–Mar report. *Status: mostly answered. The marine hours carry Open-Meteo ocean-current values and `resolveHourDrift` uses them when present; the curve is only a fallback. Not checked: how reliable that 8 km current is inside passes.*
+3. **Enough reports.** Count reports per rim class in `data/store.json` / `data/replay.json`. Three free parameters over ~500 grid points will overfit a small set. Set a minimum (e.g. ≥ 30 reports per rim class, with a held-out split) and do not start below it. *Status: not met. The live store has 0 reports; the benchmark file has 51 overall, single-day per site.*
+4. **Stage A merged**, so calibration runs on correct bearings. *Status: met.*
 
 ### 4.1 Objective
 Incorporate physical open-ocean current drift ($\vec{V}_{\text{ocean}}$) and atoll hydraulic head into the existing relative strength and direction pipeline, allowing strong monsoon flow to overpower weak tidal draw in leeward passes.
@@ -234,7 +236,7 @@ To avoid ungrounded free constants:
      - Reference slope $S_{\text{ref}} \in [0.02, 0.08]$ (step $0.01\text{ m/hr}$)
    - Objective function: Maximize Directional Concordance Rate ($R_{\text{dir}} = \frac{\text{correct directions}}{\text{total reports}}$) while keeping Slack Timing Error within $\pm 45\text{ min}$.
 3. **Rollback & Feature Flag Strategy**:
-   - Add a configuration flag in [`lib/forecast.ts`](file:///D:/Gork/dive-current/lib/forecast.ts): `enableThroughflowReversal: boolean`.
+   - Add a configuration flag in [`lib/forecast.ts`](lib/forecast.ts): `enableThroughflowReversal: boolean`.
    - If Stage B testing shows improved concordance in Vaavu/South Malé but regressions in Ari Atoll, the flag can be scoped per atoll (`enabledAtolls: string[]`).
 
 ### 4.4 Acceptance Bar for Stage B
@@ -250,32 +252,38 @@ To avoid ungrounded free constants:
 Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite flows due to micro-bathymetry, reef crest wave pumping, or localized circulation eddies. No macro formula can reliably predict this without local empirical data.
 
 ### 5.2 The Strategy
-1. Rely on boat crew reports collected via the in-app reporting form (`components/ReportForm.tsx`).
-2. Use [`lib/reports.ts`](file:///D:/Gork/dive-current/lib/reports.ts) to fit pass-specific phase lags ($\Delta t$) and speed coupling coefficients ($\alpha_{\text{site}}$).
-3. If reports consistently contradict the theoretical through-flow or tidal slope, automatically reduce the site's `Confidence` rating to `"low"` and display a notice rather than making high-confidence false predictions.
+1. Rely on boat crew reports collected via the in-app reporting form (`components/ReportForm.tsx`), stored by `lib/store.ts` in `data/store.json`.
+2. The forecast already fits a per-site phase lag (`fitPhaseOffset`) and speed factor (`fitSpeedFactor`) from reports in `lib/forecast.ts`, and `lib/replay.ts` scores them. Stage C extends those fits, for example a per-site coupling coefficient $\alpha_{\text{site}}$, once there are enough reports to fit them.
+3. `confidenceFor` already lowers confidence when reports contradict the forecast. If reports consistently contradict the tidal slope or the through-flow, show a notice rather than a confident false prediction.
 
 ---
 
 ## 6. Execution Checklist
 
 ### Phase 1a: Stage A1 Execution (override + guardrail)
-- [ ] Measure and verify the 7 channel centerline azimuths against satellite imagery.
-- [ ] Add `inwardBearingDeg?: number` to `Site` and the `BearingSource` type to `lib/types.ts`. Defer `rimFacing` to Stage B.
-- [ ] Update `lib/bearing.ts` to prioritize `site.inwardBearingDeg` while keeping centroid/ocean fallback for custom user sites; return the bearing source.
-- [ ] Define the missing-bearing contract (3.4b); remove the `?? 0` in `lib/nowcast.ts`.
-- [ ] Populate measured satellite azimuths in `data/sites.json` for the 7 discrepant sites.
-- [ ] Add the seeded-data sanity test (3.7 step 4).
-- [ ] Update `divesite_audit.md` §5 and §7 to reflect the reversed product rule.
-- [ ] Verify `seawardPoint(site.lat, site.lon, inwardBearingDeg)` points into open ocean, and ensure test marine caches / fixtures provide coverage for the updated seaward coordinates.
-- [ ] Add unit tests in `lib/bearing.test.ts`.
-- [ ] Audit `monsoonNudge` impact on historical reports in `lib/replay.test.ts`, verifying Vaavu June–August reports.
-- [ ] Verify `npm test` and `npm run build` pass 100%.
+- [x] Measure the 7 channel centerline azimuths against satellite imagery. Six measured, Kuda Giri is a low-trust estimate (no pass); Himandhoo later measured.
+- [x] Add `inwardBearingDeg?: number` to `Site` and the `BearingSource` type to `lib/types.ts`. `rimFacing` deferred to Stage B.
+- [x] Update `lib/bearing.ts` to prioritize `site.inwardBearingDeg` while keeping centroid/ocean fallback; return the bearing source.
+- [x] Define the missing-bearing contract (3.4b); remove the `?? 0` in `lib/nowcast.ts`.
+- [x] Populate azimuths in `data/sites.json` for the 7 discrepant sites (plus Himandhoo, and 4 pinned sites).
+- [x] Add the seeded-data sanity test (3.7 step 4), in `lib/rim.test.ts`.
+- [x] Update `divesite_audit.md` §5 and §7 to reflect the reversed product rule.
+- [x] Verify `seawardPoint(...)` points into open ocean (`npm run bearings`), and add benchmark fixtures for the moved sample points.
+- [x] Add unit tests in `lib/bearing.test.ts`.
+- [ ] Audit `monsoonNudge` impact on historical reports, verifying Vaavu June–August reports. *Partly done: no June–August reports exist; the September check is in 3.9. Reopen when summer reports arrive.*
+- [x] Verify `npm test` and `npm run build` pass 100%. CI runs both on every PR.
 
 ### Phase 1b: Stage A2 Execution (rim-derived default)
-- [ ] Assess OSM rim polygon coverage for every atoll; fetch and store in-repo.
-- [ ] Implement nearest-segment inward normal; add tests including an atoll with a single site.
-- [ ] Compare against the audit table; keep overrides where the difference exceeds ~30°.
-- [ ] Add the `BearingSource` UI trust marker.
+- [x] Assess OSM rim polygon coverage for every atoll; fetch and store in-repo (`data/rims.json`).
+- [x] Implement the rim-segment inward normal (smoothed over 1.5 km, applied within 0.8 km of the rim); add tests including an atoll with a single site.
+- [x] Compare against the audit table; keep overrides where the difference exceeds ~30° (four pinned sites).
+- [x] Add the `BearingSource` UI trust marker (outlined arrows and estimate note).
+
+### Also done (outside the original plan)
+- [x] App-added pins are matched to an atoll by distance to the stored outlines; outside 5 km they become `unseeded` (no forecast, no arrow).
+- [x] Tests are hermetic: a throwaway marine cache directory per test file and no network. Benchmark mode reads only the committed fixtures.
+- [x] `ADDING_SITES.md` checklist and `npm run bearings`.
+- [x] OpenStreetMap credit in the footer.
 
 ### Phase 2: Stage B Preparation & Tuning (ON HOLD until 4.0 gates pass)
 - [ ] Fix and unit-test the rim sign convention (4.2).
