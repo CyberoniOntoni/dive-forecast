@@ -84,7 +84,9 @@ Say which bearings were measured, which came from the rim, and which are estimat
 
 ## App-added pins
 
-A pin added in the app is a `sourceUrl: "user"` site. It is assigned to the nearest atoll by ocean point, and it is not a mate for anyone else's fallback.
+A pin added in the app is a `sourceUrl: "user"` site. It is not a mate for anyone else's fallback.
 
-- It gets `rim-derived` if it is within 0.8 km of that atoll's outline, otherwise `fallback`. Pins in atolls we have not seeded fall to `fallback` against the wrong atoll's outline. Do not trust their arrows.
+- Its atoll comes from where it sits: inside or within 5 km of a stored atoll outline. It is worked out every time sites are read, so the stored `atollId` does not matter. North and South Ari share one outline and are split by the nearer ocean point.
+- A pin farther than 5 km from every outline gets `atollId: "unseeded"`. It has no forecast and draws no arrow until its atoll is seeded (step 4 above).
+- Inside a seeded atoll it gets `rim-derived` if it is within 0.8 km of the outline, otherwise `fallback`. Treat `fallback` arrows on app-added pins as low-trust.
 - To promote one to a seeded site, add it to `data/sites.json` with a published `sourceUrl` and the same `id`. Its reports stay attached because they are keyed by `id`.

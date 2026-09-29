@@ -3,6 +3,7 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addReport, addReportAction, addSite, rateSite } from "./actions";
 import { setStorePath } from "./store";
+import { UNSEEDED_ATOLL_ID } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const LIVE_STORE = path.join(DATA_DIR, "store.json");
@@ -59,6 +60,18 @@ describe("addSite", () => {
     // C4
     await expect(addSite({ name: "North", lat: 85, lon: 73.5 })).rejects.toThrow(/Maldives.*bounds/i);
     await expect(addSite({ name: "East", lat: 4.3, lon: 150 })).rejects.toThrow(/Maldives.*bounds/i);
+  });
+});
+
+describe("addSite atoll matching", () => {
+  it("puts a pin on a seeded reef in that atoll", async () => {
+    const site = await addSite({ name: "Test Reef", lat: 4.2342, lon: 73.534 });
+    expect(site.atollId).toBe("north-male");
+  });
+
+  it("marks a pin in an unseeded atoll instead of assigning a far atoll", async () => {
+    const site = await addSite({ name: "Baa Test", lat: 5.2, lon: 72.95 });
+    expect(site.atollId).toBe(UNSEEDED_ATOLL_ID);
   });
 });
 

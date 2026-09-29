@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
-import type { Catalog, Rating, Report, Site, StoreData } from "./types";
+import { atollForPin } from "./bearing";
+import { UNSEEDED_ATOLL_ID, type Catalog, type Rating, type Report, type Site, type StoreData } from "./types";
 
 const CATALOG_PATH = path.join(process.cwd(), "data", "sites.json");
 const DEFAULT_STORE_FILE = "store.json";
@@ -56,11 +57,21 @@ function isMissingFile(error: unknown): boolean {
 }
 
 export function listMergedSites(): Site[] {
-  const published = readCatalog().sites;
+  const catalog = readCatalog();
+  const published = catalog.sites;
   const added = readStore().sites;
   const publishedIds = new Set(published.map((site) => site.id));
-  const onlyAdded = added.filter((site) => !publishedIds.has(site.id));
+  const onlyAdded = added
+    .filter((site) => !publishedIds.has(site.id))
+    .map((site) => withCurrentAtoll(site, catalog.atolls));
   return [...published, ...onlyAdded];
+}
+
+/** An app-added pin's atoll is worked out from where it sits now, not from what was stored when it was added. */
+function withCurrentAtoll(site: Site, atolls: Catalog["atolls"]): Site {
+  if (site.sourceUrl !== "user") return site;
+  const atollId = atollForPin(site.lat, site.lon, atolls)?.id ?? UNSEEDED_ATOLL_ID;
+  return atollId === site.atollId ? site : { ...site, atollId };
 }
 
 export function findSite(id: string): Site | null {
