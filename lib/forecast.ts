@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/1";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/2";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -42,7 +42,12 @@ export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/1";
  */
 export const NUDGE_SOURCE: "drift" | "off" = "drift";
 
-export const REF_CHANNEL_AREA_M2 = 2_000_000;
+/**
+ * Cross-section that counts as a typical pass: the median of the measured dive-site channels (about 32,000 m2).
+ * It used to be Vaadhoo Kandu (5 km x 400 m), an inter-atoll channel, which made every real pass look narrow and
+ * pinned each site with published dimensions at the maximum factor, so it was "too strong" nearly all the time.
+ */
+export const REF_CHANNEL_AREA_M2 = 31_500;
 export const CONSTRICTION_EXPONENT = 0.35;
 export const CONSTRICTION_MIN = 1.0;
 export const CONSTRICTION_MAX = 2.5;
@@ -218,23 +223,8 @@ type OpenHour = {
   levelM: number;
 };
 
-// One incoming or outgoing run keeps the peak band. Only the turn is slack.
-function peakBand(open: OpenHour[]) {
-  const slackTurn = (slope: number) => Math.abs(slope) < SLACK_SLOPE_M;
-  let peak = 0;
-  for (const hour of open) {
-    if (slackTurn(hour.slope)) continue;
-    peak = Math.max(peak, bandIndex(hour.strength));
-  }
-  if (peak > 0) {
-    const band = STRENGTHS[peak];
-    for (const hour of open) {
-      hour.strength = slackTurn(hour.slope) ? "slack" : band;
-    }
-  }
-}
-
-// Hours at or above the slack slope vote. Past half saturation, step one band. A slack run stays put.
+// Each hour keeps its own band, so a run eases in from slack, peaks, and eases out.
+// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band. A slack hour stays put.
 function meanNudge(open: OpenHour[]) {
   let nudge = 0;
   let count = 0;
@@ -255,7 +245,7 @@ function meanNudge(open: OpenHour[]) {
   }
 }
 
-/** One walk over the series. Each closed run is peak band, then mean nudge, then report pull. */
+/** One walk over the series. Each hour gets its own band, each closed run is nudged, then reports pull. */
 function finishRuns(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
@@ -268,8 +258,11 @@ function finishRuns(
   constriction: number = 1.0,
 ): HourForecast[] {
   // A report fades for six hours and must not cut the run.
+  // It moves later hours by how far it differed from the model at its own hour, so a report that agrees changes nothing.
+  const settled = settledHours(hours, residual, inwardBearingDeg, offset, speedFactor, tides, constriction);
+  const modelBands = new Map(settled.map((open) => [open.index, open.strength]));
   const reportPull = (hour: OpenHour): HourForecast => {
-    const pull = aggregateReportPull(hour, hours, classified);
+    const pull = aggregateReportPull(hour, hours, classified, modelBands);
     return {
       time: hour.time,
       direction: pull.direction,
@@ -290,10 +283,10 @@ function finishRuns(
     };
   };
 
-  return settledHours(hours, residual, inwardBearingDeg, offset, speedFactor, tides, constriction).map(reportPull);
+  return settled.map(reportPull);
 }
 
-/** Open hours after peak band and mean nudge, before the report pull. */
+/** Open hours after their own band and the mean nudge, before the report pull. */
 function settledHours(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
@@ -307,7 +300,6 @@ function settledHours(
   let run: OpenHour[] = [];
   const closeRun = () => {
     if (run.length === 0) return;
-    peakBand(run);
     meanNudge(run);
     for (const hour of run) settled.push(hour);
     run = [];
@@ -548,6 +540,7 @@ export function aggregateReportPull(
   hour: OpenHour,
   hours: readonly MarineHour[],
   classified: readonly ClassifiedReport[],
+  modelBands?: ReadonlyMap<number, Strength>,
 ): AggregatedPull {
   const hourMs = parseWall(hour.time);
   if (!Number.isFinite(hourMs)) {
@@ -595,17 +588,13 @@ export function aggregateReportPull(
   if (incomingWeight > outgoingWeight && incomingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
     direction = "incoming";
     const concordant = activeReports.filter((r) => r.item.report.direction === "incoming");
-    const sumBand = concordant.reduce((sum, r) => sum + r.weight * bandIndex(r.item.report.strength), 0);
-    const avgTargetBand = sumBand / incomingWeight;
-    const gap = avgTargetBand - bandIndex(hour.strength);
+    const gap = averageGap(concordant, incomingWeight, hour, modelBands);
     const effectiveWeight = Math.min(1, incomingWeight);
     strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
   } else if (outgoingWeight > incomingWeight && outgoingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
     direction = "outgoing";
     const concordant = activeReports.filter((r) => r.item.report.direction === "outgoing");
-    const sumBand = concordant.reduce((sum, r) => sum + r.weight * bandIndex(r.item.report.strength), 0);
-    const avgTargetBand = sumBand / outgoingWeight;
-    const gap = avgTargetBand - bandIndex(hour.strength);
+    const gap = averageGap(concordant, outgoingWeight, hour, modelBands);
     const effectiveWeight = Math.min(1, outgoingWeight);
     strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
   } else {
@@ -615,6 +604,24 @@ export function aggregateReportPull(
 
   const contradicted = hasConflict || direction !== hour.direction;
   return { direction, strength, contradicted };
+}
+
+/**
+ * Weighted average number of bands by which the reports differ from the model at their own hour.
+ * With no model band there (a report outside the series), it falls back to the gap from the hour being pulled.
+ */
+function averageGap(
+  reports: readonly { item: ClassifiedReport; weight: number }[],
+  totalWeight: number,
+  hour: OpenHour,
+  modelBands?: ReadonlyMap<number, Strength>,
+): number {
+  const sum = reports.reduce((acc, r) => {
+    const prior = modelBands?.get(r.item.seriesIndex);
+    const base = prior != null ? bandIndex(prior) : bandIndex(hour.strength);
+    return acc + r.weight * (bandIndex(r.item.report.strength) - base);
+  }, 0);
+  return sum / totalWeight;
 }
 
 /** Tide direction at a lag. An in-series miss is outside the series, not the unshifted hour. */

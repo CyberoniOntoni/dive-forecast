@@ -39,8 +39,8 @@ describe("loadSite", () => {
     lat: 4.234,
     lon: 73.533,
     sourceUrl: "https://example.com/kandu",
-    channelWidthM: 1500,
-    channelDepthM: 80,
+    channelWidthM: 300,
+    channelDepthM: 20,
   };
 
   const syntheticHours: MarineHour[] = Array.from({ length: 72 }, (_, i) => ({
@@ -103,8 +103,8 @@ describe("loadSite", () => {
     expect(result.unavailable).toBe(false);
     expect(result.hours.length).toBeGreaterThan(0);
 
-    // Peak rising hour is amplified to 'strong' or 'too_strong'
-    const peakHour = result.hours.find((h) => h.time.startsWith("2026-09-24T03:00"));
+    // The steepest rising hour of the sine tide (it crosses zero at 00:00) is amplified to 'strong' or 'too_strong'
+    const peakHour = result.hours.find((h) => h.time.startsWith("2026-09-24T00:00"));
     expect(["strong", "too_strong"]).toContain(peakHour?.strength);
   });
 });

@@ -78,7 +78,7 @@ console.log("===================================================================
 console.log("--- 1. INVARIANT 1: Channel Constriction & Hydrodynamic Amplification ---");
 
 // 1.1 Mathematical formula & clamping bounds
-assert(REF_CHANNEL_AREA_M2 === 2_000_000, "1.1.1 REF_CHANNEL_AREA_M2 is exactly 2,000,000 m^2");
+assert(REF_CHANNEL_AREA_M2 === 31_500, "1.1.1 REF_CHANNEL_AREA_M2 is exactly 31,500 m^2");
 assert(CONSTRICTION_EXPONENT === 0.35, "1.1.2 CONSTRICTION_EXPONENT is exactly 0.35");
 assert(CONSTRICTION_MIN === 1.0, "1.1.3 CONSTRICTION_MIN is exactly 1.0");
 assert(CONSTRICTION_MAX === 2.5, "1.1.4 CONSTRICTION_MAX is exactly 2.5");
@@ -96,17 +96,17 @@ assert(
   `Received C=${constrictionFactor(100, 10)}`
 );
 assert(
-  constrictionFactor(300, 30) === 2.5,
-  "1.1.7 Narrow pass (300m x 30m = 9,000 m^2) clamps to C_max = 2.5",
-  `Received C=${constrictionFactor(300, 30)}`
+  constrictionFactor(60, 10) === 2.5,
+  "1.1.7 Narrow cut (60m x 10m = 600 m^2) clamps to C_max = 2.5",
+  `Received C=${constrictionFactor(60, 10)}`
 );
 
 // Intermediate channel
-const intermediateExpected = Math.pow(2_000_000 / (1500 * 300), 0.35);
+const intermediateExpected = Math.pow(31_500 / (500 * 30), 0.35);
 assert(
-  Math.abs(constrictionFactor(1500, 300) - intermediateExpected) < 1e-6,
-  "1.1.8 Intermediate pass (1500m x 300m) matches formula (A_ref / A)^0.35",
-  `Received C=${constrictionFactor(1500, 300)}, expected ${intermediateExpected}`
+  Math.abs(constrictionFactor(500, 30) - intermediateExpected) < 1e-6,
+  "1.1.8 Intermediate pass (500m x 30m) matches formula (A_ref / A)^0.35",
+  `Received C=${constrictionFactor(500, 30)}, expected ${intermediateExpected}`
 );
 
 // Wide channel clamps to 1.0

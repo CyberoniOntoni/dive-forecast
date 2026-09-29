@@ -188,10 +188,12 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
       // Cycle 1: Day 1 14:30 midpoint -> report at 14:30 (deviation = 0 min)
       // Cycle 2: Day 2 02:30 midpoint -> report at 02:45 (deviation = 15 min)
       // Cycle 3: Day 2 14:30 midpoint -> report at 15:00 (deviation = 30 min)
+      // slopeM: null keeps these reports from training the speed factor, which would otherwise learn that the
+      // site is weak from three slack calls and add slack hours. This test measures timing only.
       const multiSlack: Report[] = [
-        { id: "s-c1", siteId: "s", time: "2026-09-22T14:30", direction: "incoming", strength: "slack" },
-        { id: "s-c2", siteId: "s", time: "2026-09-23T02:45", direction: "incoming", strength: "slack" },
-        { id: "s-c3", siteId: "s", time: "2026-09-23T15:00", direction: "incoming", strength: "slack" },
+        { id: "s-c1", siteId: "s", time: "2026-09-22T14:30", direction: "incoming", strength: "slack", slopeM: null },
+        { id: "s-c2", siteId: "s", time: "2026-09-23T02:45", direction: "incoming", strength: "slack", slopeM: null },
+        { id: "s-c3", siteId: "s", time: "2026-09-23T15:00", direction: "incoming", strength: "slack", slopeM: null },
       ];
 
       const result = replayReports({
