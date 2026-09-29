@@ -262,6 +262,7 @@
     },
     {
       "id": "kuda-giri",
+      "inwardBearingDeg": 285,
       "name": "Kuda Giri",
       "atollId": "south-male",
       "lat": 3.973217,
