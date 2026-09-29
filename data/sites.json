@@ -195,6 +195,7 @@
     },
     {
       "id": "himandhoo-thila",
+      "inwardBearingDeg": 90,
       "name": "Himandhoo Thila",
       "atollId": "north-ari",
       "lat": 3.9148,

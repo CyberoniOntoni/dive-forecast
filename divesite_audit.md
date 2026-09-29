@@ -114,13 +114,13 @@ Bearing resolution order (`resolveBearing` in `lib/bearing.ts`): override, then 
 
 ## 6. Options Evaluated
 
-- **Option A, explicit `inwardBearingDeg` in `data/sites.json`: implemented.** 11 sites have one: the 7 discrepant sites (Kuda Giri's is a low-trust estimate), plus Fotteyo, Embudhoo, Hp Reef and Kuda Faru, which are pinned to their previous heuristic output because a rim normal would have moved them by 28 to 134 degrees.
+- **Option A, explicit `inwardBearingDeg` in `data/sites.json`: implemented.** 12 sites have one: the 7 discrepant sites (Kuda Giri's is a low-trust estimate), Himandhoo Thila (measured later), plus Fotteyo, Embudhoo, Hp Reef and Kuda Faru, which are pinned to their previous heuristic output because a rim normal would have moved them by 28 to 134 degrees.
 - **Option B, per-atoll lagoon centroids: not built.** The rim-derived default replaced it. It needs no hand-entered coordinates and handles a first site in a new atoll.
 
 ## 7. Outcome
 
 - **Site coordinates:** unchanged and still correct.
 - **The 7 discrepant sites:** six measured on Esri World Imagery (about ±15 degrees) and stored. The audit was off for Vaavu: its three passes run roughly east-west (280, 250, 250), not southwest (230, 230, 220). The seventh, Kuda Giri, has no pass, so it carries a low-trust estimate of 285.
-- **Ten sites** (internal thilas and pins more than 0.8 km from the outline) are still on the heuristic and show outlined arrows. The audit rated most of them accurate to within about 15 degrees, but none has been measured.
+- **Nine sites** are still on the heuristic and show outlined arrows: Banana Reef, Nassimo Thila, Kuda Haa, Fish Head, Maaya Thila, Halaveli Wreck, Fesdhoo, Fesdu Wreck and Kudarah Thila. An imagery review found no pass at any of them, so there is no channel axis to measure; they sit in open lagoon water or are patch reefs and thilas. The audit rated most accurate to within about 15 degrees, which remains an estimate.
 - **Effect on the forecast:** direction is unchanged, since it comes from the tide slope. The corrected bearings change the monsoon nudge (strength) and the 3 km seaward sample point. The Vaavu strength check is logged in `HYDRODYNAMICS_PLAN.md` §3.9.
 - **Still open:** measuring the remaining heuristic sites, and the Stage B monsoon through-flow work, which is on hold in the plan.
