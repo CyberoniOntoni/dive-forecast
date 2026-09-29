@@ -2,7 +2,11 @@ import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addReport, addReportAction, addSite, rateSite } from "./actions";
-import { setStorePath } from "./store";
+import { inwardBearingDeg } from "./bearing";
+import { FORECAST_MODEL_VERSION } from "./forecast";
+import { marineCacheDir, seawardPoint } from "./marine";
+import { rimForAtoll } from "./rim";
+import { readCatalog, setStorePath } from "./store";
 import { UNSEEDED_ATOLL_ID } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -89,6 +93,58 @@ describe("addReport", () => {
     const fromNull = await rejection(addReport(null));
     expect(fromNull).toBeInstanceOf(Error);
     expect(fromNull).not.toBeInstanceOf(TypeError);
+  });
+});
+
+/** Puts a site's committed benchmark fixture in the test marine cache, under the name the cache reader looks for. */
+function seedMarineCache(siteId: string): void {
+  const catalog = readCatalog();
+  const site = catalog.sites.find((item) => item.id === siteId)!;
+  const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
+  const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
+  const point = seawardPoint(site.lat, site.lon, bearing);
+  const fixtureName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`;
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(DATA_DIR, "benchmark-marine-cache", fixtureName), "utf8"),
+  ) as { hours: unknown[] };
+  fs.mkdirSync(marineCacheDir(), { recursive: true });
+  // The live cache reader strips letters from its file names, so its files have no extension.
+  fs.writeFileSync(
+    path.join(marineCacheDir(), fixtureName.replace(/[^0-9.+_-]/g, "")),
+    JSON.stringify({ fetchedAt: Date.now(), hours: fixture.hours }),
+  );
+}
+
+describe("addReport saves the prediction", () => {
+  it("stores what the page showed and what the model alone said for the report hour", async () => {
+    seedMarineCache("kandooma-thila");
+    const report = await addReport({
+      siteId: "kandooma-thila",
+      time: "2026-09-27T08:00",
+      direction: "incoming",
+      strength: "strong",
+    });
+    expect(report.predicted).toBeDefined();
+    expect(report.predicted?.modelVersion).toBe(FORECAST_MODEL_VERSION);
+    expect(report.predicted?.bearingDeg).toBe(285);
+    expect(report.predicted?.bearingSource).toBe("override");
+    expect(report.predicted?.shown.direction).toMatch(/^(incoming|outgoing)$/);
+    expect(report.predicted?.modelOnly).not.toBeNull();
+    expect(report.predicted?.issuedAt).toEqual(expect.any(Number));
+  });
+
+  it("the modelOnly prediction ignores earlier reports; the shown one may not", async () => {
+    seedMarineCache("kandooma-thila");
+    const first = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
+    const second = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
+    expect(second.predicted?.modelOnly).toEqual(first.predicted?.modelOnly);
+  });
+
+  it("still saves the report when there is no ocean data, just without a prediction", async () => {
+    // Nothing seeds Banana Reef's cache in this file, and the test setup blocks the network.
+    const report = await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    expect(report.id).toBeTruthy();
+    expect(report.predicted).toBeUndefined();
   });
 });
 

@@ -70,6 +70,30 @@ export type Report = {
    * Index 6 is the report hour. Null is a missing hour. Absent when the fetch failed.
    */
   slopeWindowM?: (number | null)[] | null;
+  /** What the forecast said for this hour when the report was filed. Absent when there was no forecast. */
+  predicted?: ForecastAtReport;
+};
+
+/**
+ * The prediction paired with a report, saved when the report is filed so it can be scored later without
+ * recomputing it with a newer model. Lead time is the report hour minus `issuedAt`; a negative lead means the
+ * ocean data was fetched after the dive, so the "forecast" was really an analysis of a past hour.
+ */
+export type ForecastAtReport = {
+  /** FORECAST_MODEL_VERSION when the report was filed. */
+  modelVersion: string;
+  /** NUDGE_SOURCE when the report was filed. */
+  nudge: "drift" | "off";
+  /** Unix ms when the ocean data behind the forecast was fetched. Null if unknown. */
+  issuedAt: number | null;
+  /** True when that data was the last cached series, not a fresh fetch. */
+  stale: boolean;
+  bearingDeg: number;
+  bearingSource: BearingSource | null;
+  /** What the site page showed for the report hour: earlier reports for the site pull on it. */
+  shown: { direction: Direction; strength: Strength; confidence: Confidence };
+  /** The model alone, with no reports pulling. Null if it produced no hour. */
+  modelOnly: { direction: Direction; strength: Strength } | null;
 };
 
 export type Rating = {

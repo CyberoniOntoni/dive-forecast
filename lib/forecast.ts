@@ -30,6 +30,12 @@ const NUDGE_SATURATION_MS = 0.4;
 const DRIFT_HALF_HOURS = 12;
 
 /**
+ * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
+ * Change it whenever a change alters what the forecast says for the same inputs.
+ */
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/1";
+
+/**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
  * so its hourly value is mostly tide at strongly tidal cells. "drift" uses the 25-hour mean, which removes the tide.
  * "off" disables the nudge.

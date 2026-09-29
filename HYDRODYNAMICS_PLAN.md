@@ -264,7 +264,8 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 ### 5.2 The Strategy
 1. Rely on boat crew reports collected via the in-app reporting form (`components/ReportForm.tsx`), stored by `lib/store.ts` in `data/store.json`.
 2. The forecast already fits a per-site phase lag (`fitPhaseOffset`) and speed factor (`fitSpeedFactor`) from reports in `lib/forecast.ts`, and `lib/replay.ts` scores them. Stage C extends those fits, for example a per-site coupling coefficient $\alpha_{\text{site}}$, once there are enough reports to fit them.
-3. `confidenceFor` already lowers confidence when reports contradict the forecast. If reports consistently contradict the tidal slope or the through-flow, show a notice rather than a confident false prediction.
+3. Every new report saves the prediction made for that hour, so accuracy can be measured without recomputing with a newer model (`npm run verify`). Bump `FORECAST_MODEL_VERSION` in `lib/forecast.ts` whenever a change alters what the forecast says for the same inputs, so results stay grouped by model.
+4. `confidenceFor` already lowers confidence when reports contradict the forecast. If reports consistently contradict the tidal slope or the through-flow, show a notice rather than a confident false prediction.
 
 ---
 
@@ -291,6 +292,7 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 
 ### Also done (outside the original plan)
 - [x] The strength nudge is fed the tide-removed drift instead of the hourly total current (see 3.9).
+- [x] Each new report saves the prediction the app made for its hour (`Report.predicted`: shown and model-only forecasts, model version, bearing and its source, when the ocean data was fetched). `npm run verify` scores them by model version. This is the ground truth that Stage B and C need, and it only accumulates from the deploy date; older reports have none.
 - [x] App-added pins are matched to an atoll by distance to the stored outlines; outside 5 km they become `unseeded` (no forecast, no arrow).
 - [x] Tests are hermetic: a throwaway marine cache directory per test file and no network. Benchmark mode reads only the committed fixtures.
 - [x] `ADDING_SITES.md` checklist and `npm run bearings`.

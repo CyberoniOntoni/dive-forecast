@@ -24,6 +24,16 @@ Seeded sites are in `data/sites.json`, with a source for each coordinate. See `A
 
 `data/marine-cache` holds fetched Open-Meteo hours and is not part of the repo. `data/store.json` holds reports, ratings, and sites added in the app.
 
+## Checking the forecast
+
+Each diver report saves the prediction the app made for that hour: what the site page showed, what the model said on its own, the model version, and the bearing used. Nothing is recomputed later, so a change to the model cannot rewrite past results. Score them against what divers reported:
+
+```bash
+npm run verify
+```
+
+It groups results by model version and warns while there are too few reports to mean anything. The reports in `data/benchmark-reports.json` are curated test scenarios with no saved prediction, so they are not scored.
+
 ## Roadmap
 
 What is shipped, what comes next, and what stays out of this version is in [ROADMAP.md](ROADMAP.md).
