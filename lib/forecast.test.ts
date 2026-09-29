@@ -608,9 +608,7 @@ describe("forecastHours", () => {
   it("one running hour with several slack hours still steps one band when that running hour's nudge is past 0.5", () => {
     const levels = [0, 0.4, 0.401, 0.402, 0.403, 0.404];
     const calm = marineFromLevels("2026-09-23T00:00", levels);
-    const driven = calm.map((hour, index) =>
-      index === 0 ? { ...hour, currentVelocityMs: 0.3, currentDirectionDeg: 0 } : hour,
-    );
+    const driven = calm.map((hour) => ({ ...hour, currentVelocityMs: 0.3, currentDirectionDeg: 0 }));
     const plain = forecastHours({ hours: calm, inwardBearingDeg: 0, reports: [] });
     const nudged = forecastHours({ hours: driven, inwardBearingDeg: 0, reports: [] });
     expect(strengthAt(plain, "2026-09-23T00:00")).toBe("mild");

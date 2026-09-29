@@ -27,6 +27,14 @@ const WINDOW_HOURS = WINDOW_HALF_HOURS * 2 + 1;
 const HOUR_MATCH_MS = 45 * 60 * 1000;
 const NUDGE_BAND = 0.5;
 const NUDGE_SATURATION_MS = 0.4;
+const DRIFT_HALF_HOURS = 12;
+
+/**
+ * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
+ * so its hourly value is mostly tide at strongly tidal cells. "drift" uses the 25-hour mean, which removes the tide.
+ * "off" disables the nudge.
+ */
+export const NUDGE_SOURCE: "drift" | "off" = "drift";
 
 export const REF_CHANNEL_AREA_M2 = 2_000_000;
 export const CONSTRICTION_EXPONENT = 0.35;
@@ -83,7 +91,7 @@ type ClassifiedReport =
   | (ClassifiedBase & { kind: "unusable" });
 
 export function forecastHours(input: ForecastInput): HourForecast[] {
-  const hours = input.hours;
+  const hours = currentForNudge(input.hours);
   const constriction = constrictionFactor(input.channelWidthM, input.channelDepthM);
   const residual = residualSeries(hours);
   const classified = (input.reports ?? []).map((report) => classifyReport(report, hours));
@@ -705,6 +713,59 @@ function slopesOpposite(left: number | null, right: number | null): boolean {
 
 function opposite(direction: Direction): Direction {
   return direction === "incoming" ? "outgoing" : "incoming";
+}
+
+/**
+ * Hours with the current replaced by what the nudge should see. Times and sea level are untouched.
+ * The drift is the vector mean over the 25 hours around each hour, with the window slid inward at the ends of the
+ * series so it stays a full tidal cycle. A short series (under 24 hours) cannot remove the tide and averages what it has.
+ * An hour with too few current samples keeps a null current, which falls back to the seasonal curve.
+ */
+function currentForNudge(hours: readonly MarineHour[]): MarineHour[] {
+  if (NUDGE_SOURCE === "off") return hours.map((hour) => ({ ...hour, currentVelocityMs: 0 }));
+  const times = hours.map((hour) => parseWall(hour.time));
+  const finiteTimes = times.filter((time) => !Number.isNaN(time));
+  if (finiteTimes.length === 0) return [...hours];
+  const first = Math.min(...finiteTimes);
+  const last = Math.max(...finiteTimes);
+  const full = last - first >= 2 * DRIFT_HALF_HOURS * HOUR_MS;
+  const east = hours.map((hour) => currentComponent(hour, Math.sin));
+  const north = hours.map((hour) => currentComponent(hour, Math.cos));
+  return hours.map((hour, index) => {
+    if (Number.isNaN(times[index])) return hour;
+    const center = full
+      ? Math.min(last - DRIFT_HALF_HOURS * HOUR_MS, Math.max(first + DRIFT_HALF_HOURS * HOUR_MS, times[index]))
+      : times[index];
+    let sumEast = 0;
+    let sumNorth = 0;
+    let count = 0;
+    for (let other = 0; other < hours.length; other += 1) {
+      if (Number.isNaN(times[other]) || Math.abs(times[other] - center) > DRIFT_HALF_HOURS * HOUR_MS) continue;
+      if (Number.isNaN(east[other])) continue;
+      sumEast += east[other];
+      sumNorth += north[other];
+      count += 1;
+    }
+    if (count === 0 || (full && count < MIN_MEAN_SAMPLES)) {
+      return { ...hour, currentVelocityMs: null, currentDirectionDeg: null };
+    }
+    const meanEast = sumEast / count;
+    const meanNorth = sumNorth / count;
+    return {
+      ...hour,
+      currentVelocityMs: Math.hypot(meanEast, meanNorth),
+      currentDirectionDeg: ((Math.atan2(meanEast, meanNorth) * 180) / Math.PI + 360) % 360,
+    };
+  });
+}
+
+/** East or north component of the hour's current, or NaN when it has no usable current. An exact-zero speed is calm at any heading. */
+function currentComponent(hour: MarineHour, trig: (radians: number) => number): number {
+  const speed = hour.currentVelocityMs;
+  const heading = hour.currentDirectionDeg;
+  if (speed === 0) return 0;
+  if (speed == null || heading == null || !Number.isFinite(speed) || !Number.isFinite(heading)) return Number.NaN;
+  return speed * trig((heading * Math.PI) / 180);
 }
 
 export function resolveHourDrift(hour: MarineHour): OceanDrift {
