@@ -3,12 +3,11 @@ import path from "path";
 import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
 import { rimForAtoll } from "../lib/rim";
-import { marineHoursFromApi, seawardPoint } from "../lib/marine";
+import { marineCacheDir, marineHoursFromApi, seawardPoint } from "../lib/marine";
 import { replayReports, type BenchmarkMetrics } from "../lib/replay";
 import { listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
 
-export const CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 /** Committed fixture caches so CI can score benchmark reports without live Open-Meteo files. */
 export const BENCHMARK_CACHE_DIR = path.join(process.cwd(), "data", "benchmark-marine-cache");
 export const REPLAY_OUT_PATH = path.join(process.cwd(), "data", "replay.json");
@@ -408,7 +407,7 @@ function cachedHoursAt(lat: number, lon: number, benchmarkOnly = false): MarineH
   const lonPart = (lon === 0 ? 0 : lon).toFixed(4);
   // Prefer real .json names. Also accept the old stripped key that ended in ".".
   const names = [`${latPart}_${lonPart}.json`, `${latPart}_${lonPart}.`];
-  const dirs = benchmarkOnly ? [BENCHMARK_CACHE_DIR] : [CACHE_DIR, BENCHMARK_CACHE_DIR];
+  const dirs = benchmarkOnly ? [BENCHMARK_CACHE_DIR] : [marineCacheDir(), BENCHMARK_CACHE_DIR];
 
   for (const dir of dirs) {
     for (const name of names) {
