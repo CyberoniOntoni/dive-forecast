@@ -7,8 +7,10 @@ import {
   CONSTRICTION_MIN,
   CONSTRICTION_MAX,
 } from "../lib/forecast";
+import { inwardBearingDeg } from "../lib/bearing";
 import { loadSite, type SiteLoad } from "../lib/load-site";
 import * as Marine from "../lib/marine";
+import { rimForAtoll } from "../lib/rim";
 import type { Atoll, Catalog, MarineHour, Report as DiverReport, Site, Strength } from "../lib/types";
 
 const SITES_PATH = path.join(process.cwd(), "data", "sites.json");
@@ -16,6 +18,27 @@ const catalogRaw = JSON.parse(fs.readFileSync(SITES_PATH, "utf8")) as Catalog;
 const atolls = catalogRaw.atolls;
 const sites = catalogRaw.sites;
 const atollMap = new Map<string, Atoll>(atolls.map((a) => [a.id, a]));
+
+/** Copies each site's committed benchmark fixture into the test cache directory, keyed by its seaward point. */
+function seedCacheFromFixtures(siteIds: readonly string[]): void {
+  const fixtureDir = path.join(process.cwd(), "data", "benchmark-marine-cache");
+  fs.mkdirSync(Marine.marineCacheDir(), { recursive: true });
+  for (const id of siteIds) {
+    const site = sites.find((s) => s.id === id)!;
+    const atoll = atollMap.get(site.atollId)!;
+    const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
+    const bearing = inwardBearingDeg(site, sites, outside, rimForAtoll(atoll));
+    const point = Marine.seawardPoint(site.lat, site.lon, bearing);
+    const fixtureName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`;
+    // The live cache reader strips letters from its file names, so its files have no extension.
+    const cacheName = fixtureName.replace(/[^0-9.+_-]/g, "");
+    const fixture = JSON.parse(fs.readFileSync(path.join(fixtureDir, fixtureName), "utf8")) as { hours: MarineHour[] };
+    fs.writeFileSync(
+      path.join(Marine.marineCacheDir(), cacheName),
+      JSON.stringify({ fetchedAt: Date.now(), hours: fixture.hours }),
+    );
+  }
+}
 
 // 72-hour semi-diurnal tidal series (Maldives 12h cycle) with timestamps relative to now
 function createSyntheticMarine(amplitude = 0.28, mean = 0.5): MarineHour[] {
@@ -445,10 +468,11 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
     });
   });
 
-  describe("6. Real-World On-Disk Marine Cache Replay", () => {
-    it("successfully loads real cached marine series for sites with matching cache entries", async () => {
-      // Find sites whose coordinate or fallback has a cache file in data/marine-cache
+  describe("6. On-Disk Marine Cache Replay", () => {
+    it("successfully loads cached marine series for sites with matching cache entries", async () => {
+      // The committed benchmark fixtures stand in for a real cache, so this needs no network and no live cache.
       const candidates = ["kandooma-thila", "banana-reef", "rasdhoo-madivaru", "miyaru-kandu"];
+      seedCacheFromFixtures(candidates);
 
       for (const id of candidates) {
         const site = sites.find((s) => s.id === id)!;

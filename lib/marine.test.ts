@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { fetchMarine, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours, wrapLongitude } from "./marine";
+import { fetchMarine, marineCacheDir, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours, wrapLongitude } from "./marine";
 import type { MarineHour } from "./types";
 
 const NOW = Date.UTC(2026, 8, 24, 12, 0, 0);
@@ -501,7 +501,7 @@ function nearPoint(lat: number, lon: number, otherLat: number, otherLon: number)
 
 function forgetMarineCache(lat: number, lon: number) {
   const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
-  fs.rmSync(path.join(process.cwd(), "data", "marine-cache", name), { force: true });
+  fs.rmSync(path.join(marineCacheDir(), name), { force: true });
 }
 
 async function withMarineFetch(

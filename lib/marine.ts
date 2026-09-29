@@ -2,12 +2,17 @@ import fs from "fs";
 import path from "path";
 import type { MarineHour } from "./types";
 
-const CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
+const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
 const SEAWARD_KM = 3;
 const EARTH_RADIUS_KM = 6371;
+
+/** Fetched Open-Meteo hours. MARINE_CACHE_DIR points tests at a throwaway directory. */
+export function marineCacheDir(): string {
+  return process.env.MARINE_CACHE_DIR || DEFAULT_CACHE_DIR;
+}
 
 /**
  * marine-api.open-meteo.com is the live marine host. api.open-meteo.com/v1/marine
@@ -182,7 +187,7 @@ function cacheName(lat: number, lon: number): string {
 
 function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
   try {
-    const raw = fs.readFileSync(path.join(CACHE_DIR, cacheName(lat, lon)), "utf8");
+    const raw = fs.readFileSync(path.join(marineCacheDir(), cacheName(lat, lon)), "utf8");
     const parsed = JSON.parse(raw) as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
     if (typeof parsed.fetchedAt !== "number") return null;
     // Older cache files still store the Open-Meteo body. Parse that once; stored hours are already parsed.
@@ -200,8 +205,8 @@ function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: 
 
 function writeCache(lat: number, lon: number, hours: MarineHour[], fetchedAt: number) {
   try {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
-    fs.writeFileSync(path.join(CACHE_DIR, cacheName(lat, lon)), JSON.stringify({ fetchedAt, hours }));
+    fs.mkdirSync(marineCacheDir(), { recursive: true });
+    fs.writeFileSync(path.join(marineCacheDir(), cacheName(lat, lon)), JSON.stringify({ fetchedAt, hours }));
   } catch (error) {
     console.warn("Failed to write marine cache", error);
   }
