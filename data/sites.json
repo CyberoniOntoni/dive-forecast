@@ -60,6 +60,7 @@
   "sites": [
     {
       "id": "kandooma-thila",
+      "inwardBearingDeg": 285,
       "name": "Kandooma Thila",
       "atollId": "south-male",
       "lat": 3.9075,
@@ -115,6 +116,7 @@
     },
     {
       "id": "rasdhoo-madivaru",
+      "inwardBearingDeg": 330,
       "name": "Rasdhoo Madivaru",
       "atollId": "rasdhoo",
       "lat": 4.2655597,
@@ -140,6 +142,7 @@
     },
     {
       "id": "miyaru-kandu",
+      "inwardBearingDeg": 280,
       "name": "Miyaru Kandu",
       "atollId": "vaavu",
       "lat": 3.5996409,
@@ -168,6 +171,7 @@
     },
     {
       "id": "alimatha-house-reef",
+      "inwardBearingDeg": 250,
       "name": "Alimatha house reef",
       "atollId": "vaavu",
       "lat": 3.5937501,
@@ -241,6 +245,7 @@
     },
     {
       "id": "kuredu-express",
+      "inwardBearingDeg": 165,
       "name": "Kuredu Express",
       "atollId": "lhaviyani",
       "lat": 5.55854,
@@ -321,6 +326,7 @@
     },
     {
       "id": "devana-kandu",
+      "inwardBearingDeg": 250,
       "name": "Devana Kandu",
       "atollId": "vaavu",
       "lat": 3.5841078,

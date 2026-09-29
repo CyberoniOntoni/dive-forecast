@@ -1,7 +1,28 @@
-import type { Atoll, Site } from "./types";
+import type { Atoll, BearingSource, Site } from "./types";
 
-/** Degrees clockwise from north. Two or more seeded mates: pin toward their centroid. Otherwise outside toward the pin. */
+/** Degrees clockwise from north, with where it came from. A measured site bearing wins over the heuristic. */
+export function resolveBearing(
+  site: Site,
+  mates: readonly Site[],
+  outside: { lat: number; lon: number },
+): { deg: number; source: BearingSource } {
+  if (typeof site.inwardBearingDeg === "number" && Number.isFinite(site.inwardBearingDeg)) {
+    return { deg: wrapDegrees(site.inwardBearingDeg), source: "override" };
+  }
+  return { deg: heuristicBearing(site, mates, outside), source: "fallback" };
+}
+
+/** Degrees clockwise from north. */
 export function inwardBearingDeg(
+  site: Site,
+  mates: readonly Site[],
+  outside: { lat: number; lon: number },
+): number {
+  return resolveBearing(site, mates, outside).deg;
+}
+
+/** Two or more seeded mates: pin toward their centroid. Otherwise outside toward the pin. */
+function heuristicBearing(
   site: Site,
   mates: readonly Site[],
   outside: { lat: number; lon: number },

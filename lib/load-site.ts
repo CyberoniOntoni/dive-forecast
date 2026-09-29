@@ -1,26 +1,28 @@
 import fs from "fs";
 import path from "path";
-import { inwardBearingDeg } from "./bearing";
+import { resolveBearing } from "./bearing";
 import { forecastHours, residualSlopeWindow } from "./forecast";
 import { marineSeriesStale, siteMarineHours } from "./marine";
-import type { Atoll, HourForecast, MarineHour, Report, Site } from "./types";
+import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site } from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
 export type SiteLoad = {
   bearing: number | null;
+  bearingSource: BearingSource | null;
   hours: HourForecast[];
   unavailable: boolean;
   stale: boolean;
   fetchedAt: number | null;
 };
 
-function unavailableLoad(bearing: number | null): SiteLoad {
-  return { bearing, hours: [], unavailable: true, stale: false, fetchedAt: null };
+function unavailableLoad(bearing: number | null, bearingSource: BearingSource | null): SiteLoad {
+  return { bearing, bearingSource, hours: [], unavailable: true, stale: false, fetchedAt: null };
 }
 
 function forecastedLoad(
   bearing: number,
+  bearingSource: BearingSource,
   marineHours: MarineHour[],
   reports: readonly Report[],
   fetchedAt: number,
@@ -36,7 +38,7 @@ function forecastedLoad(
     channelDepthM,
     ...(replayAllowsHigh() ? {} : { allowHighConfidence: false }),
   });
-  return { bearing, hours, unavailable: false, stale, fetchedAt };
+  return { bearing, bearingSource, hours, unavailable: false, stale, fetchedAt };
 }
 
 /** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
@@ -51,8 +53,8 @@ function replayAllowsHigh(): boolean {
 }
 
 type CheckedMarine =
-  | { ok: true; bearing: number; hours: MarineHour[]; fetchedAt: number; stale: boolean }
-  | { ok: false; bearing: number | null };
+  | { ok: true; bearing: number; bearingSource: BearingSource; hours: MarineHour[]; fetchedAt: number; stale: boolean }
+  | { ok: false; bearing: number | null; bearingSource: BearingSource | null };
 
 /** Inward bearing and marine fetch. No cache is not ok. A stale series still has hours. A missing atoll has no bearing. */
 async function checkedMarine(
@@ -60,16 +62,17 @@ async function checkedMarine(
   mates: readonly Site[],
   atoll: Atoll | undefined,
 ): Promise<CheckedMarine> {
-  if (!atoll) return { ok: false, bearing: null };
+  if (!atoll) return { ok: false, bearing: null, bearingSource: null };
 
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
-  const bearing = inwardBearingDeg(site, mates, outside);
+  const { deg: bearing, source: bearingSource } = resolveBearing(site, mates, outside);
   const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon);
-  if (!marine.ok) return { ok: false, bearing };
+  if (!marine.ok) return { ok: false, bearing, bearingSource };
 
   return {
     ok: true,
     bearing,
+    bearingSource,
     hours: marine.hours,
     fetchedAt: marine.fetchedAt,
     stale: marine.stale || marineSeriesStale(marine.hours),
@@ -84,9 +87,10 @@ export async function loadSite(
   reports: readonly Report[],
 ): Promise<SiteLoad> {
   const marine = await checkedMarine(site, mates, atoll);
-  if (!marine.ok) return unavailableLoad(marine.bearing);
+  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource);
   return forecastedLoad(
     marine.bearing,
+    marine.bearingSource,
     marine.hours,
     reports,
     marine.fetchedAt,
