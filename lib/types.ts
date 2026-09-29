@@ -42,7 +42,7 @@ export type Site = {
 };
 
 /** Where a resolved bearing came from. */
-export type BearingSource = "override" | "fallback";
+export type BearingSource = "override" | "rim-derived" | "fallback";
 
 export type ForecastInput = {
   hours: MarineHour[];

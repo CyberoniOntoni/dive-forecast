@@ -1,14 +1,21 @@
+import { rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
-/** Degrees clockwise from north, with where it came from. A measured site bearing wins over the heuristic. */
+/**
+ * Degrees clockwise from north, with where it came from. A measured site bearing wins, then the atoll rim's
+ * inward normal when the pin sits on the rim, then the mate-centroid heuristic.
+ */
 export function resolveBearing(
   site: Site,
   mates: readonly Site[],
   outside: { lat: number; lon: number },
+  rim: RimRing | null = null,
 ): { deg: number; source: BearingSource } {
   if (typeof site.inwardBearingDeg === "number" && Number.isFinite(site.inwardBearingDeg)) {
     return { deg: wrapDegrees(site.inwardBearingDeg), source: "override" };
   }
+  const fromRim = rim ? rimInwardBearing(site, rim) : null;
+  if (fromRim != null) return { deg: fromRim, source: "rim-derived" };
   return { deg: heuristicBearing(site, mates, outside), source: "fallback" };
 }
 
@@ -17,8 +24,9 @@ export function inwardBearingDeg(
   site: Site,
   mates: readonly Site[],
   outside: { lat: number; lon: number },
+  rim: RimRing | null = null,
 ): number {
-  return resolveBearing(site, mates, outside).deg;
+  return resolveBearing(site, mates, outside, rim).deg;
 }
 
 /** Two or more seeded mates: pin toward their centroid. Otherwise outside toward the pin. */
