@@ -93,6 +93,58 @@ describe("forecastHours", () => {
     expect(directionAt(plain, "2026-09-24T02:00")).toBe("incoming");
   });
 
+  it("lets a slack report pull strength but not direction", () => {
+    const plain = forecastHours({ hours: series, inwardBearingDeg: 270, reports: [] });
+    // The form makes a diver pick a direction even at slack. That pick must not flip the incoming hours.
+    const slack: Report = { ...outgoingReport, strength: "slack" };
+    const pulled = forecastHours({ hours: series, inwardBearingDeg: 270, reports: [slack] });
+    for (const time of ["2026-09-23T03:00", "2026-09-23T05:00"]) {
+      const before = plain.find((hour) => hour.time === time);
+      const after = pulled.find((hour) => hour.time === time);
+      expect(after?.direction).toBe("incoming");
+      expect(STRENGTHS.indexOf(after!.strength)).toBeLessThanOrEqual(STRENGTHS.indexOf(before!.strength));
+    }
+  });
+
+  it("does not let a report from the other tide block high confidence", () => {
+    // 12-hour sine: 01:00 on the second day is on the rise.
+    const hours = marineFromLevels(
+      "2026-07-20T00:00",
+      Array.from({ length: 72 }, (_, index) => 1 + 0.6 * Math.sin((2 * Math.PI * index) / 12)),
+    );
+    const target = "2026-07-21T01:00";
+    const agreeing: Report[] = [1, 2, 3, 4, 5].map((id) => ({
+      id: `in-${id}`,
+      siteId: "s",
+      time: "2026-07-06T01:00",
+      direction: "incoming",
+      strength: "too_strong",
+      slopeM: 0.08,
+    }));
+    const confidenceWith = (extra: Report) =>
+      forecastHours({ hours, inwardBearingDeg: 90, reports: [...agreeing, extra], allowHighConfidence: true }).find(
+        (hour) => hour.time === target,
+      )?.confidence;
+    const threeDaysBefore = "2026-07-18T01:00";
+
+    // Outgoing on a falling tide three days ago is what the model expects, not a contradiction.
+    expect(
+      confidenceWith({ id: "ebb", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "strong", slopeM: -0.08 }),
+    ).toBe("high");
+    // Outgoing on a rising tide is.
+    expect(
+      confidenceWith({ id: "odd", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "strong", slopeM: 0.08 }),
+    ).not.toBe("high");
+    // Within three hours any opposite report counts: it may be the same water on a skewed clock.
+    expect(
+      confidenceWith({ id: "near", siteId: "s", time: "2026-07-21T03:00", direction: "outgoing", strength: "strong", slopeM: -0.08 }),
+    ).not.toBe("high");
+    // A slack report saw no flow, so its direction contradicts nothing.
+    expect(
+      confidenceWith({ id: "slack", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "slack", slopeM: 0.08 }),
+    ).toBe("high");
+  });
+
   it("uses a learned phase offset on the next day instead of the fresh-report pull", () => {
     const custom = repeatingHours();
     const reports: Report[] = [

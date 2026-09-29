@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/2";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/3";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -57,6 +57,8 @@ export const REPORT_HALF_LIFE_MS = REPORT_HALF_LIFE_DAYS * 24 * 60 * 60 * 1000;
 export const LAG_PENALTY_LAMBDA = 0.05;
 export const CONSENSUS_RATIO_THRESHOLD = 0.6;
 export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+/** Inside this distance any opposite report blocks high, whatever its tide phase: it may be the same water on a skewed clock. */
+export const CONTRADICTION_NEAR_MS = 3 * HOUR_MS;
 
 /** Exponential temporal decay weight: 2^(-delta_days / 90) */
 export function reportTemporalWeight(reportTime: string, referenceTimeMs: number): number {
@@ -224,7 +226,8 @@ type OpenHour = {
 };
 
 // Each hour keeps its own band, so a run eases in from slack, peaks, and eases out.
-// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band. A slack hour stays put.
+// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band, never down to slack.
+// A slack hour stays put.
 function meanNudge(open: OpenHour[]) {
   let nudge = 0;
   let count = 0;
@@ -240,7 +243,8 @@ function meanNudge(open: OpenHour[]) {
     const withTide = open[0].direction === favored;
     for (const hour of open) {
       if (hour.strength === "slack") continue;
-      hour.strength = shiftStrength(hour.strength, withTide ? 1 : -1);
+      // Drift against the tide slows a flowing hour. It does not stop it, so the floor is mild.
+      hour.strength = withTide ? shiftStrength(hour.strength, 1) : STRENGTHS[Math.max(1, bandIndex(hour.strength) - 1)];
     }
   }
 }
@@ -389,7 +393,8 @@ function fitPhaseOffset(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
 ): number {
-  const voters = classified.filter((item) => item.kind !== "unusable");
+  // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
+  const voters = classified.filter((item) => item.kind !== "unusable" && !isSlackReport(item));
   if (voters.length < 2) return 0;
 
   let bestK = 0;
@@ -460,7 +465,7 @@ function fitSpeedFactor(
     const prior = speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction);
     if (!prior) continue;
     const reportPhase = tideDirectionAtLag(item, hours, residual, offset);
-    if (reportPhase != null && reportPhase !== item.report.direction) continue;
+    if (!isSlackReport(item) && reportPhase != null && reportPhase !== item.report.direction) continue;
     const ratio = (bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5);
     const w = item.temporalWeight;
     weightedRatioSum += ratio * w;
@@ -489,34 +494,40 @@ function confidenceFor(input: {
 
   const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
 
-  // Hard safety invariant: any report within 7 days with the opposite direction
-  // blocks high confidence (includes future clock-skew within the window).
+  const samePhase = (item: ClassifiedReport) => {
+    const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
+    return reportPhase != null && reportPhase === input.tideDirection;
+  };
+
+  // Hard safety invariant: an opposite report within 7 days on the same tide blocks high confidence.
+  // Within 3 hours any opposite report blocks it, whatever its phase, since it may be the same water on a skewed clock.
+  // A report on the other tide is expected to be opposite and does not count. Nor does slack, which saw no flow.
   const hasRecentContradiction =
     Number.isFinite(targetHourMs) &&
     input.classified.some((item) => {
-      if (item.kind === "unusable") return false;
+      if (item.kind === "unusable" || isSlackReport(item)) return false;
+      if (item.report.direction === input.direction) return false;
       const repMs = parseWall(item.report.time);
-      if (!Number.isFinite(repMs) || Math.abs(targetHourMs - repMs) > SEVEN_DAYS_MS) return false;
-      return item.report.direction !== input.direction;
+      if (!Number.isFinite(repMs)) return false;
+      const apart = Math.abs(targetHourMs - repMs);
+      return apart <= CONTRADICTION_NEAR_MS || (apart <= SEVEN_DAYS_MS && samePhase(item));
     });
 
-  const similar = input.classified.filter((item) => {
-    const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
-    return reportPhase != null && reportPhase === input.tideDirection;
-  });
+  const similar = input.classified.filter(samePhase);
   if (similar.length < 2) return "low";
 
-  const totalWeight = similar.reduce((sum, item) => sum + item.temporalWeight, 0);
-  const dirAgreeWeight = similar
-    .filter((item) => item.report.direction === input.direction)
-    .reduce((sum, item) => sum + item.temporalWeight, 0);
-  const strAgreeWeight = similar
-    .filter((item) => item.report.strength === input.strength)
-    .reduce((sum, item) => sum + item.temporalWeight, 0);
+  const weightOf = (items: readonly ClassifiedReport[]) => items.reduce((sum, item) => sum + item.temporalWeight, 0);
+  // Slack reports count toward strength agreement but not direction.
+  const directional = similar.filter((item) => !isSlackReport(item));
+  const totalWeight = weightOf(similar);
+  const directionalWeight = weightOf(directional);
+  const dirAgreeWeight = weightOf(directional.filter((item) => item.report.direction === input.direction));
+  const strAgreeWeight = weightOf(similar.filter((item) => item.report.strength === input.strength));
 
-  const directionAgree = totalWeight > 0 ? dirAgreeWeight / totalWeight : 0;
+  const directionAgree = directionalWeight > 0 ? dirAgreeWeight / directionalWeight : 0;
   const strengthAgree = totalWeight > 0 ? strAgreeWeight / totalWeight : 0;
-  const directionUnanimous = similar.every((item) => item.report.direction === input.direction);
+  const directionUnanimous =
+    directional.length > 0 && directional.every((item) => item.report.direction === input.direction);
 
   if (
     directionUnanimous &&
@@ -549,6 +560,7 @@ export function aggregateReportPull(
 
   let incomingWeight = 0;
   let outgoingWeight = 0;
+  let slackWeight = 0;
   const activeReports: { item: ClassifiedReport; weight: number }[] = [];
 
   for (const item of classified) {
@@ -568,7 +580,10 @@ export function aggregateReportPull(
       continue;
     }
 
-    if (item.report.direction === "incoming") {
+    // A slack report pulls strength but casts no direction vote: the form makes the diver pick one anyway.
+    if (isSlackReport(item)) {
+      slackWeight += weight;
+    } else if (item.report.direction === "incoming") {
       incomingWeight += weight;
     } else if (item.report.direction === "outgoing") {
       outgoingWeight += weight;
@@ -576,32 +591,29 @@ export function aggregateReportPull(
     activeReports.push({ item, weight });
   }
 
-  const totalWeight = incomingWeight + outgoingWeight;
-  if (totalWeight === 0) {
+  const directionalWeight = incomingWeight + outgoingWeight;
+  if (directionalWeight + slackWeight === 0) {
     return { direction: hour.direction, strength: hour.strength, contradicted: false };
   }
 
   const hasConflict = incomingWeight > 0 && outgoingWeight > 0;
-  let direction = hour.direction;
-  let strength = hour.strength;
-
-  if (incomingWeight > outgoingWeight && incomingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
-    direction = "incoming";
-    const concordant = activeReports.filter((r) => r.item.report.direction === "incoming");
-    const gap = averageGap(concordant, incomingWeight, hour, modelBands);
-    const effectiveWeight = Math.min(1, incomingWeight);
-    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
-  } else if (outgoingWeight > incomingWeight && outgoingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
-    direction = "outgoing";
-    const concordant = activeReports.filter((r) => r.item.report.direction === "outgoing");
-    const gap = averageGap(concordant, outgoingWeight, hour, modelBands);
-    const effectiveWeight = Math.min(1, outgoingWeight);
-    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
-  } else {
+  let direction: Direction | null = null;
+  if (directionalWeight === 0) {
     direction = hour.direction;
-    strength = hour.strength;
+  } else if (incomingWeight > outgoingWeight && incomingWeight / directionalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "incoming";
+  } else if (outgoingWeight > incomingWeight && outgoingWeight / directionalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "outgoing";
+  }
+  if (direction == null) {
+    return { direction: hour.direction, strength: hour.strength, contradicted: hasConflict };
   }
 
+  const chosen = direction;
+  const concordant = activeReports.filter((r) => isSlackReport(r.item) || r.item.report.direction === chosen);
+  const concordantWeight = concordant.reduce((sum, r) => sum + r.weight, 0);
+  const gap = averageGap(concordant, concordantWeight, hour, modelBands);
+  const strength = shiftStrength(hour.strength, Math.round(Math.min(1, concordantWeight) * gap));
   const contradicted = hasConflict || direction !== hour.direction;
   return { direction, strength, contradicted };
 }
@@ -722,6 +734,10 @@ function slopesOpposite(left: number | null, right: number | null): boolean {
   const a = directionFromSlope(left);
   const b = directionFromSlope(right);
   return a != null && b != null && a !== b;
+}
+
+function isSlackReport(item: ClassifiedReport): boolean {
+  return item.report.strength === "slack";
 }
 
 function opposite(direction: Direction): Direction {
