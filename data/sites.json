@@ -157,6 +157,7 @@
     },
     {
       "id": "fotteyo-kandu",
+      "inwardBearingDeg": 298,
       "name": "Fotteyo Kandu",
       "atollId": "vaavu",
       "lat": 3.4877081,
@@ -224,6 +225,7 @@
     },
     {
       "id": "hp-reef",
+      "inwardBearingDeg": 271,
       "name": "HP Reef",
       "atollId": "north-male",
       "lat": 4.31355,
@@ -234,6 +236,7 @@
     },
     {
       "id": "kuda-faru",
+      "inwardBearingDeg": 155,
       "name": "Kuda Faru",
       "atollId": "north-male",
       "lat": 4.56706,
@@ -270,6 +273,7 @@
     },
     {
       "id": "embudhoo-express",
+      "inwardBearingDeg": 216,
       "name": "Embudhoo Express",
       "atollId": "south-male",
       "lat": 4.087862,

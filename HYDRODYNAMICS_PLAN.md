@@ -180,6 +180,8 @@ The azimuths below are **proposed approximations derived from geographic audit a
 5. **New-site workflow**: adding a site to an existing atoll needs no bearing work. Adding a new atoll needs its rim polygon added, and the sanity test in 3.7 step 4 will fail until it is.
 6. **UI trust marker**: surface `BearingSource`; render `fallback` arrows as low-trust.
 
+**A2 result (implemented)**: `data/rims.json` holds the six OSM outlines; `lib/rim.ts` averages inward normals of rim segments within 1.5 km of the pin and only applies when the pin is within 0.8 km of the rim. Order is now override, then rim-derived, then the legacy heuristic (`resolveBearing`). Against the measured sites the rim normal was within ~12° for Kandooma, Rasdhoo, Miyaru, Kuredu and Devana. It would have regressed four previously-fine sites (Fotteyo 134°, Kuda Faru 60°, Hp Reef 51°, Embudhoo 28°), so those are pinned to their previous heuristic output (298, 155, 271, 216) and behave exactly as before. Internal thilas and pins more than 0.8 km from the rim stay on the heuristic (11 sites). Kuda Giri is still on the wrong heuristic value (357°) and needs a source. The seeded-data sanity test lives in `lib/rim.test.ts`; Fotteyo is exempt because the OSM outline is a thin spike at Vaavu's east tip. Still open: the UI trust marker for `BearingSource`, and removing the `?? 0` in `lib/nowcast.ts`.
+
 ---
 
 ## 4. Stage B: Monsoon Through-Flow Modeling (ON HOLD)

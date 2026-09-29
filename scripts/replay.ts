@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
+import { rimForAtoll } from "../lib/rim";
 import { marineHoursFromApi, seawardPoint } from "../lib/marine";
 import { replayReports, type BenchmarkMetrics } from "../lib/replay";
 import { listMergedSites, readCatalog, readStore } from "../lib/store";
@@ -168,7 +169,12 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     const atoll = atollById.get(site.atollId);
     if (!atoll) continue;
 
-    const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon });
+    const bearing = inwardBearingDeg(
+      site,
+      catalog.sites,
+      { lat: atoll.oceanLat, lon: atoll.oceanLon },
+      rimForAtoll(atoll),
+    );
     const seaward = seawardPoint(site.lat, site.lon, bearing);
     const benchmarkFirst = options.mode === "benchmark";
     const hours =

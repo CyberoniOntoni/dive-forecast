@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
+import { rimForAtoll } from "./rim";
 import { forecastHours, residualSlopeWindow } from "./forecast";
 import { marineSeriesStale, siteMarineHours } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site } from "./types";
@@ -65,7 +66,7 @@ async function checkedMarine(
   if (!atoll) return { ok: false, bearing: null, bearingSource: null };
 
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
-  const { deg: bearing, source: bearingSource } = resolveBearing(site, mates, outside);
+  const { deg: bearing, source: bearingSource } = resolveBearing(site, mates, outside, rimForAtoll(atoll));
   const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon);
   if (!marine.ok) return { ok: false, bearing, bearingSource };
 
