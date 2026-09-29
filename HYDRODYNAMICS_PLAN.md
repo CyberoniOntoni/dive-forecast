@@ -149,7 +149,7 @@ The azimuths below are **proposed approximations derived from geographic audit a
 | `maaya-thila` | North Ari | Internal thila | **210° (SSW)** | `inside` | Verified accurate in audit (10° diff) |
 | `fesdhoo` | North Ari | West rim reef | **75° (ENE)** | `west` | Verified accurate in audit (15° diff) |
 | `fesdu-wreck` | North Ari | West rim wreck | **75° (ENE)** | `west` | Same reef area as Fesdhoo (15° diff) |
-| `himandhoo-thila` | North Ari | Southwest pass | **50° (NE)** | `west` | Verified accurate in audit (3° diff) |
+| `himandhoo-thila` | North Ari | Southwest pass | **90° (E)** | `west` | Measured (2026-09-29), ±15°; the pin is in a west-to-east gap between two reefs, ocean to the west. The audit's 50° was an estimate |
 | `halaveli-wreck` | North Ari | Internal wreck | **250° (WSW)** | `inside` | Verified accurate in audit (14° diff) |
 | `kudarah-thila` | South Ari | Southeast pass thila | **300° (WNW)** | `east` | Inner channel thila; flood enters from East (20° diff) |
 | `broken-rock` | South Ari | Dhigurah channel cut | **300° (WNW)** | `east` | Canyon in Dhigurah pass; flood enters from East (20° diff) |
@@ -186,6 +186,7 @@ The azimuths below are **proposed approximations derived from geographic audit a
 
 ### 3.9 Findings Log
 
+- **Remaining fallback sites (2026-09-29)**: imagery review of the ten sites still on the heuristic found one real pass, Himandhoo Thila (now an override, 90°). The other nine have no channel axis to measure. Banana Reef, Nassimo Thila and Kuda Haa are in open lagoon water 1.8 to 2.3 km inside the North Malé east rim. Fish Head, Maaya Thila, Halaveli Wreck, Fesdhoo and Fesdu Wreck are patch reefs and thilas in the middle of Ari's lagoon. Kudarah Thila is in deep open water at a channel mouth. For these, "inward" is only the direction the atoll edge faces the lagoon, which feeds the arrow heading, the nudge sign and the seaward sample point. They stay on the heuristic with outlined arrows rather than getting numbers that look measured. The audit's ~15 degree accuracy claim for them still stands as an estimate. If one matters, a diver's knowledge of the flow beats imagery.
 - **Vaavu monsoon-nudge check (2026-09-29)**: there are no June–August Vaavu reports; all 24 benchmark reports are from 24–27 September 2026 and `data/store.json` is empty. September is still SW-monsoon in the drift model, so the nudge applies. On identical marine data, moving Miyaru from 126° to 280° and Alimatha from 118° to 250° changes no direction (the nudge never flips direction) but lowers incoming-tide strength one band at Miyaru (`too_strong` to `strong`) and two at Alimatha (`too_strong` to `mild`). Divers reported `too_strong` or `strong` for those incoming hours, so the old, wrong-way bearing happened to land closer. The sample is one day per site with correlated reports, so this neither supports nor refutes the physics (monsoon drift opposing the flood). Decision: leave bearings and nudge as they are. If summer reports show the flood consistently stronger than forecast, tune `NUDGE_SATURATION_MS` before touching bearings.
 
 ## 4. Stage B: Monsoon Through-Flow Modeling (ON HOLD)
