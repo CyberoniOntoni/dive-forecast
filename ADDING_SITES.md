@@ -39,6 +39,8 @@ Read the result as a direction:
 
 `rim-derived` on a pin that sits in a pass is usually good to about 15 degrees. `fallback` needs a check every time.
 
+In the app, a `fallback` pin draws an outlined arrow instead of a solid one, its tooltip says "heading estimated", and its site page carries an estimate note. Getting a pin to a solid arrow means giving it an override or putting it on the rim.
+
 ## 3. Measure it when it is not rim-derived, or looks off
 
 Use the same imagery as the live map. This URL returns a north-up image with equal degrees on both axes, so an angle read off the picture is a bearing. Centre it on the pin, about 0.02 degrees each way:

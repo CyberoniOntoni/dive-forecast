@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Confidence, Direction, HourForecast, Strength } from "@/lib/types";
+import type { BearingSource, Confidence, Direction, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
   slack: "Slack",
@@ -20,6 +20,8 @@ export function HourSlider({
   hours,
   unavailable,
   inwardBearingDeg,
+  bearingSource = null,
+  unseeded = false,
   notice,
   fetchedAt = null,
   stale = false,
@@ -29,6 +31,10 @@ export function HourSlider({
   hours: HourForecast[];
   unavailable: boolean;
   inwardBearingDeg: number | null;
+  /** Where the bearing came from. The fallback heuristic gets an estimate note. */
+  bearingSource?: BearingSource | null;
+  /** True for an app-added pin that is not in or near a seeded atoll. */
+  unseeded?: boolean;
   notice: string;
   fetchedAt?: { wall: string; iso: string } | null;
   /** True when these hours are the last cached series. */
@@ -47,6 +53,11 @@ export function HourSlider({
         <p role="status" className="mt-2 text-xl font-semibold text-foam">
           The forecast is unavailable.
         </p>
+        {unseeded ? (
+          <p className="mt-3 text-sm leading-6 text-foam/80">
+            This spot is not in a seeded atoll yet, so there is no forecast. Reports and ratings still work.
+          </p>
+        ) : null}
         <p className="mt-3 text-sm leading-6 text-foam/80">{notice}</p>
       </section>
     );
@@ -93,6 +104,11 @@ export function HourSlider({
           </p>
         </div>
       </div>
+      {bearing != null && bearingSource === "fallback" ? (
+        <p className="mt-3 text-xs leading-5 text-foam/80">
+          The arrow heading is an estimate. This pin has no measured channel bearing.
+        </p>
+      ) : null}
       <ResidualLine hours={hours} selected={selected} />
       {stale || fetchedAt ? (
         <p className="mt-3 text-xs leading-5 text-foam/80">

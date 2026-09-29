@@ -7,7 +7,7 @@ import { ReportForm } from "@/components/ReportForm";
 import { forecastSite, getRating, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
-import type { HourForecast, Site } from "@/lib/types";
+import { UNSEEDED_ATOLL_ID, type HourForecast, type Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +53,8 @@ export default async function SitePage({
         unavailable={forecast.unavailable}
         stale={forecast.stale}
         inwardBearingDeg={forecast.inwardBearingDeg}
+        bearingSource={forecast.bearingSource}
+        unseeded={site.atollId === UNSEEDED_ATOLL_ID}
         notice={forecast.notice}
         fetchedAt={fetchedStamp(forecast.fetchedAt)}
         maldivesWall={maldivesWall}

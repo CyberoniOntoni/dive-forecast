@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { nearestForecastHour } from "./nowcast";
-import type { HourForecast } from "./types";
+import { nearestForecastHour, nowcastSites } from "./nowcast";
+import { UNSEEDED_ATOLL_ID, type HourForecast } from "./types";
 
 const hours: HourForecast[] = [
   {
@@ -32,5 +32,16 @@ describe("nearestForecastHour", () => {
   // W8
   it("returns null when a lone hour is 3 hours away", () => {
     expect(nearestForecastHour(hours.slice(0, 1), "2026-09-23T13:00")).toBeNull();
+  });
+});
+
+describe("nowcastSites", () => {
+  it("gives a site with no atoll no bearing and no forecast", async () => {
+    const pin = { id: "pin", name: "Pin", atollId: UNSEEDED_ATOLL_ID, lat: 5.2, lon: 72.95, sourceUrl: "user" };
+    const [nowcast] = await nowcastSites([pin], [], "2026-09-23T10:00");
+    expect(nowcast.inwardBearingDeg).toBeNull();
+    expect(nowcast.bearingSource).toBeNull();
+    expect(nowcast.unavailable).toBe(true);
+    expect(nowcast.hour).toBeNull();
   });
 });

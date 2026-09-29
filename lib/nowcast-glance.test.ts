@@ -87,3 +87,35 @@ describe("passArrowBearing", () => {
     expect(nowcastGlance("West", nowcast, true).arrowBearing).toBe(90);
   });
 });
+
+describe("nowcastGlance heading trust", () => {
+  const hour = {
+    time: "2026-09-23T10:00",
+    direction: "incoming" as const,
+    strength: "mild" as const,
+    confidence: "medium" as const,
+    levelM: 0.1,
+  };
+  const base: SiteNowcast = { siteId: "s", atollId: "a", inwardBearingDeg: 90, unavailable: false, hour };
+
+  it("marks a fallback heading as estimated in the spoken text", () => {
+    const glance = nowcastGlance("Pin", { ...base, bearingSource: "fallback" }, true);
+    expect(glance.estimatedHeading).toBe(true);
+    expect(glance.spoken).toBe("Pin, incoming, mild, medium, heading estimated");
+  });
+
+  it("leaves measured and rim-derived headings unmarked", () => {
+    for (const bearingSource of ["override", "rim-derived", null, undefined] as const) {
+      const glance = nowcastGlance("Pin", { ...base, bearingSource }, true);
+      expect(glance.estimatedHeading).toBe(false);
+      expect(glance.spoken).toBe("Pin, incoming, mild, medium");
+    }
+  });
+
+  it("draws no arrow when there is no bearing, even with an hour", () => {
+    const glance = nowcastGlance("Pin", { ...base, inwardBearingDeg: null }, true);
+    expect(glance.arrowBearing).toBeNull();
+    expect(glance.label).toBeNull();
+    expect(glance.estimatedHeading).toBe(false);
+  });
+});

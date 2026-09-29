@@ -1,12 +1,15 @@
 import { parseWall } from "./forecast";
 import { loadSite } from "./load-site";
 import { readCatalog, reportsForSite } from "./store";
-import type { Atoll, HourForecast, Site } from "./types";
+import type { Atoll, BearingSource, HourForecast, Site } from "./types";
 
 export type SiteNowcast = {
   siteId: string;
   atollId: string;
-  inwardBearingDeg: number;
+  /** Null when the site has no atoll, so there is no arrow to point. */
+  inwardBearingDeg: number | null;
+  /** Where the bearing came from. Absent or null draws no estimate note. */
+  bearingSource?: BearingSource | null;
   hour: HourForecast | null;
   unavailable: boolean;
   /** True when this hour is the last cached series. */
@@ -64,8 +67,8 @@ async function nowcastOne(
   return {
     siteId: site.id,
     atollId: site.atollId,
-    // A missing atoll has no bearing. The pin still needs a number, and it draws no arrow.
-    inwardBearingDeg: loaded.bearing ?? 0,
+    inwardBearingDeg: loaded.bearing,
+    bearingSource: loaded.bearingSource,
     hour: hasHours ? hour : null,
     unavailable: !hasHours,
     stale: hasHours && loaded.stale,

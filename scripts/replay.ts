@@ -176,10 +176,10 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       rimForAtoll(atoll),
     );
     const seaward = seawardPoint(site.lat, site.lon, bearing);
-    const benchmarkFirst = options.mode === "benchmark";
+    const benchmarkOnly = options.mode === "benchmark";
     const hours =
-      cachedHoursAt(seaward.lat, seaward.lon, benchmarkFirst) ??
-      cachedHoursAt(atoll.oceanLat, atoll.oceanLon, benchmarkFirst);
+      cachedHoursAt(seaward.lat, seaward.lon, benchmarkOnly) ??
+      cachedHoursAt(atoll.oceanLat, atoll.oceanLon, benchmarkOnly);
     if (!hours) continue;
 
     // Run replayReports for site with channel constriction support
@@ -402,13 +402,13 @@ function groupBySiteId(reports: readonly Report[]): Map<string, Report[]> {
   return grouped;
 }
 
-/** Benchmark mode reads the pinned fixtures first so a live cache cannot change its numbers. */
-function cachedHoursAt(lat: number, lon: number, benchmarkFirst = false): MarineHour[] | null {
+/** Benchmark mode reads only the pinned fixtures, so a live cache cannot change its numbers. */
+function cachedHoursAt(lat: number, lon: number, benchmarkOnly = false): MarineHour[] | null {
   const latPart = (lat === 0 ? 0 : lat).toFixed(4);
   const lonPart = (lon === 0 ? 0 : lon).toFixed(4);
   // Prefer real .json names. Also accept the old stripped key that ended in ".".
   const names = [`${latPart}_${lonPart}.json`, `${latPart}_${lonPart}.`];
-  const dirs = benchmarkFirst ? [BENCHMARK_CACHE_DIR, CACHE_DIR] : [CACHE_DIR, BENCHMARK_CACHE_DIR];
+  const dirs = benchmarkOnly ? [BENCHMARK_CACHE_DIR] : [CACHE_DIR, BENCHMARK_CACHE_DIR];
 
   for (const dir of dirs) {
     for (const name of names) {
