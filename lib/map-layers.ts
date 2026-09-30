@@ -22,15 +22,28 @@ export const OVERLAYS: readonly { id: OverlayId; label: string; defaultOn: boole
   { id: "depthShading", label: "Depth shading", defaultOn: false },
   { id: "sonarDepths", label: "Sonar depths", defaultOn: false },
   { id: "depthContours", label: "Depth contours", defaultOn: false },
-  { id: "grid", label: "Coordinate grid", defaultOn: false },
+  { id: "grid", label: "Coordinate grid", defaultOn: true },
 ];
+
+/** Overlays drawn as colour fills or labels that clash with satellite imagery; they read best over the street map. */
+const NEEDS_STREET_BASE: readonly OverlayId[] = ["depthShading", "depthContours"];
+
+/** The base to show for a choice: depth shading or contours over satellite moves to the street map. None stays none. */
+export function readableBase(choice: LayerChoice): BaseId {
+  if (choice.base !== "satellite") return choice.base;
+  return NEEDS_STREET_BASE.some((id) => choice.overlays[id]) ? "street" : "satellite";
+}
 
 export const DEFAULT_LAYER_CHOICE: LayerChoice = {
   base: "satellite",
   overlays: Object.fromEntries(OVERLAYS.map((item) => [item.id, item.defaultOn])) as Record<OverlayId, boolean>,
 };
 
-export const LAYER_STORAGE_KEY = "dive-current:map-layers";
+/**
+ * v2: the first release saved its defaults on every page load, not only when a viewer chose, so stored v1 values
+ * mostly record the old defaults. A new key lets every viewer start from the current ones.
+ */
+export const LAYER_STORAGE_KEY = "dive-current:map-layers:v2";
 
 const OPENSEAMAP = '&copy; <a href="https://www.openseamap.org/">OpenSeaMap</a> contributors';
 const DEPTH_WMS = "https://depth.openseamap.org/geoserver/openseamap/wms";
@@ -212,14 +225,17 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
 /** Adds the saved base and overlays, and a layer switcher under the zoom buttons that remembers what the viewer picks. */
 export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
   const choice = readLayerChoice();
+  choice.base = readableBase(choice);
   const bases: Record<string, Layer> = {};
   const overlays: Record<string, Layer> = {};
+  const baseById = new Map<BaseId, Layer>();
   const baseByLabel = new Map<string, BaseId>();
   const overlayByLabel = new Map<string, OverlayId>();
 
   for (const item of BASE_LAYERS) {
     const layer = baseLayer(L, item.id);
     bases[item.label] = layer;
+    baseById.set(item.id, layer);
     baseByLabel.set(item.label, item.id);
     if (item.id === choice.base) layer.addTo(map);
   }
@@ -232,17 +248,46 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
 
   L.control.layers(bases, overlays, { position: "topright", collapsed: true, sortLayers: false }).addTo(map);
 
+  // Leaflet adds layers only once the map has its first view, and removes them all when it is torn down. Both fire
+  // the switcher's events, so listen only in between: from the first view (after the initial adds) until unload.
+  map.whenReady(() => listenForChoices(map, choice, baseById, baseByLabel, overlayByLabel));
+}
+
+function listenForChoices(
+  map: LeafletMap,
+  choice: LayerChoice,
+  baseById: ReadonlyMap<BaseId, Layer>,
+  baseByLabel: ReadonlyMap<string, BaseId>,
+  overlayByLabel: ReadonlyMap<string, OverlayId>,
+): void {
+  let unloading = false;
+  map.on("unload", () => {
+    unloading = true;
+  });
+
   map.on("baselayerchange", (event: { name: string }) => {
+    if (unloading) return;
     const id = baseByLabel.get(event.name);
     if (!id) return;
     choice.base = id;
     saveLayerChoice(choice);
   });
   const setOverlay = (on: boolean) => (event: { name: string }) => {
+    if (unloading) return;
     const id = overlayByLabel.get(event.name);
     if (!id) return;
     choice.overlays[id] = on;
     saveLayerChoice(choice);
+    const next = readableBase(choice);
+    if (next === choice.base) return;
+    // After the switcher finishes this click, so it redraws its radio buttons for the new base.
+    const from = baseById.get(choice.base);
+    const to = baseById.get(next);
+    setTimeout(() => {
+      if (unloading) return;
+      if (from) map.removeLayer(from);
+      if (to) map.addLayer(to); // fires baselayerchange, which saves the new base
+    }, 0);
   };
   map.on("overlayadd", setOverlay(true));
   map.on("overlayremove", setOverlay(false));
