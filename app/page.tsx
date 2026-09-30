@@ -4,6 +4,7 @@ import { SiteMap } from "@/components/SiteMap";
 import { listSites } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nowcastSites } from "@/lib/nowcast";
+import { atollNamesById } from "@/lib/site-labels";
 import { readCatalog } from "@/lib/store";
 
 async function SiteMapSection() {
@@ -13,7 +14,7 @@ async function SiteMapSection() {
   const atolls = readCatalog().atolls;
   const maldivesWall = toMaldivesWall(new Date().toISOString());
   const nowcasts = await nowcastSites(sites, atolls, maldivesWall);
-  return <SiteMap sites={sites} nowcasts={nowcasts} maldivesWall={maldivesWall} />;
+  return <SiteMap sites={sites} nowcasts={nowcasts} maldivesWall={maldivesWall} atollNames={atollNamesById(atolls)} />;
 }
 
 export default function Home() {

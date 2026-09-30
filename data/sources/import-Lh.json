@@ -1,0 +1,414 @@
+{
+  "atollCode": "Lh",
+  "generatedAt": "2026-09-30T13:47:53.818Z",
+  "candidates": [
+    {
+      "guideId": 213,
+      "name": "Kuredu Caves",
+      "lat": 5.552399,
+      "lon": 73.462895,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuredu-caves",
+        "name": "Kuredu Caves",
+        "atollId": "lhaviyani",
+        "lat": 5.552399,
+        "lon": 73.462895,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 156,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 214,
+      "name": "Kuredu Housereef",
+      "lat": 5.543858,
+      "lon": 73.463275,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuredu-housereef",
+        "name": "Kuredu Housereef",
+        "atollId": "lhaviyani",
+        "lat": 5.543858,
+        "lon": 73.463275,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 153,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 215,
+      "name": "Latheef Reef",
+      "lat": 5.540785,
+      "lon": 73.440931,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "latheef-reef",
+        "name": "Latheef Reef",
+        "atollId": "lhaviyani",
+        "lat": 5.540785,
+        "lon": 73.440931,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 16,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 144,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 216,
+      "name": "The Wall",
+      "lat": 5.518002,
+      "lon": 73.441451,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "the-wall",
+        "name": "The Wall",
+        "atollId": "lhaviyani",
+        "lat": 5.518002,
+        "lon": 73.441451,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 33,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 108,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 217,
+      "name": "Gaaerifaru Kandu",
+      "lat": 5.495165,
+      "lon": 73.403319,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "gaaerifaru-kandu",
+        "name": "Gaaerifaru Kandu",
+        "atollId": "lhaviyani",
+        "lat": 5.495165,
+        "lon": 73.403319,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 150,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 218,
+      "name": "Shipyard",
+      "lat": 5.484046,
+      "lon": 73.39695,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "shipyard",
+        "name": "Shipyard",
+        "atollId": "lhaviyani",
+        "lat": 5.484046,
+        "lon": 73.39695,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 1,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 146,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 219,
+      "name": "Felivaru Kandu",
+      "lat": 5.489204,
+      "lon": 73.392925,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "felivaru-kandu",
+        "name": "Felivaru Kandu",
+        "atollId": "lhaviyani",
+        "lat": 5.489204,
+        "lon": 73.392925,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 146,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 220,
+      "name": "Nakolhu Giri",
+      "lat": 5.512156,
+      "lon": 73.444261,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "nakolhu-giri",
+        "name": "Nakolhu Giri",
+        "atollId": "lhaviyani",
+        "lat": 5.512156,
+        "lon": 73.444261,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 100,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 221,
+      "name": "Guraidhoo Corner",
+      "lat": 5.46614,
+      "lon": 73.570493,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "guraidhoo-corner-2",
+        "name": "Guraidhoo Corner",
+        "atollId": "lhaviyani",
+        "lat": 5.46614,
+        "lon": 73.570493,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 16,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 218,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 222,
+      "name": "Maagiri",
+      "lat": 5.50871,
+      "lon": 73.491127,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maagiri",
+        "name": "Maagiri",
+        "atollId": "lhaviyani",
+        "lat": 5.50871,
+        "lon": 73.491127,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 254,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 223,
+      "name": "Fathima Kandu",
+      "lat": 5.455797,
+      "lon": 73.586635,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fathima-kandu",
+        "name": "Fathima Kandu",
+        "atollId": "lhaviyani",
+        "lat": 5.455797,
+        "lon": 73.586635,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 16,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 211,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 224,
+      "name": "Kanuhuraa Corner",
+      "lat": 5.513292,
+      "lon": 73.511019,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kanuhuraa-corner",
+        "name": "Kanuhuraa Corner",
+        "atollId": "lhaviyani",
+        "lat": 5.513292,
+        "lon": 73.511019,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 22,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 258,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 225,
+      "name": "Fushifaru Kandu",
+      "lat": 5.483913,
+      "lon": 73.519251,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fushifaru-kandu",
+        "name": "Fushifaru Kandu",
+        "atollId": "lhaviyani",
+        "lat": 5.483913,
+        "lon": 73.519251,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 299,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 226,
+      "name": "Fushifaru Thila",
+      "lat": 5.49369,
+      "lon": 73.523547,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fushifaru-thila",
+        "name": "Fushifaru Thila",
+        "atollId": "lhaviyani",
+        "lat": 5.49369,
+        "lon": 73.523547,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 213,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 228,
+      "name": "Fushifaru Corner",
+      "lat": 5.493988,
+      "lon": 73.527672,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fushifaru-corner",
+        "name": "Fushifaru Corner",
+        "atollId": "lhaviyani",
+        "lat": 5.493988,
+        "lon": 73.527672,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 209,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 229,
+      "name": "Fushifaru Giri",
+      "lat": 5.485977,
+      "lon": 73.51623,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fushifaru-giri",
+        "name": "Fushifaru Giri",
+        "atollId": "lhaviyani",
+        "lat": 5.485977,
+        "lon": 73.51623,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 299,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 230,
+      "name": "Kuredu Express",
+      "lat": 5.555359,
+      "lon": 73.476085,
+      "decision": "match:kuredu-express",
+      "reason": "same site, 0.42 km"
+    }
+  ]
+}

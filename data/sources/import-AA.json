@@ -1,0 +1,754 @@
+{
+  "atollCode": "AA",
+  "generatedAt": "2026-09-30T14:14:15.402Z",
+  "candidates": [
+    {
+      "guideId": 1,
+      "name": "Rasdhoo-Madivaru",
+      "lat": 4.263095,
+      "lon": 73.001804,
+      "decision": "match:rasdhoo-madivaru",
+      "reason": "same site, 0.32 km"
+    },
+    {
+      "guideId": 2,
+      "name": "Kuramathi",
+      "lat": 4.265253,
+      "lon": 72.983946,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuramathi",
+        "name": "Kuramathi",
+        "atollId": "rasdhoo",
+        "lat": 4.265253,
+        "lon": 72.983946,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 231,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 3,
+      "name": "Ukulhas Thila",
+      "lat": 4.26826,
+      "lon": 72.828332,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ukulhas-thila",
+        "name": "Ukulhas Thila",
+        "atollId": "north-ari",
+        "lat": 4.26826,
+        "lon": 72.828332,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 13,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 225,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 4,
+      "name": "Gangehi Kandu",
+      "lat": 4.219006,
+      "lon": 72.733178,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "gangehi-kandu",
+        "name": "Gangehi Kandu",
+        "atollId": "north-ari",
+        "lat": 4.219006,
+        "lon": 72.733178,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 96,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 5,
+      "name": "Kuda Giri",
+      "lat": 4.192835,
+      "lon": 72.785,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuda-giri-2",
+        "name": "Kuda Giri",
+        "atollId": "north-ari",
+        "lat": 4.192835,
+        "lon": 72.785,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 161,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 6,
+      "name": "Miyaruga Thila",
+      "lat": 4.16416,
+      "lon": 72.76183,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "miyaruga-thila",
+        "name": "Miyaruga Thila",
+        "atollId": "north-ari",
+        "lat": 4.16416,
+        "lon": 72.76183,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 145,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 7,
+      "name": "Maa Thila",
+      "lat": 4.17265,
+      "lon": 72.769556,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maa-thila",
+        "name": "Maa Thila",
+        "atollId": "north-ari",
+        "lat": 4.17265,
+        "lon": 72.769556,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 150,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 8,
+      "name": "Kuda Thila",
+      "lat": 4.161001,
+      "lon": 72.777795,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuda-thila-2",
+        "name": "Kuda Thila",
+        "atollId": "north-ari",
+        "lat": 4.161001,
+        "lon": 72.777795,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 6,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 151,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 9,
+      "name": "Beyru Madivaru",
+      "lat": 4.129877,
+      "lon": 72.94484,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "beyru-madivaru",
+        "name": "Beyru Madivaru",
+        "atollId": "north-ari",
+        "lat": 4.129877,
+        "lon": 72.94484,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 246,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 10,
+      "name": "Beyru Thila",
+      "lat": 4.152232,
+      "lon": 72.932923,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "beyru-thila",
+        "name": "Beyru Thila",
+        "atollId": "north-ari",
+        "lat": 4.152232,
+        "lon": 72.932923,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 236,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 11,
+      "name": "Coral Garden",
+      "lat": 4.171699,
+      "lon": 72.909627,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "coral-garden-4",
+        "name": "Coral Garden",
+        "atollId": "north-ari",
+        "lat": 4.171699,
+        "lon": 72.909627,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 235,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 12,
+      "name": "Dhigu Thila",
+      "lat": 4.115838,
+      "lon": 72.949382,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhigu-thila-2",
+        "name": "Dhigu Thila",
+        "atollId": "north-ari",
+        "lat": 4.115838,
+        "lon": 72.949382,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 254,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 13,
+      "name": "Kari Beyru Thila",
+      "lat": 4.093703,
+      "lon": 72.954419,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kari-beyru-thila",
+        "name": "Kari Beyru Thila",
+        "atollId": "north-ari",
+        "lat": 4.093703,
+        "lon": 72.954419,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 258,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 14,
+      "name": "Maaya Thila",
+      "lat": 4.083916,
+      "lon": 72.854599,
+      "decision": "match:maaya-thila",
+      "reason": "same site, 1.16 km"
+    },
+    {
+      "guideId": 15,
+      "name": "Halaveli Wreck",
+      "lat": 4.057877,
+      "lon": 72.914193,
+      "decision": "match:halaveli-wreck",
+      "reason": "same site, 0.52 km"
+    },
+    {
+      "guideId": 16,
+      "name": "Bathalaa Maagaa Kanthila",
+      "lat": 4.059896,
+      "lon": 72.958773,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bathalaa-maagaa-kanthila",
+        "name": "Bathalaa Maagaa Kanthila",
+        "atollId": "north-ari",
+        "lat": 4.059896,
+        "lon": 72.958773,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 263,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 17,
+      "name": "Bodu Thila",
+      "lat": 4.040126,
+      "lon": 72.957163,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-thila",
+        "name": "Bodu Thila",
+        "atollId": "north-ari",
+        "lat": 4.040126,
+        "lon": 72.957163,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 265,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 18,
+      "name": "Kandholhudhoo Thila",
+      "lat": 4.010896,
+      "lon": 72.888465,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kandholhudhoo-thila",
+        "name": "Kandholhudhoo Thila",
+        "atollId": "north-ari",
+        "lat": 4.010896,
+        "lon": 72.888465,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 315,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 19,
+      "name": "Ellaidhoo",
+      "lat": 4.002703,
+      "lon": 72.943976,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ellaidhoo",
+        "name": "Ellaidhoo",
+        "atollId": "north-ari",
+        "lat": 4.002703,
+        "lon": 72.943976,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 301,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 20,
+      "name": "Orimas Thila",
+      "lat": 3.982657,
+      "lon": 72.94494,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "orimas-thila",
+        "name": "Orimas Thila",
+        "atollId": "north-ari",
+        "lat": 3.982657,
+        "lon": 72.94494,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 307,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 21,
+      "name": "Fish Head",
+      "lat": 3.936666,
+      "lon": 72.916633,
+      "decision": "match:fish-head",
+      "reason": "same site, 0.39 km"
+    },
+    {
+      "guideId": 22,
+      "name": "Maa Thila",
+      "lat": 4.109084,
+      "lon": 72.741648,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maa-thila-2",
+        "name": "Maa Thila",
+        "atollId": "north-ari",
+        "lat": 4.109084,
+        "lon": 72.741648,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 113,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 23,
+      "name": "Dhonagali Thila",
+      "lat": 4.10636,
+      "lon": 72.789322,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhonagali-thila",
+        "name": "Dhonagali Thila",
+        "atollId": "north-ari",
+        "lat": 4.10636,
+        "lon": 72.789322,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 132,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 24,
+      "name": "Berucolo Falhu",
+      "lat": 4.044034,
+      "lon": 72.750408,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "berucolo-falhu",
+        "name": "Berucolo Falhu",
+        "atollId": "north-ari",
+        "lat": 4.044034,
+        "lon": 72.750408,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 70,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 25,
+      "name": "Maalhos Thila",
+      "lat": 4.001171,
+      "lon": 72.725587,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maalhos-thila",
+        "name": "Maalhos Thila",
+        "atollId": "north-ari",
+        "lat": 4.001171,
+        "lon": 72.725587,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 55,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 26,
+      "name": "Fesdu Wreck",
+      "lat": 4.001802,
+      "lon": 72.781781,
+      "decision": "match:fesdu-wreck",
+      "reason": "same site, 0.54 km"
+    },
+    {
+      "guideId": 27,
+      "name": "Dhonkalo Thila",
+      "lat": 3.971123,
+      "lon": 72.723351,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhonkalo-thila",
+        "name": "Dhonkalo Thila",
+        "atollId": "north-ari",
+        "lat": 3.971123,
+        "lon": 72.723351,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 46,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 28,
+      "name": "Enmas Thila",
+      "lat": 3.909239,
+      "lon": 72.723994,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "enmas-thila",
+        "name": "Enmas Thila",
+        "atollId": "north-ari",
+        "lat": 3.909239,
+        "lon": 72.723994,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 32,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 29,
+      "name": "Bodu Thila",
+      "lat": 4.148671,
+      "lon": 72.754819,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-thila-2",
+        "name": "Bodu Thila",
+        "atollId": "north-ari",
+        "lat": 4.148671,
+        "lon": 72.754819,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 137,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 30,
+      "name": "Himendhoo Dhekunu Kandu",
+      "lat": 3.919314,
+      "lon": 72.720252,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "himendhoo-dhekunu-kandu",
+        "name": "Himendhoo Dhekunu Kandu",
+        "atollId": "north-ari",
+        "lat": 3.919314,
+        "lon": 72.720252,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 35,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 31,
+      "name": "Thin Thila",
+      "lat": 4.119986,
+      "lon": 72.757229,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "thin-thila",
+        "name": "Thin Thila",
+        "atollId": "north-ari",
+        "lat": 4.119986,
+        "lon": 72.757229,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 124,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 32,
+      "name": "Dhiggaa Faru",
+      "lat": 4.057769,
+      "lon": 72.755937,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhiggaa-faru",
+        "name": "Dhiggaa Faru",
+        "atollId": "north-ari",
+        "lat": 4.057769,
+        "lon": 72.755937,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 78,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 33,
+      "name": "Mathaggahaa Faru",
+      "lat": 4.058657,
+      "lon": 72.8113,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "mathaggahaa-faru",
+        "name": "Mathaggahaa Faru",
+        "atollId": "north-ari",
+        "lat": 4.058657,
+        "lon": 72.8113,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 49,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 34,
+      "name": "Fesdu Housereef",
+      "lat": 4.011863,
+      "lon": 72.813145,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fesdu-housereef",
+        "name": "Fesdu Housereef",
+        "atollId": "north-ari",
+        "lat": 4.011863,
+        "lon": 72.813145,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 13,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 35,
+      "name": "Fesdu Top",
+      "lat": 4.007389,
+      "lon": 72.801915,
+      "decision": "skip",
+      "reason": "owner: skip for now"
+    }
+  ]
+}

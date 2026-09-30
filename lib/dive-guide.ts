@@ -110,6 +110,7 @@ export function matchGuideSite(
 ): MatchVerdict {
   let closest: MatchVerdict = { kind: "new" };
   let closestKm = Number.POSITIVE_INFINITY;
+  let closestExact = false;
   for (const site of sites) {
     const km = distanceKm(guide.lat, guide.lon, site.lat, site.lon);
     const similarity = nameSimilarity(guide.name, site.name);
@@ -122,15 +123,42 @@ export function matchGuideSite(
       verdict = { kind: "review", siteId: site.id, km, similarity, reason: "different name, same spot" };
     }
     if (!verdict) continue;
-    // A match beats a review; otherwise the nearer one wins.
+    // A match beats a review; then the same name spelled the same way (Fesdu Wreck over Fesdhoo); then the nearer.
+    const exact = normalizeName(guide.name) === normalizeName(site.name);
     const better =
-      closest.kind === "new" || (verdict.kind === "match" && closest.kind !== "match") || (verdict.kind === closest.kind && km < closestKm);
+      closest.kind === "new" ||
+      (verdict.kind === "match" && closest.kind !== "match") ||
+      (verdict.kind === closest.kind && (exact !== closestExact ? exact : km < closestKm));
     if (better) {
       closest = verdict;
       closestKm = km;
+      closestExact = exact;
     }
   }
   return closest;
+}
+
+/**
+ * Seeded atolls each guide atoll code belongs to. Only needed where two seeded atolls share one outline
+ * (North and South Ari, one OSM atoll): the administrative code, not the nearer ocean point, decides.
+ */
+const GUIDE_ATOLL_IDS: Record<string, readonly string[]> = {
+  AA: ["north-ari", "rasdhoo"],
+  ADh: ["south-ari"],
+};
+
+/**
+ * The atoll a guide site belongs to, given the one its position picked. When that atoll shares its outline with
+ * another and the guide's atoll code names the other, the other wins.
+ */
+export function atollForGuideCode<T extends { id: string; rimSourceUrl: string }>(
+  picked: T,
+  atolls: readonly T[],
+  atollCode: string,
+): T {
+  const wanted = GUIDE_ATOLL_IDS[atollCode];
+  if (!wanted || wanted.includes(picked.id)) return picked;
+  return atolls.find((atoll) => atoll.rimSourceUrl === picked.rimSourceUrl && wanted.includes(atoll.id)) ?? picked;
 }
 
 /** "6m - 25m" → top 6, max 25; "30m" → max 30; blank or unreadable → neither. */

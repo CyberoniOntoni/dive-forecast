@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
 import { inView, siteCountLabel, type MapView } from "@/lib/map-view";
+import { listAtollLabel, repeatedNames } from "@/lib/site-labels";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
 
@@ -44,6 +45,7 @@ const SHEET_STYLE = `
 
 export function CurrentOverlay({
   siteGlances,
+  atollNames,
   view,
   maldivesWall,
   draft,
@@ -52,6 +54,7 @@ export function CurrentOverlay({
   onAdded,
 }: {
   siteGlances: readonly SiteGlance[];
+  atollNames: Readonly<Record<string, string>>;
   /** The map's visible area. The list shows only the sites inside it; null (before the map loads) shows all. */
   view: MapView | null;
   maldivesWall: string;
@@ -61,6 +64,8 @@ export function CurrentOverlay({
   onAdded: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // Counted over every site, not just those in view, so a label does not come and go as the map moves.
+  const repeated = useMemo(() => repeatedNames(siteGlances.map(({ site }) => site)), [siteGlances]);
   const visible = view ? siteGlances.filter(({ site }) => inView(site.lat, site.lon, view)) : siteGlances;
   const countLabel = siteCountLabel(visible.length, siteGlances.length);
   // W9: copy then sort. Equal ranks stay in the name order already on the list.
@@ -122,7 +127,7 @@ export function CurrentOverlay({
         <nav aria-label="Dive sites">
           <ul className="pb-2">
             {ranked.map((item) => (
-              <SiteRow key={item.site.id} {...item} />
+              <SiteRow key={item.site.id} {...item} atoll={listAtollLabel(item.site, repeated, atollNames)} />
             ))}
           </ul>
           {ranked.length === 0 && siteGlances.length > 0 ? (
@@ -134,7 +139,7 @@ export function CurrentOverlay({
   );
 }
 
-function SiteRow({ site, glance, age }: SiteGlance) {
+function SiteRow({ site, glance, age, atoll }: SiteGlance & { atoll: string | null }) {
   const title = age ? `${glance.spoken}, ${age}` : glance.spoken;
   return (
     <li className="border-b border-foam/10 last:border-b-0">
@@ -144,7 +149,10 @@ function SiteRow({ site, glance, age }: SiteGlance) {
         title={title}
         className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
-        <span className="min-w-0 flex-1 truncate font-medium">{site.name}</span>
+        <span className="min-w-0 flex-1 truncate font-medium">
+          {site.name}
+          {atoll ? <span className="font-normal text-foam/65"> · {atoll}</span> : null}
+        </span>
         <CurrentBits glance={glance} age={age} />
       </Link>
     </li>

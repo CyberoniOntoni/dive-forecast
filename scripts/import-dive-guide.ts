@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { atollForPin, resolveBearing } from "../lib/bearing";
-import { matchGuideSite, parseDepthRange, siteIdFor } from "../lib/dive-guide";
+import { atollForGuideCode, matchGuideSite, parseDepthRange, siteIdFor } from "../lib/dive-guide";
 import { seawardPoint } from "../lib/marine";
 import { pointInRing, rimForAtoll } from "../lib/rim";
 import { deriveSiteType, SITE_TYPE_LABEL } from "../lib/site-type";
@@ -64,7 +64,8 @@ function propose(atollCode: string, separate: ReadonlySet<string>): void {
       candidates.push({ ...base, decision: "review", reason: `${verdict.reason}: ${other}, ${verdict.km.toFixed(2)} km` });
       continue;
     }
-    const atoll = atollForPin(record.lat, record.lon, catalog.atolls);
+    const picked = atollForPin(record.lat, record.lon, catalog.atolls);
+    const atoll = picked ? atollForGuideCode(picked, catalog.atolls, record.atollCode) : null;
     if (!atoll) {
       candidates.push({ ...base, decision: "review", reason: "not in or near a seeded atoll outline" });
       continue;

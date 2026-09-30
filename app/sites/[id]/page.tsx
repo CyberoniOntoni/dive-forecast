@@ -7,7 +7,9 @@ import { ReportForm } from "@/components/ReportForm";
 import { forecastSite, getRating, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
+import { atollNamesById } from "@/lib/site-labels";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
+import { readCatalog } from "@/lib/store";
 import { UNSEEDED_ATOLL_ID, type HourForecast, type Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +48,7 @@ export default async function SitePage({
       </Link>
       <header className="flex min-w-0 flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
-        {site.siteType ? <p className="text-sm leading-6 text-foam/80">{SITE_TYPE_LABEL[site.siteType]}</p> : null}
+        <SiteKind site={site} />
         <PublishedFacts site={site} />
       </header>
       <HourSlider
@@ -85,6 +87,14 @@ function fetchedStamp(fetchedAt: number | null): { wall: string; iso: string } |
   if (!wall || !iso) return null;
   return { wall, iso };
 }
+/** "Lagoon · North Ari": the site type and its atoll, whichever are known. */
+function SiteKind({ site }: { site: Site }) {
+  const atoll = atollNamesById(readCatalog().atolls)[site.atollId];
+  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null].filter(Boolean);
+  if (parts.length === 0) return null;
+  return <p className="text-sm leading-6 text-foam/80">{parts.join(" · ")}</p>;
+}
+
 type SourceLink = { href: string; label: string };
 
 function PublishedFacts({ site }: { site: Site }) {
