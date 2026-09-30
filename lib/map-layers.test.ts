@@ -7,6 +7,7 @@ import {
   gridValues,
   parseLayerChoice,
   readLayerChoice,
+  readableBase,
   saveLayerChoice,
   type LayerChoice,
 } from "./map-layers";
@@ -21,9 +22,26 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe("layer choice", () => {
-  it("starts on satellite with only seamarks on", () => {
+  it("starts on satellite with seamarks and the coordinate grid on", () => {
     expect(DEFAULT_LAYER_CHOICE.base).toBe("satellite");
-    expect(Object.entries(DEFAULT_LAYER_CHOICE.overlays).filter(([, on]) => on)).toEqual([["seamarks", true]]);
+    expect(Object.entries(DEFAULT_LAYER_CHOICE.overlays).filter(([, on]) => on)).toEqual([
+      ["seamarks", true],
+      ["grid", true],
+    ]);
+  });
+
+  it("moves depth shading and contours off satellite onto the street map", () => {
+    const withOverlay = (base: LayerChoice["base"], on: Partial<LayerChoice["overlays"]>): LayerChoice => ({
+      base,
+      overlays: { ...DEFAULT_LAYER_CHOICE.overlays, ...on },
+    });
+    expect(readableBase(withOverlay("satellite", {}))).toBe("satellite");
+    expect(readableBase(withOverlay("satellite", { sonarDepths: true }))).toBe("satellite");
+    expect(readableBase(withOverlay("satellite", { depthShading: true }))).toBe("street");
+    expect(readableBase(withOverlay("satellite", { depthContours: true }))).toBe("street");
+    // A viewer who picked no base, or the street map already, keeps it.
+    expect(readableBase(withOverlay("none", { depthShading: true }))).toBe("none");
+    expect(readableBase(withOverlay("street", { depthContours: true }))).toBe("street");
   });
 
   it("round-trips through storage", () => {
@@ -64,8 +82,8 @@ describe("layer choice", () => {
 
   it("does not share the default object with a parsed choice", () => {
     const choice = parseLayerChoice(null);
-    choice.overlays.grid = true;
-    expect(DEFAULT_LAYER_CHOICE.overlays.grid).toBe(false);
+    choice.overlays.depthShading = true;
+    expect(DEFAULT_LAYER_CHOICE.overlays.depthShading).toBe(false);
   });
 });
 
