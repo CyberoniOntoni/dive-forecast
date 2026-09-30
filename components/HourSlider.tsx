@@ -23,6 +23,7 @@ export function HourSlider({
   bearingSource = null,
   unseeded = false,
   notice,
+  siteNote = null,
   fetchedAt = null,
   stale = false,
   maldivesWall,
@@ -36,6 +37,8 @@ export function HourSlider({
   /** True for an app-added pin that is not in or near a seeded atoll. */
   unseeded?: boolean;
   notice: string;
+  /** How far to trust the forecast at this kind of site, e.g. inside the lagoon. */
+  siteNote?: string | null;
   fetchedAt?: { wall: string; iso: string } | null;
   /** True when these hours are the last cached series. */
   stale?: boolean;
@@ -58,6 +61,7 @@ export function HourSlider({
             This spot is not in a seeded atoll yet, so there is no forecast. Reports and ratings still work.
           </p>
         ) : null}
+        {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
         <p className="mt-3 text-sm leading-6 text-foam/80">{notice}</p>
       </section>
     );
@@ -160,6 +164,7 @@ export function HourSlider({
           <span className="min-w-0 truncate text-right">{clock(hours[hours.length - 1].time)}</span>
         </div>
       </div>
+      {siteNote ? <p className="mt-4 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
     </section>
   );

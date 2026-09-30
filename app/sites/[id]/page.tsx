@@ -7,6 +7,7 @@ import { ReportForm } from "@/components/ReportForm";
 import { forecastSite, getRating, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
+import { SITE_TYPE_LABEL } from "@/lib/site-type";
 import { UNSEEDED_ATOLL_ID, type HourForecast, type Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -45,6 +46,7 @@ export default async function SitePage({
       </Link>
       <header className="flex min-w-0 flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
+        {site.siteType ? <p className="text-sm leading-6 text-foam/80">{SITE_TYPE_LABEL[site.siteType]}</p> : null}
         <PublishedFacts site={site} />
       </header>
       <HourSlider
@@ -56,6 +58,7 @@ export default async function SitePage({
         bearingSource={forecast.bearingSource}
         unseeded={site.atollId === UNSEEDED_ATOLL_ID}
         notice={forecast.notice}
+        siteNote={forecast.siteNote}
         fetchedAt={fetchedStamp(forecast.fetchedAt)}
         maldivesWall={maldivesWall}
         initialIndex={startingIndex(forecast.hours, maldivesWall)}

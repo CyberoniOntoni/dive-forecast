@@ -12,6 +12,7 @@ function load(hours: HourForecast[], extra: Partial<SiteLoad> = {}): SiteLoad {
   return {
     bearing: 284.6,
     bearingSource: "override",
+    siteType: null,
     hours,
     unavailable: false,
     stale: false,

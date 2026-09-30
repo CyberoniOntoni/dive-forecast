@@ -11,7 +11,9 @@
     "replay": "vite-node scripts/replay-cli.ts",
     "benchmark": "vite-node scripts/benchmark.ts",
     "verify": "vite-node scripts/verify-reports.ts",
-    "bearings": "vite-node scripts/bearings.ts"
+    "bearings": "vite-node scripts/bearings.ts",
+    "extract-dive-guide": "vite-node scripts/extract-dive-guide.ts",
+    "site-types": "vite-node scripts/site-types.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -20,6 +22,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@mapbox/vector-tile": "^2.0.5",
     "@tailwindcss/postcss": "^4",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
@@ -27,6 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
+    "pbf": "^4.0.2",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"

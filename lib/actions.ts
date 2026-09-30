@@ -2,6 +2,7 @@
 
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
+import { LAGOON_NOTE } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import {
@@ -145,6 +146,8 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     notice: FORECAST_NOTICE,
     inwardBearingDeg: loaded.bearing,
     bearingSource: loaded.bearingSource,
+    siteType: loaded.siteType,
+    siteNote: loaded.siteType === "lagoon" ? LAGOON_NOTE : null,
     fetchedAt: loaded.fetchedAt,
   };
 }
@@ -157,6 +160,8 @@ function unavailableForecast(): SiteForecast {
     notice: FORECAST_NOTICE,
     inwardBearingDeg: null,
     bearingSource: null,
+    siteType: null,
+    siteNote: null,
     fetchedAt: null,
   };
 }

@@ -5,7 +5,6 @@
       "name": "North Male Atoll",
       "oceanLat": 4.45451,
       "oceanLon": 73.7604,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807044"
     },
     {
@@ -13,7 +12,6 @@
       "name": "South Male Atoll",
       "oceanLat": 4.06137,
       "oceanLon": 73.57458,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807056"
     },
     {
@@ -21,7 +19,6 @@
       "name": "North Ari Atoll",
       "oceanLat": 3.99915,
       "oceanLon": 72.98935,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807122"
     },
     {
@@ -29,7 +26,6 @@
       "name": "South Ari Atoll",
       "oceanLat": 3.7165,
       "oceanLon": 73.01695,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807122"
     },
     {
@@ -37,7 +33,6 @@
       "name": "Rasdhoo Atoll",
       "oceanLat": 4.3153,
       "oceanLon": 73.0453,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807123"
     },
     {
@@ -45,7 +40,6 @@
       "name": "Vaavu Atoll",
       "oceanLat": 3.44584,
       "oceanLon": 73.80908,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807115"
     },
     {
@@ -53,7 +47,6 @@
       "name": "Lhaviyani Atoll",
       "oceanLat": 5.32556,
       "oceanLon": 73.69423,
-
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807029"
     }
   ],
@@ -71,7 +64,9 @@
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/",
       "channelWidthM": 800,
       "channelDepthM": 40,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "siteType": "channel-thila",
+      "siteTypeSource": "derived"
     },
     {
       "id": "banana-reef",
@@ -82,7 +77,9 @@
       "sourceUrl": "https://www.openstreetmap.org/way/51828966",
       "diveTopM": 4,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.diveclubmaldives.com/dive-sites/banana-reef"
+      "depthSourceUrl": "https://www.diveclubmaldives.com/dive-sites/banana-reef",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "maaya-thila",
@@ -93,7 +90,9 @@
       "sourceUrl": "https://www.openstreetmap.org/node/8584458555",
       "diveTopM": 6,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/maaya-thila/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/maaya-thila/",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "fish-head",
@@ -104,7 +103,9 @@
       "sourceUrl": "https://www.openstreetmap.org/node/8584458547",
       "diveTopM": 8,
       "diveMaxM": 42,
-      "depthSourceUrl": "https://divebooker.com/mushi-mas-mingili-thila-baz13807"
+      "depthSourceUrl": "https://divebooker.com/mushi-mas-mingili-thila-baz13807",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "fesdhoo",
@@ -112,7 +113,9 @@
       "atollId": "north-ari",
       "lat": 3.9994333,
       "lon": 72.7860333,
-      "sourceUrl": "https://www.openstreetmap.org/node/663869882"
+      "sourceUrl": "https://www.openstreetmap.org/node/663869882",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "rasdhoo-madivaru",
@@ -127,7 +130,9 @@
       "depthSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
       "channelWidthM": 600,
       "channelDepthM": 40,
-      "channelSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll"
+      "channelSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "kudarah-thila",
@@ -138,7 +143,9 @@
       "sourceUrl": "https://www.openstreetmap.org/node/8584302416",
       "diveTopM": 12,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kudarah-thila/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kudarah-thila/",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "miyaru-kandu",
@@ -153,7 +160,9 @@
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
       "channelWidthM": 700,
       "channelDepthM": 40,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
     },
     {
       "id": "fotteyo-kandu",
@@ -168,7 +177,9 @@
       "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu",
       "channelWidthM": 1200,
       "channelDepthM": 55,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
     },
     {
       "id": "alimatha-house-reef",
@@ -180,7 +191,9 @@
       "sourceUrl": "https://www.openstreetmap.org/way/19882140",
       "diveTopM": 3,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/alimatha-house-reef/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/alimatha-house-reef/",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "broken-rock",
@@ -191,7 +204,9 @@
       "sourceUrl": "https://www.openstreetmap.org/node/8584320417",
       "diveTopM": 12,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/broken-rock/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/broken-rock/",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "himandhoo-thila",
@@ -202,7 +217,9 @@
       "lon": 72.717567,
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Himendhoo_Thila/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 30,
-      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Himendhoo_Thila/index.html"
+      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Himendhoo_Thila/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "fesdu-wreck",
@@ -212,7 +229,9 @@
       "lon": 72.786067,
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Fesdu_Wreck/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveTopM": 20,
-      "depthSourceUrl": "https://vibration-space.fra1.cdn.digitaloceanspaces.com/crewmaldives/uploads/695fa5d9b6fed860039883.pdf"
+      "depthSourceUrl": "https://vibration-space.fra1.cdn.digitaloceanspaces.com/crewmaldives/uploads/695fa5d9b6fed860039883.pdf",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "manta-point-lankanfinolhu",
@@ -222,7 +241,9 @@
       "lon": 73.557154,
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/Lankan_Manta_Point/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 26,
-      "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/Lankan_Manta_Point/index.html"
+      "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/Lankan_Manta_Point/index.html",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "hp-reef",
@@ -233,7 +254,9 @@
       "lon": 73.578617,
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 35,
-      "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html"
+      "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "kuda-faru",
@@ -245,7 +268,9 @@
       "sourceUrl": "https://www.padi.com/dive-site/maldives/kuda-faru/",
       "diveTopM": 13,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuda-faru/"
+      "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuda-faru/",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "kuredu-express",
@@ -259,7 +284,9 @@
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
       "channelWidthM": 900,
       "channelDepthM": 35,
-      "channelSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/"
+      "channelSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
     },
     {
       "id": "kuda-giri",
@@ -271,7 +298,9 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Kuda_Giri_Wreck/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveTopM": 15,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://www.dive-the-world.com/diving-sites-maldives-south-male-atoll.php"
+      "depthSourceUrl": "https://www.dive-the-world.com/diving-sites-maldives-south-male-atoll.php",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "embudhoo-express",
@@ -285,7 +314,9 @@
       "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
       "channelWidthM": 1500,
       "channelDepthM": 45,
-      "channelSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html"
+      "channelSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
     },
     {
       "id": "nassimo-thila",
@@ -295,7 +326,9 @@
       "lon": 73.536608,
       "sourceUrl": "https://www.purelymaldives.co.uk/resources/FACT_SHEET_DIVE_CENTER_-_BTMVMV_&_ANMVMI.pdf",
       "diveMaxM": 30,
-      "depthSourceUrl": "https://divebooker.com/nassimo-thila-baz12554"
+      "depthSourceUrl": "https://divebooker.com/nassimo-thila-baz12554",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "kuda-haa",
@@ -306,7 +339,9 @@
       "sourceUrl": "https://www.purelymaldives.co.uk/resources/FACT_SHEET_DIVE_CENTER_-_BTMVMV_&_ANMVMI.pdf",
       "diveTopM": 6,
       "diveMaxM": 35,
-      "depthSourceUrl": "https://www.purelymaldives.co.uk/resources/FACT_SHEET_DIVE_CENTER_-_BTMVMV_&_ANMVMI.pdf"
+      "depthSourceUrl": "https://www.purelymaldives.co.uk/resources/FACT_SHEET_DIVE_CENTER_-_BTMVMV_&_ANMVMI.pdf",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "halaveli-wreck",
@@ -317,7 +352,9 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Halaveli_Wreck/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveTopM": 20,
       "diveMaxM": 28,
-      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Halaveli_Wreck/index.html"
+      "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Ari/North_Ari_Atoll/Halaveli_Wreck/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
     },
     {
       "id": "rangali-madivaru",
@@ -328,7 +365,9 @@
       "sourceUrl": "https://www.openstreetmap.org/node/7156015485",
       "diveTopM": 8,
       "diveMaxM": 30,
-      "depthSourceUrl": "https://dianedivesphotos.weebly.com/rangali.html"
+      "depthSourceUrl": "https://dianedivesphotos.weebly.com/rangali.html",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     },
     {
       "id": "devana-kandu",
@@ -343,7 +382,9 @@
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
       "channelWidthM": 500,
       "channelDepthM": 30,
-      "channelSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb"
+      "channelSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
     },
     {
       "id": "vaadhoo-caves",
@@ -357,7 +398,9 @@
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/vaadhoo-caves/",
       "channelWidthM": 5000,
       "channelDepthM": 400,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
     }
   ],
   "channels": [

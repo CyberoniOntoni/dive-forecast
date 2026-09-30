@@ -189,6 +189,8 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       reports: siteReports,
       channelWidthM: site.channelWidthM,
       channelDepthM: site.channelDepthM,
+      // As on the site page: a lagoon site never shows high confidence.
+      allowHighConfidence: site.siteType !== "lagoon",
     });
 
     const m = res.metrics;

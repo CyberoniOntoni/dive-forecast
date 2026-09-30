@@ -6,6 +6,17 @@ export type Confidence = "low" | "medium" | "high";
 
 export type { OceanDrift } from "./seasonal";
 
+/**
+ * Where a site sits, which decides how its current behaves.
+ * - pass: in a channel through the atoll rim (a kandu), where the tide runs hardest.
+ * - channel-thila: a pinnacle in or at the mouth of a pass.
+ * - outer-reef: on the rim but on the reef itself, not in a gap.
+ * - lagoon: inside the atoll, away from the rim. Current is weaker and less tied to the tide.
+ * Wrecks and giris take the type of where they lie.
+ */
+export const SITE_TYPES = ["pass", "channel-thila", "outer-reef", "lagoon"] as const;
+export type SiteType = (typeof SITE_TYPES)[number];
+
 /** atollId of a pin that is not in or near a seeded atoll. It has no forecast and draws no arrow. */
 export const UNSEEDED_ATOLL_ID = "unseeded";
 
@@ -42,6 +53,10 @@ export type Site = {
    * When set it replaces the mate-centroid / outside-point heuristic.
    */
   inwardBearingDeg?: number;
+  /** Where the site sits: pass, channel thila, outer reef or lagoon. Absent until classified. */
+  siteType?: SiteType;
+  /** "manual" when someone who knows the site set it; a derived type never overwrites it. */
+  siteTypeSource?: "derived" | "manual";
 };
 
 /** Where a resolved bearing came from. */
@@ -137,6 +152,10 @@ export type SiteForecast = {
   inwardBearingDeg: number | null;
   /** Where that bearing came from. Null when there is no bearing. */
   bearingSource: BearingSource | null;
+  /** Where the site sits, when classified. */
+  siteType: SiteType | null;
+  /** A note about how far to trust the forecast at this kind of site. Null when there is none. */
+  siteNote: string | null;
   /** Unix ms when the marine series was cached. Null when no cache exists. */
   fetchedAt: number | null;
 };

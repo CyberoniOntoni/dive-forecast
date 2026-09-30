@@ -71,6 +71,11 @@ export function rimInwardBearing(site: Pick<Site, "lat" | "lon">, ring: RimRing)
 /** Km from the pin to the outline, 0 when the pin is inside it. */
 export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): number {
   if (pointInRing(site.lat, site.lon, ring)) return 0;
+  return rimEdgeKm(site, ring);
+}
+
+/** Km from the pin to the nearest point of the outline, from inside or outside. */
+export function rimEdgeKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): number {
   const points = ring.map(([lat, lon]) => toKm(lat, lon, site.lat));
   const pin = toKm(site.lat, site.lon, site.lat);
   let nearest = Number.POSITIVE_INFINITY;
