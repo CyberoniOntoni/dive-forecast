@@ -1260,19 +1260,6 @@
       "siteTypeSource": "derived"
     },
     {
-      "id": "banana-reef-2",
-      "name": "Banana reef",
-      "atollId": "north-male",
-      "lat": 4.373446,
-      "lon": 73.34059,
-      "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "diveTopM": 10,
-      "diveMaxM": 30,
-      "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
-    },
-    {
       "id": "rasfari",
       "name": "Rasfari",
       "atollId": "north-male",
