@@ -622,12 +622,14 @@ describe("Milestone 3 Adversarial Verification: Diver Reports & Outlier Dampenin
     });
 
     it("4.2 Uncontested 5 concordant reports yield 'high' confidence, but adding 1 contradiction drops it immediately", () => {
+      // Five reports on the rising tide that each match the model at their own hour (too strong at 00:00 and 01:00,
+      // mild at 02:00 as the run eases toward the 03:00 turn), so strength agreement is a clean track record.
       const concordantReports: Report[] = [
-        { id: "c1", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "strong" },
-        { id: "c2", siteId: "s", time: "2026-07-15T02:00", direction: "incoming", strength: "strong" },
-        { id: "c3", siteId: "s", time: "2026-07-15T03:00", direction: "incoming", strength: "strong" },
-        { id: "c4", siteId: "s", time: "2026-07-15T04:00", direction: "incoming", strength: "strong" },
-        { id: "c5", siteId: "s", time: "2026-07-15T05:00", direction: "incoming", strength: "strong" },
+        { id: "c1", siteId: "s", time: "2026-07-15T00:00", direction: "incoming", strength: "too_strong" },
+        { id: "c2", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "too_strong" },
+        { id: "c3", siteId: "s", time: "2026-07-15T02:00", direction: "incoming", strength: "mild" },
+        { id: "c4", siteId: "s", time: "2026-07-15T00:00", direction: "incoming", strength: "too_strong" },
+        { id: "c5", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "too_strong" },
       ];
 
       const forecastClean = forecastHours({
@@ -636,7 +638,7 @@ describe("Milestone 3 Adversarial Verification: Diver Reports & Outlier Dampenin
         reports: concordantReports,
         allowHighConfidence: true,
       });
-      const hourClean = findHour(forecastClean, "2026-07-15T03:00");
+      const hourClean = findHour(forecastClean, "2026-07-15T02:00");
       expect(hourClean).toBeDefined();
       expect(hourClean!.confidence).toBe("high");
 
@@ -644,7 +646,7 @@ describe("Milestone 3 Adversarial Verification: Diver Reports & Outlier Dampenin
       const noisyReport: Report = {
         id: "noise",
         siteId: "s",
-        time: "2026-07-15T03:00",
+        time: "2026-07-15T02:00",
         direction: "outgoing",
         strength: "strong",
       };
@@ -655,20 +657,21 @@ describe("Milestone 3 Adversarial Verification: Diver Reports & Outlier Dampenin
         reports: [...concordantReports, noisyReport],
         allowHighConfidence: true,
       });
-      const hourContaminated = findHour(forecastContaminated, "2026-07-15T03:00");
+      const hourContaminated = findHour(forecastContaminated, "2026-07-15T02:00");
       expect(hourContaminated).toBeDefined();
       expect(hourContaminated!.confidence).not.toBe("high");
       expect(["low", "medium"]).toContain(hourContaminated!.confidence);
     });
 
     it("4.3 Contradiction older than 7 days does NOT block 'high' confidence for fresh concordant reports", () => {
-      // 5 fresh agreeing reports today
+      // Five reports on the rising tide that each match the model at their own hour (too strong at 00:00 and 01:00,
+      // mild at 02:00 as the run eases toward the 03:00 turn), so strength agreement is a clean track record.
       const concordantToday: Report[] = [
-        { id: "ct-1", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "strong" },
-        { id: "ct-2", siteId: "s", time: "2026-07-15T02:00", direction: "incoming", strength: "strong" },
-        { id: "ct-3", siteId: "s", time: "2026-07-15T03:00", direction: "incoming", strength: "strong" },
-        { id: "ct-4", siteId: "s", time: "2026-07-15T04:00", direction: "incoming", strength: "strong" },
-        { id: "ct-5", siteId: "s", time: "2026-07-15T05:00", direction: "incoming", strength: "strong" },
+        { id: "ct-1", siteId: "s", time: "2026-07-15T00:00", direction: "incoming", strength: "too_strong" },
+        { id: "ct-2", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "too_strong" },
+        { id: "ct-3", siteId: "s", time: "2026-07-15T02:00", direction: "incoming", strength: "mild" },
+        { id: "ct-4", siteId: "s", time: "2026-07-15T00:00", direction: "incoming", strength: "too_strong" },
+        { id: "ct-5", siteId: "s", time: "2026-07-15T01:00", direction: "incoming", strength: "too_strong" },
       ];
 
       // Contradiction from 14 days ago (> 7 days)
@@ -687,7 +690,7 @@ describe("Milestone 3 Adversarial Verification: Diver Reports & Outlier Dampenin
         allowHighConfidence: true,
       });
 
-      const hour = findHour(forecast, "2026-07-15T03:00");
+      const hour = findHour(forecast, "2026-07-15T02:00");
       expect(hour).toBeDefined();
       // Historical contradiction past 7-day boundary does not trigger recent contradiction invariant
       expect(hour!.confidence).toBe("high");
