@@ -1,9 +1,7 @@
-import fs from "fs";
-import path from "path";
 import { deriveSiteType, SITE_TYPE_LABEL } from "../lib/site-type";
 import { pointInRing, rimEdgeKm, rimForAtoll } from "../lib/rim";
 import { readCatalog } from "../lib/store";
-import type { Catalog } from "../lib/types";
+import { writeSites } from "./sites-file";
 
 /**
  * Classifies each seeded site as pass, channel thila, outer reef or lagoon, and prints why.
@@ -14,8 +12,6 @@ import type { Catalog } from "../lib/types";
  * A type set by hand (siteTypeSource "manual") is never changed. To correct a derived type, set siteType and
  * siteTypeSource: "manual" on the site.
  */
-const SITES_PATH = path.join(process.cwd(), "data", "sites.json");
-
 function main(): void {
   const write = process.argv.includes("--write");
   const catalog = readCatalog();
@@ -36,17 +32,8 @@ function main(): void {
     }
   }
   if (!write) return;
-  writeSites(catalog);
+  writeSites(catalog.sites);
   console.log(`\n${changed} site types written to data/sites.json`);
-}
-
-/** Rewrites only the sites list, keeping the file's other keys, its two-space layout and its line endings. */
-export function writeSites(catalog: Pick<Catalog, "sites">): void {
-  const raw = fs.readFileSync(SITES_PATH, "utf8");
-  const file = JSON.parse(raw) as Catalog;
-  file.sites = catalog.sites;
-  const eol = raw.includes("\r\n") ? "\r\n" : "\n";
-  fs.writeFileSync(SITES_PATH, `${JSON.stringify(file, null, 2)}\n`.replace(/\n/g, eol));
 }
 
 main();
