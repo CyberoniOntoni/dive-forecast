@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { matchGuideSite, nameSimilarity, parseDepthRange, siteIdFor } from "./dive-guide";
+import { atollForGuideCode, matchGuideSite, nameSimilarity, parseDepthRange, siteIdFor } from "./dive-guide";
 
 describe("nameSimilarity", () => {
   it("treats spelling variants and kind words as the same site", () => {
@@ -45,8 +45,42 @@ describe("matchGuideSite", () => {
     expect(verdict).toMatchObject({ kind: "review", siteId: "miyaru-kandu", reason: "similar name, pins apart" });
   });
 
+  it("prefers the seeded site with the same name when two match at the same spot", () => {
+    const twins = [
+      { id: "fesdhoo", name: "Fesdhoo", lat: 3.9994, lon: 72.786 },
+      { id: "fesdu-wreck", name: "Fesdu Wreck", lat: 3.9995, lon: 72.7861 },
+    ];
+    expect(matchGuideSite({ name: "Fesdu Wreck", lat: 3.995, lon: 72.785 }, twins)).toMatchObject({
+      kind: "match",
+      siteId: "fesdu-wreck",
+    });
+  });
+
   it("calls anything else new", () => {
     expect(matchGuideSite({ name: "Fulidhoo Caves", lat: 3.683, lon: 73.416 }, seeded)).toEqual({ kind: "new" });
+  });
+});
+
+describe("atollForGuideCode", () => {
+  const ari = "https://www.openstreetmap.org/way/671807122";
+  const atolls = [
+    { id: "north-ari", rimSourceUrl: ari },
+    { id: "south-ari", rimSourceUrl: ari },
+    { id: "rasdhoo", rimSourceUrl: "https://www.openstreetmap.org/way/671807123" },
+    { id: "vaavu", rimSourceUrl: "https://www.openstreetmap.org/way/671807115" },
+  ];
+  const byId = (id: string) => atolls.find((atoll) => atoll.id === id)!;
+
+  it("lets the guide's code split the shared Ari outline", () => {
+    expect(atollForGuideCode(byId("north-ari"), atolls, "ADh").id).toBe("south-ari");
+    expect(atollForGuideCode(byId("south-ari"), atolls, "AA").id).toBe("north-ari");
+    expect(atollForGuideCode(byId("north-ari"), atolls, "AA").id).toBe("north-ari");
+  });
+
+  it("never moves a site to an atoll with a different outline", () => {
+    expect(atollForGuideCode(byId("rasdhoo"), atolls, "AA").id).toBe("rasdhoo");
+    expect(atollForGuideCode(byId("vaavu"), atolls, "ADh").id).toBe("vaavu");
+    expect(atollForGuideCode(byId("vaavu"), atolls, "V").id).toBe("vaavu");
   });
 });
 
