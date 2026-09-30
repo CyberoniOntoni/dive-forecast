@@ -55,6 +55,55 @@
       "oceanLat": 5.32556,
       "oceanLon": 73.69423,
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807029"
+    },
+    {
+      "id": "raa",
+      "name": "Raa Atoll",
+      "oceanLat": 5.6201,
+      "oceanLon": 73.1214,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807031"
+    },
+    {
+      "id": "baa",
+      "name": "Baa Atoll",
+      "oceanLat": 5.1868,
+      "oceanLon": 73.2681,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807030"
+    },
+    {
+      "id": "goidhoo",
+      "name": "Goidhoo",
+      "oceanLat": 4.8504,
+      "oceanLon": 73.078,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807124"
+    },
+    {
+      "id": "faafu",
+      "name": "Faafu Atoll",
+      "oceanLat": 3.1884,
+      "oceanLon": 73.1151,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807126"
+    },
+    {
+      "id": "dhaalu",
+      "name": "Dhaalu Atoll",
+      "oceanLat": 2.8362,
+      "oceanLon": 73.1011,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807127"
+    },
+    {
+      "id": "meemu",
+      "name": "Meemu Atoll",
+      "oceanLat": 2.9605,
+      "oceanLon": 73.7177,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807090"
+    },
+    {
+      "id": "addu",
+      "name": "Addu Atoll",
+      "oceanLat": -0.6412,
+      "oceanLon": 73.3011,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807083"
     }
   ],
   "sites": [
