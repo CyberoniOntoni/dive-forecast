@@ -143,6 +143,17 @@ describe("addReport saves the prediction", () => {
     expect(second.predicted?.modelOnly).toEqual(first.predicted?.modelOnly);
   });
 
+  it("a back-dated report's shown prediction uses only reports from before its dive", async () => {
+    seedMarineCache("kandooma-thila");
+    // Later dives filed first. They must not tune the forecast for an earlier dive filed after them.
+    for (let index = 0; index < 3; index += 1) {
+      await addReport({ siteId: "kandooma-thila", time: "2026-09-27T14:00", direction: "outgoing", strength: "too_strong" });
+    }
+    const backDated = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T06:00", direction: "incoming", strength: "mild" });
+    expect(backDated.predicted?.modelOnly).not.toBeNull();
+    expect(backDated.predicted?.shown).toEqual({ ...backDated.predicted!.modelOnly, confidence: "low" });
+  });
+
   it("still saves the report when there is no ocean data, just without a prediction", async () => {
     // Nothing seeds Banana Reef's cache in this file, and the test setup blocks the network.
     const report = await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });

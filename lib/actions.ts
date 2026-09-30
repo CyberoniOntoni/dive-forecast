@@ -1,7 +1,7 @@
 "use server";
 
 import { atollForPin } from "./bearing";
-import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
+import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { forecastAtReport } from "./forecast-log";
 import { loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import {
@@ -105,12 +105,17 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
   }
 }
 
-/** The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report. */
+/**
+ * The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report.
+ * Only reports from before this dive count, as in the replay, so a back-dated report is not scored on later dives.
+ */
 async function predictionAtReport(site: Site, time: string): Promise<ForecastAtReport | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    const shown = await loadSite(site, catalog.sites, atoll, reportsForSite(site.id));
+    const diveMs = parseWall(time);
+    const earlier = reportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
+    const shown = await loadSite(site, catalog.sites, atoll, earlier);
     const modelOnly = await loadSite(site, catalog.sites, atoll, []);
     return forecastAtReport(shown, modelOnly, time);
   } catch {
