@@ -253,8 +253,9 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
       });
 
       expect(result.metrics.totalReports).toBe(1);
-      // A linear rise leaves no residual tide, so the report hour is itself forecast slack: timed, and 0 minutes off
-      expect(result.metrics.slackReports).toBe(1);
+      // A linear rise leaves no residual tide, and the series' 0.5 m/s current along the channel runs it in all day:
+      // no slack or turn to time, so the slack report is left out of the timing
+      expect(result.metrics.slackReports).toBe(0);
       expect(result.metrics.slackTimingDeviationMins).toBe(0);
       assertNoNaN(result);
     });

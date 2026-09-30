@@ -91,6 +91,11 @@ export type Report = {
    * Absent on older reports and when the fetch failed.
    */
   rangeM?: number | null;
+  /**
+   * Through-flow at the report hour, residual metres per hour: the monsoon drift along the channel's inward axis
+   * times THROUGHFLOW_SLOPE_PER_MS. Added to the stored tide slopes. Absent on older reports.
+   */
+  throughflowM?: number | null;
   /** What the forecast said for this hour when the report was filed. Absent when there was no forecast. */
   predicted?: ForecastAtReport;
 };

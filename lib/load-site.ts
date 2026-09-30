@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { forecastHours, residualRangeAt, residualSlopeWindow } from "./forecast";
+import { forecastHours, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site, SiteType } from "./types";
 
@@ -114,6 +114,8 @@ export type ReportTide = {
   slopeWindowM: (number | null)[];
   /** Residual range over the 25 hours around the report hour. Null when that hour has no full window. */
   rangeM: number | null;
+  /** Through-flow at the report hour, residual metres per hour. Null when that hour is missing. */
+  throughflowM: number | null;
 };
 
 /** Same fetch as loadSite. The tide saved with a report, or null when there is no series. */
@@ -127,5 +129,9 @@ export async function reportTideForSite(
   if (!marine.ok) return null;
   const slopeWindowM = residualSlopeWindow(marine.hours, time);
   if (!slopeWindowM) return null;
-  return { slopeWindowM, rangeM: residualRangeAt(marine.hours, time) };
+  return {
+    slopeWindowM,
+    rangeM: residualRangeAt(marine.hours, time),
+    throughflowM: throughflowAt(marine.hours, time, marine.bearing),
+  };
 }

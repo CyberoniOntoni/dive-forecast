@@ -26,7 +26,7 @@ function series(opts: { tideCurrent?: number; driftMs?: number; driftDeg?: numbe
 const strengths = (hours: MarineHour[], bearing = 90) =>
   forecastHours({ hours, inwardBearingDeg: bearing, reports: [] }).map((hour) => `${hour.time}:${hour.direction}:${hour.strength}`);
 
-describe("strength nudge uses the drift, not the tidal current", () => {
+describe("through-flow uses the drift, not the tidal current", () => {
   const calm = series();
 
   it("a purely tidal current along the pass axis changes nothing", () => {
@@ -42,19 +42,15 @@ describe("strength nudge uses the drift, not the tidal current", () => {
     }
   });
 
-  it("a steady drift along the inward axis still moves strength: flood up, ebb down", () => {
-    const drifted = forecastHours({ hours: series({ driftMs: 0.4, driftDeg: 90 }), inwardBearingDeg: 90, reports: [] });
+  it("a steady drift along the inward axis lengthens the flood and shortens the ebb", () => {
+    const drifted = forecastHours({ hours: series({ driftMs: 0.2, driftDeg: 90 }), inwardBearingDeg: 90, reports: [] });
     const plain = forecastHours({ hours: calm, inwardBearingDeg: 90, reports: [] });
-    const band = (strength: string) => ["slack", "mild", "strong", "too_strong"].indexOf(strength);
-    const delta = (direction: string) =>
-      drifted.filter((hour, index) => hour.direction === direction && plain[index].strength !== "slack").map((hour, i) => {
-        const base = plain.filter((h, index) => h.direction === direction && plain[index].strength !== "slack")[i];
-        return band(hour.strength) - band(base.strength);
-      });
-    expect(delta("incoming").some((d) => d > 0)).toBe(true);
-    expect(delta("incoming").every((d) => d >= 0)).toBe(true);
-    expect(delta("outgoing").some((d) => d < 0)).toBe(true);
-    expect(delta("outgoing").every((d) => d <= 0)).toBe(true);
+    const count = (list: typeof plain, direction: string) => list.filter((hour) => hour.direction === direction).length;
+    expect(drifted).toHaveLength(plain.length);
+    expect(count(drifted, "incoming")).toBeGreaterThan(count(plain, "incoming"));
+    expect(count(drifted, "outgoing")).toBeLessThan(count(plain, "outgoing"));
+    // At 0.2 m/s the tide still turns it: some hours still run out.
+    expect(count(drifted, "outgoing")).toBeGreaterThan(0);
   });
 
   it("a tide plus a drift gives the same strengths as the drift alone", () => {

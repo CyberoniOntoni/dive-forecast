@@ -135,6 +135,7 @@ describe("addReport saves the prediction", () => {
     // The day's tide range is saved beside the slope window, so the report can be graded after it leaves the series.
     expect(report.slopeWindowM).toHaveLength(13);
     expect(report.rangeM).toEqual(expect.any(Number));
+    expect(report.throughflowM).toEqual(expect.any(Number));
   });
 
   it("the modelOnly prediction ignores earlier reports; the shown one may not", async () => {

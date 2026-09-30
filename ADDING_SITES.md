@@ -2,7 +2,7 @@
 
 Seeded sites live in `data/sites.json`. Sites a user adds in the app go to `data/store.json` and are never seeded (see the last section).
 
-The one thing that goes wrong quietly is the inward bearing, so most of this is about that. A bad bearing does not crash anything. It points the arrow the wrong way, moves the monsoon nudge, and samples the ocean data from the wrong side of the reef.
+The one thing that goes wrong quietly is the inward bearing, so most of this is about that. A bad bearing does not crash anything. It points the arrow the wrong way, puts the channel on the wrong side of the monsoon through-flow (so it can run in when it should run out), and samples the ocean data from the wrong side of the reef.
 
 ## 1. Add the record
 

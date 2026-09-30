@@ -15,7 +15,8 @@
     "extract-dive-guide": "vite-node scripts/extract-dive-guide.ts",
     "site-types": "vite-node scripts/site-types.ts",
     "import-dive-guide": "vite-node scripts/import-dive-guide.ts",
-    "atlas-overlays": "vite-node scripts/atlas-overlays.ts"
+    "atlas-overlays": "vite-node scripts/atlas-overlays.ts",
+    "throughflow-calibrate": "vite-node scripts/throughflow-calibrate.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

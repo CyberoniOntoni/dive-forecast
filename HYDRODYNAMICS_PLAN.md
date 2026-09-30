@@ -4,7 +4,7 @@
 **Purpose**: Rigorous, phased engineering specification to upgrade the forecast engine from an uncoupled tidal breather heuristic to an oceanographically grounded channel pass model. Aligns geometric channel axes, accounts for monsoon-driven through-flow, eliminates speculative parallel physics, and grounds predictions in empirical diver calibration.
 
 
-> **Status (2026-09-29):** Stages A1 and A2 are shipped, merged, and deployed. Stage B is on hold (its gates are in 4.0). Stage C needs diver reports that do not exist yet: the reports in `data/benchmark-reports.json` are curated fixtures, so the project has no ground truth. Section 3.9 is the findings log; section 6 is the checklist.
+> **Status (2026-10-01):** Stages A1 and A2 are shipped. Stage B is shipped in a simplified, one-constant form (§4.5), calibrated to the owner's knowledge of how the channels run instead of to reports. Stage C still needs diver reports: the reports in `data/benchmark-reports.json` are curated fixtures, so the project has no ground truth. Section 3.9 is the findings log; section 6 is the checklist.
 ---
 
 ## 1. Executive Summary & Critical Reality Check
@@ -30,7 +30,7 @@ A scientifically sound model cannot be delivered as an uncalibrated "3-hour patc
 |---|---|---|---|
 | **Stage A1** | **Explicit Override + Guardrail Test.** Done. | Optional `inwardBearingDeg` on `Site`, preferred by `lib/bearing.ts`. Populate the 7 known-bad sites with measured values. Add a seeded-data sanity test so a bad bearing on any current or future site fails CI. Maintain the existing direction contract (slope = direction; ocean = nudge). | **~0.5 – 1 day** (plus measurement time) |
 | **Stage A2** | **Rim-Derived Default (scales to new sites).** Done. | Replace the mate-centroid / `outside → pin` default with the normal to the nearest atoll rim segment, pointing into the lagoon. Needed because more sites, and new atolls, are coming. | **~1 – 2 days** (depends on rim data quality) |
-| **Stage B** | **Monsoon Through-Flow Projection** | **ON HOLD.** Blocked on the sign fix in §4.2, a real drift input, and enough reports to calibrate (§4.0 gates). | **~2 – 4 days once unblocked** |
+| **Stage B** | **Monsoon Through-Flow Projection** | **Shipped, simplified (§4.5).** One calibrated constant; the owner's experience stands in for the reports gate. | Done |
 | **Stage C** | **Empirical Pass Learning** | Learn local pass quirks and opposite-neighbor flow from diver reports so confidence ratings stay honest. | **Ongoing (post-launch)** |
 
 > **Scaling note**: more dive sites will be added soon. Hand-measured per-site bearings do not scale, and the current heuristic degrades as sites are added: a new atoll's first site falls into the `outside → pin` fallback (the Kuredu / Rasdhoo failure), and every added site shifts its atoll's centroid, silently moving bearings for existing sites. Overrides (A1) are the escape hatch; the rim-derived default (A2) is the fix.
@@ -260,6 +260,35 @@ To avoid ungrounded free constants:
 - **Deliberate Test Retuning**: All existing test assertions that hardcoded `slope > 0 ==> incoming` must be updated intentionally to test the coupled through-flow contract.
 
 ---
+
+### 4.5 As shipped (2026-10-01)
+
+The owner saw the live map showing every channel in the country running the same way at the same hour: the model treated each atoll as a bowl filling and emptying through all its channels at once. Their experience, which replaced the reports gate (§4.0, gate 3):
+
+- The monsoon side decides a channel's direction and the tide adjusts it. Channels facing the monsoon current run in, the far side runs out. Near high and low water the current slackens or briefly reverses, more at spring tides.
+- On the side facing the current, incoming holds most of the day.
+- NE monsoon (about Dec–Apr): east-side channels run in, west-side out. SW monsoon (about May–Nov): the reverse.
+
+The model (`lib/forecast.ts`) is the §4.2 idea with one free constant and no rim-facing term:
+
+    S_net = S_tide + K · F_inward
+
+- `F_inward` is `monsoonInwardFlux`: the 25-hour mean drift at the site's sample point (gate 2's recovered drift), projected on the channel's inward axis. It is positive when the drift runs the same way as water entering, so a channel facing the current runs in. The sign table (NE and SW × east and west rims) is a test (gate 1).
+- Direction is the sign of `S_net`. Strength is graded on `|S_net|` with the existing ramp. The day's envelope is the tide's range plus the range a tide would need to run that much faster (extra slope × 12.42/π). The strength nudge (`NUDGE_BAND`) is retired.
+- Phase and speed fits, the report pull and confidence all read the net flow. New reports save their through-flow (`throughflowM`). Older reports count as having none.
+
+**Calibration** (`npm run throughflow-calibrate`, 173 rim sites, cached Open-Meteo series around 30 Sep 2026, end of the SW monsoon): the median drift along the axis was 0.09 m/s on sites facing the current and 0.11 m/s facing away; the median steepest tide slope was 0.23 m/h.
+
+| K (m/h per m/s) | 0 | 0.3 | 0.5 | 0.6 | **0.7** | 0.8 | 1.0 |
+|---|---|---|---|---|---|---|---|
+| Facing the current: hours running in | 49 % | 61 % | 69 % | 73 % | **75 %** | 78 % | 85 % |
+| Far side: hours running out | 51 % | 63 % | 71 % | 75 % | **78 %** | 81 % | 86 % |
+
+K = 0.7 meets "most of the day" on this data. In peak monsoon the drift is roughly twice as strong, so facing channels will run in about 90 % of hours, still reversing briefly around spring-tide turns. This is a one-parameter calibration against the owner's description, not a fit to reports; revisit it once real reports exist (Stage C).
+
+**Benchmark** (curated scenarios written for the tide-only model, so not a gate): direction 91.3 % → 84.8 %, slack timing 20 → 95 min, false-high 0 %. Through-flow moves the turns away from high and low water on purpose, and the scenarios assume slack at high and low water everywhere.
+
+**Still open:** the per-rim hydraulic head term (`F_rim`, §4.2) and neighbouring channels that run opposite ways (§5.1) need reports.
 
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 

@@ -7,6 +7,7 @@ import {
   residualRangeAt,
   residualSlopeWindow,
   seaLevelSlopeAt,
+  throughflowAt,
   tideWindow,
   toMaldivesWall,
 } from "./forecast";
@@ -59,7 +60,7 @@ describe("forecastHours", () => {
     expect(omitted).toEqual(forecastHours({ hours, inwardBearingDeg: 90, reports: [] }));
   });
 
-  it("follows the residual sea-level slope and stays low confidence with no reports", () => {
+  it("follows the net flow, tide slope plus through-flow, and stays low confidence with no reports", () => {
     const forecast = forecastHours({
       hours: series,
       inwardBearingDeg: 270,
@@ -69,17 +70,19 @@ describe("forecastHours", () => {
     expect(forecast.every((hour) => hour.confidence === "low")).toBe(true);
     for (let index = 0; index < series.length; index += 1) {
       const slope = seaLevelSlopeAt(series, series[index].time);
+      const through = throughflowAt(series, series[index].time, 270);
       const hour = forecast.find((item) => item.time === series[index].time);
-      if (slope == null) {
+      if (slope == null || through == null) {
         expect(hour).toBeUndefined();
         continue;
       }
+      const net = slope + through;
       // C8: exact-zero slope is slack with the following run sign, not omitted.
-      if (slope === 0) {
+      if (net === 0) {
         if (hour) expect(hour.strength).toBe("slack");
         continue;
       }
-      expect(hour?.direction).toBe(slope > 0 ? "incoming" : "outgoing");
+      expect(hour?.direction).toBe(net > 0 ? "incoming" : "outgoing");
     }
   });
 
@@ -385,7 +388,7 @@ describe("forecastHours", () => {
     expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("slack");
   });
 
-  it("a strong seaward current does not set direction when the residual is flat", () => {
+  it("with a flat tide, the drift along the channel sets direction and strength", () => {
     const against = forecastHours({
       hours: marineFromLevels("2026-09-23T00:00", [0, 0.5, 0.5 + 0.001]).map((hour) => ({
         ...hour,
@@ -395,8 +398,9 @@ describe("forecastHours", () => {
       inwardBearingDeg: 0,
       reports: [],
     });
-    expect(directionAt(against, "2026-09-23T01:00")).toBe("incoming");
-    expect(strengthAt(against, "2026-09-23T01:00")).toBe("slack");
+    // The tide has stopped rising; a 1 m/s drift heading out of the channel carries the water out.
+    expect(directionAt(against, "2026-09-23T01:00")).toBe("outgoing");
+    expect(strengthAt(against, "2026-09-23T01:00")).not.toBe("slack");
     expect(against.every((hour) => hour.confidence === "low")).toBe(true);
 
     const along = forecastHours({
@@ -409,7 +413,7 @@ describe("forecastHours", () => {
       reports: [],
     });
     expect(directionAt(along, "2026-09-23T01:00")).toBe("incoming");
-    expect(strengthAt(along, "2026-09-23T01:00")).toBe("slack");
+    expect(strengthAt(along, "2026-09-23T01:00")).not.toBe("slack");
     expect(along.every((hour) => hour.confidence === "low")).toBe(true);
 
     const flat = forecastHours({
@@ -421,7 +425,9 @@ describe("forecastHours", () => {
       inwardBearingDeg: 0,
       reports: [],
     });
-    expect(flat).toEqual([]);
+    // No tide at all: the drift alone runs the channel out, all day.
+    expect(flat.length).toBeGreaterThan(0);
+    expect(flat.every((hour) => hour.direction === "outgoing" && hour.strength !== "slack")).toBe(true);
   });
 
   it("reads residual slopes from six hours before through six hours after", () => {
@@ -742,15 +748,48 @@ describe("forecastHours", () => {
     expect(lagged.find((hour) => hour.time === edge)).toBeUndefined();
   });
 
-  it("one running hour with several slack hours still steps one band when that running hour's nudge is past 0.5", () => {
-    const levels = [0, 0.4, 0.401, 0.402, 0.403, 0.404];
-    const calm = marineFromLevels("2026-09-23T00:00", levels);
-    const driven = calm.map((hour) => ({ ...hour, currentVelocityMs: 0.3, currentDirectionDeg: 0 }));
-    const plain = forecastHours({ hours: calm, inwardBearingDeg: 0, reports: [] });
-    const nudged = forecastHours({ hours: driven, inwardBearingDeg: 0, reports: [] });
-    expect(strengthAt(plain, "2026-09-23T00:00")).toBe("mild");
-    expect(strengthAt(nudged, "2026-09-23T00:00")).toBe("strong");
-    expect(nudged.filter((hour) => hour.strength === "slack").length).toBeGreaterThanOrEqual(3);
+  describe("through-flow", () => {
+    /** 72 hours of a semidiurnal tide with a steady drift. */
+    const tideWithDrift = (amplitudeM: number, driftMs: number, driftDeg: number) =>
+      marineFromLevels(
+        "2026-01-10T00:00",
+        Array.from({ length: 72 }, (_, index) => amplitudeM * Math.sin((2 * Math.PI * index) / 12.42)),
+      ).map((hour) => ({ ...hour, currentVelocityMs: driftMs, currentDirectionDeg: driftDeg }));
+    const shareIn = (hours: MarineHour[], inwardBearingDeg: number) => {
+      const shown = forecastHours({ hours, inwardBearingDeg, reports: [] });
+      return shown.filter((hour) => hour.direction === "incoming").length / shown.length;
+    };
+    // An east-rim channel's water enters heading west (270°); a west-rim channel's heading east (90°).
+    const EAST_RIM = 270;
+    const WEST_RIM = 90;
+
+    it("follows the monsoon side: NE runs the east side in and the west out, SW the reverse", () => {
+      const ne = tideWithDrift(0.4, 0.2, 270); // NE monsoon: the drift heads west
+      const sw = tideWithDrift(0.4, 0.2, 90); // SW monsoon: the drift heads east
+      expect(shareIn(ne, EAST_RIM)).toBeGreaterThan(0.6);
+      expect(shareIn(ne, WEST_RIM)).toBeLessThan(0.4);
+      expect(shareIn(sw, WEST_RIM)).toBeGreaterThan(0.6);
+      expect(shareIn(sw, EAST_RIM)).toBeLessThan(0.4);
+    });
+
+    it("holds the facing side in all day at neap, while spring tides still reverse it near the turns", () => {
+      const neap = shareIn(tideWithDrift(0.15, 0.2, 270), EAST_RIM);
+      const spring = shareIn(tideWithDrift(0.5, 0.2, 270), EAST_RIM);
+      expect(neap).toBe(1);
+      expect(spring).toBeGreaterThan(0.5);
+      expect(spring).toBeLessThan(1);
+    });
+
+    it("with no drift, gives exactly the tide's own directions on every rim", () => {
+      const calm = tideWithDrift(0.4, 0, 0);
+      const east = forecastHours({ hours: calm, inwardBearingDeg: EAST_RIM, reports: [] });
+      const west = forecastHours({ hours: calm, inwardBearingDeg: WEST_RIM, reports: [] });
+      expect(east.map((hour) => hour.direction)).toEqual(west.map((hour) => hour.direction));
+      for (const hour of east) {
+        const slope = seaLevelSlopeAt(calm, hour.time)!;
+        if (slope !== 0) expect(hour.direction).toBe(slope > 0 ? "incoming" : "outgoing");
+      }
+    });
   });
 
   it("an exact-zero residual hour is present with slack and the following run sign", () => {

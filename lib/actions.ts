@@ -83,6 +83,7 @@ export async function addReport(input: unknown): Promise<Report> {
   if (tide) {
     report.slopeWindowM = tide.slopeWindowM;
     if (tide.rangeM != null) report.rangeM = tide.rangeM;
+    if (tide.throughflowM != null) report.throughflowM = tide.throughflowM;
   }
   if (predicted) report.predicted = predicted;
   return persistReport(report);
