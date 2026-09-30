@@ -24,10 +24,16 @@ Seeded sites are in `data/sites.json`, with a source for each coordinate. See `A
 
 The map's layer button switches the base and each overlay on or off, and remembers the choice in the browser. Bases: Esri World Imagery (default), OpenStreetMap, or none. Overlays, from [OpenSeaMap](https://www.openseamap.org/) under CC BY-SA 2.0: seamarks (on by default), depth shading from the GEBCO 2021 grid (about 450 m, so atoll shape rather than pass detail), sonar depths shared by boats (sparse in the Maldives), and depth contours. The coordinate grid is drawn by the app and is on by default, like seamarks. Depth shading and contours clash with satellite imagery, so turning either on over satellite switches the base to the street map. Each layer's credit shows while it is on.
 
-The **Reef zones** overlay (off by default, drawn from zoom 11) is the [Allen Coral Atlas](https://allencoralatlas.org/) geomorphic map, CC BY 4.0: reef crest, reef flats, reef slopes, plateau and lagoon. It is served from static tiles in `public/overlays/reef-zones/`, built from the Atlas region download:
+Three overlays come from the [Allen Coral Atlas](https://allencoralatlas.org/), CC BY 4.0, all off by default:
 
-1. Sign in at allencoralatlas.org, download the Maldives area (Geomorphic map, GeoPackage or GeoJSON) and unzip it into `data/sources/aca/` (gitignored).
-2. `npm run reef-zones` rewrites the tiles and their index.
+- **Reef outline** (from zoom 10): the edge of every mapped reef.
+- **Reef zones** (from zoom 11): the geomorphic map, reef crest, reef flats, reef slopes, plateau and lagoon.
+- **Bottom types** (from zoom 12): the benthic map, coral/algae, rock, rubble, sand, seagrass and microalgal mats. Patches under 600 m² are left out; most are single-pixel specks from the satellite classification.
+
+They are served from static tiles in `public/overlays/`, built from the Atlas region download:
+
+1. Sign in at allencoralatlas.org, download the Maldives area (Geomorphic map, Benthic map and Reef extent, as GeoPackage) and unzip it into `data/sources/aca/` (gitignored).
+2. `npm run atlas-overlays` rewrites the tiles and their indexes (`-- reefZones`, `bottomTypes` or `reefOutline` for one).
 
 The Atlas maps only the shallow reef tops, so it does not decide a site's type (see `ADDING_SITES.md`). Whether Esri's terms allow this public map is still open (roadmap item 7).
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { decodeRing, encodeRing, reefTileFile, REEF_ZONE_CLASSES, simplifyRing } from "./reef-zones";
+import { ATLAS_OVERLAYS, atlasTileFile, decodeRing, encodeRing, ringAreaM2, simplifyRing } from "./atlas-overlays";
 
-describe("reef-zone rings", () => {
+describe("overlay rings", () => {
   it("round-trips to 1e-5 degrees and comes back as [lat, lon]", () => {
     const ring = [
       [73.126008231, -0.676431409],
@@ -29,13 +29,26 @@ describe("simplifyRing", () => {
   });
 });
 
-describe("reefTileFile", () => {
+describe("atlasTileFile", () => {
   it("names the tile by its south-west corner, south of the equator too", () => {
-    expect(reefTileFile(4.17, 73.51)).toBe("4.00_73.50.json");
-    expect(reefTileFile(-0.6, 73.1)).toBe("-0.75_73.00.json");
+    expect(atlasTileFile(4.17, 73.51)).toBe("4.00_73.50.json");
+    expect(atlasTileFile(-0.6, 73.1)).toBe("-0.75_73.00.json");
   });
 });
 
-it("keeps one colour per Atlas class, with unique names", () => {
-  expect(new Set(REEF_ZONE_CLASSES.map((item) => item.name)).size).toBe(REEF_ZONE_CLASSES.length);
+describe("ringAreaM2", () => {
+  it("measures a 100 m square near the equator", () => {
+    const side = 100 / 111_320; // degrees for 100 m
+    const square = [[73, 0], [73 + side, 0], [73 + side, side], [73, side], [73, 0]];
+    expect(ringAreaM2(square)).toBeGreaterThan(9_900);
+    expect(ringAreaM2(square)).toBeLessThan(10_100);
+  });
+});
+
+it("gives each overlay unique class names and its own tile directory", () => {
+  const overlays = Object.values(ATLAS_OVERLAYS);
+  for (const overlay of overlays) {
+    expect(new Set(overlay.classes.map((item) => item.name)).size).toBe(overlay.classes.length);
+  }
+  expect(new Set(overlays.map((overlay) => overlay.path)).size).toBe(overlays.length);
 });

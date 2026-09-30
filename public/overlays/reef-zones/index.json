@@ -1,10 +1,9 @@
 {
-  "source": "Allen Coral Atlas geomorphic map (Central Indian Ocean), © 2018-2023 Allen Coral Atlas Partnership and Arizona State University, CC BY 4.0",
+  "source": "Allen Coral Atlas (Geomorphic-Map, Central Indian Ocean), © 2018-2023 Allen Coral Atlas Partnership and Arizona State University, CC BY 4.0",
   "classes": [
     "Reef Crest",
     "Outer Reef Flat",
     "Inner Reef Flat",
-    "Terrestrial Reef Flat",
     "Reef Slope",
     "Sheltered Reef Slope",
     "Back Reef Slope",
