@@ -1,6 +1,6 @@
 {
   "atollCode": "V",
-  "generatedAt": "2026-09-30T06:12:17.497Z",
+  "generatedAt": "2026-09-30T06:32:44.192Z",
   "candidates": [
     {
       "guideId": 194,
@@ -305,8 +305,8 @@
       "name": "Vattaru Kandu",
       "lat": 3.219774,
       "lon": 73.424226,
-      "decision": "review",
-      "reason": "not in or near a seeded atoll outline"
+      "decision": "skip",
+      "reason": "on Vattaru, outside the Vaavu outline; skipped for now (owner decision)"
     },
     {
       "guideId": 211,

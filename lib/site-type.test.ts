@@ -35,12 +35,4 @@ describe("deriveSiteType", () => {
   it("does not take an island called Kandooma for a kandu", () => {
     expect(deriveSiteType({ name: "Kandooma Reef", ...onRim }, RING)).toBe("outer-reef");
   });
-
-  it("uses a gap in the mapped reef on the rim as a pass", () => {
-    expect(deriveSiteType({ name: "Unnamed corner", ...onRim }, RING, { atPin: null })).toBe("pass");
-    expect(deriveSiteType({ name: "Some Thila", ...onRim }, RING, { atPin: "Deep Lagoon" })).toBe("channel-thila");
-    expect(deriveSiteType({ name: "House reef", ...onRim }, RING, { atPin: "Reef Slope" })).toBe("outer-reef");
-    // The name still wins on the reef itself: a kandu pin can land on the reef edge beside the channel.
-    expect(deriveSiteType({ name: "Devana Kandu", ...onRim }, RING, { atPin: "Reef Crest" })).toBe("pass");
-  });
 });

@@ -1,6 +1,6 @@
 # Dive-guide import: atoll V
 
-Generated 2026-09-30T06:12:17.497Z. Edit decisions in `import-V.json`, then run
+Generated 2026-09-30T06:32:44.192Z. Edit decisions in `import-V.json`, then run
 `npm run import-dive-guide -- --atoll V --apply`.
 
 Check each new site's type and bearing. A fallback bearing is an estimate (outlined arrow); measure it
