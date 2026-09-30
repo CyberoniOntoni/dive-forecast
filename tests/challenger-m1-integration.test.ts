@@ -472,7 +472,9 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
   describe("6. On-Disk Marine Cache Replay", () => {
     it("successfully loads cached marine series for sites with matching cache entries", async () => {
       // The committed benchmark fixtures stand in for a real cache, so this needs no network and no live cache.
-      const candidates = ["kandooma-thila", "banana-reef", "rasdhoo-madivaru", "miyaru-kandu"];
+      // Only sites with a measured heading: an estimated one aims at the atoll's other sites, so adding sites
+      // moves its ocean sample point off its fixture (Banana Reef's did when the Kaafu batch arrived).
+      const candidates = ["kandooma-thila", "kuredu-express", "rasdhoo-madivaru", "miyaru-kandu"];
       seedCacheFromFixtures(candidates);
 
       for (const id of candidates) {

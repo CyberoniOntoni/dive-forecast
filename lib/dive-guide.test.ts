@@ -9,6 +9,15 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("Rasdhoo-Madivaru", "Rasdhoo Madivaru")).toBe(1);
   });
 
+  it("keeps different kinds of site on one reef apart", () => {
+    expect(nameSimilarity("Kandooma Caves", "Kandooma Thila")).toBeLessThanOrEqual(0.5);
+    expect(nameSimilarity("Embudhu Thila", "Embudhoo Express")).toBeLessThanOrEqual(0.5);
+    expect(nameSimilarity("Vaadhoo Housereef", "Vaadhoo Caves")).toBeLessThanOrEqual(0.5);
+    // An express is a kandu, so these are one site.
+    expect(nameSimilarity("Embudhoo Kandu", "Embudhoo Express")).toBe(1);
+    expect(nameSimilarity("Kuda Giri Wreck", "Kuda Giri")).toBe(1);
+  });
+
   it("keeps different places apart", () => {
     expect(nameSimilarity("Miyaru Kandu", "Alimatha house reef")).toBeLessThan(0.4);
     expect(nameSimilarity("Coral Garden", "Vaadhoo Caves")).toBeLessThan(0.4);

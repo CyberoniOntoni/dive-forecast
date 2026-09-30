@@ -14,6 +14,9 @@ import { writeSites } from "./sites-file";
  *
  *   npm run import-dive-guide -- --atoll V            write data/sources/import-V.json and import-V.review.md
  *   npm run import-dive-guide -- --atoll V --apply    add the approved sites to data/sites.json
+ *   npm run import-dive-guide -- --atoll K --new "Cocoa Corner" --new "Kandooma Caves"
+ *                                                     propose those as new sites even though they sit close to a
+ *                                                     seeded site under another name (a person has said they differ)
  *
  * Every guide site gets a decision in the JSON file:
  *   "add"          a new site (the proposed record is in "site"; edit it freely before applying)
@@ -43,7 +46,7 @@ type GuideFile = {
 
 const SOURCES = path.join(process.cwd(), "data", "sources");
 
-function propose(atollCode: string): void {
+function propose(atollCode: string, separate: ReadonlySet<string>): void {
   const guide = JSON.parse(fs.readFileSync(path.join(SOURCES, "dive-guide-sites.json"), "utf8")) as GuideFile;
   const catalog = readCatalog();
   const taken = new Set(catalog.sites.map((site) => site.id));
@@ -51,7 +54,7 @@ function propose(atollCode: string): void {
 
   for (const record of guide.sites.filter((item) => item.atollCode === atollCode)) {
     const base = { guideId: record.guideId, name: record.name, lat: record.lat, lon: record.lon };
-    const verdict = matchGuideSite(record, catalog.sites);
+    const verdict = separate.has(record.name.toLowerCase()) ? { kind: "new" as const } : matchGuideSite(record, catalog.sites);
     if (verdict.kind === "match") {
       candidates.push({ ...base, decision: `match:${verdict.siteId}`, reason: `same site, ${verdict.km.toFixed(2)} km` });
       continue;
@@ -185,6 +188,16 @@ function apply(atollCode: string): void {
   console.log(`${added} sites added, ${filled} seeded sites given dive depths. Run npm test before committing.`);
 }
 
+/** Every value given after a repeated flag, lower-cased: --new A --new B. */
+function argValues(flag: string): Set<string> {
+  const values = new Set<string>();
+  process.argv.forEach((arg, index) => {
+    const value = process.argv[index + 1];
+    if (arg === flag && value) values.add(value.toLowerCase());
+  });
+  return values;
+}
+
 function main(): void {
   const at = process.argv.indexOf("--atoll");
   const atollCode = at >= 0 ? process.argv[at + 1] : undefined;
@@ -193,7 +206,7 @@ function main(): void {
     process.exit(2);
   }
   if (process.argv.includes("--apply")) apply(atollCode);
-  else propose(atollCode);
+  else propose(atollCode, argValues("--new"));
 }
 
 main();

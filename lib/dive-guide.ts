@@ -20,20 +20,57 @@ export function normalizeName(name: string): string {
     .trim();
 }
 
-/** Words that name the kind of site rather than the site, so "Fotteyo" matches "Fotteyo Kandu". */
-const KIND_WORDS = new Set(["kandu", "tila", "giri", "faru", "reef", "house", "wreck", "point", "caves", "cave", "corner"]);
+/**
+ * Words that name the kind of site rather than the site, so "Fotteyo" matches "Fotteyo Kandu", each mapped to its
+ * kind. Two names that both say their kind must agree on it: Kandooma Caves is not Kandooma Thila.
+ */
+const KIND_WORDS = new Map<string, string>(
+  // Keys go through normalizeName like the names they are compared with ("reef" becomes "rif").
+  (
+    [
+      ["kandu", "kandu"],
+      ["express", "kandu"], // an "express" is a kandu drift
+      ["tila", "tila"],
+      ["giri", "giri"],
+      ["faru", "faru"],
+      ["reef", "reef"],
+      ["house", "house reef"],
+      ["housereef", "house reef"],
+      ["wreck", "wreck"],
+      ["point", "point"],
+      ["caves", "caves"],
+      ["cave", "caves"],
+      ["corner", "corner"],
+    ] as const
+  ).map(([word, kind]) => [normalizeName(word), kind]),
+);
+
+/** The kinds a name states; "house reef" is one kind, not two. */
+function kindsOf(words: readonly string[]): Set<string> {
+  const kinds = new Set(words.flatMap((word) => (KIND_WORDS.has(word) ? [KIND_WORDS.get(word)!] : [])));
+  if (kinds.has("house reef")) kinds.delete("reef");
+  return kinds;
+}
 
 function bigrams(text: string): string[] {
   const compact = text.replace(/ /g, "");
   return Array.from({ length: Math.max(0, compact.length - 1) }, (_, i) => compact.slice(i, i + 2));
 }
 
-/** 0 to 1. The distinctive words of one name all in the other counts as 1; otherwise bigram overlap (Dice). */
+/**
+ * 0 to 1. The distinctive words of one name all in the other counts as 1; otherwise bigram overlap (Dice).
+ * Names that both state a kind of site, and disagree on it, are different sites: at most 0.5.
+ */
 export function nameSimilarity(a: string, b: string): number {
   const left = normalizeName(a);
   const right = normalizeName(b);
   if (!left || !right) return 0;
   if (left === right) return 1;
+  const leftKinds = kindsOf(left.split(" "));
+  const rightKinds = kindsOf(right.split(" "));
+  const kindsClash =
+    leftKinds.size > 0 && rightKinds.size > 0 && ![...leftKinds].some((kind) => rightKinds.has(kind));
+  if (kindsClash) return Math.min(0.5, bigramSimilarity(left, right));
   const distinct = (text: string) => text.split(" ").filter((word) => word && !KIND_WORDS.has(word));
   const leftWords = distinct(left);
   const rightWords = distinct(right);
@@ -41,6 +78,11 @@ export function nameSimilarity(a: string, b: string): number {
     const [short, long] = leftWords.length <= rightWords.length ? [leftWords, rightWords] : [rightWords, leftWords];
     if (short.every((word) => long.includes(word))) return 1;
   }
+  return bigramSimilarity(left, right);
+}
+
+/** Dice coefficient on letter pairs, spaces ignored. */
+function bigramSimilarity(left: string, right: string): number {
   const x = bigrams(left);
   const y = bigrams(right);
   if (x.length === 0 || y.length === 0) return 0;
