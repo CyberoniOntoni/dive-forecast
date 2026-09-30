@@ -69,7 +69,7 @@ Check each new site's type and bearing. A fallback bearing is an estimate (outli
 | Shallow Point | add | new | Lagoon | 8–20 m | 71° fallback, sample in lagoon | [4.3581, 73.3717](https://www.openstreetmap.org/?mlat=4.358119&mlon=73.371677#map=15/4.358119/73.371677) |
 | Nakatcha Thila | add | new | Lagoon | 10–26 m | 82° fallback | [4.3837, 73.3568](https://www.openstreetmap.org/?mlat=4.383741&mlon=73.356792#map=15/4.383741/73.356792) |
 | Mas Thila | add | new | Lagoon | ?–30 m | 83° fallback | [4.3882, 73.3694](https://www.openstreetmap.org/?mlat=4.388222&mlon=73.369399#map=15/4.388222/73.369399) |
-| Banana reef | add | new | Outer reef | 10–30 m | 97° rim-derived | [4.3734, 73.3406](https://www.openstreetmap.org/?mlat=4.373446&mlon=73.34059#map=15/4.373446/73.34059) |
+| Banana reef | skip | owner: the guide lists Banana Reef twice; this second pin, 23 km from the known reef, is removed | | | | |
 | Rasfari | add | new | Outer reef | 10–30 m | 104° rim-derived | [4.3957, 73.3475](https://www.openstreetmap.org/?mlat=4.395712&mlon=73.347453#map=15/4.395712/73.347453) |
 | Bodu Hithi Thila | add | new | Channel thila | 8–25 m | 106° rim-derived | [4.4489, 73.3625](https://www.openstreetmap.org/?mlat=4.448872&mlon=73.362501#map=15/4.448872/73.362501) |
 | Hembadhoo Wreck | add | new | Lagoon | 15–22 m | 122° fallback, sample in lagoon | [4.4806, 73.3979](https://www.openstreetmap.org/?mlat=4.480611&mlon=73.397855#map=15/4.480611/73.397855) |

@@ -1,0 +1,263 @@
+{
+  "atollCode": "F",
+  "generatedAt": "2026-09-30T18:13:46.893Z",
+  "candidates": [
+    {
+      "guideId": 267,
+      "name": "Two Brothers",
+      "lat": 3.276896,
+      "lon": 73.004347,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "two-brothers",
+        "name": "Two Brothers",
+        "atollId": "faafu",
+        "lat": 3.276896,
+        "lon": 73.004347,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 229,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 268,
+      "name": "Jumping Jack",
+      "lat": 3.303816,
+      "lon": 72.97912,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "jumping-jack",
+        "name": "Jumping Jack",
+        "atollId": "faafu",
+        "lat": 3.303816,
+        "lon": 72.97912,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 222,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 269,
+      "name": "Lighthouse Channel",
+      "lat": 3.269811,
+      "lon": 73.010365,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lighthouse-channel",
+        "name": "Lighthouse Channel",
+        "atollId": "faafu",
+        "lat": 3.269811,
+        "lon": 73.010365,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 4,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 229,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 270,
+      "name": "Seven Stingrays",
+      "lat": 3.233873,
+      "lon": 73.033103,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "seven-stingrays",
+        "name": "Seven Stingrays",
+        "atollId": "faafu",
+        "lat": 3.233873,
+        "lon": 73.033103,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 248,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 271,
+      "name": "Kings Corner",
+      "lat": 3.235351,
+      "lon": 73.009069,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kings-corner",
+        "name": "Kings Corner",
+        "atollId": "faafu",
+        "lat": 3.235351,
+        "lon": 73.009069,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 152,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 272,
+      "name": "Filitheyo Outside",
+      "lat": 3.2094,
+      "lon": 73.042523,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "filitheyo-outside",
+        "name": "Filitheyo Outside",
+        "atollId": "faafu",
+        "lat": 3.2094,
+        "lon": 73.042523,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 258,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 274,
+      "name": "Filitheyo Thila",
+      "lat": 3.204489,
+      "lon": 73.038843,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "filitheyo-thila",
+        "name": "Filitheyo Thila",
+        "atollId": "faafu",
+        "lat": 3.204489,
+        "lon": 73.038843,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 261,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 275,
+      "name": "Dolphin Corner",
+      "lat": 3.191149,
+      "lon": 73.043748,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dolphin-corner",
+        "name": "Dolphin Corner",
+        "atollId": "faafu",
+        "lat": 3.191149,
+        "lon": 73.043748,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 269,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 276,
+      "name": "Barracuda Kandu",
+      "lat": 3.138112,
+      "lon": 73.029555,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "barracuda-kandu",
+        "name": "Barracuda Kandu",
+        "atollId": "faafu",
+        "lat": 3.138112,
+        "lon": 73.029555,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 289,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 277,
+      "name": "Biledhoo Kandu",
+      "lat": 3.09031,
+      "lon": 73.005159,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "biledhoo-kandu",
+        "name": "Biledhoo Kandu",
+        "atollId": "faafu",
+        "lat": 3.09031,
+        "lon": 73.005159,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 321,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+{
+  "atollCode": "M",
+  "generatedAt": "2026-09-30T18:13:49.073Z",
+  "candidates": [
+    {
+      "guideId": 284,
+      "name": "Mulaku Kandu",
+      "lat": 3.177189,
+      "lon": 73.473562,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "mulaku-kandu",
+        "name": "Mulaku Kandu",
+        "atollId": "meemu",
+        "lat": 3.177189,
+        "lon": 73.473562,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 190,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 285,
+      "name": "Medhu Faru Kandu",
+      "lat": 3.159186,
+      "lon": 73.499297,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "medhu-faru-kandu",
+        "name": "Medhu Faru Kandu",
+        "atollId": "meemu",
+        "lat": 3.159186,
+        "lon": 73.499297,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 22,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 215,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 286,
+      "name": "Vanhuravalhi Kandu",
+      "lat": 3.143515,
+      "lon": 73.525011,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vanhuravalhi-kandu",
+        "name": "Vanhuravalhi Kandu",
+        "atollId": "meemu",
+        "lat": 3.143515,
+        "lon": 73.525011,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 221,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 287,
+      "name": "Veyvah Beyru",
+      "lat": 2.944302,
+      "lon": 73.600113,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "veyvah-beyru",
+        "name": "Veyvah Beyru",
+        "atollId": "meemu",
+        "lat": 2.944302,
+        "lon": 73.600113,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 305,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 289,
+      "name": "Muli Kandu (Hakura Express)",
+      "lat": 2.927955,
+      "lon": 73.58642,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "muli-kandu-hakura-express",
+        "name": "Muli Kandu (Hakura Express)",
+        "atollId": "meemu",
+        "lat": 2.927955,
+        "lon": 73.58642,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 296,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 290,
+      "name": "Muli Beyru",
+      "lat": 2.922511,
+      "lon": 73.586427,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "muli-beyru",
+        "name": "Muli Beyru",
+        "atollId": "meemu",
+        "lat": 2.922511,
+        "lon": 73.586427,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 22,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 288,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 291,
+      "name": "Hakura Thila",
+      "lat": 2.940593,
+      "lon": 73.543168,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hakura-thila",
+        "name": "Hakura Thila",
+        "atollId": "meemu",
+        "lat": 2.940593,
+        "lon": 73.543168,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 2,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 298,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 292,
+      "name": "Ashaa",
+      "lat": 2.905762,
+      "lon": 73.55151,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ashaa",
+        "name": "Ashaa",
+        "atollId": "meemu",
+        "lat": 2.905762,
+        "lon": 73.55151,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 1,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 318,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 293,
+      "name": "Bodu Faru",
+      "lat": 2.928314,
+      "lon": 73.552214,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-faru",
+        "name": "Bodu Faru",
+        "atollId": "meemu",
+        "lat": 2.928314,
+        "lon": 73.552214,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 18,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 304,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 294,
+      "name": "Hedhey Faru",
+      "lat": 2.947607,
+      "lon": 73.535652,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hedhey-faru",
+        "name": "Hedhey Faru",
+        "atollId": "meemu",
+        "lat": 2.947607,
+        "lon": 73.535652,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 35,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 294,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 295,
+      "name": "Kurali Kandu",
+      "lat": 2.768728,
+      "lon": 73.372232,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kurali-kandu",
+        "name": "Kurali Kandu",
+        "atollId": "meemu",
+        "lat": 2.768728,
+        "lon": 73.372232,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 14,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 67,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 296,
+      "name": "Nenge Kandu",
+      "lat": 2.864694,
+      "lon": 73.374387,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "nenge-kandu",
+        "name": "Nenge Kandu",
+        "atollId": "meemu",
+        "lat": 2.864694,
+        "lon": 73.374387,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 99,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 297,
+      "name": "Thuvarudhekunu Kandu",
+      "lat": 2.887818,
+      "lon": 73.375407,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "thuvarudhekunu-kandu",
+        "name": "Thuvarudhekunu Kandu",
+        "atollId": "meemu",
+        "lat": 2.887818,
+        "lon": 73.375407,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 89,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 298,
+      "name": "Rayvilla Wreck",
+      "lat": 2.979239,
+      "lon": 73.407911,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rayvilla-wreck",
+        "name": "Rayvilla Wreck",
+        "atollId": "meemu",
+        "lat": 2.979239,
+        "lon": 73.407911,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 99,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    }
+  ]
+}

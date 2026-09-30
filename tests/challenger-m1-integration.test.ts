@@ -99,7 +99,8 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       expect(sites.length).toBeGreaterThanOrEqual(20);
       for (const site of sites) {
         expect(atollMap.has(site.atollId)).toBe(true);
-        expect(site.lat).toBeGreaterThan(0);
+        // The Maldives runs from Addu, just south of the equator, to about 7°N; new pins are accepted from 2°S to 9°N.
+        expect(site.lat).toBeGreaterThan(-2);
         expect(site.lat).toBeLessThan(10);
         expect(site.lon).toBeGreaterThan(70);
         expect(site.lon).toBeLessThan(75);

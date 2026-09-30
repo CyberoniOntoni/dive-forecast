@@ -1,0 +1,358 @@
+{
+  "atollCode": "S",
+  "generatedAt": "2026-09-30T18:13:50.136Z",
+  "candidates": [
+    {
+      "guideId": 231,
+      "name": "British Loyalty",
+      "lat": -0.641373,
+      "lon": 73.115966,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "british-loyalty",
+        "name": "British Loyalty",
+        "atollId": "addu",
+        "lat": -0.641373,
+        "lon": 73.115966,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 16,
+        "diveMaxM": 33,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 67,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 232,
+      "name": "Deamon Point Bay",
+      "lat": -0.580499,
+      "lon": 73.090152,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "deamon-point-bay",
+        "name": "Deamon Point Bay",
+        "atollId": "addu",
+        "lat": -0.580499,
+        "lon": 73.090152,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 206,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 233,
+      "name": "Gulda Lamago",
+      "lat": -0.58976,
+      "lon": 73.094449,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "gulda-lamago",
+        "name": "Gulda Lamago",
+        "atollId": "addu",
+        "lat": -0.58976,
+        "lon": 73.094449,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 231,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 234,
+      "name": "Koattey Beyru West",
+      "lat": -0.581069,
+      "lon": 73.074988,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "koattey-beyru-west",
+        "name": "Koattey Beyru West",
+        "atollId": "addu",
+        "lat": -0.581069,
+        "lon": 73.074988,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 130,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 235,
+      "name": "Fihal Faru",
+      "lat": -0.623719,
+      "lon": 73.136315,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fihal-faru",
+        "name": "Fihal Faru",
+        "atollId": "addu",
+        "lat": -0.623719,
+        "lon": 73.136315,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 92,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 236,
+      "name": "Bushy West",
+      "lat": -0.61356,
+      "lon": 73.139892,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bushy-west",
+        "name": "Bushy West",
+        "atollId": "addu",
+        "lat": -0.61356,
+        "lon": 73.139892,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 170,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 237,
+      "name": "Maa Kandu",
+      "lat": -0.607875,
+      "lon": 73.15459,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maa-kandu",
+        "name": "Maa Kandu",
+        "atollId": "addu",
+        "lat": -0.607875,
+        "lon": 73.15459,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 154,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 238,
+      "name": "Maa Kandu Beyru",
+      "lat": -0.603367,
+      "lon": 73.160153,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maa-kandu-beyru",
+        "name": "Maa Kandu Beyru",
+        "atollId": "addu",
+        "lat": -0.603367,
+        "lon": 73.160153,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 7,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 153,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 239,
+      "name": "Shark Point",
+      "lat": -0.582183,
+      "lon": 73.241264,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "shark-point",
+        "name": "Shark Point",
+        "atollId": "addu",
+        "lat": -0.582183,
+        "lon": 73.241264,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 248,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 240,
+      "name": "Las Pueblas",
+      "lat": -0.626231,
+      "lon": 73.228542,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "las-pueblas",
+        "name": "Las Pueblas",
+        "atollId": "addu",
+        "lat": -0.626231,
+        "lon": 73.228542,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 275,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 241,
+      "name": "Muli Kolhu Faru",
+      "lat": -0.668695,
+      "lon": 73.203338,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "muli-kolhu-faru",
+        "name": "Muli Kolhu Faru",
+        "atollId": "addu",
+        "lat": -0.668695,
+        "lon": 73.203338,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 323,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 242,
+      "name": "Kanandhou Kaleyge Galha",
+      "lat": -0.661005,
+      "lon": 73.197246,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kanandhou-kaleyge-galha",
+        "name": "Kanandhou Kaleyge Galha",
+        "atollId": "addu",
+        "lat": -0.661005,
+        "lon": 73.197246,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 312,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 243,
+      "name": "Viligili Inside",
+      "lat": -0.671676,
+      "lon": 73.187318,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "viligili-inside",
+        "name": "Viligili Inside",
+        "atollId": "addu",
+        "lat": -0.671676,
+        "lon": 73.187318,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 327,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 244,
+      "name": "Gan inside",
+      "lat": -0.689053,
+      "lon": 73.160954,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "gan-inside",
+        "name": "Gan inside",
+        "atollId": "addu",
+        "lat": -0.689053,
+        "lon": 73.160954,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 14,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 356,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    }
+  ]
+}

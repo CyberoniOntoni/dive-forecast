@@ -1481,26 +1481,8 @@
       "name": "Banana reef",
       "lat": 4.373446,
       "lon": 73.34059,
-      "decision": "add",
-      "reason": "new",
-      "site": {
-        "id": "banana-reef-2",
-        "name": "Banana reef",
-        "atollId": "north-male",
-        "lat": 4.373446,
-        "lon": 73.34059,
-        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-        "diveTopM": 10,
-        "diveMaxM": 30,
-        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-        "siteType": "outer-reef",
-        "siteTypeSource": "derived"
-      },
-      "bearing": {
-        "deg": 97,
-        "source": "rim-derived",
-        "sampleInOcean": true
-      }
+      "decision": "skip",
+      "reason": "owner: the guide lists Banana Reef twice; this second pin, 23 km from the known reef, is removed"
     },
     {
       "guideId": 100,

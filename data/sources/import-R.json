@@ -1,0 +1,190 @@
+{
+  "atollCode": "R",
+  "generatedAt": "2026-09-30T18:13:44.651Z",
+  "candidates": [
+    {
+      "guideId": 299,
+      "name": "Maamunagau",
+      "lat": 5.36223,
+      "lon": 72.931227,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maamunagau",
+        "name": "Maamunagau",
+        "atollId": "raa",
+        "lat": 5.36223,
+        "lon": 72.931227,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 332,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 300,
+      "name": "Vaadhoo Faru",
+      "lat": 5.402592,
+      "lon": 72.993323,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vaadhoo-faru",
+        "name": "Vaadhoo Faru",
+        "atollId": "raa",
+        "lat": 5.402592,
+        "lon": 72.993323,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 328,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 301,
+      "name": "Beriyan Faru Thila",
+      "lat": 5.417619,
+      "lon": 73.006167,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "beriyan-faru-thila",
+        "name": "Beriyan Faru Thila",
+        "atollId": "raa",
+        "lat": 5.417619,
+        "lon": 73.006167,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 268,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 302,
+      "name": "Fainu Kandu",
+      "lat": 5.454485,
+      "lon": 73.038798,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fainu-kandu",
+        "name": "Fainu Kandu",
+        "atollId": "raa",
+        "lat": 5.454485,
+        "lon": 73.038798,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 279,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 303,
+      "name": "Fenfushi Giri",
+      "lat": 5.378409,
+      "lon": 72.911864,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fenfushi-giri",
+        "name": "Fenfushi Giri",
+        "atollId": "raa",
+        "lat": 5.378409,
+        "lon": 72.911864,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 37,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 304,
+      "name": "Kudathuilaadhoo Thila",
+      "lat": 5.403382,
+      "lon": 72.902723,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kudathuilaadhoo-thila",
+        "name": "Kudathuilaadhoo Thila",
+        "atollId": "raa",
+        "lat": 5.403382,
+        "lon": 72.902723,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 72,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 305,
+      "name": "Maa Faru",
+      "lat": 5.444548,
+      "lon": 72.861665,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maa-faru",
+        "name": "Maa Faru",
+        "atollId": "raa",
+        "lat": 5.444548,
+        "lon": 72.861665,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 59,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 306,
+      "name": "Kukulhudhoo Faru",
+      "lat": 5.457228,
+      "lon": 72.870742,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kukulhudhoo-faru",
+        "name": "Kukulhudhoo Faru",
+        "atollId": "raa",
+        "lat": 5.457228,
+        "lon": 72.870742,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 122,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    }
+  ]
+}

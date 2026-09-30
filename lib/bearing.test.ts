@@ -112,8 +112,9 @@ describe("atollForPin", () => {
   });
 
   it("returns null for a pin in an unseeded atoll instead of handing it to a far one", () => {
-    // Baa Atoll, about 60 km north of Lhaviyani's nearest neighbor outline.
-    expect(atollForPin(5.2, 72.95, atolls)).toBeNull();
+    // Laamu Atoll, about 90 km south of Meemu, the nearest seeded outline.
+    expect(atollForPin(1.95, 73.45, atolls)).toBeNull();
+    // Huvadhu Atoll, over 100 km north of Addu.
     expect(atollForPin(0.5, 73.0, atolls)).toBeNull();
   });
 
