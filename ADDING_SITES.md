@@ -68,7 +68,29 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
    Store the closed ring as `[lat, lon]` pairs, five decimals. Two atolls can share one way, as North and South Ari do.
 3. The test "has a stored rim for every atoll" fails until this is done. The outline is OpenStreetMap data under ODbL.
 
-## 5. Check
+## 5. Site type
+
+Every site has a type: rim pass, channel thila, outer reef or lagoon. A lagoon site never shows high confidence, and its page says the forecast is less reliable there.
+
+```bash
+npm run site-types              # the derived type for each site, and why
+npm run site-types -- --write   # store derived types
+```
+
+The type is derived from the distance to the atoll outline and the name (Kandu, Express, Thila, Giri). If it is wrong, set `siteType` and `"siteTypeSource": "manual"`; a manual type is never overwritten.
+
+## 5a. Importing from the dive guide
+
+`data/sources/dive-guide-sites.json` lists 289 sites from the Dive Maldives guide (via SeaSketch). To add an atoll's sites:
+
+```bash
+npm run import-dive-guide -- --atoll V           # proposal: data/sources/import-V.json and import-V.review.md
+npm run import-dive-guide -- --atoll V --apply   # after review
+```
+
+Each guide site is matched against the seeded ones: `add`, `match:<id>` (same site; fills missing depths), `skip`, or `review` (a person decides; `--apply` refuses while any remain). The review file lists each new site's type, depth and bearing, and any seeded site whose fallback bearing moves once the new sites join its atoll. Then carry on from step 6.
+
+## 6. Check
 
 ```bash
 npm test
@@ -80,7 +102,7 @@ npm run build
 
 If the site has reports in `data/benchmark-reports.json`, its seaward sample point needs a fixture in `data/benchmark-marine-cache/`, or the benchmark falls back to the atoll's ocean-point cache, which may not cover the report times, and skips them. Run `npm run benchmark` and check the report count. A moved bearing moves the point.
 
-## 6. Commit
+## 7. Commit
 
 Say which bearings were measured, which came from the rim, and which are estimates. Keep site additions separate from logic changes.
 

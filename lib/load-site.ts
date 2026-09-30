@@ -4,21 +4,27 @@ import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
 import { forecastHours, residualRangeAt, residualSlopeWindow } from "./forecast";
 import { marineSeriesStale, siteMarineHours } from "./marine";
-import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site } from "./types";
+import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site, SiteType } from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
 export type SiteLoad = {
   bearing: number | null;
   bearingSource: BearingSource | null;
+  /** Where the site sits, when classified. A lagoon site never shows high confidence. */
+  siteType: SiteType | null;
   hours: HourForecast[];
   unavailable: boolean;
   stale: boolean;
   fetchedAt: number | null;
 };
 
-function unavailableLoad(bearing: number | null, bearingSource: BearingSource | null): SiteLoad {
-  return { bearing, bearingSource, hours: [], unavailable: true, stale: false, fetchedAt: null };
+function unavailableLoad(
+  bearing: number | null,
+  bearingSource: BearingSource | null,
+  siteType: SiteType | null,
+): SiteLoad {
+  return { bearing, bearingSource, siteType, hours: [], unavailable: true, stale: false, fetchedAt: null };
 }
 
 function forecastedLoad(
@@ -28,18 +34,20 @@ function forecastedLoad(
   reports: readonly Report[],
   fetchedAt: number,
   stale: boolean,
-  channelWidthM?: number,
-  channelDepthM?: number,
+  site: Site,
 ): SiteLoad {
+  const siteType = site.siteType ?? null;
+  // The model follows the ocean tide through the passes. Inside the lagoon it is never that sure.
+  const allowHigh = replayAllowsHigh() && siteType !== "lagoon";
   const hours = forecastHours({
     hours: marineHours,
     inwardBearingDeg: bearing,
     reports,
-    channelWidthM,
-    channelDepthM,
-    ...(replayAllowsHigh() ? {} : { allowHighConfidence: false }),
+    channelWidthM: site.channelWidthM,
+    channelDepthM: site.channelDepthM,
+    ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
-  return { bearing, bearingSource, hours, unavailable: false, stale, fetchedAt };
+  return { bearing, bearingSource, siteType, hours, unavailable: false, stale, fetchedAt };
 }
 
 /** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
@@ -88,7 +96,7 @@ export async function loadSite(
   reports: readonly Report[],
 ): Promise<SiteLoad> {
   const marine = await checkedMarine(site, mates, atoll);
-  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource);
+  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null);
   return forecastedLoad(
     marine.bearing,
     marine.bearingSource,
@@ -96,8 +104,7 @@ export async function loadSite(
     reports,
     marine.fetchedAt,
     marine.stale,
-    site.channelWidthM,
-    site.channelDepthM,
+    site,
   );
 }
 

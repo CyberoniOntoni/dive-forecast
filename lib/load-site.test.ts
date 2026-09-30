@@ -107,6 +107,32 @@ describe("loadSite", () => {
     const peakHour = result.hours.find((h) => h.time.startsWith("2026-09-24T00:00"));
     expect(["strong", "too_strong"]).toContain(peakHour?.strength);
   });
+
+  it("never gives a lagoon site high confidence, where the same reports make a pass site high", async () => {
+    const fetched = { ok: true as const, hours: syntheticHours, fetchedAt: 1234567890, stale: false };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue(fetched);
+    const plain = await loadSite(openSite, [openSite], atoll, []);
+    // Five reports on the first day's rising tide, each matching the model at its own hour.
+    const reports = ["2026-09-24T00:00", "2026-09-24T01:00", "2026-09-24T02:00", "2026-09-24T00:00", "2026-09-24T01:00"].map(
+      (time, index) => {
+        const hour = plain.hours.find((item) => item.time === time)!;
+        return { id: `r${index}`, siteId: "s", time, direction: hour.direction, strength: hour.strength };
+      },
+    );
+
+    const pass = await loadSite({ ...openSite, siteType: "pass" }, [openSite], atoll, reports);
+    const lagoon = await loadSite({ ...openSite, siteType: "lagoon" }, [openSite], atoll, reports);
+    vi.mocked(Marine.siteMarineHours).mockReset();
+
+    expect(pass.siteType).toBe("pass");
+    expect(pass.hours.some((hour) => hour.confidence === "high")).toBe(true);
+    expect(lagoon.siteType).toBe("lagoon");
+    expect(lagoon.hours.some((hour) => hour.confidence === "high")).toBe(false);
+    // Only confidence changes: the lagoon site's directions and strengths are the pass site's.
+    expect(lagoon.hours.map((hour) => [hour.direction, hour.strength])).toEqual(
+      pass.hours.map((hour) => [hour.direction, hour.strength]),
+    );
+  });
 });
 
 describe("reportTideForSite", () => {

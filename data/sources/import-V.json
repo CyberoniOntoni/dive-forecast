@@ -1,0 +1,361 @@
+{
+  "atollCode": "V",
+  "generatedAt": "2026-09-30T06:32:44.192Z",
+  "candidates": [
+    {
+      "guideId": 194,
+      "name": "Fulidhoo Caves",
+      "lat": 3.683382,
+      "lon": 73.415558,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fulidhoo-caves",
+        "name": "Fulidhoo Caves",
+        "atollId": "vaavu",
+        "lat": 3.683382,
+        "lon": 73.415558,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 25,
+        "diveMaxM": 40,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 180,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 195,
+      "name": "Ihiga",
+      "lat": 3.682999,
+      "lon": 73.45139,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ihiga",
+        "name": "Ihiga",
+        "atollId": "vaavu",
+        "lat": 3.682999,
+        "lon": 73.45139,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 185,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 196,
+      "name": "Manta Point",
+      "lat": 3.648016,
+      "lon": 73.488669,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "manta-point",
+        "name": "Manta Point (Vaavu)",
+        "atollId": "vaavu",
+        "lat": 3.648016,
+        "lon": 73.488669,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 170,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 197,
+      "name": "Fufalhi Kandu",
+      "lat": 3.673856,
+      "lon": 73.486645,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fufalhi-kandu",
+        "name": "Fufalhi Kandu",
+        "atollId": "vaavu",
+        "lat": 3.673856,
+        "lon": 73.486645,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 206,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 198,
+      "name": "Dhiggiri Kandu",
+      "lat": 3.648208,
+      "lon": 73.503146,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhiggiri-kandu",
+        "name": "Dhiggiri Kandu",
+        "atollId": "vaavu",
+        "lat": 3.648208,
+        "lon": 73.503146,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 247,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 199,
+      "name": "Medhu Kandu",
+      "lat": 3.620526,
+      "lon": 73.508711,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "medhu-kandu",
+        "name": "Medhu Kandu",
+        "atollId": "vaavu",
+        "lat": 3.620526,
+        "lon": 73.508711,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 278,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 200,
+      "name": "Miyaru Kandu",
+      "lat": 3.597845,
+      "lon": 73.502463,
+      "decision": "match:miyaru-kandu",
+      "reason": "same site, 0.28 km"
+    },
+    {
+      "guideId": 201,
+      "name": "Dhevana Kandu",
+      "lat": 3.57936,
+      "lon": 73.501404,
+      "decision": "match:devana-kandu",
+      "reason": "same site, 0.55 km"
+    },
+    {
+      "guideId": 202,
+      "name": "Hulhidhoo Kandu",
+      "lat": 3.499273,
+      "lon": 73.53882,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hulhidhoo-kandu",
+        "name": "Hulhidhoo Kandu",
+        "atollId": "vaavu",
+        "lat": 3.499273,
+        "lon": 73.53882,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 35,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 240,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 204,
+      "name": "Felidhoo Kandu",
+      "lat": 3.471124,
+      "lon": 73.5529,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "felidhoo-kandu",
+        "name": "Felidhoo Kandu",
+        "atollId": "vaavu",
+        "lat": 3.471124,
+        "lon": 73.5529,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 245,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 205,
+      "name": "Keyodhoo Kandu",
+      "lat": 3.463336,
+      "lon": 73.557134,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "keyodhoo-kandu",
+        "name": "Keyodhoo Kandu",
+        "atollId": "vaavu",
+        "lat": 3.463336,
+        "lon": 73.557134,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 234,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 206,
+      "name": "Kuda Kandu",
+      "lat": 3.456885,
+      "lon": 73.562894,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuda-kandu",
+        "name": "Kuda Kandu",
+        "atollId": "vaavu",
+        "lat": 3.456885,
+        "lon": 73.562894,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 219,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 207,
+      "name": "Fotteyo",
+      "lat": 3.488038,
+      "lon": 73.698665,
+      "decision": "match:fotteyo-kandu",
+      "reason": "same site, 0.07 km"
+    },
+    {
+      "guideId": 208,
+      "name": "Rakeedhoo Kandu",
+      "lat": 3.309484,
+      "lon": 73.472525,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rakeedhoo-kandu",
+        "name": "Rakeedhoo Kandu",
+        "atollId": "vaavu",
+        "lat": 3.309484,
+        "lon": 73.472525,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 23,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 209,
+      "name": "Vattaru Kandu",
+      "lat": 3.219774,
+      "lon": 73.424226,
+      "decision": "skip",
+      "reason": "on Vattaru, outside the Vaavu outline; skipped for now (owner decision)"
+    },
+    {
+      "guideId": 211,
+      "name": "Anbaraa",
+      "lat": 3.373964,
+      "lon": 73.43991,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "anbaraa",
+        "name": "Anbaraa",
+        "atollId": "vaavu",
+        "lat": 3.373964,
+        "lon": 73.43991,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 22,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 212,
+      "name": "Anbaraa Thila",
+      "lat": 3.37252,
+      "lon": 73.441936,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "anbaraa-thila",
+        "name": "Anbaraa Thila",
+        "atollId": "vaavu",
+        "lat": 3.37252,
+        "lon": 73.441936,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 21,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    }
+  ]
+}

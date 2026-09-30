@@ -32,7 +32,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/5";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/6";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),

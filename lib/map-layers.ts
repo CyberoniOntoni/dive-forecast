@@ -1,4 +1,12 @@
-import type { Layer, LayerGroup, Map as LeafletMap } from "leaflet";
+import type { Control, Layer, LayerGroup, Map as LeafletMap } from "leaflet";
+import {
+  ATLAS_CREDIT,
+  ATLAS_OVERLAYS,
+  decodeRing,
+  type AtlasOverlay,
+  type AtlasTile,
+  type AtlasTileEntry,
+} from "./atlas-overlays";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -7,7 +15,15 @@ type LeafletLib = typeof import("leaflet");
  * The dive pins are not a layer here: they are always on.
  */
 export type BaseId = "satellite" | "street" | "none";
-export type OverlayId = "seamarks" | "depthShading" | "sonarDepths" | "depthContours" | "grid";
+export type OverlayId =
+  | "seamarks"
+  | "reefZones"
+  | "bottomTypes"
+  | "reefOutline"
+  | "depthShading"
+  | "sonarDepths"
+  | "depthContours"
+  | "grid";
 
 export type LayerChoice = { base: BaseId; overlays: Record<OverlayId, boolean> };
 
@@ -19,6 +35,9 @@ export const BASE_LAYERS: readonly { id: BaseId; label: string }[] = [
 
 export const OVERLAYS: readonly { id: OverlayId; label: string; defaultOn: boolean }[] = [
   { id: "seamarks", label: "Seamarks", defaultOn: true },
+  { id: "reefOutline", label: "Reef outline", defaultOn: false },
+  { id: "reefZones", label: "Reef zones", defaultOn: false },
+  { id: "bottomTypes", label: "Bottom types", defaultOn: false },
   { id: "depthShading", label: "Depth shading", defaultOn: false },
   { id: "sonarDepths", label: "Sonar depths", defaultOn: false },
   { id: "depthContours", label: "Depth contours", defaultOn: false },
@@ -130,6 +149,117 @@ export function formatGridLabel(value: number, axis: "lat" | "lon"): string {
   return `${degrees}°${minutes}′${hemisphere}`;
 }
 
+/**
+ * An Allen Coral Atlas overlay (reef zones, bottom types or reef outline) from its static tiles under
+ * public/overlays (npm run atlas-overlays). Only the tiles in view are fetched, each once, from the overlay's
+ * minimum zoom, and drawn on one canvas under the pins. A legend shows while the overlay is on.
+ */
+function atlasLayer(L: LeafletLib, map: LeafletMap, overlay: AtlasOverlay): LayerGroup {
+  const group = L.layerGroup([], { attribution: ATLAS_CREDIT });
+  const renderer = L.canvas({ padding: 0.3 });
+  const built = new Map<string, LayerGroup>();
+  const requested = new Set<string>();
+  let index: Promise<AtlasTileEntry[]> | null = null;
+  const legend = atlasLegend(L, map, overlay);
+
+  const tileIndex = () => {
+    index ??= fetch(`${overlay.path}/index.json`)
+      .then((response) => (response.ok ? response.json() : { tiles: [] }))
+      .then((body: { tiles?: AtlasTileEntry[] }) => body.tiles ?? [])
+      .catch(() => []);
+    return index;
+  };
+
+  const style = (classIndex: number) => {
+    const color = overlay.classes[classIndex]?.color ?? "#ffffff";
+    return overlay.outline
+      ? { renderer, color, weight: 1.5, opacity: 0.9, fill: false, interactive: false }
+      : { renderer, stroke: false, fillColor: color, fillOpacity: 0.55, interactive: false };
+  };
+
+  const buildTile = (shapes: AtlasTile): LayerGroup =>
+    L.layerGroup(shapes.map(([classIndex, ...rings]) => L.polygon(rings.map(decodeRing), style(classIndex))));
+
+  const refresh = async () => {
+    if (!map.hasLayer(group)) return;
+    const zoomedIn = map.getZoom() >= overlay.minZoom;
+    legend.setZoomedIn(zoomedIn);
+    const view = map.getBounds();
+    const tiles = zoomedIn ? await tileIndex() : [];
+    const wanted = new Set(
+      tiles
+        .filter((tile) => tile.north >= view.getSouth() && tile.south <= view.getNorth() && tile.east >= view.getWest() && tile.west <= view.getEast())
+        .map((tile) => tile.file),
+    );
+    for (const [file, layer] of built) {
+      if (wanted.has(file)) group.addLayer(layer);
+      else group.removeLayer(layer);
+    }
+    for (const file of wanted) {
+      if (requested.has(file)) continue;
+      requested.add(file);
+      fetch(`${overlay.path}/${file}`)
+        .then((response) => (response.ok ? response.json() : []))
+        .then((shapes: AtlasTile) => {
+          built.set(file, buildTile(shapes));
+          if (map.hasLayer(group)) void refresh();
+        })
+        .catch(() => requested.delete(file)); // try again on the next move
+    }
+  };
+
+  group.on("add", () => {
+    legend.show();
+    map.on("moveend", refresh);
+    void refresh();
+  });
+  group.on("remove", () => {
+    legend.hide();
+    map.off("moveend", refresh);
+    group.clearLayers();
+  });
+  return group;
+}
+
+/** A small key to an overlay's colours, with a hint to zoom in below its drawing zoom. */
+function atlasLegend(L: LeafletLib, map: LeafletMap, overlay: AtlasOverlay) {
+  let control: Control | null = null;
+  let note: HTMLElement | null = null;
+  return {
+    show() {
+      if (control) return;
+      control = new L.Control({ position: "topleft" });
+      control.onAdd = () => {
+        const box = L.DomUtil.create("div", "dive-atlas-legend");
+        L.DomEvent.disableClickPropagation(box);
+        const title = L.DomUtil.create("p", "dive-atlas-legend-title", box);
+        title.textContent = overlay.title;
+        note = L.DomUtil.create("p", "dive-atlas-legend-note", box);
+        note.textContent = "Zoom in to see them";
+        if (overlay.classes.length > 1) {
+          const list = L.DomUtil.create("ul", "", box);
+          for (const item of overlay.classes) {
+            const row = L.DomUtil.create("li", "", list);
+            const swatch = L.DomUtil.create("span", "dive-atlas-swatch", row);
+            swatch.style.background = item.color;
+            row.append(item.name);
+          }
+        }
+        return box;
+      };
+      control.addTo(map);
+    },
+    hide() {
+      control?.remove();
+      control = null;
+      note = null;
+    },
+    setZoomedIn(zoomedIn: boolean) {
+      if (note) note.hidden = zoomedIn;
+    },
+  };
+}
+
 /** Thin lat/long lines for the visible area, redrawn as the map moves. Labels sit on the left and top edges. */
 function coordinateGrid(L: LeafletLib, map: LeafletMap): LayerGroup {
   const group = L.layerGroup();
@@ -217,6 +347,10 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
         version: "1.1.0",
         attribution: OPENSEAMAP,
       });
+    case "reefZones":
+    case "bottomTypes":
+    case "reefOutline":
+      return atlasLayer(L, map, ATLAS_OVERLAYS[id]);
     case "grid":
       return coordinateGrid(L, map);
   }

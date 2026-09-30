@@ -49,3 +49,6 @@ next-env.d.ts
 
 # agents
 /.agents/
+
+# raw downloads (Allen Coral Atlas and similar), too large to commit
+/data/sources/aca/
