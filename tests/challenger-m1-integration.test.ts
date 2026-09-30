@@ -84,6 +84,12 @@ function createNormalTideWithSlackCrests(): MarineHour[] {
   });
 }
 
+// Channel narrowing is compared with no ocean current: the sites face different ways, so a drift would give them
+// different through-flow and mix that into the comparison.
+function calm(hours: MarineHour[]): MarineHour[] {
+  return hours.map((hour) => ({ ...hour, currentVelocityMs: 0 }));
+}
+
 const STRENGTH_ORDER: Record<Strength, number> = {
   slack: 0,
   mild: 1,
@@ -211,7 +217,7 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
-        hours: syntheticHours,
+        hours: calm(syntheticHours),
         fetchedAt: Date.now(),
         stale: false,
       });
@@ -248,7 +254,7 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
       const atoll = atollMap.get(devana.atollId)!;
 
-      const slackMarine = createNormalTideWithSlackCrests();
+      const slackMarine = calm(createNormalTideWithSlackCrests());
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
         hours: slackMarine,
@@ -275,7 +281,7 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
-        hours: syntheticHours,
+        hours: calm(syntheticHours),
         fetchedAt: Date.now(),
         stale: false,
       });
@@ -300,7 +306,7 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
-        hours: syntheticHours,
+        hours: calm(syntheticHours),
         fetchedAt: Date.now(),
         stale: false,
       });

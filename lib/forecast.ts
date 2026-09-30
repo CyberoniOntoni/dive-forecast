@@ -14,7 +14,7 @@ export type { ForecastInput, OceanDrift };
 export { getMaldivesMonsoonDrift };
 
 export const FORECAST_NOTICE =
-  "The 8 km grid is weak in passes. Direction comes from the tide slope plus reports, not from the current at the dive pin.";
+  "The 8 km grid is weak in passes. Direction comes from the tide plus the monsoon current through the atoll, and from reports, not from the current at the dive pin.";
 
 const HOUR_MS = 60 * 60 * 1000;
 const SLACK_SLOPE_M = 0.02;
@@ -24,20 +24,18 @@ const MIN_MEAN_SAMPLES = 18;
 const WINDOW_HALF_HOURS = 6;
 const WINDOW_HOURS = WINDOW_HALF_HOURS * 2 + 1;
 const HOUR_MATCH_MS = 45 * 60 * 1000;
-const NUDGE_BAND = 0.5;
-const NUDGE_SATURATION_MS = 0.4;
 const DRIFT_HALF_HOURS = 12;
 
 /**
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/6";
+export const FORECAST_MODEL_VERSION = "tide+throughflow/7";
 
 /**
- * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
+ * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
  * so its hourly value is mostly tide at strongly tidal cells. "drift" uses the 25-hour mean, which removes the tide.
- * "off" disables the nudge.
+ * "off" gives no through-flow: the tide alone decides.
  */
 export const NUDGE_SOURCE: "drift" | "off" = "drift";
 
@@ -47,6 +45,20 @@ export const NUDGE_SOURCE: "drift" | "off" = "drift";
  * pinned each site with published dimensions at the maximum factor, so it was "too strong" nearly all the time.
  */
 export const REF_CHANNEL_AREA_M2 = 31_500;
+
+/**
+ * Through-flow, in residual metres per hour for each m/s of ocean drift along the channel's inward axis.
+ *
+ * An atoll is not a bowl that fills and empties through every channel at once. The monsoon current pushes water
+ * through it: channels facing the current run in, the far side runs out, and the tide makes that stronger or weaker
+ * and can reverse it near the turns. The net flow at a channel is the tide's slope plus this constant times the
+ * drift component along its inward axis (monsoonInwardFlux). The constant is calibrated to the owner's experience
+ * (scripts/throughflow-calibrate.ts): a channel facing a typical monsoon drift runs in most of the day, slackening or
+ * briefly reversing near high and low water, more at spring tides. There are no reports to fit it to yet.
+ */
+export const THROUGHFLOW_SLOPE_PER_MS = 0.7;
+/** Principal lunar semidiurnal period, hours: a tide's steepest hourly slope is about π × range / this. */
+const M2_PERIOD_HOURS = 12.42;
 export const CONSTRICTION_EXPONENT = 0.35;
 export const CONSTRICTION_MIN = 1.0;
 export const CONSTRICTION_MAX = 2.5;
@@ -85,7 +97,8 @@ export function constrictionFactor(channelWidthM?: number, channelDepthM?: numbe
   return Math.min(CONSTRICTION_MAX, Math.max(CONSTRICTION_MIN, raw));
 }
 
-type TideStats = { range: number | null; maxAbs: number | null };
+/** The tide's range, and the steepest net flow (tide plus through-flow) and steepest tide alone, over 25 hours. */
+type TideStats = { range: number | null; maxAbs: number | null; maxAbsTide?: number | null };
 
 type ClassifiedBase = {
   report: Report;
@@ -94,6 +107,8 @@ type ClassifiedBase = {
   pullSlope: number | null;
   failed: boolean;
   temporalWeight: number;
+  /** Through-flow at the report's hour, in slope units; added to its stored tide slopes. */
+  through: number;
 };
 
 type ClassifiedReport =
@@ -102,38 +117,30 @@ type ClassifiedReport =
   | (ClassifiedBase & { kind: "slope-window"; slopes: readonly (number | null)[] })
   | (ClassifiedBase & { kind: "unusable" });
 
+function opposite(direction: Direction): Direction {
+  return direction === "incoming" ? "outgoing" : "incoming";
+}
+
 export function forecastHours(input: ForecastInput): HourForecast[] {
   const hours = currentForNudge(input.hours);
   const constriction = constrictionFactor(input.channelWidthM, input.channelDepthM);
+  // The tide alone: the level shown under the slider and the day's range.
   const residual = residualSeries(hours);
+  // Tide plus through-flow: everything that decides direction and strength reads its slope.
+  const through = throughflowSeries(hours, input.inwardBearingDeg);
+  const flow = flowSeries(residual, through);
   const classified = (input.reports ?? []).map((report) => classifyReport(report, hours));
-  const offset = fitPhaseOffset(classified, hours, residual);
-  applyPullSlopes(classified, hours, residual, offset);
-  const tides = centeredTides(hours, residual);
-  const speedFactor = fitSpeedFactor(
-    classified,
-    hours,
-    residual,
-    tides,
-    offset,
-    input.inwardBearingDeg,
-    constriction,
-  );
+  for (const item of classified) item.through = reportThroughflow(item, through);
+  const offset = fitPhaseOffset(classified, hours, flow);
+  applyPullSlopes(classified, hours, flow, offset);
+  const tides = centeredTides(hours, residual, flow);
+  const speedFactor = fitSpeedFactor(classified, hours, flow, tides, offset, constriction);
   const allowHighConfidence = input.allowHighConfidence ?? true;
-  const reportBands = ownHourBands(
-    classified,
-    hours,
-    residual,
-    tides,
-    offset,
-    input.inwardBearingDeg,
-    speedFactor,
-    constriction,
-  );
+  const reportBands = ownHourBands(classified, hours, flow, tides, offset, speedFactor, constriction);
   return finishRuns(
     hours,
     residual,
-    input.inwardBearingDeg,
+    flow,
     offset,
     speedFactor,
     tides,
@@ -157,7 +164,7 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   const failed = report.slopeM === null && finite.length === 0;
   const referenceTimeMs = hours.length > 0 ? parseWall(hours[0].time) : Number.NaN;
   const temporalWeight = reportTemporalWeight(report.time, referenceTimeMs);
-  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed, temporalWeight };
+  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed, temporalWeight, through: 0 };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
   const centerSlope = slopes ? slopes[WINDOW_HALF_HOURS] : null;
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
@@ -177,26 +184,44 @@ function hourSlope(slopes: readonly (number | null)[] | null, report: Report): n
   return typeof report.slopeM === "number" && Number.isFinite(report.slopeM) ? report.slopeM : null;
 }
 
-/** Lagged residual slope at an in-series report. Outside reports keep the stored slope. */
+/** Lagged net slope at an in-series report. Outside reports keep the stored tide slope plus their through-flow. */
 function applyPullSlopes(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   offset: number,
 ): void {
   for (const item of classified) {
     if (item.seriesIndex < 0) {
-      item.pullSlope = item.storedHourSlope;
+      item.pullSlope = item.storedHourSlope == null ? null : item.storedHourSlope + item.through;
       continue;
     }
     const shifted = shiftIndex(hours, item.seriesIndex, offset);
-    item.pullSlope = shifted < 0 ? null : slopeFromResidual(residual, shifted);
+    item.pullSlope = shifted < 0 ? null : slopeFromResidual(flow, shifted);
   }
 }
 
-/** Residual range and steepest slope over the 25 hours centered on each displayed hour. */
-function centeredTides(hours: readonly MarineHour[], residual: readonly (number | null)[]): TideStats[] {
-  return hours.map((_, index) => tideWindow(hours, residual, index));
+/** The tide's range, the steepest net flow and the steepest tide over the 25 hours centered on each hour. */
+function centeredTides(
+  hours: readonly MarineHour[],
+  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
+): TideStats[] {
+  return hours.map((_, index) => {
+    const tide = tideWindow(hours, residual, index);
+    return { range: tide.range, maxAbs: tideWindow(hours, flow, index).maxAbs, maxAbsTide: tide.maxAbs };
+  });
+}
+
+/**
+ * The day's top band. The tide's range sets it, and through-flow adds the range a tide would need to run that much
+ * faster: a tide's steepest slope is about π × range / 12.42 h, so extra slope × 12.42 / π is extra range. With no
+ * through-flow this is the tide's own envelope; with a flat tide the through-flow alone sets it.
+ */
+function envelopeFor(stats: TideStats, constriction: number): Strength | null {
+  if (stats.range == null || stats.maxAbs == null) return null;
+  const extraSlope = Math.max(0, stats.maxAbs - (stats.maxAbsTide ?? stats.maxAbs));
+  return strengthFromRange(stats.range + (extraSlope * M2_PERIOD_HOURS) / Math.PI, constriction);
 }
 
 export function tideWindow(
@@ -229,41 +254,16 @@ type OpenHour = {
   time: string;
   direction: Direction;
   strength: Strength;
+  /** Net slope: tide plus through-flow. */
   slope: number;
-  nudge: number;
   index: number;
-  levelM: number;
 };
 
-// Each hour keeps its own band, so a run eases in from slack, peaks, and eases out.
-// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band, never down to slack.
-// A slack hour stays put.
-function meanNudge(open: OpenHour[]) {
-  let nudge = 0;
-  let count = 0;
-  for (const hour of open) {
-    if (Math.abs(hour.slope) < SLACK_SLOPE_M) continue;
-    nudge += hour.nudge;
-    count += 1;
-  }
-  if (count === 0) return;
-  nudge /= count;
-  if (Math.abs(nudge) >= NUDGE_BAND) {
-    const favored: Direction = nudge > 0 ? "incoming" : "outgoing";
-    const withTide = open[0].direction === favored;
-    for (const hour of open) {
-      if (hour.strength === "slack") continue;
-      // Drift against the tide slows a flowing hour. It does not stop it, so the floor is mild.
-      hour.strength = withTide ? shiftStrength(hour.strength, 1) : STRENGTHS[Math.max(1, bandIndex(hour.strength) - 1)];
-    }
-  }
-}
-
-/** One walk over the series. Each hour gets its own band, each closed run is nudged, then reports pull. */
+/** One walk over the series. Each hour gets its own band from the net flow, then reports pull. */
 function finishRuns(
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
-  inwardBearingDeg: number,
+  flow: readonly (number | null)[],
   offset: number,
   speedFactor: number,
   tides: readonly TideStats[],
@@ -274,7 +274,7 @@ function finishRuns(
 ): HourForecast[] {
   // A report fades for six hours and must not cut the run.
   // It moves later hours by how far it differed from the model at its own hour, so a report that agrees changes nothing.
-  const settled = settledHours(hours, residual, inwardBearingDeg, offset, speedFactor, tides, constriction);
+  const settled = settledHours(hours, flow, offset, speedFactor, tides, constriction);
   const modelBands = new Map(settled.map((open) => [open.index, open.strength]));
   const reportPull = (hour: OpenHour): HourForecast => {
     const pull = aggregateReportPull(hour, hours, classified, modelBands);
@@ -286,7 +286,7 @@ function finishRuns(
         classified,
         reportBands,
         hours,
-        residual,
+        flow,
         offset,
         direction: pull.direction,
         strength: pull.strength,
@@ -295,69 +295,43 @@ function finishRuns(
         allowHighConfidence,
         hourTime: hour.time,
       }),
-      levelM: hour.levelM,
+      levelM: residual[hour.index] as number,
     };
   };
 
   return settled.map(reportPull);
 }
 
-/** Open hours after their own band and the mean nudge, before the report pull. */
+/** Open hours with their own band from the net flow, before the report pull. */
 function settledHours(
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
-  inwardBearingDeg: number,
+  flow: readonly (number | null)[],
   offset: number,
   speedFactor: number,
   tides: readonly TideStats[],
   constriction: number = 1.0,
 ): OpenHour[] {
   const settled: OpenHour[] = [];
-  let run: OpenHour[] = [];
-  const closeRun = () => {
-    if (run.length === 0) return;
-    meanNudge(run);
-    for (const hour of run) settled.push(hour);
-    run = [];
-  };
-
   for (let index = 0; index < hours.length; index += 1) {
-    const hour = hours[index];
-    // Displayed residual stays on this clock hour. Direction and strength use the lagged slope.
-    const levelM = residual[index];
-    if (levelM == null) continue;
+    // The flow series has a value exactly where the residual does, so this skips the hours with no tide level.
+    if (flow[index] == null) continue;
     const shifted = shiftIndex(hours, index, offset);
     if (shifted < 0) continue;
-    const slope = slopeFromResidual(residual, shifted);
+    const slope = slopeFromResidual(flow, shifted);
     if (slope == null || !Number.isFinite(slope)) continue;
-    const tideDirection = directionFromSlope(slope);
-    // C8: exact-zero slope is slack. Direction is the next signed lagged slope, never the previous hour or the ocean current.
-    let effectiveDirection = tideDirection;
-    if (effectiveDirection == null) {
-      effectiveDirection = nextSignedDirection(hours, residual, offset, index);
-      if (effectiveDirection == null) continue;
+    // C8: exact-zero slope is slack. Direction is the next signed lagged slope, never the previous hour.
+    let direction = directionFromSlope(slope);
+    if (direction == null) {
+      direction = nextSignedDirection(hours, flow, offset, index);
+      if (direction == null) continue;
     }
     const stats = tides[index];
-    if (stats.range == null || stats.maxAbs == null) continue;
-    const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
-    const opened: OpenHour = {
-      time: hour.time,
-      direction: effectiveDirection,
-      strength: applySpeed(tideStrength, speedFactor),
-      slope,
-      nudge: monsoonNudge(hour, inwardBearingDeg),
-      index,
-      levelM,
-    };
-    if (run.length > 0 && !sameRun(run[run.length - 1], opened)) closeRun();
-    run.push(opened);
+    const envelope = envelopeFor(stats, constriction);
+    if (envelope == null || stats.maxAbs == null) continue;
+    const strength = hourlyStrength(Math.abs(slope), stats.maxAbs, envelope);
+    settled.push({ time: hours[index].time, direction, strength: applySpeed(strength, speedFactor), slope, index });
   }
-  closeRun();
   return settled;
-}
-
-function sameRun(left: { direction: Direction; time: string }, right: { direction: Direction; time: string }): boolean {
-  return left.direction === right.direction && Math.abs(parseWall(right.time) - parseWall(left.time)) <= 2 * HOUR_MS;
 }
 
 /** Naive clock strings are Maldives wall time. Offset strings are converted to that wall clock. */
@@ -405,7 +379,7 @@ export function residualRangeAt(hours: readonly MarineHour[], time: string): num
 function fitPhaseOffset(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
 ): number {
   // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
   const voters = classified.filter((item) => item.kind !== "unusable" && !isSlackReport(item));
@@ -420,7 +394,7 @@ function fitPhaseOffset(
     let weightedScore = 0;
     let count = 0;
     for (const voter of voters) {
-      if (phaseScore(voter, hours, residual, k) > 0) {
+      if (phaseScore(voter, hours, flow, k) > 0) {
         weightedScore += voter.temporalWeight;
         count += 1;
       }
@@ -453,22 +427,21 @@ function fitPhaseOffset(
 function phaseScore(
   item: ClassifiedReport,
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   lag: number,
 ): number {
   // A missing in-series lag does not vote and does not use the unshifted hour.
   if (item.kind === "in-series" && lag !== 0 && shiftIndex(hours, item.index, lag) < 0) return 0;
-  const tide = tideDirectionAtLag(item, hours, residual, lag);
+  const tide = tideDirectionAtLag(item, hours, flow, lag);
   return tide != null && tide === item.report.direction ? 1 : 0;
 }
 
 function fitSpeedFactor(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   tides: readonly TideStats[],
   offset: number,
-  inwardBearingDeg: number,
   constriction: number = 1.0,
 ): number {
   let weightedRatioSum = 0;
@@ -476,9 +449,9 @@ function fitSpeedFactor(
   let count = 0;
 
   for (const item of classified) {
-    const prior = speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction);
+    const prior = speedPrior(item, hours, flow, tides, offset, constriction);
     if (!prior) continue;
-    const reportPhase = tideDirectionAtLag(item, hours, residual, offset);
+    const reportPhase = tideDirectionAtLag(item, hours, flow, offset);
     if (!isSlackReport(item) && reportPhase != null && reportPhase !== item.report.direction) continue;
     const ratio = (bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5);
     const w = item.temporalWeight;
@@ -496,7 +469,7 @@ function confidenceFor(input: {
   classified: readonly ClassifiedReport[];
   reportBands: ReadonlyMap<ClassifiedReport, Strength | null>;
   hours: readonly MarineHour[];
-  residual: readonly (number | null)[];
+  flow: readonly (number | null)[];
   offset: number;
   direction: Direction;
   strength: Strength;
@@ -510,7 +483,7 @@ function confidenceFor(input: {
   const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
 
   const samePhase = (item: ClassifiedReport) => {
-    const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
+    const reportPhase = tideDirectionAtLag(item, input.hours, input.flow, input.offset);
     return reportPhase != null && reportPhase === input.tideDirection;
   };
 
@@ -655,47 +628,50 @@ function averageGap(
   return sum / totalWeight;
 }
 
-/** Tide direction at a lag. An in-series miss is outside the series, not the unshifted hour. */
+/**
+ * Net flow direction (tide plus through-flow) at a report, at a lag. An in-series miss is outside the series, not
+ * the unshifted hour.
+ */
 function tideDirectionAtLag(
   item: ClassifiedReport,
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   lag: number,
 ): Direction | null {
   if (item.kind === "unusable") return null;
   if (item.kind === "single-slope") {
-    // One stored slope can support lag 0 or a 6-hour flip, not a measured intermediate lag.
-    const sign = directionFromSlope(item.slope);
+    // One stored slope can support lag 0 or a 6-hour flip, not a measured intermediate lag. Six hours on the tide has
+    // turned; with no through-flow so has the flow, but with through-flow one slope cannot say.
+    const sign = directionFromSlope(item.slope + item.through);
     if (!sign) return null;
     if (lag === 0) return sign;
-    if (lag === WINDOW_HALF_HOURS || lag === -WINDOW_HALF_HOURS) return opposite(sign);
+    if (item.through === 0 && Math.abs(lag) === WINDOW_HALF_HOURS) return opposite(sign);
     return null;
   }
   if (item.kind === "slope-window") {
     const slope = item.slopes[WINDOW_HALF_HOURS + lag];
     if (typeof slope !== "number" || !Number.isFinite(slope)) return null;
-    return directionFromSlope(slope);
+    return directionFromSlope(slope + item.through);
   }
   const index = shiftIndex(hours, item.index, lag);
   if (index < 0) return null;
-  const slope = slopeFromResidual(residual, index);
+  const slope = slopeFromResidual(flow, index);
   return slope == null ? null : directionFromSlope(slope);
 }
 
 function speedPrior(
   item: ClassifiedReport,
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   tides: readonly TideStats[],
   offset: number,
-  inwardBearingDeg: number,
   constriction: number = 1.0,
 ): Strength | null {
   if (item.failed) return null;
   if (item.seriesIndex >= 0) {
     // A fitted lag is the lagged slope's own band. Peak band would treat a matching report as a miss.
-    if (offset !== 0) return laggedSlopeBand(item, hours, residual, tides, offset, constriction);
-    return shownStrength(hours, residual, inwardBearingDeg, offset, tides, item.seriesIndex, constriction);
+    if (offset !== 0) return laggedSlopeBand(item, hours, flow, tides, offset, constriction);
+    return shownStrength(hours, flow, offset, tides, item.seriesIndex, constriction);
   }
   return storedPrior(item, offset, constriction);
 }
@@ -708,10 +684,9 @@ function speedPrior(
 function ownHourBands(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   tides: readonly TideStats[],
   offset: number,
-  inwardBearingDeg: number,
   speedFactor: number,
   constriction: number,
 ): Map<ClassifiedReport, Strength | null> {
@@ -721,7 +696,7 @@ function ownHourBands(
         item.failed
           ? null
           : item.seriesIndex >= 0
-            ? speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction)
+            ? speedPrior(item, hours, flow, tides, offset, constriction)
             : gradedStoredBand(item, offset, constriction);
       return [item, band == null ? null : applySpeed(band, speedFactor)];
     }),
@@ -735,7 +710,7 @@ function ownHourBands(
  */
 function storedPrior(item: ClassifiedReport, offset: number, constriction: number): Strength | null {
   if (item.storedHourSlope == null) return null;
-  if (!isGradedStored(item)) return Math.abs(item.storedHourSlope) < SLACK_SLOPE_M ? "slack" : "mild";
+  if (!isGradedStored(item)) return Math.abs(item.storedHourSlope + item.through) < SLACK_SLOPE_M ? "slack" : "mild";
   return gradedStoredBand(item, offset, constriction);
 }
 
@@ -751,38 +726,41 @@ function gradedStoredBand(item: ClassifiedReport, offset: number, constriction: 
   const slope = item.slopes[WINDOW_HALF_HOURS + offset];
   if (typeof slope !== "number") return null;
   // Thirteen hours span more than a half cycle, so the window holds this run's steepest hour.
-  const maxAbs = Math.max(...item.slopes.map((value) => (typeof value === "number" ? Math.abs(value) : 0)));
-  return hourlyStrength(Math.abs(slope), maxAbs, strengthFromRange(range, constriction));
+  const tides = item.slopes.map((value) => (typeof value === "number" ? Math.abs(value) : 0));
+  const nets = item.slopes.map((value) => (typeof value === "number" ? Math.abs(value + item.through) : 0));
+  const stats: TideStats = { range, maxAbs: Math.max(...nets), maxAbsTide: Math.max(...tides) };
+  const envelope = envelopeFor(stats, constriction);
+  return envelope == null ? null : hourlyStrength(Math.abs(slope + item.through), stats.maxAbs as number, envelope);
 }
 
 function laggedSlopeBand(
   item: ClassifiedReport,
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   tides: readonly TideStats[],
   offset: number,
   constriction: number = 1.0,
 ): Strength | null {
   const index = shiftIndex(hours, item.seriesIndex, offset);
   if (index < 0) return null;
-  const slope = slopeFromResidual(residual, index);
+  const slope = slopeFromResidual(flow, index);
   if (slope == null) return null;
   const stats = tides[item.seriesIndex];
-  if (stats.range == null || stats.maxAbs == null) return null;
-  return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
+  const envelope = envelopeFor(stats, constriction);
+  if (envelope == null || stats.maxAbs == null) return null;
+  return hourlyStrength(Math.abs(slope), stats.maxAbs, envelope);
 }
 
-/** Clock-hour strength after peak band and mean nudge, before the report pull. Factor 1, so the fit is not circular. */
+/** Clock-hour strength from the net flow, before the report pull. Factor 1, so the fit is not circular. */
 function shownStrength(
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
-  inwardBearingDeg: number,
+  flow: readonly (number | null)[],
   offset: number,
   tides: readonly TideStats[],
   index: number,
   constriction: number = 1.0,
 ): Strength | null {
-  for (const hour of settledHours(hours, residual, inwardBearingDeg, offset, 1, tides, constriction)) {
+  for (const hour of settledHours(hours, flow, offset, 1, tides, constriction)) {
     if (hour.index === index) return hour.strength;
   }
   return null;
@@ -805,10 +783,6 @@ function slopesOpposite(left: number | null, right: number | null): boolean {
 
 function isSlackReport(item: ClassifiedReport): boolean {
   return item.report.strength === "slack";
-}
-
-function opposite(direction: Direction): Direction {
-  return direction === "incoming" ? "outgoing" : "incoming";
 }
 
 /**
@@ -886,11 +860,47 @@ export function monsoonInwardFlux(drift: OceanDrift, inwardBearingDeg: number): 
   return drift.velocityMs * Math.cos(radians);
 }
 
-function monsoonNudge(hour: MarineHour, inwardBearingDeg: number): number {
+/** Through-flow for one hour, in slope units. A calm hour (exactly zero drift) has none. */
+function throughflowFor(hour: MarineHour, inwardBearingDeg: number): number {
   if (hour.currentVelocityMs === 0) return 0;
-  const drift = resolveHourDrift(hour);
-  const inward = monsoonInwardFlux(drift, inwardBearingDeg);
-  return Math.max(-1, Math.min(1, inward / NUDGE_SATURATION_MS));
+  return THROUGHFLOW_SLOPE_PER_MS * monsoonInwardFlux(resolveHourDrift(hour), inwardBearingDeg);
+}
+
+/** Through-flow for each hour of a series whose current is already the 25-hour drift (currentForNudge). */
+function throughflowSeries(hours: readonly MarineHour[], inwardBearingDeg: number): number[] {
+  return hours.map((hour) => throughflowFor(hour, inwardBearingDeg));
+}
+
+/**
+ * The residual plus the accumulated through-flow, so that its hour-to-hour change is the tide's slope plus that
+ * hour's through-flow: the net flow. It has a value exactly where the residual does. Only its slopes mean anything.
+ */
+function flowSeries(residual: readonly (number | null)[], through: readonly number[]): (number | null)[] {
+  let added = 0;
+  return residual.map((level, index) => {
+    const value = level == null ? null : level + added;
+    added += through[index] ?? 0;
+    return value;
+  });
+}
+
+/**
+ * Through-flow at a report's hour. Inside the series it is that hour's; outside, the value saved with the report.
+ * Older reports saved none, and they count as having none: the seasonal curve runs about twice the measured drift.
+ */
+function reportThroughflow(item: ClassifiedReport, through: readonly number[]): number {
+  if (item.seriesIndex >= 0) return through[item.seriesIndex] ?? 0;
+  if (NUDGE_SOURCE === "off") return 0;
+  const saved = item.report.throughflowM;
+  return typeof saved === "number" && Number.isFinite(saved) ? saved : 0;
+}
+
+/** Through-flow at the hour nearest `time`, in slope units, to save with a report. Null when that hour is missing. */
+export function throughflowAt(hours: readonly MarineHour[], time: string, inwardBearingDeg: number): number | null {
+  const drifted = currentForNudge(hours);
+  const index = nearestIndex(drifted, parseWall(time), HOUR_MATCH_MS);
+  if (index < 0) return null;
+  return throughflowFor(drifted[index], inwardBearingDeg);
 }
 
 function residualSeries(hours: readonly MarineHour[]): (number | null)[] {
@@ -979,14 +989,14 @@ function directionFromSlope(slope: number): Direction | null {
 /** Later clock hours only. Same lag and residual slope as this hour. Never the previous hour or the ocean current. */
 function nextSignedDirection(
   hours: readonly MarineHour[],
-  residual: readonly (number | null)[],
+  flow: readonly (number | null)[],
   offset: number,
   index: number,
 ): Direction | null {
   for (let later = index + 1; later < hours.length; later += 1) {
     const shifted = shiftIndex(hours, later, offset);
     if (shifted < 0) continue;
-    const slope = slopeFromResidual(residual, shifted);
+    const slope = slopeFromResidual(flow, shifted);
     if (slope == null) continue;
     const direction = directionFromSlope(slope);
     if (direction != null) return direction;

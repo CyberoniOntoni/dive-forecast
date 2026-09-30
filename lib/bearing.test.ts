@@ -10,7 +10,7 @@ function seeded(id: string, lat: number, lon: number, atollId = "cross"): Site {
 }
 
 describe("inwardBearingDeg", () => {
-  it("nudges opposite sides of one centroid in opposite ways for one regional current", () => {
+  it("sends opposite sides of one atoll opposite ways under one regional current", () => {
     const west = seeded("west", 0, -2);
     const east = seeded("east", 0, 2);
     const mates = [
@@ -37,13 +37,12 @@ describe("inwardBearingDeg", () => {
     const westHours = forecastHours({ hours, inwardBearingDeg: westBearing, reports: [] });
     const eastHours = forecastHours({ hours, inwardBearingDeg: eastBearing, reports: [] });
 
+    // The tide rises gently everywhere, but an eastward drift of 0.4 m/s pushes through the atoll: the west side,
+    // facing the current, runs in, and the east side runs out. Not a bowl filling through every channel at once.
     expect(westHours.length).toBeGreaterThan(0);
+    expect(eastHours.length).toBe(westHours.length);
     expect(westHours.every((hour) => hour.direction === "incoming")).toBe(true);
-    expect(eastHours.every((hour) => hour.direction === "incoming")).toBe(true);
-    // Both start mild. The drift lifts the west side a band; on the east it runs against the tide, which slows
-    // a flowing hour but never stops it, so mild is the floor.
-    expect(westHours.every((hour) => hour.strength === "strong")).toBe(true);
-    expect(eastHours.every((hour) => hour.strength === "mild")).toBe(true);
+    expect(eastHours.every((hour) => hour.direction === "outgoing")).toBe(true);
   });
 
   it("bears from an outside point toward the pin when that is the only seeded site", () => {

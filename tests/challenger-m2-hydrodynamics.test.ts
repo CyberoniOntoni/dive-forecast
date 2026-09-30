@@ -87,9 +87,9 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       expect(Number.isFinite(fluxSuper)).toBe(true);
     });
 
-    it("1.2 Antiparallel 2.0 m/s draw against incoming flood tide does NOT flip direction", () => {
-      // Incoming flood tide (sea level rising) with inward bearing 90°.
-      // An extreme 2.0 m/s ocean current is drawing outward (270°).
+    it("1.2 Antiparallel 2.0 m/s draw overpowers the flood: the channel runs out all day", () => {
+      // Flood tide with inward bearing 90°, and an extreme 2.0 m/s ocean current drawing outward (270°).
+      // Through-flow is 2.0 m/s × THROUGHFLOW_SLOPE_PER_MS = 1.4 m/h against a tide slope of at most about 0.2 m/h.
       const hours = createSyntheticMarineSeries({
         startDateIso: "2026-07-15T00:00:00Z",
         amplitude: 0.4,
@@ -103,22 +103,12 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       });
 
       expect(forecast.length).toBeGreaterThan(0);
-      for (let i = 0; i < forecast.length; i++) {
-        const hour = forecast[i];
-        // At hours 1 to 5, tide is rising (sin(pi/6 * i) is increasing).
-        // The slope is positive. The direction MUST remain incoming!
-        const hourNum = parseInt(hour.time.slice(11, 13), 10);
-        const cycleHour = hourNum % 12;
-        if (cycleHour >= 1 && cycleHour <= 2) {
-          // Definitively rising tidal slope
-          expect(hour.direction).toBe("incoming");
-        }
-      }
+      expect(forecast.every((hour) => hour.direction === "outgoing")).toBe(true);
+      expect(forecast.every((hour) => hour.strength !== "slack")).toBe(true);
     });
 
-    it("1.3 Antiparallel 2.0 m/s push against outgoing ebb tide does NOT flip direction", () => {
-      // Outgoing ebb tide (sea level falling) with inward bearing 90°.
-      // An extreme 2.0 m/s ocean current is pushing inward (90°).
+    it("1.3 An aligned 2.0 m/s push overpowers the ebb: the channel runs in all day", () => {
+      // Ebb and flood tide with inward bearing 90°, and an extreme 2.0 m/s ocean current pushing inward (90°).
       const hours = createSyntheticMarineSeries({
         startDateIso: "2026-07-15T00:00:00Z",
         amplitude: 0.4,
@@ -132,15 +122,7 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       });
 
       expect(forecast.length).toBeGreaterThan(0);
-      for (let i = 0; i < forecast.length; i++) {
-        const hour = forecast[i];
-        const hourNum = parseInt(hour.time.slice(11, 13), 10);
-        const cycleHour = hourNum % 12;
-        if (cycleHour >= 7 && cycleHour <= 8) {
-          // Definitively falling tidal slope (crest at 3, trough at 9)
-          expect(hour.direction).toBe("outgoing");
-        }
-      }
+      expect(forecast.every((hour) => hour.direction === "incoming")).toBe(true);
     });
 
     it("1.4 Purely orthogonal drift (0° and 180° onto 90° bearing) yields zero projected flux and identical forecast to zero velocity", () => {
@@ -290,7 +272,7 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
   // 2. Critical Invariant Verification
   // ────────────────────────────────────────────────────────────────────────────
   describe("2. Invariant Preservation (Slope Dictates Direction, Calm Preserved, Superposition)", () => {
-    it("2.1 Invariant 1: Residual tidal slope strictly dictates direction across all 360° pass bearings under extreme opposing drift", () => {
+    it("2.1 Invariant 1: net flow decides direction at every bearing — an extreme opposing drift runs every channel out, no drift leaves the tide in charge", () => {
       // Test all 12 cardinal and intercardinal compass bearings: 0°, 30°, 60°, ..., 330°
       const testBearings = Array.from({ length: 12 }, (_, i) => i * 30);
 
@@ -323,10 +305,11 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
           inwardBearingDeg: bearing,
         });
 
-        for (let i = 0; i < forecast.length; i++) {
-          // Zero direction flips allowed regardless of bearing or extreme drift
-          expect(forecast[i].direction).toBe(pureForecast[i].direction);
-        }
+        // The drift heads straight out of the channel at 2.0 m/s: it runs out every hour, whatever the bearing.
+        expect(forecast.every((hour) => hour.direction === "outgoing")).toBe(true);
+        // With no drift the tide alone decides, identically at every bearing.
+        const firstBearing = forecastHours({ hours: pureTidalHours, inwardBearingDeg: 0 });
+        expect(pureForecast.map((hour) => hour.direction)).toEqual(firstBearing.map((hour) => hour.direction));
       }
     });
 
@@ -455,7 +438,7 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       }
     });
 
-    it("2.4 Monotonicity check: Constriction amplification and aligned monsoon push both monotonically increase or preserve current strength", () => {
+    it("2.4 Monotonicity check: narrowing and an aligned monsoon push never weaken the flood; an opposing draw turns it out", () => {
       const baseHoursCalm = createSyntheticMarineSeries({
         startDateIso: "2026-07-15T00:00:00Z",
         amplitude: 0.3,
@@ -482,15 +465,17 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       const forecastAligned = forecastHours({ hours: baseHoursAligned, inwardBearingDeg: 90 });
       const forecastOpposing = forecastHours({ hours: baseHoursOpposing, inwardBearingDeg: 90 });
 
-      for (let i = 0; i < forecastCalm.length; i++) {
-        if (forecastCalm[i].direction === "incoming") {
-          const rankCalm = STRENGTH_LEVELS[forecastCalm[i].strength];
-          const rankAligned = STRENGTH_LEVELS[forecastAligned[i].strength];
-          const rankOpposing = STRENGTH_LEVELS[forecastOpposing[i].strength];
-
-          expect(rankAligned).toBeGreaterThanOrEqual(rankCalm);
-          expect(rankCalm).toBeGreaterThanOrEqual(rankOpposing);
-        }
+      const at = (list: typeof forecastCalm, time: string) => list.find((hour) => hour.time === time)!;
+      const calmIncoming = forecastCalm.filter((hour) => hour.direction === "incoming");
+      expect(calmIncoming.length).toBeGreaterThan(0);
+      for (const hour of calmIncoming) {
+        const aligned = at(forecastAligned, hour.time);
+        const opposing = at(forecastOpposing, hour.time);
+        // An aligned 1.5 m/s push keeps the flood running in, at least as strong.
+        expect(aligned.direction).toBe("incoming");
+        expect(STRENGTH_LEVELS[aligned.strength]).toBeGreaterThanOrEqual(STRENGTH_LEVELS[hour.strength]);
+        // A 1.5 m/s draw is stronger than this tide: it turns the flood out.
+        expect(opposing.direction).toBe("outgoing");
       }
 
       // 2. Test Constriction Monotonicity: Narrow Pass >= Open Pass
