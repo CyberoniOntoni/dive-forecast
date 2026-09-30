@@ -17,7 +17,6 @@ export const FORECAST_NOTICE =
   "The 8 km grid is weak in passes. Direction comes from the tide slope plus reports, not from the current at the dive pin.";
 
 const HOUR_MS = 60 * 60 * 1000;
-const TIE_M = 0.005;
 const SLACK_SLOPE_M = 0.02;
 const FADE_HOURS = 6;
 const MEAN_HALF_HOURS = 12;
@@ -33,7 +32,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/3";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/4";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -327,12 +326,7 @@ function settledHours(
     }
     const stats = tides[index];
     if (stats.range == null || stats.maxAbs == null) continue;
-    const tideStrength = hourlyStrength(
-      Math.abs(slope),
-      stats.maxAbs,
-      strengthFromRange(stats.range, constriction),
-      constriction,
-    );
+    const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
     const opened: OpenHour = {
       time: hour.time,
       direction: effectiveDirection,
@@ -703,7 +697,7 @@ function storedPrior(item: ClassifiedReport, offset: number, constriction: numbe
   if (typeof slope !== "number") return null;
   // Thirteen hours span more than a half cycle, so the window holds this run's steepest hour.
   const maxAbs = Math.max(...item.slopes.map((value) => (typeof value === "number" ? Math.abs(value) : 0)));
-  return hourlyStrength(Math.abs(slope), maxAbs, strengthFromRange(range, constriction), constriction);
+  return hourlyStrength(Math.abs(slope), maxAbs, strengthFromRange(range, constriction));
 }
 
 function laggedSlopeBand(
@@ -720,12 +714,7 @@ function laggedSlopeBand(
   if (slope == null) return null;
   const stats = tides[item.seriesIndex];
   if (stats.range == null || stats.maxAbs == null) return null;
-  return hourlyStrength(
-    Math.abs(slope),
-    stats.maxAbs,
-    strengthFromRange(stats.range, constriction),
-    constriction,
-  );
+  return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
 }
 
 /** Clock-hour strength after peak band and mean nudge, before the report pull. Factor 1, so the fit is not circular. */
@@ -954,20 +943,16 @@ export function strengthFromRange(range: number, constriction: number = 1.0): St
   return "too_strong";
 }
 
-/** Slack inside 5 mm, and below 0.02 m. The steepest hour takes the envelope. */
-export function hourlyStrength(
-  absSlope: number,
-  maxAbsSlope: number,
-  envelope: Strength,
-  constriction: number = 1.0,
-): Strength {
+/**
+ * Slack below 0.02 m an hour. The steepest hour takes the envelope and the rest ramp up to it on the raw slope.
+ * Channel narrowing is already in the envelope, so it does not also steepen the ramp.
+ */
+export function hourlyStrength(absSlope: number, maxAbsSlope: number, envelope: Strength): Strength {
   const top = bandIndex(envelope);
-  if (absSlope <= TIE_M || absSlope < SLACK_SLOPE_M || top <= 0) return "slack";
-  const effSlope = absSlope * constriction;
-  const effMaxSlope = maxAbsSlope * constriction;
-  const span = effMaxSlope - SLACK_SLOPE_M;
+  if (absSlope < SLACK_SLOPE_M || top <= 0) return "slack";
+  const span = maxAbsSlope - SLACK_SLOPE_M;
   if (!(span > 0)) return envelope;
-  const t = Math.min(1, Math.max(0, (effSlope - SLACK_SLOPE_M) / span));
+  const t = Math.min(1, Math.max(0, (absSlope - SLACK_SLOPE_M) / span));
   const index = Math.min(top, Math.max(1, Math.ceil(t * top - 1e-9)));
   return STRENGTHS[index];
 }

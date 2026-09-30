@@ -146,6 +146,20 @@ describe("forecastHours", () => {
     ).toBe("high");
   });
 
+  it("applies channel narrowing to the envelope only, not again to the hourly ramp", () => {
+    // A 1.2 m range is too strong with or without a narrow channel, so the two envelopes match.
+    // A 13-hour period spreads the hourly slopes so some sit where the old doubled narrowing moved them a band.
+    const hours = marineFromLevels(
+      "2026-09-22T00:00",
+      Array.from({ length: 72 }, (_, index) => 0.6 * Math.sin((2 * Math.PI * index) / 13)),
+    );
+    const open = forecastHours({ hours, inwardBearingDeg: 0 });
+    const narrow = forecastHours({ hours, inwardBearingDeg: 0, channelWidthM: 50, channelDepthM: 10 });
+    expect(constrictionFactor(50, 10)).toBe(2.5);
+    expect(narrow.map((hour) => hour.strength)).toEqual(open.map((hour) => hour.strength));
+    expect(new Set(open.map((hour) => hour.strength)).size).toBeGreaterThan(2);
+  });
+
   it("grades an old report from its saved range and window instead of calling every flowing hour mild", () => {
     // 12-hour sine of amplitude 0.35 m: a 0.7 m range, so the envelope is strong and the steepest hours are strong.
     const sine = (index: number) => 0.35 * Math.sin((2 * Math.PI * index) / 12);
