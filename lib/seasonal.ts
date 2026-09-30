@@ -21,9 +21,9 @@ function smoothstep(t: number): number {
  * - Northeast Monsoon (Iruvai, Dec 1 - Mar 31):
  *   Westward drift (heading ~270°), velocity ~0.35 - 0.40 m/s peaking in mid-winter (Jan/Feb).
  * - Spring Inter-Monsoon Transition (April 1 - Apr 30):
- *   Smooth C^1 transition dipping to calm conditions (~0.05 m/s) with heading rotating 270° -> 90° via South (180°).
+ *   Continuous transition (speed has no jump, though its rate of change does at the month edges) dipping to calm conditions (~0.05 m/s) with heading rotating 270° -> 90° via South (180°).
  * - Autumn Inter-Monsoon Transition (November 1 - Nov 30):
- *   Smooth C^1 transition dipping to calm conditions (~0.05 m/s) with heading rotating 90° -> 270° via South (180°).
+ *   Continuous transition (speed has no jump, though its rate of change does at the month edges) dipping to calm conditions (~0.05 m/s) with heading rotating 90° -> 270° via South (180°).
  *
  * Uses UTC date methods throughout to guarantee timezone invariance.
  */

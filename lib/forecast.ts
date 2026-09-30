@@ -486,12 +486,12 @@ function confidenceFor(input: {
   offset: number;
   direction: Direction;
   strength: Strength;
-  tideDirection: Direction | null;
+  tideDirection: Direction;
   contradicted: boolean;
   allowHighConfidence: boolean;
   hourTime?: string;
 }): "low" | "medium" | "high" {
-  if (input.classified.length === 0 || input.contradicted || input.tideDirection == null) return "low";
+  if (input.classified.length === 0 || input.contradicted) return "low";
 
   const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
 
@@ -881,6 +881,11 @@ function reachesMeanSpan(times: readonly number[]): boolean {
   return max - min >= 2 * MEAN_HALF_HOURS * HOUR_MS;
 }
 
+/**
+ * Residual change over the hour after this one. The forward difference is kept on purpose: a centred one moves
+ * turns half an hour earlier and scored worse on the replay benchmark (direction 91.3% to 89.1%, slack 20 to
+ * 30 minutes). The half-hour lead likely stands in for the pass lagging the ocean. Revisit with real reports.
+ */
 function slopeFromResidual(residual: readonly (number | null)[], index: number): number | null {
   const level = residual[index];
   if (level == null) return null;
