@@ -8,6 +8,13 @@
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807044"
     },
     {
+      "id": "gaafaru",
+      "name": "Gaafaru",
+      "oceanLat": 4.75,
+      "oceanLon": 73.58,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807125"
+    },
+    {
       "id": "south-male",
       "name": "South Male Atoll",
       "oceanLat": 4.06137,

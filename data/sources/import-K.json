@@ -1,0 +1,2701 @@
+{
+  "atollCode": "K",
+  "generatedAt": "2026-09-30T13:16:46.536Z",
+  "candidates": [
+    {
+      "guideId": 36,
+      "name": "Lady Christine",
+      "lat": 4.775241,
+      "lon": 73.391647,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lady-christine",
+        "name": "Lady Christine",
+        "atollId": "gaafaru",
+        "lat": 4.775241,
+        "lon": 73.391647,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 138,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 37,
+      "name": "Erlangen",
+      "lat": 4.7864,
+      "lon": 73.449722,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "erlangen",
+        "name": "Erlangen",
+        "atollId": "gaafaru",
+        "lat": 4.7864,
+        "lon": 73.449722,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 190,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 38,
+      "name": "SS Sea Gull",
+      "lat": 4.755209,
+      "lon": 73.501639,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ss-sea-gull",
+        "name": "SS Sea Gull",
+        "atollId": "gaafaru",
+        "lat": 4.755209,
+        "lon": 73.501639,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 9,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 233,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 39,
+      "name": "Kagi",
+      "lat": 4.675592,
+      "lon": 73.501403,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kagi",
+        "name": "Kagi",
+        "atollId": "north-male",
+        "lat": 4.675592,
+        "lon": 73.501403,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 177,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 40,
+      "name": "Vah Kandu",
+      "lat": 4.678486,
+      "lon": 73.533377,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vah-kandu",
+        "name": "Vah Kandu",
+        "atollId": "north-male",
+        "lat": 4.678486,
+        "lon": 73.533377,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 223,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 41,
+      "name": "Rassag Place",
+      "lat": 4.589007,
+      "lon": 73.597444,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rassag-place",
+        "name": "Rassag Place",
+        "atollId": "north-male",
+        "lat": 4.589007,
+        "lon": 73.597444,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 225,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 42,
+      "name": "Helengeli Thila",
+      "lat": 4.633687,
+      "lon": 73.567227,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "helengeli-thila",
+        "name": "Helengeli Thila",
+        "atollId": "north-male",
+        "lat": 4.633687,
+        "lon": 73.567227,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 232,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 43,
+      "name": "Guruwa Faru",
+      "lat": 4.554427,
+      "lon": 73.622742,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "guruwa-faru",
+        "name": "Guruwa Faru",
+        "atollId": "north-male",
+        "lat": 4.554427,
+        "lon": 73.622742,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 230,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 44,
+      "name": "Kagi  Kandu",
+      "lat": 4.699475,
+      "lon": 73.506711,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kagi-kandu",
+        "name": "Kagi  Kandu",
+        "atollId": "north-male",
+        "lat": 4.699475,
+        "lon": 73.506711,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 199,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 45,
+      "name": "Fairytale Reef",
+      "lat": 4.551343,
+      "lon": 73.625913,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fairytale-reef",
+        "name": "Fairytale Reef",
+        "atollId": "north-male",
+        "lat": 4.551343,
+        "lon": 73.625913,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 226,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 46,
+      "name": "Kuda Kandu",
+      "lat": 4.522573,
+      "lon": 73.663033,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuda-kandu-2",
+        "name": "Kuda Kandu",
+        "atollId": "north-male",
+        "lat": 4.522573,
+        "lon": 73.663033,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 225,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 47,
+      "name": "Far Reef",
+      "lat": 4.496709,
+      "lon": 73.68088,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "far-reef",
+        "name": "Far Reef",
+        "atollId": "north-male",
+        "lat": 4.496709,
+        "lon": 73.68088,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 223,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 48,
+      "name": "Miyaru Faru",
+      "lat": 4.527035,
+      "lon": 73.654885,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "miyaru-faru",
+        "name": "Miyaru Faru",
+        "atollId": "north-male",
+        "lat": 4.527035,
+        "lon": 73.654885,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 216,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 49,
+      "name": "Miyaru Thila",
+      "lat": 4.529715,
+      "lon": 73.65093,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "miyaru-thila",
+        "name": "Miyaru Thila",
+        "atollId": "north-male",
+        "lat": 4.529715,
+        "lon": 73.65093,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 215,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 50,
+      "name": "Long Reef",
+      "lat": 4.478021,
+      "lon": 73.684842,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "long-reef",
+        "name": "Long Reef",
+        "atollId": "north-male",
+        "lat": 4.478021,
+        "lon": 73.684842,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 247,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 51,
+      "name": "Prisca Head",
+      "lat": 4.483383,
+      "lon": 73.694341,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "prisca-head",
+        "name": "Prisca Head",
+        "atollId": "north-male",
+        "lat": 4.483383,
+        "lon": 73.694341,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 223,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 52,
+      "name": "Prisca Corner",
+      "lat": 4.488787,
+      "lon": 73.68849,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "prisca-corner",
+        "name": "Prisca Corner",
+        "atollId": "north-male",
+        "lat": 4.488787,
+        "lon": 73.68849,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 222,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 53,
+      "name": "Cave Corner",
+      "lat": 4.472732,
+      "lon": 73.691014,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "cave-corner",
+        "name": "Cave Corner",
+        "atollId": "north-male",
+        "lat": 4.472732,
+        "lon": 73.691014,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 28,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 249,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 54,
+      "name": "Asdhoo Rock",
+      "lat": 4.450585,
+      "lon": 73.660658,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "asdhoo-rock",
+        "name": "Asdhoo Rock",
+        "atollId": "north-male",
+        "lat": 4.450585,
+        "lon": 73.660658,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 253,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 55,
+      "name": "West Rock",
+      "lat": 4.457012,
+      "lon": 73.679787,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "west-rock",
+        "name": "West Rock",
+        "atollId": "north-male",
+        "lat": 4.457012,
+        "lon": 73.679787,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 253,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 56,
+      "name": "Bodu Giri",
+      "lat": 4.439641,
+      "lon": 73.677139,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-giri",
+        "name": "Bodu Giri",
+        "atollId": "north-male",
+        "lat": 4.439641,
+        "lon": 73.677139,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 259,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 57,
+      "name": "Stairs",
+      "lat": 4.456989,
+      "lon": 73.723309,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "stairs",
+        "name": "Stairs",
+        "atollId": "north-male",
+        "lat": 4.456989,
+        "lon": 73.723309,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 264,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 58,
+      "name": "Meeru Corner",
+      "lat": 4.477773,
+      "lon": 73.701472,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "meeru-corner",
+        "name": "Meeru Corner",
+        "atollId": "north-male",
+        "lat": 4.477773,
+        "lon": 73.701472,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 221,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 59,
+      "name": "Colosseum",
+      "lat": 4.372747,
+      "lon": 73.657153,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "colosseum",
+        "name": "Colosseum",
+        "atollId": "north-male",
+        "lat": 4.372747,
+        "lon": 73.657153,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 338,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 60,
+      "name": "Chicken Island",
+      "lat": 4.373265,
+      "lon": 73.662516,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "chicken-island",
+        "name": "Chicken Island",
+        "atollId": "north-male",
+        "lat": 4.373265,
+        "lon": 73.662516,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 333,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 61,
+      "name": "Aquarium",
+      "lat": 4.347145,
+      "lon": 73.615438,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "aquarium",
+        "name": "Aquarium",
+        "atollId": "north-male",
+        "lat": 4.347145,
+        "lon": 73.615438,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 318,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 62,
+      "name": "Kani Corner",
+      "lat": 4.342199,
+      "lon": 73.61563,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kani-corner",
+        "name": "Kani Corner",
+        "atollId": "north-male",
+        "lat": 4.342199,
+        "lon": 73.61563,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 315,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 63,
+      "name": "Palm Reef",
+      "lat": 4.357121,
+      "lon": 73.629674,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "palm-reef",
+        "name": "Palm Reef",
+        "atollId": "north-male",
+        "lat": 4.357121,
+        "lon": 73.629674,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 322,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 64,
+      "name": "Old Virgin",
+      "lat": 4.354075,
+      "lon": 73.612897,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "old-virgin",
+        "name": "Old Virgin",
+        "atollId": "north-male",
+        "lat": 4.354075,
+        "lon": 73.612897,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 299,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 65,
+      "name": "Coral Garden",
+      "lat": 4.324757,
+      "lon": 73.582414,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "coral-garden",
+        "name": "Coral Garden",
+        "atollId": "north-male",
+        "lat": 4.324757,
+        "lon": 73.582414,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 18,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 322,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 66,
+      "name": "Middle Point",
+      "lat": 4.313319,
+      "lon": 73.588768,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "middle-point",
+        "name": "Middle Point",
+        "atollId": "north-male",
+        "lat": 4.313319,
+        "lon": 73.588768,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 17,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 329,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 67,
+      "name": "HP Reef",
+      "lat": 4.316195,
+      "lon": 73.57847,
+      "decision": "match:hp-reef",
+      "reason": "same site, 0.29 km"
+    },
+    {
+      "guideId": 68,
+      "name": "Okobe Thila",
+      "lat": 4.296808,
+      "lon": 73.51798,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "okobe-thila",
+        "name": "Okobe Thila",
+        "atollId": "north-male",
+        "lat": 4.296808,
+        "lon": 73.51798,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 360,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 69,
+      "name": "Nassimo Thila",
+      "lat": 4.285549,
+      "lon": 73.536308,
+      "decision": "match:nassimo-thila",
+      "reason": "same site, 0.05 km"
+    },
+    {
+      "guideId": 70,
+      "name": "Manta Point",
+      "lat": 4.281945,
+      "lon": 73.559091,
+      "decision": "match:manta-point-lankanfinolhu",
+      "reason": "same site, 0.32 km"
+    },
+    {
+      "guideId": 71,
+      "name": "Lankan Caves",
+      "lat": 4.279091,
+      "lon": 73.552601,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lankan-caves",
+        "name": "Lankan Caves",
+        "atollId": "north-male",
+        "lat": 4.279091,
+        "lon": 73.552601,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 291,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 72,
+      "name": "Ilkka Reef",
+      "lat": 4.322192,
+      "lon": 73.571331,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ilkka-reef",
+        "name": "Ilkka Reef",
+        "atollId": "north-male",
+        "lat": 4.322192,
+        "lon": 73.571331,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 328,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 73,
+      "name": "Hannes Reef",
+      "lat": 4.263854,
+      "lon": 73.531122,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hannes-reef",
+        "name": "Hannes Reef",
+        "atollId": "north-male",
+        "lat": 4.263854,
+        "lon": 73.531122,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 20,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 354,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 74,
+      "name": "Maagiri Caves",
+      "lat": 4.264972,
+      "lon": 73.535296,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maagiri-caves",
+        "name": "Maagiri Caves",
+        "atollId": "north-male",
+        "lat": 4.264972,
+        "lon": 73.535296,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 353,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 75,
+      "name": "Maagiri Thila",
+      "lat": 4.259819,
+      "lon": 73.533217,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maagiri-thila",
+        "name": "Maagiri Thila",
+        "atollId": "north-male",
+        "lat": 4.259819,
+        "lon": 73.533217,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 354,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 76,
+      "name": "Furana North",
+      "lat": 4.253919,
+      "lon": 73.549571,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "furana-north",
+        "name": "Furana North",
+        "atollId": "north-male",
+        "lat": 4.253919,
+        "lon": 73.549571,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 276,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 77,
+      "name": "Furana Thila",
+      "lat": 4.256933,
+      "lon": 73.548946,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "furana-thila",
+        "name": "Furana Thila",
+        "atollId": "north-male",
+        "lat": 4.256933,
+        "lon": 73.548946,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 280,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 78,
+      "name": "Furana South",
+      "lat": 4.246501,
+      "lon": 73.549823,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "furana-south",
+        "name": "Furana South",
+        "atollId": "north-male",
+        "lat": 4.246501,
+        "lon": 73.549823,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 265,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 80,
+      "name": "Chicken Island",
+      "lat": 4.259552,
+      "lon": 73.542267,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "chicken-island-2",
+        "name": "Chicken Island",
+        "atollId": "north-male",
+        "lat": 4.259552,
+        "lon": 73.542267,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 350,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 81,
+      "name": "Back Faru",
+      "lat": 4.236686,
+      "lon": 73.55535,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "back-faru",
+        "name": "Back Faru",
+        "atollId": "north-male",
+        "lat": 4.236686,
+        "lon": 73.55535,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 273,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 82,
+      "name": "Club Med Corner",
+      "lat": 4.243201,
+      "lon": 73.552922,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "club-med-corner",
+        "name": "Club Med Corner",
+        "atollId": "north-male",
+        "lat": 4.243201,
+        "lon": 73.552922,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 24,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 266,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 83,
+      "name": "Banana Reef",
+      "lat": 4.240328,
+      "lon": 73.532518,
+      "decision": "match:banana-reef",
+      "reason": "same site, 0.70 km"
+    },
+    {
+      "guideId": 84,
+      "name": "Black Coral Reef",
+      "lat": 4.214304,
+      "lon": 73.487751,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "black-coral-reef",
+        "name": "Black Coral Reef",
+        "atollId": "north-male",
+        "lat": 4.214304,
+        "lon": 73.487751,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 9,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 85,
+      "name": "Funadhoo",
+      "lat": 4.209273,
+      "lon": 73.486926,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "funadhoo",
+        "name": "Funadhoo",
+        "atollId": "north-male",
+        "lat": 4.209273,
+        "lon": 73.486926,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 9,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 86,
+      "name": "Hulhule Reef",
+      "lat": 4.182304,
+      "lon": 73.536515,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hulhule-reef",
+        "name": "Hulhule Reef",
+        "atollId": "north-male",
+        "lat": 4.182304,
+        "lon": 73.536515,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 304,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 87,
+      "name": "Maldive Victory",
+      "lat": 4.17717,
+      "lon": 73.524399,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maldive-victory",
+        "name": "Maldive Victory",
+        "atollId": "north-male",
+        "lat": 4.17717,
+        "lon": 73.524399,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 35,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 329,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 88,
+      "name": "Hans Hass Place",
+      "lat": 4.171071,
+      "lon": 73.46585,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hans-hass-place",
+        "name": "Hans Hass Place",
+        "atollId": "north-male",
+        "lat": 4.171071,
+        "lon": 73.46585,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 10,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 89,
+      "name": "Old Shark Point",
+      "lat": 4.175587,
+      "lon": 73.450589,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "old-shark-point",
+        "name": "Old Shark Point",
+        "atollId": "north-male",
+        "lat": 4.175587,
+        "lon": 73.450589,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 12,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 90,
+      "name": "Lions Head",
+      "lat": 4.180686,
+      "lon": 73.427581,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lions-head",
+        "name": "Lions Head",
+        "atollId": "north-male",
+        "lat": 4.180686,
+        "lon": 73.427581,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 7,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 91,
+      "name": "Kuda Haa",
+      "lat": 4.217624,
+      "lon": 73.413089,
+      "decision": "match:kuda-haa",
+      "reason": "same site, 1.13 km"
+    },
+    {
+      "guideId": 92,
+      "name": "Bandos",
+      "lat": 4.271401,
+      "lon": 73.495116,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bandos",
+        "name": "Bandos",
+        "atollId": "north-male",
+        "lat": 4.271401,
+        "lon": 73.495116,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 9,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 93,
+      "name": "Baros Thila",
+      "lat": 4.277757,
+      "lon": 73.425405,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "baros-thila",
+        "name": "Baros Thila",
+        "atollId": "north-male",
+        "lat": 4.277757,
+        "lon": 73.425405,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 27,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 35,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 94,
+      "name": "Wall",
+      "lat": 4.306255,
+      "lon": 73.41746,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "wall",
+        "name": "Wall",
+        "atollId": "north-male",
+        "lat": 4.306255,
+        "lon": 73.41746,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 44,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 95,
+      "name": "Shallow Point",
+      "lat": 4.358119,
+      "lon": 73.371677,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "shallow-point",
+        "name": "Shallow Point",
+        "atollId": "north-male",
+        "lat": 4.358119,
+        "lon": 73.371677,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 71,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 96,
+      "name": "Nakatcha Thila",
+      "lat": 4.383741,
+      "lon": 73.356792,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "nakatcha-thila",
+        "name": "Nakatcha Thila",
+        "atollId": "north-male",
+        "lat": 4.383741,
+        "lon": 73.356792,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 26,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 82,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 97,
+      "name": "Mas Thila",
+      "lat": 4.388222,
+      "lon": 73.369399,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "mas-thila",
+        "name": "Mas Thila",
+        "atollId": "north-male",
+        "lat": 4.388222,
+        "lon": 73.369399,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 83,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 99,
+      "name": "Banana reef",
+      "lat": 4.373446,
+      "lon": 73.34059,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "banana-reef-2",
+        "name": "Banana reef",
+        "atollId": "north-male",
+        "lat": 4.373446,
+        "lon": 73.34059,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 97,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 100,
+      "name": "Rasfari",
+      "lat": 4.395712,
+      "lon": 73.347453,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rasfari",
+        "name": "Rasfari",
+        "atollId": "north-male",
+        "lat": 4.395712,
+        "lon": 73.347453,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 104,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 101,
+      "name": "Bodu Hithi Thila",
+      "lat": 4.448872,
+      "lon": 73.362501,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-hithi-thila",
+        "name": "Bodu Hithi Thila",
+        "atollId": "north-male",
+        "lat": 4.448872,
+        "lon": 73.362501,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 106,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 102,
+      "name": "Hembadhoo Wreck",
+      "lat": 4.480611,
+      "lon": 73.397855,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hembadhoo-wreck",
+        "name": "Hembadhoo Wreck",
+        "atollId": "north-male",
+        "lat": 4.480611,
+        "lon": 73.397855,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 22,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 122,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 103,
+      "name": "Peak",
+      "lat": 4.445842,
+      "lon": 73.371427,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "peak",
+        "name": "Peak",
+        "atollId": "north-male",
+        "lat": 4.445842,
+        "lon": 73.371427,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 8,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 105,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 104,
+      "name": "Madi Thila",
+      "lat": 4.484698,
+      "lon": 73.368913,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "madi-thila",
+        "name": "Madi Thila",
+        "atollId": "north-male",
+        "lat": 4.484698,
+        "lon": 73.368913,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 87,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 106,
+      "name": "Madivaru",
+      "lat": 4.502158,
+      "lon": 73.362175,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "madivaru",
+        "name": "Madivaru",
+        "atollId": "north-male",
+        "lat": 4.502158,
+        "lon": 73.362175,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 84,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 107,
+      "name": "Ihiga",
+      "lat": 4.517583,
+      "lon": 73.361473,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ihiga-2",
+        "name": "Ihiga",
+        "atollId": "north-male",
+        "lat": 4.517583,
+        "lon": 73.361473,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 99,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 108,
+      "name": "Madigaa",
+      "lat": 4.523328,
+      "lon": 73.362891,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "madigaa",
+        "name": "Madigaa",
+        "atollId": "north-male",
+        "lat": 4.523328,
+        "lon": 73.362891,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 104,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 109,
+      "name": "Blue Lagoon",
+      "lat": 4.533644,
+      "lon": 73.375574,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "blue-lagoon",
+        "name": "Blue Lagoon",
+        "atollId": "north-male",
+        "lat": 4.533644,
+        "lon": 73.375574,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 4,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 106,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 110,
+      "name": "West Point",
+      "lat": 4.547309,
+      "lon": 73.387511,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "west-point",
+        "name": "West Point",
+        "atollId": "north-male",
+        "lat": 4.547309,
+        "lon": 73.387511,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 137,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 111,
+      "name": "Z Reef",
+      "lat": 4.55052,
+      "lon": 73.394943,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "z-reef",
+        "name": "Z Reef",
+        "atollId": "north-male",
+        "lat": 4.55052,
+        "lon": 73.394943,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 140,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 112,
+      "name": "Ziyaarai Thila",
+      "lat": 4.555536,
+      "lon": 73.375226,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ziyaarai-thila",
+        "name": "Ziyaarai Thila",
+        "atollId": "north-male",
+        "lat": 4.555536,
+        "lon": 73.375226,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 9,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 102,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 113,
+      "name": "Kuda Thila",
+      "lat": 4.550092,
+      "lon": 73.379959,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kuda-thila",
+        "name": "Kuda Thila",
+        "atollId": "north-male",
+        "lat": 4.550092,
+        "lon": 73.379959,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 16,
+        "diveMaxM": 28,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 103,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 114,
+      "name": "Eri Faru",
+      "lat": 4.562845,
+      "lon": 73.394894,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "eri-faru",
+        "name": "Eri Faru",
+        "atollId": "north-male",
+        "lat": 4.562845,
+        "lon": 73.394894,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 142,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 116,
+      "name": "Kuda Faru",
+      "lat": 4.568322,
+      "lon": 73.379374,
+      "decision": "match:kuda-faru",
+      "reason": "same site, 0.14 km"
+    },
+    {
+      "guideId": 117,
+      "name": "Himmiya Beyru",
+      "lat": 4.575551,
+      "lon": 73.37644,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "himmiya-beyru",
+        "name": "Himmiya Beyru",
+        "atollId": "north-male",
+        "lat": 4.575551,
+        "lon": 73.37644,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 99,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 118,
+      "name": "Coral Garden",
+      "lat": 4.579481,
+      "lon": 73.406055,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "coral-garden-2",
+        "name": "Coral Garden",
+        "atollId": "north-male",
+        "lat": 4.579481,
+        "lon": 73.406055,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 2,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 147,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 119,
+      "name": "Akirifushi Caves",
+      "lat": 4.634342,
+      "lon": 73.401841,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "akirifushi-caves",
+        "name": "Akirifushi Caves",
+        "atollId": "north-male",
+        "lat": 4.634342,
+        "lon": 73.401841,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 134,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 120,
+      "name": "Olhahali Caves",
+      "lat": 4.693237,
+      "lon": 73.44393,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "olhahali-caves",
+        "name": "Olhahali Caves",
+        "atollId": "north-male",
+        "lat": 4.693237,
+        "lon": 73.44393,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 146,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 121,
+      "name": "Velassaru Caves",
+      "lat": 4.127334,
+      "lon": 73.439287,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "velassaru-caves",
+        "name": "Velassaru Caves",
+        "atollId": "south-male",
+        "lat": 4.127334,
+        "lon": 73.439287,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 169,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 122,
+      "name": "Vaadhoo Housereef",
+      "lat": 4.123432,
+      "lon": 73.459875,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vaadhoo-housereef",
+        "name": "Vaadhoo Housereef",
+        "atollId": "south-male",
+        "lat": 4.123432,
+        "lon": 73.459875,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 182,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 123,
+      "name": "Vaadhoo Caves",
+      "lat": 4.129037,
+      "lon": 73.455575,
+      "decision": "match:vaadhoo-caves",
+      "reason": "same site, 1.10 km"
+    },
+    {
+      "guideId": 124,
+      "name": "Coral Garden",
+      "lat": 4.122834,
+      "lon": 73.455044,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "coral-garden-3",
+        "name": "Coral Garden",
+        "atollId": "south-male",
+        "lat": 4.122834,
+        "lon": 73.455044,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 12,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 178,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 125,
+      "name": "Embudhoo Canyon",
+      "lat": 4.126446,
+      "lon": 73.507287,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "embudhoo-canyon",
+        "name": "Embudhoo Canyon",
+        "atollId": "south-male",
+        "lat": 4.126446,
+        "lon": 73.507287,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 181,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 126,
+      "name": "Cathedral",
+      "lat": 4.12342,
+      "lon": 73.526644,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "cathedral",
+        "name": "Cathedral",
+        "atollId": "south-male",
+        "lat": 4.12342,
+        "lon": 73.526644,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 218,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 127,
+      "name": "Embudhoo Kandu",
+      "lat": 4.085377,
+      "lon": 73.528763,
+      "decision": "match:embudhoo-express",
+      "reason": "same site, 0.72 km"
+    },
+    {
+      "guideId": 128,
+      "name": "Embudhu Thila",
+      "lat": 4.087588,
+      "lon": 73.534001,
+      "decision": "review",
+      "reason": "different name, same spot: Embudhoo Express, 0.08 km"
+    },
+    {
+      "guideId": 129,
+      "name": "Dhigu Thila",
+      "lat": 3.981703,
+      "lon": 73.509777,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhigu-thila",
+        "name": "Dhigu Thila",
+        "atollId": "south-male",
+        "lat": 3.981703,
+        "lon": 73.509777,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 300,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 130,
+      "name": "Miyaru Falhu",
+      "lat": 3.99195,
+      "lon": 73.523197,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "miyaru-falhu",
+        "name": "Miyaru Falhu",
+        "atollId": "south-male",
+        "lat": 3.99195,
+        "lon": 73.523197,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 17,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 312,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 132,
+      "name": "Kuda Giri Wreck",
+      "lat": 3.971952,
+      "lon": 73.489923,
+      "decision": "match:kuda-giri",
+      "reason": "same site, 0.18 km"
+    },
+    {
+      "guideId": 133,
+      "name": "Maafushi Caves",
+      "lat": 3.956924,
+      "lon": 73.492873,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maafushi-caves",
+        "name": "Maafushi Caves",
+        "atollId": "south-male",
+        "lat": 3.956924,
+        "lon": 73.492873,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 265,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 135,
+      "name": "Cocoa Corner",
+      "lat": 3.908911,
+      "lon": 73.480514,
+      "decision": "review",
+      "reason": "different name, same spot: Kandooma Thila, 0.31 km"
+    },
+    {
+      "guideId": 136,
+      "name": "Kandooma Thila",
+      "lat": 3.908978,
+      "lon": 73.473998,
+      "decision": "match:kandooma-thila",
+      "reason": "same site, 0.48 km"
+    },
+    {
+      "guideId": 137,
+      "name": "Kandooma Caves",
+      "lat": 3.904485,
+      "lon": 73.476674,
+      "decision": "review",
+      "reason": "different name, same spot: Kandooma Thila, 0.37 km"
+    },
+    {
+      "guideId": 138,
+      "name": "Lhosfushi Kandu",
+      "lat": 3.895001,
+      "lon": 73.467701,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lhosfushi-kandu",
+        "name": "Lhosfushi Kandu",
+        "atollId": "south-male",
+        "lat": 3.895001,
+        "lon": 73.467701,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 294,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 140,
+      "name": "Sundune",
+      "lat": 3.895815,
+      "lon": 73.460294,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "sundune",
+        "name": "Sundune",
+        "atollId": "south-male",
+        "lat": 3.895815,
+        "lon": 73.460294,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 331,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 141,
+      "name": "Medhu Faru",
+      "lat": 3.892065,
+      "lon": 73.468502,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "medhu-faru",
+        "name": "Medhu Faru",
+        "atollId": "south-male",
+        "lat": 3.892065,
+        "lon": 73.468502,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 288,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 142,
+      "name": "Guraidhoo Corner",
+      "lat": 3.889564,
+      "lon": 73.468377,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "guraidhoo-corner",
+        "name": "Guraidhoo Corner",
+        "atollId": "south-male",
+        "lat": 3.889564,
+        "lon": 73.468377,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 284,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 143,
+      "name": "Ranikan",
+      "lat": 3.80962,
+      "lon": 73.389847,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ranikan",
+        "name": "Ranikan",
+        "atollId": "south-male",
+        "lat": 3.80962,
+        "lon": 73.389847,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 19,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 144,
+      "name": "Lhohi Faru Thila",
+      "lat": 3.870358,
+      "lon": 73.360627,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lhohi-faru-thila",
+        "name": "Lhohi Faru Thila",
+        "atollId": "south-male",
+        "lat": 3.870358,
+        "lon": 73.360627,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 73,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 145,
+      "name": "Kudarah",
+      "lat": 3.809841,
+      "lon": 73.418346,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kudarah",
+        "name": "Kudarah",
+        "atollId": "south-male",
+        "lat": 3.809841,
+        "lon": 73.418346,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 343,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 146,
+      "name": "Adam Faru",
+      "lat": 3.858171,
+      "lon": 73.368061,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "adam-faru",
+        "name": "Adam Faru",
+        "atollId": "south-male",
+        "lat": 3.858171,
+        "lon": 73.368061,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 75,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 147,
+      "name": "Lhohi Housereef",
+      "lat": 3.876399,
+      "lon": 73.368894,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lhohi-housereef",
+        "name": "Lhohi Housereef",
+        "atollId": "south-male",
+        "lat": 3.876399,
+        "lon": 73.368894,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 39,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 148,
+      "name": "Lhohi Paradise",
+      "lat": 3.872622,
+      "lon": 73.364827,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lhohi-paradise",
+        "name": "Lhohi Paradise",
+        "atollId": "south-male",
+        "lat": 3.872622,
+        "lon": 73.364827,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 73,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 149,
+      "name": "Ramm Faru",
+      "lat": 3.882187,
+      "lon": 73.355661,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ramm-faru",
+        "name": "Ramm Faru",
+        "atollId": "south-male",
+        "lat": 3.882187,
+        "lon": 73.355661,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 74,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 150,
+      "name": "Ihi Reef",
+      "lat": 3.888106,
+      "lon": 73.354113,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ihi-reef",
+        "name": "Ihi Reef",
+        "atollId": "south-male",
+        "lat": 3.888106,
+        "lon": 73.354113,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 75,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 151,
+      "name": "Ran Faru",
+      "lat": 3.895023,
+      "lon": 73.354564,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ran-faru",
+        "name": "Ran Faru",
+        "atollId": "south-male",
+        "lat": 3.895023,
+        "lon": 73.354564,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 79,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 152,
+      "name": "Rannalhi Faru",
+      "lat": 3.907159,
+      "lon": 73.351444,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rannalhi-faru",
+        "name": "Rannalhi Faru",
+        "atollId": "south-male",
+        "lat": 3.907159,
+        "lon": 73.351444,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 84,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 153,
+      "name": "Balcony",
+      "lat": 3.936798,
+      "lon": 73.350998,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "balcony",
+        "name": "Balcony",
+        "atollId": "south-male",
+        "lat": 3.936798,
+        "lon": 73.350998,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 24,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 94,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 154,
+      "name": "Vaagili Bodu Thila",
+      "lat": 3.945832,
+      "lon": 73.353959,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vaagili-bodu-thila",
+        "name": "Vaagili Bodu Thila",
+        "atollId": "south-male",
+        "lat": 3.945832,
+        "lon": 73.353959,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 95,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 155,
+      "name": "Vaagili Caves",
+      "lat": 3.950455,
+      "lon": 73.35638,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "vaagili-caves",
+        "name": "Vaagili Caves",
+        "atollId": "south-male",
+        "lat": 3.950455,
+        "lon": 73.35638,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 18,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 96,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 157,
+      "name": "Rihiveli Wreck",
+      "lat": 3.821128,
+      "lon": 73.402165,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "rihiveli-wreck",
+        "name": "Rihiveli Wreck",
+        "atollId": "south-male",
+        "lat": 3.821128,
+        "lon": 73.402165,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 15,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 12,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    }
+  ]
+}
