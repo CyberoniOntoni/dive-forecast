@@ -48,11 +48,12 @@ export async function siteMarineHours(
   inwardBearingDeg: number,
   fallbackLat: number,
   fallbackLon: number,
+  options: FetchOptions = {},
 ): Promise<MarineFetch> {
   const point = seawardPoint(lat, lon, inwardBearingDeg);
-  const seaward = await fetchMarine(point.lat, point.lon);
+  const seaward = await fetchMarine(point.lat, point.lon, options);
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
-  const fallback = await fetchMarine(fallbackLat, fallbackLon);
+  const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
   const cached = readCachedHours(point.lat, point.lon) ?? readCachedHours(fallbackLat, fallbackLon);
   if (!cached) return { ok: false, unavailable: true };
@@ -75,15 +76,25 @@ export function seawardPoint(
 }
 
 /**
- * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a refresh runs in the
- * background, so a page never waits on Open-Meteo for a point it has seen before. Only a point with no cache at
- * all waits for its first fetch.
+ * wait: false queues the first fetch for a point with no cache and returns at once as unavailable. The map uses
+ * it, so a batch of new sites fills in over the next loads instead of holding the page.
  */
-export async function fetchMarine(lat: number, lon: number): Promise<MarineFetch> {
+export type FetchOptions = { wait?: boolean };
+
+/**
+ * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a refresh runs in the
+ * background, so a page never waits on Open-Meteo for a point it has seen before. A point with no cache at all
+ * waits for its first fetch, unless the caller asked not to wait.
+ */
+export async function fetchMarine(lat: number, lon: number, options: FetchOptions = {}): Promise<MarineFetch> {
   const cached = readCachedHours(lat, lon);
   if (cached) {
     if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) void refreshMarine(lat, lon).catch(() => null);
     return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
+  }
+  if (options.wait === false) {
+    void refreshMarine(lat, lon).catch(() => null);
+    return { ok: false, unavailable: true };
   }
   const fetched = await refreshMarine(lat, lon);
   if (!fetched) return { ok: false, unavailable: true };

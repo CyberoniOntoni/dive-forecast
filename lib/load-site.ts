@@ -3,7 +3,7 @@ import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
 import { forecastHours, residualRangeAt, residualSlopeWindow } from "./forecast";
-import { marineSeriesStale, siteMarineHours } from "./marine";
+import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site, SiteType } from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
@@ -70,12 +70,13 @@ async function checkedMarine(
   site: Site,
   mates: readonly Site[],
   atoll: Atoll | undefined,
+  options: FetchOptions = {},
 ): Promise<CheckedMarine> {
   if (!atoll) return { ok: false, bearing: null, bearingSource: null };
 
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const { deg: bearing, source: bearingSource } = resolveBearing(site, mates, outside, rimForAtoll(atoll));
-  const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon);
+  const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon, options);
   if (!marine.ok) return { ok: false, bearing, bearingSource };
 
   return {
@@ -94,8 +95,9 @@ export async function loadSite(
   mates: readonly Site[],
   atoll: Atoll | undefined,
   reports: readonly Report[],
+  options: FetchOptions = {},
 ): Promise<SiteLoad> {
-  const marine = await checkedMarine(site, mates, atoll);
+  const marine = await checkedMarine(site, mates, atoll, options);
   if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null);
   return forecastedLoad(
     marine.bearing,
