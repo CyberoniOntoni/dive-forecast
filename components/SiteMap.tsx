@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
+import { addMapLayers } from "@/lib/map-layers";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site } from "@/lib/types";
@@ -135,8 +136,20 @@ const MAP_STYLE = `
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 .dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 88%, transparent);color:var(--foam)}
 .dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
+.dive-map.leaflet-container{background:var(--ink)}
+.dive-map .leaflet-control-layers{background:var(--ink);color:var(--foam);border:2px solid rgba(0,0,0,0.2);border-radius:4px}
+.dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
+.dive-map .leaflet-control-layers-toggle:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
+.dive-map .leaflet-control-layers-expanded{padding:4px 10px 4px 8px;font:500 14px/1.2 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif}
+.dive-map .leaflet-control-layers label{min-height:44px;display:flex;align-items:center;margin:0;cursor:pointer}
+.dive-map .leaflet-control-layers label>span{display:flex;align-items:center;gap:10px}
+.dive-map .leaflet-control-layers input{width:18px;height:18px;margin:0;accent-color:var(--incoming)}
+.dive-map .leaflet-control-layers input:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
+.dive-map .leaflet-control-layers-separator{border-top-color:color-mix(in srgb, var(--foam) 28%, transparent)}
+.dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
 @media (max-width:1023px){
   .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
+  .dive-map .leaflet-bottom.leaflet-right .leaflet-control-attribution{float:left}
 }
 `;
 
@@ -152,7 +165,7 @@ function mountDiveMap(
 ): { map: LeafletMapType; destroy: () => void } {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  addSatelliteTiles(L, map);
+  addMapLayers(L, map);
 
   map.on("zoomend", () => {
     hooks.onZoom(map.getZoom());
@@ -179,13 +192,6 @@ function mountDiveMap(
       map.remove();
     },
   };
-}
-
-function addSatelliteTiles(L: LeafletLib, map: LeafletMapType) {
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    maxZoom: 18,
-    attribution: "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-  }).addTo(map);
 }
 
 function frameSites(L: LeafletLib, map: LeafletMapType, siteGlances: readonly SiteGlance[]) {
