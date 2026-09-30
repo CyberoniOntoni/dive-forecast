@@ -1,0 +1,136 @@
+{
+  "atollCode": "Dh",
+  "generatedAt": "2026-09-30T18:13:47.962Z",
+  "candidates": [
+    {
+      "guideId": 278,
+      "name": "Fushi Kandu",
+      "lat": 3.001856,
+      "lon": 72.927593,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "fushi-kandu",
+        "name": "Fushi Kandu",
+        "atollId": "dhaalu",
+        "lat": 3.001856,
+        "lon": 72.927593,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 167,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 279,
+      "name": "Velavaru Thila",
+      "lat": 2.969788,
+      "lon": 73.024701,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "velavaru-thila",
+        "name": "Velavaru Thila",
+        "atollId": "dhaalu",
+        "lat": 2.969788,
+        "lon": 73.024701,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 7,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 257,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 280,
+      "name": "Lhohi Caves",
+      "lat": 2.959758,
+      "lon": 72.986249,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "lhohi-caves",
+        "name": "Lhohi Caves",
+        "atollId": "dhaalu",
+        "lat": 2.959758,
+        "lon": 72.986249,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 155,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 281,
+      "name": "Maale Faru",
+      "lat": 2.881036,
+      "lon": 73.028341,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maale-faru",
+        "name": "Maale Faru",
+        "atollId": "dhaalu",
+        "lat": 2.881036,
+        "lon": 73.028341,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 16,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 271,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 283,
+      "name": "Hulhu Kandu",
+      "lat": 2.85281,
+      "lon": 73.027481,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hulhu-kandu",
+        "name": "Hulhu Kandu",
+        "atollId": "dhaalu",
+        "lat": 2.85281,
+        "lon": 73.027481,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 15,
+        "diveMaxM": 20,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "pass",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 270,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    }
+  ]
+}

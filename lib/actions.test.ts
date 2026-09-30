@@ -74,7 +74,8 @@ describe("addSite atoll matching", () => {
   });
 
   it("marks a pin in an unseeded atoll instead of assigning a far atoll", async () => {
-    const site = await addSite({ name: "Baa Test", lat: 5.2, lon: 72.95 });
+    // Laamu Atoll: about 90 km from Meemu, the nearest seeded atoll.
+    const site = await addSite({ name: "Laamu Test", lat: 1.95, lon: 73.45 });
     expect(site.atollId).toBe(UNSEEDED_ATOLL_ID);
   });
 });

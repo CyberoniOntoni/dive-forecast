@@ -127,7 +127,8 @@ describe("mutateStore", () => {
 describe("listMergedSites atoll for app-added pins", () => {
   it("re-derives a stored pin's atoll from where it sits", async () => {
     const wrong = { ...sampleSite("pin-a"), atollId: "vaavu", lat: 4.2342, lon: 73.534, sourceUrl: "user" };
-    const far = { ...sampleSite("pin-b"), atollId: "vaavu", lat: 5.2, lon: 72.95, sourceUrl: "user" };
+    // Laamu Atoll, which has no seeded outline.
+    const far = { ...sampleSite("pin-b"), atollId: "vaavu", lat: 1.95, lon: 73.45, sourceUrl: "user" };
     await addUserSite(wrong);
     await addUserSite(far);
     const merged = listMergedSites();

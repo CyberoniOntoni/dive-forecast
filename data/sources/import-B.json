@@ -1,0 +1,538 @@
+{
+  "atollCode": "B",
+  "generatedAt": "2026-09-30T18:13:45.805Z",
+  "candidates": [
+    {
+      "guideId": 245,
+      "name": "Bathalaa",
+      "lat": 5.346391,
+      "lon": 73.079741,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bathalaa",
+        "name": "Bathalaa",
+        "atollId": "baa",
+        "lat": 5.346391,
+        "lon": 73.079741,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 6,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 234,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 246,
+      "name": "Voavah",
+      "lat": 5.316209,
+      "lon": 73.074615,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "voavah",
+        "name": "Voavah",
+        "atollId": "baa",
+        "lat": 5.316209,
+        "lon": 73.074615,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 177,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 247,
+      "name": "Landaa Giraavaru",
+      "lat": 5.289998,
+      "lon": 73.120238,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "landaa-giraavaru",
+        "name": "Landaa Giraavaru",
+        "atollId": "baa",
+        "lat": 5.289998,
+        "lon": 73.120238,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 210,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 248,
+      "name": "Landaa Giraavaru Lagoon",
+      "lat": 5.284221,
+      "lon": 73.108399,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "landaa-giraavaru-lagoon",
+        "name": "Landaa Giraavaru Lagoon",
+        "atollId": "baa",
+        "lat": 5.284221,
+        "lon": 73.108399,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 192,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 249,
+      "name": "Kamadhoo",
+      "lat": 5.28006,
+      "lon": 73.133735,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kamadhoo",
+        "name": "Kamadhoo",
+        "atollId": "baa",
+        "lat": 5.28006,
+        "lon": 73.133735,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 199,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 250,
+      "name": "Aidhoo",
+      "lat": 5.188125,
+      "lon": 73.163968,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "aidhoo",
+        "name": "Aidhoo",
+        "atollId": "baa",
+        "lat": 5.188125,
+        "lon": 73.163968,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 310,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 251,
+      "name": "Bodu Thila",
+      "lat": 5.167729,
+      "lon": 73.129155,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "bodu-thila-3",
+        "name": "Bodu Thila",
+        "atollId": "baa",
+        "lat": 5.167729,
+        "lon": 73.129155,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 263,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 252,
+      "name": "Dhonfanu Thila",
+      "lat": 5.185435,
+      "lon": 73.115895,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhonfanu-thila",
+        "name": "Dhonfanu Thila",
+        "atollId": "baa",
+        "lat": 5.185435,
+        "lon": 73.115895,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 7,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 235,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 253,
+      "name": "Dhigu Thila",
+      "lat": 5.173523,
+      "lon": 73.105873,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhigu-thila-4",
+        "name": "Dhigu Thila",
+        "atollId": "baa",
+        "lat": 5.173523,
+        "lon": 73.105873,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 6,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 244,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 254,
+      "name": "Dharavandhoo Thila",
+      "lat": 5.156609,
+      "lon": 73.121008,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dharavandhoo-thila",
+        "name": "Dharavandhoo Thila",
+        "atollId": "baa",
+        "lat": 5.156609,
+        "lon": 73.121008,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 278,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 255,
+      "name": "Maalhoss",
+      "lat": 5.135365,
+      "lon": 73.103089,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maalhoss",
+        "name": "Maalhoss",
+        "atollId": "baa",
+        "lat": 5.135365,
+        "lon": 73.103089,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 25,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 323,
+        "source": "fallback",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 256,
+      "name": "Dhigali Haa",
+      "lat": 5.146273,
+      "lon": 73.037675,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "dhigali-haa",
+        "name": "Dhigali Haa",
+        "atollId": "baa",
+        "lat": 5.146273,
+        "lon": 73.037675,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 70,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 257,
+      "name": "Kufunadhoo Corner",
+      "lat": 5.110229,
+      "lon": 73.08715,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kufunadhoo-corner",
+        "name": "Kufunadhoo Corner",
+        "atollId": "baa",
+        "lat": 5.110229,
+        "lon": 73.08715,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 319,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 258,
+      "name": "Eydhafushi",
+      "lat": 5.099846,
+      "lon": 73.077864,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "eydhafushi",
+        "name": "Eydhafushi",
+        "atollId": "baa",
+        "lat": 5.099846,
+        "lon": 73.077864,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 317,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 259,
+      "name": "Maaddoo Corner",
+      "lat": 5.092808,
+      "lon": 73.067935,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maaddoo-corner",
+        "name": "Maaddoo Corner",
+        "atollId": "baa",
+        "lat": 5.092808,
+        "lon": 73.067935,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 317,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 260,
+      "name": "Nelivaru Thila",
+      "lat": 5.123682,
+      "lon": 73.075417,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "nelivaru-thila",
+        "name": "Nelivaru Thila",
+        "atollId": "baa",
+        "lat": 5.123682,
+        "lon": 73.075417,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 1,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 10,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 261,
+      "name": "Maaddoo Giri",
+      "lat": 5.093623,
+      "lon": 73.050556,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "maaddoo-giri",
+        "name": "Maaddoo Giri",
+        "atollId": "baa",
+        "lat": 5.093623,
+        "lon": 73.050556,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 3,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 25,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 262,
+      "name": "Hulhudhoo",
+      "lat": 5.070967,
+      "lon": 73.033265,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "hulhudhoo",
+        "name": "Hulhudhoo",
+        "atollId": "baa",
+        "lat": 5.070967,
+        "lon": 73.033265,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 28,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 263,
+      "name": "Miriandhoo Thila",
+      "lat": 5.05896,
+      "lon": 73.033946,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "miriandhoo-thila",
+        "name": "Miriandhoo Thila",
+        "atollId": "baa",
+        "lat": 5.05896,
+        "lon": 73.033946,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 316,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 264,
+      "name": "Ohgali Haa",
+      "lat": 5.063649,
+      "lon": 73.018938,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "ohgali-haa",
+        "name": "Ohgali Haa",
+        "atollId": "baa",
+        "lat": 5.063649,
+        "lon": 73.018938,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "lagoon",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 33,
+        "source": "fallback",
+        "sampleInOcean": false
+      }
+    },
+    {
+      "guideId": 265,
+      "name": "Kudadhoo Corner",
+      "lat": 5.024813,
+      "lon": 72.992053,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kudadhoo-corner",
+        "name": "Kudadhoo Corner",
+        "atollId": "baa",
+        "lat": 5.024813,
+        "lon": 72.992053,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 332,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    },
+    {
+      "guideId": 266,
+      "name": "Naamuli Wreck",
+      "lat": 4.835942,
+      "lon": 72.851241,
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "naamuli-wreck",
+        "name": "Naamuli Wreck",
+        "atollId": "goidhoo",
+        "lat": 4.835942,
+        "lon": 72.851241,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveMaxM": 5,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 67,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
+    }
+  ]
+}
