@@ -7,6 +7,8 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
 const SEAWARD_KM = 3;
+/** Open-Meteo requests running at once. Hundreds of sites must not fire hundreds of requests together. */
+const MAX_REQUESTS = 4;
 const EARTH_RADIUS_KM = 6371;
 
 /** Fetched Open-Meteo hours. MARINE_CACHE_DIR points tests at a throwaway directory. */
@@ -38,7 +40,7 @@ type HourlyColumns = {
 /**
  * Open-Meteo at the 3 km seaward point, for both sea level and current.
  * A failed or stale seaward fetch uses the fallback point instead.
- * When both fail or their hours are stale, the cache is used past the 6-hour TTL.
+ * When both fail or their hours are stale, the last cached series is used and marked stale.
  */
 export async function siteMarineHours(
   lat: number,
@@ -72,22 +74,61 @@ export function seawardPoint(
   return destinationKm(lat, lon, outwardBearing, SEAWARD_KM);
 }
 
+/**
+ * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a refresh runs in the
+ * background, so a page never waits on Open-Meteo for a point it has seen before. Only a point with no cache at
+ * all waits for its first fetch.
+ */
 export async function fetchMarine(lat: number, lon: number): Promise<MarineFetch> {
-  const cached = freshCachedFetch(lat, lon);
-  if (cached) return cached;
-
-  const hours = await requestMarine(lat, lon);
-  if (!hours || hours.length === 0) return { ok: false, unavailable: true };
-
-  const fetchedAt = Date.now();
-  writeCache(lat, lon, hours, fetchedAt);
-  return { ok: true, hours, fetchedAt, stale: false };
+  const cached = readCachedHours(lat, lon);
+  if (cached) {
+    if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) void refreshMarine(lat, lon).catch(() => null);
+    return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
+  }
+  const fetched = await refreshMarine(lat, lon);
+  if (!fetched) return { ok: false, unavailable: true };
+  return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: false };
 }
 
-function freshCachedFetch(lat: number, lon: number): MarineFetch | null {
-  const cached = readFreshCache(lat, lon);
-  if (!cached) return null;
-  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
+const inFlight = new Map<string, Promise<{ hours: MarineHour[]; fetchedAt: number } | null>>();
+
+/**
+ * Fetches a point and caches it. Callers asking for the same point while it runs share one request, and at most
+ * MAX_REQUESTS run at once. A failed fetch leaves the cache as it was.
+ */
+function refreshMarine(lat: number, lon: number): Promise<{ hours: MarineHour[]; fetchedAt: number } | null> {
+  const key = cacheName(lat, lon);
+  const running = inFlight.get(key);
+  if (running) return running;
+  const request = withRequestSlot(() => requestMarine(lat, lon))
+    .then((hours) => {
+      if (!hours || hours.length === 0) return null;
+      const fetchedAt = Date.now();
+      writeCache(lat, lon, hours, fetchedAt);
+      return { hours, fetchedAt };
+    })
+    .finally(() => inFlight.delete(key));
+  inFlight.set(key, request);
+  return request;
+}
+
+let activeRequests = 0;
+const waitingRequests: (() => void)[] = [];
+
+async function withRequestSlot<T>(task: () => Promise<T>): Promise<T> {
+  if (activeRequests >= MAX_REQUESTS) await new Promise<void>((resolve) => waitingRequests.push(resolve));
+  activeRequests += 1;
+  try {
+    return await task();
+  } finally {
+    activeRequests -= 1;
+    waitingRequests.shift()?.();
+  }
+}
+
+/** Open-Meteo requests running now. For tests. */
+export function marineRequestsInFlight(): number {
+  return activeRequests;
 }
 
 export function marineHoursFromApi(body: unknown): MarineHour[] | null {
@@ -175,12 +216,6 @@ async function readMarineEndpoint(url: string): Promise<MarineHour[] | null> {
   } catch {
     return null;
   }
-}
-
-function readFreshCache(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
-  const cached = readCachedHours(lat, lon);
-  if (!cached || Date.now() - cached.fetchedAt > CACHE_TTL_MS) return null;
-  return cached;
 }
 
 function cacheName(lat: number, lon: number): string {
