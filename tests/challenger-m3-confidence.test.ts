@@ -460,7 +460,9 @@ describe("Adversarial Verification of Milestone 3: Confidence Scoring & Regulari
       });
       const durationMs = performance.now() - startTime;
 
-      expect(forecast.length).toBe(138);
+      // 168 hours less the 12 at each end with no 25-hour mean. Slack reports cast no phase vote, so these
+      // alternating reports fit no lag and no shifted hour falls off the series.
+      expect(forecast.length).toBe(144);
       for (const h of forecast) {
         expect(["incoming", "outgoing"]).toContain(h.direction);
         expect(["slack", "mild", "strong", "too_strong"]).toContain(h.strength);

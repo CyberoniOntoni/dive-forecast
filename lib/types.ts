@@ -70,6 +70,12 @@ export type Report = {
    * Index 6 is the report hour. Null is a missing hour. Absent when the fetch failed.
    */
   slopeWindowM?: (number | null)[] | null;
+  /**
+   * Residual sea-level range over the 25 hours around the report hour, metres: the day's tide envelope.
+   * With the slope window it grades what the model would have said once the hour has left the series.
+   * Absent on older reports and when the fetch failed.
+   */
+  rangeM?: number | null;
   /** What the forecast said for this hour when the report was filed. Absent when there was no forecast. */
   predicted?: ForecastAtReport;
 };

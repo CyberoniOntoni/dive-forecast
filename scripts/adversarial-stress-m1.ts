@@ -359,26 +359,24 @@ assert(
 
 // Test 3.5: Direct unit stress on hourlyStrength
 let directHourlySlackPreserved = true;
+// Narrowing reaches hourlyStrength only through the envelope, so every envelope covers every constriction.
 for (const env of STRENGTHS) {
-  for (let c = 1.0; c <= 5.0; c += 0.5) {
-    for (const slope of [0, 0.001, 0.005, 0.01, 0.015, 0.0199]) {
-      const res = hourlyStrength(slope, 0.2, env, c);
-      if (res !== "slack") {
-        directHourlySlackPreserved = false;
-        assert(
-          false,
-          `hourlyStrength violated slack invariant at slope=${slope}, env=${env}, C=${c}`,
-          `Returned: ${res}`
-        );
-        break;
-      }
+  for (const slope of [0, 0.001, 0.005, 0.01, 0.015, 0.0199]) {
+    const res = hourlyStrength(slope, 0.2, env);
+    if (res !== "slack") {
+      directHourlySlackPreserved = false;
+      assert(
+        false,
+        `hourlyStrength violated slack invariant at slope=${slope}, env=${env}`,
+        `Returned: ${res}`
+      );
+      break;
     }
-    if (!directHourlySlackPreserved) break;
   }
   if (!directHourlySlackPreserved) break;
 }
 if (directHourlySlackPreserved) {
-  assert(true, "hourlyStrength strictly preserves 'slack' for all slopes < 0.02m across all constrictions and envelopes");
+  assert(true, "hourlyStrength strictly preserves 'slack' for all slopes < 0.02m across all envelopes");
 }
 
 // -----------------------------------------------------------------

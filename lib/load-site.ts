@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { forecastHours, residualSlopeWindow } from "./forecast";
+import { forecastHours, residualRangeAt, residualSlopeWindow } from "./forecast";
 import { marineSeriesStale, siteMarineHours } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site } from "./types";
 
@@ -101,14 +101,22 @@ export async function loadSite(
   );
 }
 
-/** Same fetch as loadSite. Residual slope window, or null when no cache exists. */
-export async function slopeWindowForSite(
+export type ReportTide = {
+  slopeWindowM: (number | null)[];
+  /** Residual range over the 25 hours around the report hour. Null when that hour has no full window. */
+  rangeM: number | null;
+};
+
+/** Same fetch as loadSite. The tide saved with a report, or null when there is no series. */
+export async function reportTideForSite(
   site: Site,
   mates: readonly Site[],
   atoll: Atoll | undefined,
   time: string,
-): Promise<(number | null)[] | null> {
+): Promise<ReportTide | null> {
   const marine = await checkedMarine(site, mates, atoll);
   if (!marine.ok) return null;
-  return residualSlopeWindow(marine.hours, time);
+  const slopeWindowM = residualSlopeWindow(marine.hours, time);
+  if (!slopeWindowM) return null;
+  return { slopeWindowM, rangeM: residualRangeAt(marine.hours, time) };
 }

@@ -40,8 +40,10 @@ describe("inwardBearingDeg", () => {
     expect(westHours.length).toBeGreaterThan(0);
     expect(westHours.every((hour) => hour.direction === "incoming")).toBe(true);
     expect(eastHours.every((hour) => hour.direction === "incoming")).toBe(true);
+    // Both start mild. The drift lifts the west side a band; on the east it runs against the tide, which slows
+    // a flowing hour but never stops it, so mild is the floor.
     expect(westHours.every((hour) => hour.strength === "strong")).toBe(true);
-    expect(eastHours.every((hour) => hour.strength === "slack")).toBe(true);
+    expect(eastHours.every((hour) => hour.strength === "mild")).toBe(true);
   });
 
   it("bears from an outside point toward the pin when that is the only seeded site", () => {

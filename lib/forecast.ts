@@ -17,7 +17,6 @@ export const FORECAST_NOTICE =
   "The 8 km grid is weak in passes. Direction comes from the tide slope plus reports, not from the current at the dive pin.";
 
 const HOUR_MS = 60 * 60 * 1000;
-const TIE_M = 0.005;
 const SLACK_SLOPE_M = 0.02;
 const FADE_HOURS = 6;
 const MEAN_HALF_HOURS = 12;
@@ -33,7 +32,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/2";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/4";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -57,6 +56,8 @@ export const REPORT_HALF_LIFE_MS = REPORT_HALF_LIFE_DAYS * 24 * 60 * 60 * 1000;
 export const LAG_PENALTY_LAMBDA = 0.05;
 export const CONSENSUS_RATIO_THRESHOLD = 0.6;
 export const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+/** Inside this distance any opposite report blocks high, whatever its tide phase: it may be the same water on a skewed clock. */
+export const CONTRADICTION_NEAR_MS = 3 * HOUR_MS;
 
 /** Exponential temporal decay weight: 2^(-delta_days / 90) */
 export function reportTemporalWeight(reportTime: string, referenceTimeMs: number): number {
@@ -224,7 +225,8 @@ type OpenHour = {
 };
 
 // Each hour keeps its own band, so a run eases in from slack, peaks, and eases out.
-// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band. A slack hour stays put.
+// Hours at or above the slack slope vote. Past half saturation, the whole run steps one band, never down to slack.
+// A slack hour stays put.
 function meanNudge(open: OpenHour[]) {
   let nudge = 0;
   let count = 0;
@@ -240,7 +242,8 @@ function meanNudge(open: OpenHour[]) {
     const withTide = open[0].direction === favored;
     for (const hour of open) {
       if (hour.strength === "slack") continue;
-      hour.strength = shiftStrength(hour.strength, withTide ? 1 : -1);
+      // Drift against the tide slows a flowing hour. It does not stop it, so the floor is mild.
+      hour.strength = withTide ? shiftStrength(hour.strength, 1) : STRENGTHS[Math.max(1, bandIndex(hour.strength) - 1)];
     }
   }
 }
@@ -323,12 +326,7 @@ function settledHours(
     }
     const stats = tides[index];
     if (stats.range == null || stats.maxAbs == null) continue;
-    const tideStrength = hourlyStrength(
-      Math.abs(slope),
-      stats.maxAbs,
-      strengthFromRange(stats.range, constriction),
-      constriction,
-    );
+    const tideStrength = hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
     const opened: OpenHour = {
       time: hour.time,
       direction: effectiveDirection,
@@ -384,12 +382,20 @@ export function residualSlopeWindow(hours: readonly MarineHour[], time: string):
   return window;
 }
 
+/** Residual range over the 25 hours around `time`, or null when that hour is missing or has no full window. */
+export function residualRangeAt(hours: readonly MarineHour[], time: string): number | null {
+  const index = nearestIndex(hours, parseWall(time), HOUR_MATCH_MS);
+  if (index < 0) return null;
+  return tideWindow(hours, residualSeries(hours), index).range;
+}
+
 function fitPhaseOffset(
   classified: readonly ClassifiedReport[],
   hours: readonly MarineHour[],
   residual: readonly (number | null)[],
 ): number {
-  const voters = classified.filter((item) => item.kind !== "unusable");
+  // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
+  const voters = classified.filter((item) => item.kind !== "unusable" && !isSlackReport(item));
   if (voters.length < 2) return 0;
 
   let bestK = 0;
@@ -460,7 +466,7 @@ function fitSpeedFactor(
     const prior = speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction);
     if (!prior) continue;
     const reportPhase = tideDirectionAtLag(item, hours, residual, offset);
-    if (reportPhase != null && reportPhase !== item.report.direction) continue;
+    if (!isSlackReport(item) && reportPhase != null && reportPhase !== item.report.direction) continue;
     const ratio = (bandIndex(item.report.strength) + 0.5) / (bandIndex(prior) + 0.5);
     const w = item.temporalWeight;
     weightedRatioSum += ratio * w;
@@ -480,43 +486,49 @@ function confidenceFor(input: {
   offset: number;
   direction: Direction;
   strength: Strength;
-  tideDirection: Direction | null;
+  tideDirection: Direction;
   contradicted: boolean;
   allowHighConfidence: boolean;
   hourTime?: string;
 }): "low" | "medium" | "high" {
-  if (input.classified.length === 0 || input.contradicted || input.tideDirection == null) return "low";
+  if (input.classified.length === 0 || input.contradicted) return "low";
 
   const targetHourMs = input.hourTime ? parseWall(input.hourTime) : Number.NaN;
 
-  // Hard safety invariant: any report within 7 days with the opposite direction
-  // blocks high confidence (includes future clock-skew within the window).
+  const samePhase = (item: ClassifiedReport) => {
+    const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
+    return reportPhase != null && reportPhase === input.tideDirection;
+  };
+
+  // Hard safety invariant: an opposite report within 7 days on the same tide blocks high confidence.
+  // Within 3 hours any opposite report blocks it, whatever its phase, since it may be the same water on a skewed clock.
+  // A report on the other tide is expected to be opposite and does not count. Nor does slack, which saw no flow.
   const hasRecentContradiction =
     Number.isFinite(targetHourMs) &&
     input.classified.some((item) => {
-      if (item.kind === "unusable") return false;
+      if (item.kind === "unusable" || isSlackReport(item)) return false;
+      if (item.report.direction === input.direction) return false;
       const repMs = parseWall(item.report.time);
-      if (!Number.isFinite(repMs) || Math.abs(targetHourMs - repMs) > SEVEN_DAYS_MS) return false;
-      return item.report.direction !== input.direction;
+      if (!Number.isFinite(repMs)) return false;
+      const apart = Math.abs(targetHourMs - repMs);
+      return apart <= CONTRADICTION_NEAR_MS || (apart <= SEVEN_DAYS_MS && samePhase(item));
     });
 
-  const similar = input.classified.filter((item) => {
-    const reportPhase = tideDirectionAtLag(item, input.hours, input.residual, input.offset);
-    return reportPhase != null && reportPhase === input.tideDirection;
-  });
+  const similar = input.classified.filter(samePhase);
   if (similar.length < 2) return "low";
 
-  const totalWeight = similar.reduce((sum, item) => sum + item.temporalWeight, 0);
-  const dirAgreeWeight = similar
-    .filter((item) => item.report.direction === input.direction)
-    .reduce((sum, item) => sum + item.temporalWeight, 0);
-  const strAgreeWeight = similar
-    .filter((item) => item.report.strength === input.strength)
-    .reduce((sum, item) => sum + item.temporalWeight, 0);
+  const weightOf = (items: readonly ClassifiedReport[]) => items.reduce((sum, item) => sum + item.temporalWeight, 0);
+  // Slack reports count toward strength agreement but not direction.
+  const directional = similar.filter((item) => !isSlackReport(item));
+  const totalWeight = weightOf(similar);
+  const directionalWeight = weightOf(directional);
+  const dirAgreeWeight = weightOf(directional.filter((item) => item.report.direction === input.direction));
+  const strAgreeWeight = weightOf(similar.filter((item) => item.report.strength === input.strength));
 
-  const directionAgree = totalWeight > 0 ? dirAgreeWeight / totalWeight : 0;
+  const directionAgree = directionalWeight > 0 ? dirAgreeWeight / directionalWeight : 0;
   const strengthAgree = totalWeight > 0 ? strAgreeWeight / totalWeight : 0;
-  const directionUnanimous = similar.every((item) => item.report.direction === input.direction);
+  const directionUnanimous =
+    directional.length > 0 && directional.every((item) => item.report.direction === input.direction);
 
   if (
     directionUnanimous &&
@@ -549,6 +561,7 @@ export function aggregateReportPull(
 
   let incomingWeight = 0;
   let outgoingWeight = 0;
+  let slackWeight = 0;
   const activeReports: { item: ClassifiedReport; weight: number }[] = [];
 
   for (const item of classified) {
@@ -568,7 +581,10 @@ export function aggregateReportPull(
       continue;
     }
 
-    if (item.report.direction === "incoming") {
+    // A slack report pulls strength but casts no direction vote: the form makes the diver pick one anyway.
+    if (isSlackReport(item)) {
+      slackWeight += weight;
+    } else if (item.report.direction === "incoming") {
       incomingWeight += weight;
     } else if (item.report.direction === "outgoing") {
       outgoingWeight += weight;
@@ -576,32 +592,29 @@ export function aggregateReportPull(
     activeReports.push({ item, weight });
   }
 
-  const totalWeight = incomingWeight + outgoingWeight;
-  if (totalWeight === 0) {
+  const directionalWeight = incomingWeight + outgoingWeight;
+  if (directionalWeight + slackWeight === 0) {
     return { direction: hour.direction, strength: hour.strength, contradicted: false };
   }
 
   const hasConflict = incomingWeight > 0 && outgoingWeight > 0;
-  let direction = hour.direction;
-  let strength = hour.strength;
-
-  if (incomingWeight > outgoingWeight && incomingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
-    direction = "incoming";
-    const concordant = activeReports.filter((r) => r.item.report.direction === "incoming");
-    const gap = averageGap(concordant, incomingWeight, hour, modelBands);
-    const effectiveWeight = Math.min(1, incomingWeight);
-    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
-  } else if (outgoingWeight > incomingWeight && outgoingWeight / totalWeight >= CONSENSUS_RATIO_THRESHOLD) {
-    direction = "outgoing";
-    const concordant = activeReports.filter((r) => r.item.report.direction === "outgoing");
-    const gap = averageGap(concordant, outgoingWeight, hour, modelBands);
-    const effectiveWeight = Math.min(1, outgoingWeight);
-    strength = shiftStrength(hour.strength, Math.round(effectiveWeight * gap));
-  } else {
+  let direction: Direction | null = null;
+  if (directionalWeight === 0) {
     direction = hour.direction;
-    strength = hour.strength;
+  } else if (incomingWeight > outgoingWeight && incomingWeight / directionalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "incoming";
+  } else if (outgoingWeight > incomingWeight && outgoingWeight / directionalWeight >= CONSENSUS_RATIO_THRESHOLD) {
+    direction = "outgoing";
+  }
+  if (direction == null) {
+    return { direction: hour.direction, strength: hour.strength, contradicted: hasConflict };
   }
 
+  const chosen = direction;
+  const concordant = activeReports.filter((r) => isSlackReport(r.item) || r.item.report.direction === chosen);
+  const concordantWeight = concordant.reduce((sum, r) => sum + r.weight, 0);
+  const gap = averageGap(concordant, concordantWeight, hour, modelBands);
+  const strength = shiftStrength(hour.strength, Math.round(Math.min(1, concordantWeight) * gap));
   const contradicted = hasConflict || direction !== hour.direction;
   return { direction, strength, contradicted };
 }
@@ -666,9 +679,25 @@ function speedPrior(
     if (offset !== 0) return laggedSlopeBand(item, hours, residual, tides, offset, constriction);
     return shownStrength(hours, residual, inwardBearingDeg, offset, tides, item.seriesIndex, constriction);
   }
+  return storedPrior(item, offset, constriction);
+}
+
+/**
+ * Band the model would have given a report outside this series, from what was saved with it.
+ * A report with its day's range and a slope window is graded like an in-series hour, at the fitted lag.
+ * An older report has no range, so all it can say is slack or flowing, and flowing counts as mild.
+ */
+function storedPrior(item: ClassifiedReport, offset: number, constriction: number): Strength | null {
   if (item.storedHourSlope == null) return null;
-  if (Math.abs(item.storedHourSlope) < SLACK_SLOPE_M) return "slack";
-  return "mild";
+  const range = item.report.rangeM;
+  if (item.kind !== "slope-window" || typeof range !== "number" || !Number.isFinite(range)) {
+    return Math.abs(item.storedHourSlope) < SLACK_SLOPE_M ? "slack" : "mild";
+  }
+  const slope = item.slopes[WINDOW_HALF_HOURS + offset];
+  if (typeof slope !== "number") return null;
+  // Thirteen hours span more than a half cycle, so the window holds this run's steepest hour.
+  const maxAbs = Math.max(...item.slopes.map((value) => (typeof value === "number" ? Math.abs(value) : 0)));
+  return hourlyStrength(Math.abs(slope), maxAbs, strengthFromRange(range, constriction));
 }
 
 function laggedSlopeBand(
@@ -685,12 +714,7 @@ function laggedSlopeBand(
   if (slope == null) return null;
   const stats = tides[item.seriesIndex];
   if (stats.range == null || stats.maxAbs == null) return null;
-  return hourlyStrength(
-    Math.abs(slope),
-    stats.maxAbs,
-    strengthFromRange(stats.range, constriction),
-    constriction,
-  );
+  return hourlyStrength(Math.abs(slope), stats.maxAbs, strengthFromRange(stats.range, constriction));
 }
 
 /** Clock-hour strength after peak band and mean nudge, before the report pull. Factor 1, so the fit is not circular. */
@@ -722,6 +746,10 @@ function slopesOpposite(left: number | null, right: number | null): boolean {
   const a = directionFromSlope(left);
   const b = directionFromSlope(right);
   return a != null && b != null && a !== b;
+}
+
+function isSlackReport(item: ClassifiedReport): boolean {
+  return item.report.strength === "slack";
 }
 
 function opposite(direction: Direction): Direction {
@@ -853,6 +881,11 @@ function reachesMeanSpan(times: readonly number[]): boolean {
   return max - min >= 2 * MEAN_HALF_HOURS * HOUR_MS;
 }
 
+/**
+ * Residual change over the hour after this one. The forward difference is kept on purpose: a centred one moves
+ * turns half an hour earlier and scored worse on the replay benchmark (direction 91.3% to 89.1%, slack 20 to
+ * 30 minutes). The half-hour lead likely stands in for the pass lagging the ocean. Revisit with real reports.
+ */
 function slopeFromResidual(residual: readonly (number | null)[], index: number): number | null {
   const level = residual[index];
   if (level == null) return null;
@@ -915,20 +948,16 @@ export function strengthFromRange(range: number, constriction: number = 1.0): St
   return "too_strong";
 }
 
-/** Slack inside 5 mm, and below 0.02 m. The steepest hour takes the envelope. */
-export function hourlyStrength(
-  absSlope: number,
-  maxAbsSlope: number,
-  envelope: Strength,
-  constriction: number = 1.0,
-): Strength {
+/**
+ * Slack below 0.02 m an hour. The steepest hour takes the envelope and the rest ramp up to it on the raw slope.
+ * Channel narrowing is already in the envelope, so it does not also steepen the ramp.
+ */
+export function hourlyStrength(absSlope: number, maxAbsSlope: number, envelope: Strength): Strength {
   const top = bandIndex(envelope);
-  if (absSlope <= TIE_M || absSlope < SLACK_SLOPE_M || top <= 0) return "slack";
-  const effSlope = absSlope * constriction;
-  const effMaxSlope = maxAbsSlope * constriction;
-  const span = effMaxSlope - SLACK_SLOPE_M;
+  if (absSlope < SLACK_SLOPE_M || top <= 0) return "slack";
+  const span = maxAbsSlope - SLACK_SLOPE_M;
   if (!(span > 0)) return envelope;
-  const t = Math.min(1, Math.max(0, (effSlope - SLACK_SLOPE_M) / span));
+  const t = Math.min(1, Math.max(0, (absSlope - SLACK_SLOPE_M) / span));
   const index = Math.min(top, Math.max(1, Math.ceil(t * top - 1e-9)));
   return STRENGTHS[index];
 }

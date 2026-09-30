@@ -1,9 +1,9 @@
 "use server";
 
 import { atollForPin } from "./bearing";
-import { FORECAST_NOTICE, toMaldivesWall } from "./forecast";
+import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { forecastAtReport } from "./forecast-log";
-import { loadSite, slopeWindowForSite } from "./load-site";
+import { loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import {
   addReport as persistReport,
   addUserSite,
@@ -69,7 +69,7 @@ export async function addReport(input: unknown): Promise<Report> {
   requireStrength(body.strength as Strength);
 
   const time = toMaldivesWall(body.time as string);
-  const slopeWindowM = await reportSlopeWindow(site, time);
+  const tide = await reportTide(site, time);
   const predicted = await predictionAtReport(site, time);
   const report: Report = {
     id: crypto.randomUUID(),
@@ -77,9 +77,12 @@ export async function addReport(input: unknown): Promise<Report> {
     time,
     direction: body.direction as Direction,
     strength: body.strength as Strength,
-    slopeM: slopeWindowM ? slopeWindowM[REPORT_HOUR_INDEX] : null,
+    slopeM: tide ? tide.slopeWindowM[REPORT_HOUR_INDEX] : null,
   };
-  if (slopeWindowM) report.slopeWindowM = slopeWindowM;
+  if (tide) {
+    report.slopeWindowM = tide.slopeWindowM;
+    if (tide.rangeM != null) report.rangeM = tide.rangeM;
+  }
   if (predicted) report.predicted = predicted;
   return persistReport(report);
 }
@@ -102,12 +105,17 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
   }
 }
 
-/** The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report. */
+/**
+ * The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report.
+ * Only reports from before this dive count, as in the replay, so a back-dated report is not scored on later dives.
+ */
 async function predictionAtReport(site: Site, time: string): Promise<ForecastAtReport | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    const shown = await loadSite(site, catalog.sites, atoll, reportsForSite(site.id));
+    const diveMs = parseWall(time);
+    const earlier = reportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
+    const shown = await loadSite(site, catalog.sites, atoll, earlier);
     const modelOnly = await loadSite(site, catalog.sites, atoll, []);
     return forecastAtReport(shown, modelOnly, time);
   } catch {
@@ -115,11 +123,11 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
   }
 }
 
-async function reportSlopeWindow(site: Site, time: string): Promise<(number | null)[] | null> {
+async function reportTide(site: Site, time: string): Promise<ReportTide | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    return await slopeWindowForSite(site, catalog.sites, atoll, time);
+    return await reportTideForSite(site, catalog.sites, atoll, time);
   } catch {
     return null;
   }

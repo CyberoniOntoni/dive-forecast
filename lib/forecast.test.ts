@@ -4,6 +4,7 @@ import {
   classifyReport,
   constrictionFactor,
   forecastHours,
+  residualRangeAt,
   residualSlopeWindow,
   seaLevelSlopeAt,
   tideWindow,
@@ -91,6 +92,104 @@ describe("forecastHours", () => {
     expect(directionAt(pulled, "2026-09-23T05:00")).toBe("outgoing");
     expect(directionAt(pulled, "2026-09-24T02:00")).toBe("incoming");
     expect(directionAt(plain, "2026-09-24T02:00")).toBe("incoming");
+  });
+
+  it("lets a slack report pull strength but not direction", () => {
+    const plain = forecastHours({ hours: series, inwardBearingDeg: 270, reports: [] });
+    // The form makes a diver pick a direction even at slack. That pick must not flip the incoming hours.
+    const slack: Report = { ...outgoingReport, strength: "slack" };
+    const pulled = forecastHours({ hours: series, inwardBearingDeg: 270, reports: [slack] });
+    for (const time of ["2026-09-23T03:00", "2026-09-23T05:00"]) {
+      const before = plain.find((hour) => hour.time === time);
+      const after = pulled.find((hour) => hour.time === time);
+      expect(after?.direction).toBe("incoming");
+      expect(STRENGTHS.indexOf(after!.strength)).toBeLessThanOrEqual(STRENGTHS.indexOf(before!.strength));
+    }
+  });
+
+  it("does not let a report from the other tide block high confidence", () => {
+    // 12-hour sine: 01:00 on the second day is on the rise.
+    const hours = marineFromLevels(
+      "2026-07-20T00:00",
+      Array.from({ length: 72 }, (_, index) => 1 + 0.6 * Math.sin((2 * Math.PI * index) / 12)),
+    );
+    const target = "2026-07-21T01:00";
+    const agreeing: Report[] = [1, 2, 3, 4, 5].map((id) => ({
+      id: `in-${id}`,
+      siteId: "s",
+      time: "2026-07-06T01:00",
+      direction: "incoming",
+      strength: "too_strong",
+      slopeM: 0.08,
+    }));
+    const confidenceWith = (extra: Report) =>
+      forecastHours({ hours, inwardBearingDeg: 90, reports: [...agreeing, extra], allowHighConfidence: true }).find(
+        (hour) => hour.time === target,
+      )?.confidence;
+    const threeDaysBefore = "2026-07-18T01:00";
+
+    // Outgoing on a falling tide three days ago is what the model expects, not a contradiction.
+    expect(
+      confidenceWith({ id: "ebb", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "strong", slopeM: -0.08 }),
+    ).toBe("high");
+    // Outgoing on a rising tide is.
+    expect(
+      confidenceWith({ id: "odd", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "strong", slopeM: 0.08 }),
+    ).not.toBe("high");
+    // Within three hours any opposite report counts: it may be the same water on a skewed clock.
+    expect(
+      confidenceWith({ id: "near", siteId: "s", time: "2026-07-21T03:00", direction: "outgoing", strength: "strong", slopeM: -0.08 }),
+    ).not.toBe("high");
+    // A slack report saw no flow, so its direction contradicts nothing.
+    expect(
+      confidenceWith({ id: "slack", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "slack", slopeM: 0.08 }),
+    ).toBe("high");
+  });
+
+  it("applies channel narrowing to the envelope only, not again to the hourly ramp", () => {
+    // A 1.2 m range is too strong with or without a narrow channel, so the two envelopes match.
+    // A 13-hour period spreads the hourly slopes so some sit where the old doubled narrowing moved them a band.
+    const hours = marineFromLevels(
+      "2026-09-22T00:00",
+      Array.from({ length: 72 }, (_, index) => 0.6 * Math.sin((2 * Math.PI * index) / 13)),
+    );
+    const open = forecastHours({ hours, inwardBearingDeg: 0 });
+    const narrow = forecastHours({ hours, inwardBearingDeg: 0, channelWidthM: 50, channelDepthM: 10 });
+    expect(constrictionFactor(50, 10)).toBe(2.5);
+    expect(narrow.map((hour) => hour.strength)).toEqual(open.map((hour) => hour.strength));
+    expect(new Set(open.map((hour) => hour.strength)).size).toBeGreaterThan(2);
+  });
+
+  it("grades an old report from its saved range and window instead of calling every flowing hour mild", () => {
+    // 12-hour sine of amplitude 0.35 m: a 0.7 m range, so the envelope is strong and the steepest hours are strong.
+    const sine = (index: number) => 0.35 * Math.sin((2 * Math.PI * index) / 12);
+    const levels = Array.from({ length: 72 }, (_, index) => sine(index));
+    const hours = marineFromLevels("2026-09-22T00:00", levels);
+    const lastMonth = marineFromLevels("2026-08-22T00:00", levels);
+    // Two dives a month ago at the steepest rising hours, reported strong, which is what the model would have said.
+    const reports: Report[] = ["2026-08-23T12:00", "2026-08-24T00:00"].map((time, id) => {
+      const slopeWindowM = residualSlopeWindow(lastMonth, time)!;
+      return {
+        id: `peak-${id}`,
+        siteId: "s",
+        time,
+        direction: "incoming",
+        strength: "strong",
+        slopeM: slopeWindowM[6],
+        slopeWindowM,
+        rangeM: residualRangeAt(lastMonth, time),
+      };
+    });
+    expect(reports.every((report) => report.rangeM != null && report.rangeM > 0.55)).toBe(true);
+
+    const strengths = (list: Report[]) =>
+      forecastHours({ hours, inwardBearingDeg: 0, reports: list }).map((hour) => hour.strength);
+    const plain = strengths([]);
+    // Agreeing reports leave the bands alone.
+    expect(strengths(reports)).toEqual(plain);
+    // Without the range the prior is mild, so the same reports read as "stronger than the model" and lift the series.
+    const legacy = strengths(reports.map((report) => ({ ...report, rangeM: undefined })));
+    expect(legacy.some((band, index) => STRENGTHS.indexOf(band) > STRENGTHS.indexOf(plain[index]))).toBe(true);
   });
 
   it("uses a learned phase offset on the next day instead of the fresh-report pull", () => {

@@ -131,6 +131,9 @@ describe("addReport saves the prediction", () => {
     expect(report.predicted?.shown.direction).toMatch(/^(incoming|outgoing)$/);
     expect(report.predicted?.modelOnly).not.toBeNull();
     expect(report.predicted?.issuedAt).toEqual(expect.any(Number));
+    // The day's tide range is saved beside the slope window, so the report can be graded after it leaves the series.
+    expect(report.slopeWindowM).toHaveLength(13);
+    expect(report.rangeM).toEqual(expect.any(Number));
   });
 
   it("the modelOnly prediction ignores earlier reports; the shown one may not", async () => {
@@ -138,6 +141,17 @@ describe("addReport saves the prediction", () => {
     const first = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
     const second = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
     expect(second.predicted?.modelOnly).toEqual(first.predicted?.modelOnly);
+  });
+
+  it("a back-dated report's shown prediction uses only reports from before its dive", async () => {
+    seedMarineCache("kandooma-thila");
+    // Later dives filed first. They must not tune the forecast for an earlier dive filed after them.
+    for (let index = 0; index < 3; index += 1) {
+      await addReport({ siteId: "kandooma-thila", time: "2026-09-27T14:00", direction: "outgoing", strength: "too_strong" });
+    }
+    const backDated = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T06:00", direction: "incoming", strength: "mild" });
+    expect(backDated.predicted?.modelOnly).not.toBeNull();
+    expect(backDated.predicted?.shown).toEqual({ ...backDated.predicted!.modelOnly, confidence: "low" });
   });
 
   it("still saves the report when there is no ocean data, just without a prediction", async () => {

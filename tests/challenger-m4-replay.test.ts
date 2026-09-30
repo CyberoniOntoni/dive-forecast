@@ -253,7 +253,8 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
       });
 
       expect(result.metrics.totalReports).toBe(1);
-      // In monotonic tide, nearestSlackDeviationMins finds no slacks/turns and returns 0
+      // A linear rise leaves no residual tide, so the report hour is itself forecast slack: timed, and 0 minutes off
+      expect(result.metrics.slackReports).toBe(1);
       expect(result.metrics.slackTimingDeviationMins).toBe(0);
       assertNoNaN(result);
     });
