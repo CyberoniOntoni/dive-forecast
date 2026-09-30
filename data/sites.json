@@ -132,7 +132,7 @@
       "channelDepthM": 40,
       "channelSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
       "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "kudarah-thila",
@@ -192,8 +192,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/alimatha-house-reef/",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "lagoon",
+      "siteTypeSource": "manual"
     },
     {
       "id": "broken-rock",
@@ -205,8 +205,8 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/broken-rock/",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "channel-thila",
+      "siteTypeSource": "manual"
     },
     {
       "id": "himandhoo-thila",
