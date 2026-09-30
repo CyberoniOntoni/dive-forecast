@@ -10,7 +10,7 @@ Check each new site's type and bearing. A fallback bearing is an estimate (outli
 |---|---|---|---|---|---|---|
 | Fulidhoo Caves | add | new | Outer reef | 25–40 m | 180° rim-derived | [3.6834, 73.4156](https://www.openstreetmap.org/?mlat=3.683382&mlon=73.415558#map=15/3.683382/73.415558) |
 | Ihiga | add | new | Outer reef |  | 185° rim-derived | [3.6830, 73.4514](https://www.openstreetmap.org/?mlat=3.682999&mlon=73.45139#map=15/3.682999/73.45139) |
-| Manta Point | add | new | Lagoon |  | 170° fallback | [3.6480, 73.4887](https://www.openstreetmap.org/?mlat=3.648016&mlon=73.488669#map=15/3.648016/73.488669) |
+| Manta Point (Vaavu) | add | new | Lagoon |  | 170° fallback | [3.6480, 73.4887](https://www.openstreetmap.org/?mlat=3.648016&mlon=73.488669#map=15/3.648016/73.488669) |
 | Fufalhi Kandu | add | new | Rim pass |  | 206° rim-derived | [3.6739, 73.4866](https://www.openstreetmap.org/?mlat=3.673856&mlon=73.486645#map=15/3.673856/73.486645) |
 | Dhiggiri Kandu | add | new | Rim pass |  | 247° rim-derived | [3.6482, 73.5031](https://www.openstreetmap.org/?mlat=3.648208&mlon=73.503146#map=15/3.648208/73.503146) |
 | Medhu Kandu | add | new | Rim pass | 10–30 m | 278° rim-derived | [3.6205, 73.5087](https://www.openstreetmap.org/?mlat=3.620526&mlon=73.508711#map=15/3.620526/73.508711) |
