@@ -61,7 +61,8 @@ async function nowcastOne(
   atoll: Atoll | undefined,
   maldivesWall: string,
 ): Promise<SiteNowcast> {
-  const loaded = await loadSite(site, mates, atoll, reportsForSite(site.id));
+  // The map never waits for a first fetch: a site with no cache yet shows no forecast until its fetch lands.
+  const loaded = await loadSite(site, mates, atoll, reportsForSite(site.id), { wait: false });
   const hour = nearestForecastHour(loaded.hours, maldivesWall);
   const hasHours = loaded.hours.length > 0;
   return {

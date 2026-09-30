@@ -1,7 +1,16 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import { fetchMarine, marineCacheDir, marineHoursFromApi, marineSeriesStale, seawardPoint, siteMarineHours, wrapLongitude } from "./marine";
+import {
+  fetchMarine,
+  marineCacheDir,
+  marineHoursFromApi,
+  marineRequestsInFlight,
+  marineSeriesStale,
+  seawardPoint,
+  siteMarineHours,
+  wrapLongitude,
+} from "./marine";
 import type { MarineHour } from "./types";
 
 const NOW = Date.UTC(2026, 8, 24, 12, 0, 0);
@@ -388,7 +397,7 @@ describe("marine fetch", () => {
 });
 
 describe("stale marine cache", () => {
-  it("returns a cache older than 6 hours when the network fails", async () => {
+  it("returns a cache older than 6 hours at once and refreshes it in the background, keeping it if that fails", async () => {
     const lat = 2.2222;
     const lon = 73.4444;
     const bearing = 90;
@@ -413,13 +422,79 @@ describe("stale marine cache", () => {
     });
     try {
       const sampled = await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon);
-      expect(fetches).toBeGreaterThan(0);
-      expect(sampled).toEqual({ ok: true, hours: cachedHours, fetchedAt, stale: true });
+      // Served from the cache without waiting; its hours still run past now, so it is not stale.
+      expect(sampled).toEqual({ ok: true, hours: cachedHours, fetchedAt, stale: false });
+      await vi.waitFor(() => expect(fetches).toBeGreaterThan(0));
+      await vi.waitFor(() => expect(marineRequestsInFlight()).toBe(0));
+      // The refresh failed, so the next load still gets the same cached series.
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon)).toEqual(sampled);
     } finally {
       vi.unstubAllGlobals();
       vi.restoreAllMocks();
       forgetMarineCache(point.lat, point.lon);
       forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+
+  it("shares one request between callers of the same point and runs at most four at once", async () => {
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    const body = marineApiBody([maldivesWall(Date.now())], [0.3], [0.1], [10]);
+    const release: (() => void)[] = [];
+    let started = 0;
+    let most = 0;
+    vi.stubGlobal("fetch", async () => {
+      started += 1;
+      most = Math.max(most, marineRequestsInFlight());
+      await new Promise<void>((resolve) => release.push(resolve));
+      return jsonResponse(body);
+    });
+    const points = Array.from({ length: 10 }, (_, index) => ({ lat: 1 + index / 100, lon: 73.3 }));
+    try {
+      // Two callers for each of ten points, all at once.
+      const all = Promise.all(points.flatMap((point) => [fetchMarine(point.lat, point.lon), fetchMarine(point.lat, point.lon)]));
+      await vi.waitFor(() => expect(started).toBe(4));
+      expect(marineRequestsInFlight()).toBe(4);
+      while (release.length > 0 || started < points.length) {
+        release.shift()?.();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      const results = await all;
+      expect(results.every((result) => result.ok)).toBe(true);
+      expect(started).toBe(points.length); // one request per point, not per caller
+      expect(most).toBeLessThanOrEqual(4);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      for (const point of points) forgetMarineCache(point.lat, point.lon);
+    }
+  });
+
+  it("without waiting, answers unavailable at once for a point with no cache and fetches it in the background", async () => {
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    const written: string[] = [];
+    vi.spyOn(fs, "writeFileSync").mockImplementation((file) => void written.push(String(file)));
+    let fetches = 0;
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return jsonResponse(marineApiBody([maldivesWall(Date.now())], [0.3], [0.1], [10]));
+    });
+    const lat = 1.4321;
+    const lon = 73.3;
+    try {
+      expect(await fetchMarine(lat, lon, { wait: false })).toEqual({ ok: false, unavailable: true });
+      await vi.waitFor(() => expect(written.length).toBe(1));
+      expect(fetches).toBe(1);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
     }
   });
 

@@ -3,10 +3,12 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker } from "leaflet";
+import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "leaflet.markercluster/dist/MarkerCluster.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { addMapLayers } from "@/lib/map-layers";
+import type { MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site } from "@/lib/types";
@@ -22,7 +24,11 @@ type MapProps = {
   adding: boolean;
   onPick: (point: Point) => void;
   onOpen: (id: string) => void;
+  onView: (view: MapView) => void;
 };
+
+/** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
+const CLUSTER_UNTIL_ZOOM = 11;
 
 type ArrowFields = {
   bearing: number;
@@ -152,6 +158,8 @@ const MAP_STYLE = `
 .dive-atlas-legend ul{list-style:none;margin:0;padding:0}
 .dive-atlas-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
 .dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
+.dive-cluster-icon{background:transparent;border:none}
+.dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
 .dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
 @media (max-width:1023px){
   .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
@@ -167,15 +175,29 @@ function mountDiveMap(
     isAdding: () => boolean;
     onPick: (point: Point) => void;
     onZoom: (zoom: number) => void;
+    onView: (view: MapView) => void;
   },
-): { map: LeafletMapType; destroy: () => void } {
+): { map: LeafletMapType; pins: MarkerClusterGroup; destroy: () => void } {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
   addMapLayers(L, map);
+  const pins = L.markerClusterGroup({
+    disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,
+    maxClusterRadius: 48,
+    showCoverageOnHover: false,
+    spiderfyOnMaxZoom: false,
+    iconCreateFunction: (cluster) => clusterIcon(L, cluster.getChildCount()),
+  });
+  pins.addTo(map);
 
+  const reportView = () => {
+    const bounds = map.getBounds();
+    hooks.onView({ south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() });
+  };
   map.on("zoomend", () => {
     hooks.onZoom(map.getZoom());
   });
+  map.on("moveend", reportView);
 
   frameSites(L, map, siteGlances);
 
@@ -190,9 +212,11 @@ function mountDiveMap(
   resize.observe(container);
   map.invalidateSize();
   hooks.onZoom(map.getZoom());
+  reportView();
 
   return {
     map,
+    pins,
     destroy: () => {
       resize.disconnect();
       map.remove();
@@ -210,14 +234,24 @@ function frameSites(L: LeafletLib, map: LeafletMapType, siteGlances: readonly Si
   }
 }
 
+/** A numbered bubble for several pins; tapping it zooms in (the cluster group's default). */
+function clusterIcon(L: LeafletLib, count: number) {
+  return L.divIcon({
+    className: "dive-cluster-icon",
+    html: `<div class="dive-cluster" aria-label="${count} sites. Zoom in to see them">${count}</div>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
+}
+
 function placeSiteMarkers(
   L: LeafletLib,
-  map: LeafletMapType,
+  pins: MarkerClusterGroup,
   siteGlances: readonly SiteGlance[],
   showStrength: boolean,
   onOpen: (id: string) => void,
 ): Marker[] {
-  return siteGlances.map(({ site, glance, age }) => {
+  const markers = siteGlances.map(({ site, glance, age }) => {
     const marker = L.marker([site.lat, site.lon], {
       icon: pinIcon(L, glance, showStrength, age),
       bubblingMouseEvents: false,
@@ -227,9 +261,10 @@ function placeSiteMarkers(
     marker.on("click", () => {
       onOpen(site.id);
     });
-    marker.addTo(map);
     return marker;
   });
+  pins.addLayers(markers);
+  return markers;
 }
 
 function placeDraftPin(L: LeafletLib, map: LeafletMapType, draft: Point): CircleMarker {
@@ -293,11 +328,17 @@ function shortSeriesAge(fetchedAt: number | null, maldivesWall: string): string 
 /** Leaflet touches window. dynamic() is the only loader; the canvas is created on mount. */
 const LeafletMap = dynamic(
   async () => {
-    const L = leafletApi(await import("leaflet"));
+    // The cluster plugin adds MarkerClusterGroup to the global L. An ES module namespace is frozen, so it gets a
+    // plain copy of Leaflet's exports (same classes), and the map uses that copy.
+    const L: LeafletLib = { ...leafletApi(await import("leaflet")) };
+    (globalThis as { L?: LeafletLib }).L = L;
+    await import("leaflet.markercluster");
 
-    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen }: MapProps) {
+    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen, onView }: MapProps) {
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
+      const pinsRef = useRef<MarkerClusterGroup | null>(null);
+      const onViewRef = useRef(onView);
       const markersRef = useRef<Marker[]>([]);
       const draftMarkerRef = useRef<CircleMarker | null>(null);
       const onPickRef = useRef(onPick);
@@ -312,8 +353,9 @@ const LeafletMap = dynamic(
       useEffect(() => {
         onPickRef.current = onPick;
         onOpenRef.current = onOpen;
+        onViewRef.current = onView;
         addingRef.current = adding;
-      }, [onPick, onOpen, adding]);
+      }, [onPick, onOpen, onView, adding]);
 
       // W4: one canvas; this effect returns mounted.destroy. Marker updates stay below.
       useEffect(() => {
@@ -323,16 +365,18 @@ const LeafletMap = dynamic(
           isAdding: () => addingRef.current,
           onPick: (point) => onPickRef.current(point),
           onZoom: (next) => setZoom(next),
+          onView: (view) => onViewRef.current(view),
         });
         mapRef.current = mounted.map;
+        pinsRef.current = mounted.pins;
         setMapEpoch((epoch) => epoch + 1);
         return mounted.destroy;
       // eslint-disable-next-line react-hooks/exhaustive-deps -- W4 mounts the canvas once; marker sync is the next effect.
       }, []);
 
       useEffect(() => {
-        const map = mapRef.current;
-        if (!map || mapEpoch === 0) return;
+        const pins = pinsRef.current;
+        if (!pins || mapEpoch === 0) return;
         // W11: same-length list setIcon in place; rebuild only when the count changes.
         if (markersRef.current.length === siteGlances.length) {
           for (let index = 0; index < siteGlances.length; index++) {
@@ -344,8 +388,8 @@ const LeafletMap = dynamic(
           }
           return;
         }
-        for (const marker of markersRef.current) marker.remove();
-        markersRef.current = placeSiteMarkers(L, map, siteGlances, showStrength, (id) => {
+        pins.clearLayers();
+        markersRef.current = placeSiteMarkers(L, pins, siteGlances, showStrength, (id) => {
           onOpenRef.current(id);
         });
       }, [siteGlances, mapEpoch, showStrength]);
@@ -384,6 +428,7 @@ export function SiteMap({
   const router = useRouter();
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
+  const [view, setView] = useState<MapView | null>(null);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -406,6 +451,7 @@ export function SiteMap({
       <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden lg:flex-row">
         <CurrentOverlay
           siteGlances={siteGlances}
+          view={view}
           maldivesWall={maldivesWall}
           draft={draft}
           adding={adding}
@@ -419,6 +465,7 @@ export function SiteMap({
             draft={draft}
             adding={adding}
             onPick={setDraft}
+            onView={setView}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}

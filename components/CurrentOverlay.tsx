@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
+import { inView, siteCountLabel, type MapView } from "@/lib/map-view";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
 
@@ -14,11 +15,6 @@ export type SiteGlance = {
 };
 
 type Point = { lat: number; lon: number };
-
-function siteCountLabel(count: number): string {
-  const noun = count === 1 ? "site" : "sites";
-  return `${count} ${noun}`;
-}
 
 function chevronTurn(expanded: boolean): string {
   return expanded ? "rotate(135deg)" : "rotate(-45deg)";
@@ -48,6 +44,7 @@ const SHEET_STYLE = `
 
 export function CurrentOverlay({
   siteGlances,
+  view,
   maldivesWall,
   draft,
   adding,
@@ -55,6 +52,8 @@ export function CurrentOverlay({
   onAdded,
 }: {
   siteGlances: readonly SiteGlance[];
+  /** The map's visible area. The list shows only the sites inside it; null (before the map loads) shows all. */
+  view: MapView | null;
   maldivesWall: string;
   draft: Point | null;
   adding: boolean;
@@ -62,9 +61,10 @@ export function CurrentOverlay({
   onAdded: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const countLabel = siteCountLabel(siteGlances.length);
+  const visible = view ? siteGlances.filter(({ site }) => inView(site.lat, site.lon, view)) : siteGlances;
+  const countLabel = siteCountLabel(visible.length, siteGlances.length);
   // W9: copy then sort. Equal ranks stay in the name order already on the list.
-  const ranked = [...siteGlances].sort((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
+  const ranked = [...visible].sort((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
 
   function toggleSheet() {
     // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
@@ -125,6 +125,9 @@ export function CurrentOverlay({
               <SiteRow key={item.site.id} {...item} />
             ))}
           </ul>
+          {ranked.length === 0 && siteGlances.length > 0 ? (
+            <p className="px-3 pb-3 text-sm text-foam/80">No sites here. Zoom out.</p>
+          ) : null}
         </nav>
       </div>
     </aside>

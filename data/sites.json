@@ -255,8 +255,8 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "channel-thila",
+      "siteTypeSource": "manual"
     },
     {
       "id": "kuda-faru",
