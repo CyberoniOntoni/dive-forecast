@@ -473,6 +473,31 @@ describe("stale marine cache", () => {
     }
   });
 
+  it("without waiting, answers unavailable at once for a point with no cache and fetches it in the background", async () => {
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    const written: string[] = [];
+    vi.spyOn(fs, "writeFileSync").mockImplementation((file) => void written.push(String(file)));
+    let fetches = 0;
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return jsonResponse(marineApiBody([maldivesWall(Date.now())], [0.3], [0.1], [10]));
+    });
+    const lat = 1.4321;
+    const lon = 73.3;
+    try {
+      expect(await fetchMarine(lat, lon, { wait: false })).toEqual({ ok: false, unavailable: true });
+      await vi.waitFor(() => expect(written.length).toBe(1));
+      expect(fetches).toBe(1);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
   it("stays unavailable when no cache file exists and the network fails", async () => {
     const lat = 2.3333;
     const lon = 73.5555;
