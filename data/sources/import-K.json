@@ -1,6 +1,6 @@
 {
   "atollCode": "K",
-  "generatedAt": "2026-09-30T13:16:46.536Z",
+  "generatedAt": "2026-09-30T13:20:55.376Z",
   "candidates": [
     {
       "guideId": 36,
@@ -2122,8 +2122,26 @@
       "name": "Embudhu Thila",
       "lat": 4.087588,
       "lon": 73.534001,
-      "decision": "review",
-      "reason": "different name, same spot: Embudhoo Express, 0.08 km"
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "embudhu-thila",
+        "name": "Embudhu Thila",
+        "atollId": "south-male",
+        "lat": 4.087588,
+        "lon": 73.534001,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 12,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "channel-thila",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 253,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
     },
     {
       "guideId": 129,
@@ -2206,7 +2224,7 @@
         "siteTypeSource": "derived"
       },
       "bearing": {
-        "deg": 265,
+        "deg": 266,
         "source": "fallback",
         "sampleInOcean": true
       }
@@ -2216,8 +2234,26 @@
       "name": "Cocoa Corner",
       "lat": 3.908911,
       "lon": 73.480514,
-      "decision": "review",
-      "reason": "different name, same spot: Kandooma Thila, 0.31 km"
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "cocoa-corner",
+        "name": "Cocoa Corner",
+        "atollId": "south-male",
+        "lat": 3.908911,
+        "lon": 73.480514,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 5,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 296,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
     },
     {
       "guideId": 136,
@@ -2232,8 +2268,26 @@
       "name": "Kandooma Caves",
       "lat": 3.904485,
       "lon": 73.476674,
-      "decision": "review",
-      "reason": "different name, same spot: Kandooma Thila, 0.37 km"
+      "decision": "add",
+      "reason": "new",
+      "site": {
+        "id": "kandooma-caves",
+        "name": "Kandooma Caves",
+        "atollId": "south-male",
+        "lat": 3.904485,
+        "lon": 73.476674,
+        "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "diveTopM": 10,
+        "diveMaxM": 30,
+        "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+        "siteType": "outer-reef",
+        "siteTypeSource": "derived"
+      },
+      "bearing": {
+        "deg": 297,
+        "source": "rim-derived",
+        "sampleInOcean": true
+      }
     },
     {
       "guideId": 138,
@@ -2281,7 +2335,7 @@
         "siteTypeSource": "derived"
       },
       "bearing": {
-        "deg": 331,
+        "deg": 337,
         "source": "fallback",
         "sampleInOcean": true
       }
@@ -2462,7 +2516,7 @@
         "siteTypeSource": "derived"
       },
       "bearing": {
-        "deg": 39,
+        "deg": 41,
         "source": "fallback",
         "sampleInOcean": true
       }
@@ -2692,7 +2746,7 @@
         "siteTypeSource": "derived"
       },
       "bearing": {
-        "deg": 12,
+        "deg": 14,
         "source": "fallback",
         "sampleInOcean": true
       }

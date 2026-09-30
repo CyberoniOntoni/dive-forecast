@@ -1,6 +1,6 @@
 # Dive-guide import: atoll K
 
-Generated 2026-09-30T13:16:46.536Z. Edit decisions in `import-K.json`, then run
+Generated 2026-09-30T13:20:55.376Z. Edit decisions in `import-K.json`, then run
 `npm run import-dive-guide -- --atoll K --apply`.
 
 Check each new site's type and bearing. A fallback bearing is an estimate (outlined arrow); measure it
@@ -96,23 +96,23 @@ Check each new site's type and bearing. A fallback bearing is an estimate (outli
 | Embudhoo Canyon | add | new | Outer reef | 10–30 m | 181° rim-derived | [4.1264, 73.5073](https://www.openstreetmap.org/?mlat=4.126446&mlon=73.507287#map=15/4.126446/73.507287) |
 | Cathedral | add | new | Outer reef | 10–30 m | 218° rim-derived | [4.1234, 73.5266](https://www.openstreetmap.org/?mlat=4.12342&mlon=73.526644#map=15/4.12342/73.526644) |
 | Embudhoo Kandu | match:embudhoo-express | same site, 0.72 km |  |  |  | [4.0854, 73.5288](https://www.openstreetmap.org/?mlat=4.085377&mlon=73.528763#map=15/4.085377/73.528763) |
-| Embudhu Thila | review | different name, same spot: Embudhoo Express, 0.08 km |  |  |  | [4.0876, 73.5340](https://www.openstreetmap.org/?mlat=4.087588&mlon=73.534001#map=15/4.087588/73.534001) |
+| Embudhu Thila | add | new | Channel thila | 12–30 m | 253° rim-derived | [4.0876, 73.5340](https://www.openstreetmap.org/?mlat=4.087588&mlon=73.534001#map=15/4.087588/73.534001) |
 | Dhigu Thila | add | new | Channel thila | 10–25 m | 300° rim-derived | [3.9817, 73.5098](https://www.openstreetmap.org/?mlat=3.981703&mlon=73.509777#map=15/3.981703/73.509777) |
 | Miyaru Falhu | add | new | Outer reef | 17–20 m | 312° rim-derived | [3.9920, 73.5232](https://www.openstreetmap.org/?mlat=3.99195&mlon=73.523197#map=15/3.99195/73.523197) |
 | Kuda Giri Wreck | match:kuda-giri | same site, 0.18 km |  |  |  | [3.9720, 73.4899](https://www.openstreetmap.org/?mlat=3.971952&mlon=73.489923#map=15/3.971952/73.489923) |
-| Maafushi Caves | add | new | Lagoon | 5–20 m | 265° fallback | [3.9569, 73.4929](https://www.openstreetmap.org/?mlat=3.956924&mlon=73.492873#map=15/3.956924/73.492873) |
-| Cocoa Corner | review | different name, same spot: Kandooma Thila, 0.31 km |  |  |  | [3.9089, 73.4805](https://www.openstreetmap.org/?mlat=3.908911&mlon=73.480514#map=15/3.908911/73.480514) |
+| Maafushi Caves | add | new | Lagoon | 5–20 m | 266° fallback | [3.9569, 73.4929](https://www.openstreetmap.org/?mlat=3.956924&mlon=73.492873#map=15/3.956924/73.492873) |
+| Cocoa Corner | add | new | Outer reef | 5–30 m | 296° rim-derived | [3.9089, 73.4805](https://www.openstreetmap.org/?mlat=3.908911&mlon=73.480514#map=15/3.908911/73.480514) |
 | Kandooma Thila | match:kandooma-thila | same site, 0.48 km |  |  |  | [3.9090, 73.4740](https://www.openstreetmap.org/?mlat=3.908978&mlon=73.473998#map=15/3.908978/73.473998) |
-| Kandooma Caves | review | different name, same spot: Kandooma Thila, 0.37 km |  |  |  | [3.9045, 73.4767](https://www.openstreetmap.org/?mlat=3.904485&mlon=73.476674#map=15/3.904485/73.476674) |
+| Kandooma Caves | add | new | Outer reef | 10–30 m | 297° rim-derived | [3.9045, 73.4767](https://www.openstreetmap.org/?mlat=3.904485&mlon=73.476674#map=15/3.904485/73.476674) |
 | Lhosfushi Kandu | add | new | Rim pass | 5–30 m | 294° rim-derived | [3.8950, 73.4677](https://www.openstreetmap.org/?mlat=3.895001&mlon=73.467701#map=15/3.895001/73.467701) |
-| Sundune | add | new | Lagoon | ?–15 m | 331° fallback | [3.8958, 73.4603](https://www.openstreetmap.org/?mlat=3.895815&mlon=73.460294#map=15/3.895815/73.460294) |
+| Sundune | add | new | Lagoon | ?–15 m | 337° fallback | [3.8958, 73.4603](https://www.openstreetmap.org/?mlat=3.895815&mlon=73.460294#map=15/3.895815/73.460294) |
 | Medhu Faru | add | new | Outer reef | 10–30 m | 288° rim-derived | [3.8921, 73.4685](https://www.openstreetmap.org/?mlat=3.892065&mlon=73.468502#map=15/3.892065/73.468502) |
 | Guraidhoo Corner | add | new | Outer reef | 3–30 m | 284° rim-derived | [3.8896, 73.4684](https://www.openstreetmap.org/?mlat=3.889564&mlon=73.468377#map=15/3.889564/73.468377) |
 | Ranikan | add | new | Outer reef | 5–30 m | 19° rim-derived | [3.8096, 73.3898](https://www.openstreetmap.org/?mlat=3.80962&mlon=73.389847#map=15/3.80962/73.389847) |
 | Lhohi Faru Thila | add | new | Channel thila | 10–30 m | 73° rim-derived | [3.8704, 73.3606](https://www.openstreetmap.org/?mlat=3.870358&mlon=73.360627#map=15/3.870358/73.360627) |
 | Kudarah | add | new | Outer reef | 3–30 m | 343° rim-derived | [3.8098, 73.4183](https://www.openstreetmap.org/?mlat=3.809841&mlon=73.418346#map=15/3.809841/73.418346) |
 | Adam Faru | add | new | Outer reef | 5–20 m | 75° rim-derived | [3.8582, 73.3681](https://www.openstreetmap.org/?mlat=3.858171&mlon=73.368061#map=15/3.858171/73.368061) |
-| Lhohi Housereef | add | new | Lagoon | ?–15 m | 39° fallback | [3.8764, 73.3689](https://www.openstreetmap.org/?mlat=3.876399&mlon=73.368894#map=15/3.876399/73.368894) |
+| Lhohi Housereef | add | new | Lagoon | ?–15 m | 41° fallback | [3.8764, 73.3689](https://www.openstreetmap.org/?mlat=3.876399&mlon=73.368894#map=15/3.876399/73.368894) |
 | Lhohi Paradise | add | new | Outer reef | ?–20 m | 73° rim-derived | [3.8726, 73.3648](https://www.openstreetmap.org/?mlat=3.872622&mlon=73.364827#map=15/3.872622/73.364827) |
 | Ramm Faru | add | new | Outer reef | ?–15 m | 74° rim-derived | [3.8822, 73.3557](https://www.openstreetmap.org/?mlat=3.882187&mlon=73.355661#map=15/3.882187/73.355661) |
 | Ihi Reef | add | new | Outer reef | ?–15 m | 75° rim-derived | [3.8881, 73.3541](https://www.openstreetmap.org/?mlat=3.888106&mlon=73.354113#map=15/3.888106/73.354113) |
@@ -121,7 +121,7 @@ Check each new site's type and bearing. A fallback bearing is an estimate (outli
 | Balcony | add | new | Outer reef | 3–24 m | 94° rim-derived | [3.9368, 73.3510](https://www.openstreetmap.org/?mlat=3.936798&mlon=73.350998#map=15/3.936798/73.350998) |
 | Vaagili Bodu Thila | add | new | Channel thila | 5–30 m | 95° rim-derived | [3.9458, 73.3540](https://www.openstreetmap.org/?mlat=3.945832&mlon=73.353959#map=15/3.945832/73.353959) |
 | Vaagili Caves | add | new | Outer reef | 10–18 m | 96° rim-derived | [3.9505, 73.3564](https://www.openstreetmap.org/?mlat=3.950455&mlon=73.35638#map=15/3.950455/73.35638) |
-| Rihiveli Wreck | add | new | Lagoon | ?–15 m | 12° fallback | [3.8211, 73.4022](https://www.openstreetmap.org/?mlat=3.821128&mlon=73.402165#map=15/3.821128/73.402165) |
+| Rihiveli Wreck | add | new | Lagoon | ?–15 m | 14° fallback | [3.8211, 73.4022](https://www.openstreetmap.org/?mlat=3.821128&mlon=73.402165#map=15/3.821128/73.402165) |
 
 ## Seeded sites whose bearing moves
 
