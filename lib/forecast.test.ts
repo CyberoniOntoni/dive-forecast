@@ -10,7 +10,7 @@ import {
   tideWindow,
   toMaldivesWall,
 } from "./forecast";
-import { STRENGTHS, type MarineHour, type Report } from "./types";
+import { STRENGTHS, type MarineHour, type Report, type Strength } from "./types";
 
 const DAY = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3];
 
@@ -144,6 +144,40 @@ describe("forecastHours", () => {
     expect(
       confidenceWith({ id: "slack", siteId: "s", time: threeDaysBefore, direction: "outgoing", strength: "slack", slopeM: 0.08 }),
     ).toBe("high");
+  });
+
+  it("judges strength agreement at each report's own hour, not the hour being scored", () => {
+    // 12-hour sine: 00:00 to 02:00 on the second day rise toward the 03:00 crest, easing off as the turn nears.
+    const hours = marineFromLevels(
+      "2026-07-14T00:00",
+      Array.from({ length: 72 }, (_, index) => 0.8 + 0.5 * Math.sin((2 * Math.PI * index) / 12)),
+    );
+    const plain = forecastHours({ hours, inwardBearingDeg: 90 });
+    const bandAt = (time: string) => plain.find((hour) => hour.time === time)!.strength;
+    const times = ["2026-07-15T00:00", "2026-07-15T01:00", "2026-07-15T02:00", "2026-07-15T00:00", "2026-07-15T01:00"];
+    const target = "2026-07-15T02:00";
+    // The run peaks early and eases off, so most reports sit at a different band from the target hour.
+    expect(times.filter((time) => bandAt(time) !== bandAt(target)).length).toBeGreaterThanOrEqual(3);
+
+    const confidenceWith = (strengthFor: (time: string) => Strength) =>
+      forecastHours({
+        hours,
+        inwardBearingDeg: 90,
+        allowHighConfidence: true,
+        reports: times.map((time, id) => ({
+          id: `r${id}`,
+          siteId: "s",
+          time,
+          direction: "incoming" as const,
+          strength: strengthFor(time),
+        })),
+      }).find((hour) => hour.time === target)?.confidence;
+
+    // Every report matched the model at its own hour: a clean track record, so high even at the easing hour.
+    expect(confidenceWith(bandAt)).toBe("high");
+    // Reports with the run's shape backwards (weak at the peak, strong as it eases): no speed factor fits them.
+    const peak = bandAt(times[0]);
+    expect(confidenceWith((time) => (bandAt(time) === peak ? "mild" : "too_strong"))).not.toBe("high");
   });
 
   it("applies channel narrowing to the envelope only, not again to the hourly ramp", () => {

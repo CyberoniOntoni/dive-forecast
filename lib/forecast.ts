@@ -32,7 +32,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/4";
+export const FORECAST_MODEL_VERSION = "tide-slope+drift-nudge/5";
 
 /**
  * What feeds the strength nudge. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -120,6 +120,16 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     constriction,
   );
   const allowHighConfidence = input.allowHighConfidence ?? true;
+  const reportBands = ownHourBands(
+    classified,
+    hours,
+    residual,
+    tides,
+    offset,
+    input.inwardBearingDeg,
+    speedFactor,
+    constriction,
+  );
   return finishRuns(
     hours,
     residual,
@@ -128,6 +138,7 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     speedFactor,
     tides,
     classified,
+    reportBands,
     allowHighConfidence,
     constriction,
   );
@@ -257,6 +268,7 @@ function finishRuns(
   speedFactor: number,
   tides: readonly TideStats[],
   classified: readonly ClassifiedReport[],
+  reportBands: ReadonlyMap<ClassifiedReport, Strength | null>,
   allowHighConfidence: boolean,
   constriction: number = 1.0,
 ): HourForecast[] {
@@ -272,6 +284,7 @@ function finishRuns(
       strength: pull.strength,
       confidence: confidenceFor({
         classified,
+        reportBands,
         hours,
         residual,
         offset,
@@ -481,6 +494,7 @@ function fitSpeedFactor(
 
 function confidenceFor(input: {
   classified: readonly ClassifiedReport[];
+  reportBands: ReadonlyMap<ClassifiedReport, Strength | null>;
   hours: readonly MarineHour[];
   residual: readonly (number | null)[];
   offset: number;
@@ -523,7 +537,11 @@ function confidenceFor(input: {
   const totalWeight = weightOf(similar);
   const directionalWeight = weightOf(directional);
   const dirAgreeWeight = weightOf(directional.filter((item) => item.report.direction === input.direction));
-  const strAgreeWeight = weightOf(similar.filter((item) => item.report.strength === input.strength));
+  // Strength is a track record too: did the model get each report's band right at that report's own hour?
+  // Reports come from all points in a run, so comparing them with this hour's band would miss a right model near a turn.
+  const strAgreeWeight = weightOf(
+    similar.filter((item) => item.report.strength === (input.reportBands.get(item) ?? input.strength)),
+  );
 
   const directionAgree = directionalWeight > 0 ? dirAgreeWeight / directionalWeight : 0;
   const strengthAgree = totalWeight > 0 ? strAgreeWeight / totalWeight : 0;
@@ -683,16 +701,53 @@ function speedPrior(
 }
 
 /**
+ * The band the model gives at each report's own hour, with the fitted speed and before any report pull: what the
+ * report can be judged against. Null when the model has no graded band there (an older report saved without its
+ * day's range), so confidence falls back to comparing that report with the hour being scored.
+ */
+function ownHourBands(
+  classified: readonly ClassifiedReport[],
+  hours: readonly MarineHour[],
+  residual: readonly (number | null)[],
+  tides: readonly TideStats[],
+  offset: number,
+  inwardBearingDeg: number,
+  speedFactor: number,
+  constriction: number,
+): Map<ClassifiedReport, Strength | null> {
+  return new Map(
+    classified.map((item) => {
+      const band =
+        item.failed
+          ? null
+          : item.seriesIndex >= 0
+            ? speedPrior(item, hours, residual, tides, offset, inwardBearingDeg, constriction)
+            : gradedStoredBand(item, offset, constriction);
+      return [item, band == null ? null : applySpeed(band, speedFactor)];
+    }),
+  );
+}
+
+/**
  * Band the model would have given a report outside this series, from what was saved with it.
  * A report with its day's range and a slope window is graded like an in-series hour, at the fitted lag.
  * An older report has no range, so all it can say is slack or flowing, and flowing counts as mild.
  */
 function storedPrior(item: ClassifiedReport, offset: number, constriction: number): Strength | null {
   if (item.storedHourSlope == null) return null;
+  if (!isGradedStored(item)) return Math.abs(item.storedHourSlope) < SLACK_SLOPE_M ? "slack" : "mild";
+  return gradedStoredBand(item, offset, constriction);
+}
+
+function isGradedStored(item: ClassifiedReport): item is ClassifiedReport & { kind: "slope-window" } {
   const range = item.report.rangeM;
-  if (item.kind !== "slope-window" || typeof range !== "number" || !Number.isFinite(range)) {
-    return Math.abs(item.storedHourSlope) < SLACK_SLOPE_M ? "slack" : "mild";
-  }
+  return item.kind === "slope-window" && typeof range === "number" && Number.isFinite(range);
+}
+
+/** The graded band from a saved range and slope window, or null for a report saved without them. */
+function gradedStoredBand(item: ClassifiedReport, offset: number, constriction: number): Strength | null {
+  if (item.storedHourSlope == null || !isGradedStored(item)) return null;
+  const range = item.report.rangeM as number;
   const slope = item.slopes[WINDOW_HALF_HOURS + offset];
   if (typeof slope !== "number") return null;
   // Thirteen hours span more than a half cycle, so the window holds this run's steepest hour.
