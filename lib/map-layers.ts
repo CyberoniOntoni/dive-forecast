@@ -1,4 +1,11 @@
-import type { Layer, LayerGroup, Map as LeafletMap } from "leaflet";
+import type { Control, Layer, LayerGroup, Map as LeafletMap } from "leaflet";
+import {
+  decodeRing,
+  REEF_ZONE_CLASSES,
+  REEF_ZONES_PATH,
+  type ReefTileEntry,
+  type ReefZoneTile,
+} from "./reef-zones";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -7,7 +14,7 @@ type LeafletLib = typeof import("leaflet");
  * The dive pins are not a layer here: they are always on.
  */
 export type BaseId = "satellite" | "street" | "none";
-export type OverlayId = "seamarks" | "depthShading" | "sonarDepths" | "depthContours" | "grid";
+export type OverlayId = "seamarks" | "reefZones" | "depthShading" | "sonarDepths" | "depthContours" | "grid";
 
 export type LayerChoice = { base: BaseId; overlays: Record<OverlayId, boolean> };
 
@@ -19,6 +26,7 @@ export const BASE_LAYERS: readonly { id: BaseId; label: string }[] = [
 
 export const OVERLAYS: readonly { id: OverlayId; label: string; defaultOn: boolean }[] = [
   { id: "seamarks", label: "Seamarks", defaultOn: true },
+  { id: "reefZones", label: "Reef zones", defaultOn: false },
   { id: "depthShading", label: "Depth shading", defaultOn: false },
   { id: "sonarDepths", label: "Sonar depths", defaultOn: false },
   { id: "depthContours", label: "Depth contours", defaultOn: false },
@@ -130,6 +138,125 @@ export function formatGridLabel(value: number, axis: "lat" | "lon"): string {
   return `${degrees}°${minutes}′${hemisphere}`;
 }
 
+/** Reef zones are drawn from this zoom; below it a whole atoll's worth of tiles would load at once. */
+export const REEF_ZONES_MIN_ZOOM = 11;
+
+/**
+ * Allen Coral Atlas reef zones, from the static tiles in public/overlays/reef-zones (npm run reef-zones).
+ * Only the tiles in view are fetched, each once, and they are drawn on one canvas under the pins.
+ * A legend shows while the layer is on.
+ */
+function reefZones(L: LeafletLib, map: LeafletMap): LayerGroup {
+  const group = L.layerGroup([], {
+    attribution: '<a href="https://allencoralatlas.org/">Allen Coral Atlas</a>, CC BY 4.0',
+  });
+  const renderer = L.canvas({ padding: 0.3 });
+  const built = new Map<string, LayerGroup>();
+  const requested = new Set<string>();
+  let index: Promise<ReefTileEntry[]> | null = null;
+  const legend = reefLegend(L, map);
+
+  const tileIndex = () => {
+    index ??= fetch(`${REEF_ZONES_PATH}/index.json`)
+      .then((response) => (response.ok ? response.json() : { tiles: [] }))
+      .then((body: { tiles?: ReefTileEntry[] }) => body.tiles ?? [])
+      .catch(() => []);
+    return index;
+  };
+
+  const buildTile = (zones: ReefZoneTile): LayerGroup =>
+    L.layerGroup(
+      zones.map(([classIndex, ...rings]) =>
+        L.polygon(rings.map(decodeRing), {
+          renderer,
+          stroke: false,
+          fillColor: REEF_ZONE_CLASSES[classIndex]?.color ?? "#ffffff",
+          fillOpacity: 0.55,
+          interactive: false,
+        }),
+      ),
+    );
+
+  const refresh = async () => {
+    if (!map.hasLayer(group)) return;
+    const zoomedIn = map.getZoom() >= REEF_ZONES_MIN_ZOOM;
+    legend.setZoomedIn(zoomedIn);
+    const view = map.getBounds();
+    const tiles = zoomedIn ? await tileIndex() : [];
+    const wanted = new Set(
+      tiles
+        .filter((tile) => tile.north >= view.getSouth() && tile.south <= view.getNorth() && tile.east >= view.getWest() && tile.west <= view.getEast())
+        .map((tile) => tile.file),
+    );
+    for (const [file, layer] of built) {
+      if (wanted.has(file)) group.addLayer(layer);
+      else group.removeLayer(layer);
+    }
+    for (const file of wanted) {
+      if (requested.has(file)) continue;
+      requested.add(file);
+      fetch(`${REEF_ZONES_PATH}/${file}`)
+        .then((response) => (response.ok ? response.json() : []))
+        .then((zones: ReefZoneTile) => {
+          const layer = buildTile(zones);
+          built.set(file, layer);
+          if (map.hasLayer(group)) void refresh();
+        })
+        .catch(() => requested.delete(file)); // try again on the next move
+    }
+  };
+
+  group.on("add", () => {
+    legend.show();
+    map.on("moveend", refresh);
+    void refresh();
+  });
+  group.on("remove", () => {
+    legend.hide();
+    map.off("moveend", refresh);
+    group.clearLayers();
+  });
+  return group;
+}
+
+/** A small key to the reef-zone colours, with a hint to zoom in below the drawing zoom. */
+function reefLegend(L: LeafletLib, map: LeafletMap) {
+  let control: Control | null = null;
+  let note: HTMLElement | null = null;
+  return {
+    show() {
+      if (control) return;
+      control = new L.Control({ position: "topleft" });
+      control.onAdd = () => {
+        const box = L.DomUtil.create("div", "dive-reef-legend");
+        L.DomEvent.disableClickPropagation(box);
+        const title = L.DomUtil.create("p", "dive-reef-legend-title", box);
+        title.textContent = "Reef zones";
+        note = L.DomUtil.create("p", "dive-reef-legend-note", box);
+        note.textContent = "Zoom in to see them";
+        const list = L.DomUtil.create("ul", "", box);
+        for (const item of REEF_ZONE_CLASSES) {
+          if (item.name === "Terrestrial Reef Flat") continue; // not mapped in the Maldives
+          const row = L.DomUtil.create("li", "", list);
+          const swatch = L.DomUtil.create("span", "dive-reef-swatch", row);
+          swatch.style.background = item.color;
+          row.append(item.name);
+        }
+        return box;
+      };
+      control.addTo(map);
+    },
+    hide() {
+      control?.remove();
+      control = null;
+      note = null;
+    },
+    setZoomedIn(zoomedIn: boolean) {
+      if (note) note.hidden = zoomedIn;
+    },
+  };
+}
+
 /** Thin lat/long lines for the visible area, redrawn as the map moves. Labels sit on the left and top edges. */
 function coordinateGrid(L: LeafletLib, map: LeafletMap): LayerGroup {
   const group = L.layerGroup();
@@ -217,6 +344,8 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
         version: "1.1.0",
         attribution: OPENSEAMAP,
       });
+    case "reefZones":
+      return reefZones(L, map);
     case "grid":
       return coordinateGrid(L, map);
   }

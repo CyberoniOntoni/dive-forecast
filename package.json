@@ -14,7 +14,8 @@
     "bearings": "vite-node scripts/bearings.ts",
     "extract-dive-guide": "vite-node scripts/extract-dive-guide.ts",
     "site-types": "vite-node scripts/site-types.ts",
-    "import-dive-guide": "vite-node scripts/import-dive-guide.ts"
+    "import-dive-guide": "vite-node scripts/import-dive-guide.ts",
+    "reef-zones": "vite-node scripts/reef-zones.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

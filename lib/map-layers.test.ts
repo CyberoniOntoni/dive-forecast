@@ -48,7 +48,7 @@ describe("layer choice", () => {
     const storage = memoryStorage();
     const choice: LayerChoice = {
       base: "none",
-      overlays: { seamarks: false, depthShading: true, sonarDepths: false, depthContours: true, grid: true },
+      overlays: { seamarks: false, reefZones: true, depthShading: true, sonarDepths: false, depthContours: true, grid: true },
     };
     saveLayerChoice(choice, storage);
     expect(storage.data.has(LAYER_STORAGE_KEY)).toBe(true);

@@ -146,6 +146,12 @@ const MAP_STYLE = `
 .dive-map .leaflet-control-layers input{width:18px;height:18px;margin:0;accent-color:var(--incoming)}
 .dive-map .leaflet-control-layers input:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 .dive-map .leaflet-control-layers-separator{border-top-color:color-mix(in srgb, var(--foam) 28%, transparent)}
+.dive-reef-legend{background:color-mix(in srgb, var(--ink) 90%, transparent);color:var(--foam);border-radius:6px;padding:6px 10px;font:500 12px/1.3 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;max-width:190px}
+.dive-reef-legend-title{font-weight:600;margin:0 0 2px}
+.dive-reef-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
+.dive-reef-legend ul{list-style:none;margin:0;padding:0}
+.dive-reef-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dive-reef-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
 .dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
 @media (max-width:1023px){
   .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
