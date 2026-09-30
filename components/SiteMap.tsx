@@ -420,10 +420,13 @@ export function SiteMap({
   sites,
   nowcasts,
   maldivesWall,
+  atollNames,
 }: {
   sites: Site[];
   nowcasts: SiteNowcast[];
   maldivesWall: string;
+  /** Short atoll names by id, shown after site names that more than one site uses. */
+  atollNames: Record<string, string>;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Point | null>(null);
@@ -451,6 +454,7 @@ export function SiteMap({
       <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden lg:flex-row">
         <CurrentOverlay
           siteGlances={siteGlances}
+          atollNames={atollNames}
           view={view}
           maldivesWall={maldivesWall}
           draft={draft}
