@@ -65,7 +65,8 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
   const along = nowcast.alongHeadingDeg ?? null;
   const arrowBearing = passArrowBearing(along ?? nowcast.inwardBearingDeg, hour.direction);
   const way = along == null ? hour.direction : `running ${compassWord(arrowBearing)}`;
-  const spokenWay = along == null ? way : `${way} along the reef`;
+  // A wall's flow runs along its reef; a lagoon site's just runs that way.
+  const spokenWay = along == null || nowcast.lagoon ? way : `${way} along the reef`;
   const base = showStrength
     ? `${name}, ${spokenWay}, ${label}, ${hour.confidence}`
     : `${name}, ${spokenWay}, ${hour.confidence}`;

@@ -86,7 +86,7 @@ export async function addReport(input: unknown): Promise<Report> {
     if (tide.throughflowM != null) report.throughflowM = tide.throughflowM;
     if (tide.headWindowM != null) report.headWindowM = tide.headWindowM;
   }
-  const along = reportAlongHeading(site);
+  const along = await reportAlongHeading(site);
   if (along != null) report.alongHeadingDeg = Math.round(along);
   if (predicted) report.predicted = predicted;
   return persistReport(report);
@@ -129,10 +129,16 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
 }
 
 /** Never blocks a report: a site whose heading cannot be resolved saves none. */
-function reportAlongHeading(site: Site): number | null {
+/**
+ * The compass heading "incoming" meant for this site when the report was filed. A wall's comes from its bearing; a
+ * lagoon site's is the main axis of its lagoon flow, so it comes from the forecast. Never blocks a report.
+ */
+async function reportAlongHeading(site: Site): Promise<number | null> {
   try {
     const catalog = readCatalog();
-    return alongHeadingFor(site, catalog.sites, catalog.atolls.find((item) => item.id === site.atollId));
+    const atoll = catalog.atolls.find((item) => item.id === site.atollId);
+    if (site.siteType === "lagoon") return (await loadSite(site, catalog.sites, atoll, [])).alongHeadingDeg;
+    return alongHeadingFor(site, catalog.sites, atoll);
   } catch {
     return null;
   }
@@ -162,7 +168,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     bearingSource: loaded.bearingSource,
     siteType: loaded.siteType,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    siteNote: loaded.alongHeadingDeg != null ? ALONG_REEF_NOTE : loaded.siteType === "lagoon" ? LAGOON_NOTE : null,
+    siteNote: loaded.siteType === "lagoon" ? LAGOON_NOTE : loaded.alongHeadingDeg != null ? ALONG_REEF_NOTE : null,
     fetchedAt: loaded.fetchedAt,
   };
 }

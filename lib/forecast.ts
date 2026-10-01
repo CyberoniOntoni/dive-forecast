@@ -31,7 +31,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef/11";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon/12";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -253,9 +253,20 @@ const FIRST_ALONG_REEF_VERSION = 8;
  * came from a model that already read walls along the reef. A report from before that meant into or out of the
  * atoll and has no along-reef reading. A saved heading more than 90° from today's flips the direction.
  */
-export function alongReportDirection(report: Report, alongHeadingDeg: number): Direction | null {
+export function alongReportDirection(
+  report: Report,
+  alongHeadingDeg: number,
+  kind: "wall" | "lagoon" = "wall",
+): Direction | null {
   let saved: number | null = typeof report.alongHeadingDeg === "number" ? report.alongHeadingDeg : null;
-  if (saved == null && report.predicted && modelVersionNumber(report.predicted.modelVersion) >= FIRST_ALONG_REEF_VERSION) {
+  // A lagoon site's axis comes from its flow, not its bearing, so only a saved heading can read its report.
+  const fromBearing = kind === "wall";
+  if (
+    saved == null &&
+    fromBearing &&
+    report.predicted &&
+    modelVersionNumber(report.predicted.modelVersion) >= FIRST_ALONG_REEF_VERSION
+  ) {
     saved = (((report.predicted.bearingDeg + 90) % 360) + 360) % 360;
   }
   if (saved == null || !Number.isFinite(saved)) return null;
@@ -279,6 +290,20 @@ export function alongReefStrength(speed: number): Strength {
 function alongComponent(hour: MarineHour, headingDeg: number): number {
   const radians = (headingDeg * Math.PI) / 180;
   return currentComponent(hour, Math.sin) * Math.sin(radians) + currentComponent(hour, Math.cos) * Math.cos(radians);
+}
+
+/**
+ * The model's net flow at each hour, in residual metres per hour, before reports: the tide's slope plus through-flow
+ * plus the head across the atoll. Positive runs in along the inward bearing. Null where the hour has no tide level.
+ * The lagoon model takes it as the exchange at each opening in the rim.
+ */
+export function netFlowSeries(input: ForecastInput): (number | null)[] {
+  const hours = currentForNudge(input.hours);
+  const residual = residualSeries(hours);
+  const through = throughflowSeries(hours, input.inwardBearingDeg);
+  const head = headSeries(hours, residual, input.ringLevel, input.headTauHours ?? ATOLL_HEAD_TAU_HOURS);
+  const flow = flowSeries(residual, addSeries(through, head));
+  return flow.map((level, index) => (level == null ? null : slopeFromResidual(flow, index)));
 }
 
 /** One pass: in-series, one stored slope, a real slope window, or unusable. */

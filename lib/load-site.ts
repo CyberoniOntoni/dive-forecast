@@ -2,8 +2,17 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { atollRingLevel } from "./atoll-ring";
-import { alongReefHours, forecastHours, headWindowAt, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
+import { atollRing, atollRingLevel } from "./atoll-ring";
+import {
+  alongReefHours,
+  forecastHours,
+  headWindowAt,
+  residualLevels,
+  residualRangeAt,
+  residualSlopeWindow,
+  throughflowAt,
+} from "./forecast";
+import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
 import { alongReefHeading, flowsAlongReef } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, RingLevel, Site, SiteType } from "./types";
@@ -16,8 +25,9 @@ export type SiteLoad = {
   /** Where the site sits, when classified. A lagoon site never shows high confidence. */
   siteType: SiteType | null;
   /**
-   * Set for a wall whose current runs along the reef: the compass heading its "incoming" means. Null for a site
-   * whose current crosses the rim, where incoming follows the inward bearing.
+   * Set for a site forecast along a compass axis: a wall whose current runs along the reef, or a lagoon site (the
+   * main axis of its lagoon flow). The heading its "incoming" means. Null for a site whose current crosses the rim,
+   * where incoming follows the inward bearing.
    */
   alongHeadingDeg: number | null;
   hours: HourForecast[];
@@ -63,6 +73,74 @@ function forecastedLoad(
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
+}
+
+const LAGOON_MEMO_MS = 10 * 60 * 1000;
+const lagoonMemo = new Map<string, { at: number; sources: LagoonSource[] }>();
+const lagoonLoading = new Map<string, Promise<LagoonSource[]>>();
+const sinkMemo = new Map<string, LagoonSink>();
+
+/**
+ * The openings of an atoll's lagoon: its porous rim from the ring points, and each channel dive site (pass, channel
+ * thila, corner) with its own net flow. Empty when the atoll has no ring level yet. Kept ten minutes per atoll and
+ * shared by every lagoon site asking at once.
+ */
+async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
+  const kept = lagoonMemo.get(atoll.id);
+  if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
+  const running = lagoonLoading.get(atoll.id);
+  if (running) return running;
+  const load = (async () => {
+    const ring = await atollRing(atoll, options);
+    if (ring.level.length === 0) return [];
+    const rim = rimForAtoll(atoll);
+    const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
+    const channels = mates.filter(
+      (mate) => mate.atollId === atoll.id && mate.siteType && mate.siteType !== "lagoon" && !flowsAlongReef(mate, mates),
+    );
+    const fetched = await Promise.all(
+      channels.map(async (channel) => {
+        const { deg } = resolveBearing(channel, mates, outside, rim);
+        const marine = await siteMarineHours(channel.lat, channel.lon, deg, outside.lat, outside.lon, options);
+        return marine.ok ? channelSource(channel, marine.hours, deg, ring.level) : null;
+      }),
+    );
+    const sources = [...rimSources(ring), ...fetched.filter((source): source is LagoonSource => source != null)];
+    lagoonMemo.set(atoll.id, { at: Date.now(), sources });
+    return sources;
+  })().finally(() => lagoonLoading.delete(atoll.id));
+  lagoonLoading.set(atoll.id, load);
+  return load;
+}
+
+/**
+ * A lagoon site's hours from the flow between the rim's openings, or null when the atoll has no outline or ring
+ * yet, so the site keeps the channel model until it has one.
+ */
+async function lagoonLoad(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll,
+  marineHours: readonly MarineHour[],
+  options: FetchOptions,
+): Promise<{ hours: HourForecast[]; axisDeg: number } | null> {
+  const rim = rimForAtoll(atoll);
+  if (!rim) return null;
+  const sources = await lagoonSources(atoll, mates, options);
+  if (sources.length === 0) return null;
+  const sinkKey = `${atoll.rimSourceUrl}|${site.id}|${site.lat}|${site.lon}`;
+  let sink = sinkMemo.get(sinkKey);
+  if (!sink) {
+    sink = lagoonSink(site, rim);
+    sinkMemo.set(sinkKey, sink);
+  }
+  const residual = residualLevels(marineHours);
+  const levels = marineHours.flatMap((hour, index) => {
+    const level = residual[index];
+    return level == null ? [] : [{ time: hour.time, levelM: level }];
+  });
+  const forecast = lagoonHours(site, sources, levels, sink);
+  return forecast.axisDeg == null || forecast.hours.length === 0 ? null : { hours: forecast.hours, axisDeg: forecast.axisDeg };
 }
 
 /**
@@ -137,6 +215,21 @@ export async function loadSite(
   const marine = await checkedMarine(site, mates, atoll, options);
   const along = marine.bearing != null && flowsAlongReef(site, mates) ? alongReefHeading(marine.bearing) : null;
   if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null, along);
+  if (site.siteType === "lagoon" && atoll) {
+    const lagoon = await lagoonLoad(site, mates, atoll, marine.hours, options);
+    if (lagoon) {
+      return {
+        bearing: marine.bearing,
+        bearingSource: marine.bearingSource,
+        siteType: "lagoon",
+        alongHeadingDeg: lagoon.axisDeg,
+        hours: lagoon.hours,
+        unavailable: false,
+        stale: marine.stale,
+        fetchedAt: marine.fetchedAt,
+      };
+    }
+  }
   return forecastedLoad(
     marine.bearing,
     marine.bearingSource,

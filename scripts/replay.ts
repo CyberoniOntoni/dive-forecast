@@ -169,6 +169,9 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     if (!site) continue;
     const atoll = atollById.get(site.atollId);
     if (!atoll) continue;
+    // A lagoon site is forecast from the flow through its atoll's rim and channels, which replay has no data for.
+    // Its fixture reports were written as into or out of the atoll and have no reading along its flow's axis.
+    if (site.siteType === "lagoon") continue;
 
     const bearing = inwardBearingDeg(
       site,
@@ -191,8 +194,6 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       reports: siteReports,
       channelWidthM: site.channelWidthM,
       channelDepthM: site.channelDepthM,
-      // As on the site page: a lagoon site never shows high confidence.
-      allowHighConfidence: site.siteType !== "lagoon",
       alongHeadingDeg,
     });
 

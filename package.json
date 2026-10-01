@@ -19,7 +19,8 @@
     "throughflow-calibrate": "vite-node scripts/throughflow-calibrate.ts",
     "along-reef-calibrate": "vite-node scripts/along-reef-calibrate.ts",
     "atoll-head-calibrate": "vite-node scripts/atoll-head-calibrate.ts",
-    "strength-calibrate": "vite-node scripts/strength-calibrate.ts"
+    "strength-calibrate": "vite-node scripts/strength-calibrate.ts",
+    "lagoon-calibrate": "vite-node scripts/lagoon-calibrate.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
