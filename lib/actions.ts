@@ -84,6 +84,7 @@ export async function addReport(input: unknown): Promise<Report> {
     report.slopeWindowM = tide.slopeWindowM;
     if (tide.rangeM != null) report.rangeM = tide.rangeM;
     if (tide.throughflowM != null) report.throughflowM = tide.throughflowM;
+    if (tide.headWindowM != null) report.headWindowM = tide.headWindowM;
   }
   const along = reportAlongHeading(site);
   if (along != null) report.alongHeadingDeg = Math.round(along);

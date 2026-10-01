@@ -352,6 +352,35 @@ A full review of the model after through-flow and along-reef flow, checked again
 - Lagoon thilas use the across model at a sample point still inside the lagoon.
 - Pass geometry is only width × depth.
 
+### 4.8 Head across the atoll (2026-10-01)
+
+The review (§4.7) found that every channel still turned together at mid-tide: each one followed its own ocean slope, and that slope is nearly the same all round an atoll. A channel runs from the higher water to the lower, the ocean outside it against the lagoon behind it, and the lagoon sits near the mean of the ocean all round the atoll.
+
+**Model** (`lib/atoll-ring.ts`, `forecastHours`):
+
+    S_net = S_tide + K · F_inward + H / τ,   H = η_out − η_ring,   τ = ATOLL_HEAD_TAU_HOURS = 0.25 h
+
+- `η_ring` is the mean residual level of 12 points spaced evenly round the outline (`data/rims.json`), each 3 km outside it, fetched like any sample point. With fewer than 9 points at an hour there is no ring level.
+- `H > 0` means the ocean outside is above the lagoon, so the channel runs in.
+- It applies to passes, channel thilas, corners and funnel walls. It does not apply to walls running along the reef or lagoon sites. With no ring level the site gets the model as before.
+- New reports save the head round their hour (`headWindowM`); older ones count as having none.
+
+**Calibration** (`MARINE_CACHE_DIR=<fresh> npm run atoll-head-calibrate`: 15 atolls, 81 channels, one model run on 1 Oct 2026):
+
+- **The head is a smooth gradient.** Neighbouring channels on one rim correlate at 1.00 (median, 92 pairs). The head differs by 0.5 cm RMS along a rim and 3.8 cm across the atoll.
+- **It is tidal:** 95 % of its variance is at M2, S2, K1 and O1.
+- **It is small.** |H| has a median of 1.1 cm and a p90 of 3.6 cm. An earlier estimate of 6.5 cm mixed series from different model runs. The ocean model barely resolves the atolls, so its tide passes over them almost as over open sea, and this is the open ocean's gradient. A real rim blocks the flow, so the real head is likely larger. A small τ stands in for that.
+
+| τ (h) | ∞ (before) | 1 | 0.5 | **0.25** | 0.15 | 0.1 |
+|---|---|---|---|---|---|---|
+| Opposite rims run opposite ways, mid-tide | 4 % | 4 % | 6 % | **27 %** | 45 % | 54 % |
+| Channels running the majority way at once | 86 % | 85 % | 84 % | **79 %** | 73 % | 72 % |
+| Facing the current: hours in | 70 % | 69 % | 70 % | **68 %** | 66 % | 63 % |
+| Far side: hours out | 85 % | 86 % | 87 % | **86 %** | 82 % | 77 % |
+| Too strong | 18 % | 18 % | 19 % | **21 %** | 28 % | 28 % |
+
+The planned gate asked for an effect at τ ≥ 0.5 h, and it did not pass. The owner chose 0.25 h: a quarter-hour lag is plausible for lagoons with many wide passes, opposite rims part ways for about a quarter of mid-tide hours, and the monsoon pattern holds. τ is a judgement, not a fit; reports from both sides of an atoll should set it (Stage C).
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

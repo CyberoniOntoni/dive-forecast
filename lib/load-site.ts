@@ -2,10 +2,11 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { alongReefHours, forecastHours, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
+import { atollRingLevel } from "./atoll-ring";
+import { alongReefHours, forecastHours, headWindowAt, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
 import { alongReefHeading, flowsAlongReef } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
-import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site, SiteType } from "./types";
+import type { Atoll, BearingSource, HourForecast, MarineHour, Report, RingLevel, Site, SiteType } from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
@@ -43,6 +44,7 @@ function forecastedLoad(
   stale: boolean,
   site: Site,
   alongHeadingDeg: number | null,
+  ringLevel: readonly RingLevel[] | undefined,
 ): SiteLoad {
   const siteType = site.siteType ?? null;
   if (alongHeadingDeg != null) {
@@ -55,11 +57,27 @@ function forecastedLoad(
     hours: marineHours,
     inwardBearingDeg: bearing,
     reports,
+    ringLevel,
     channelWidthM: site.channelWidthM,
     channelDepthM: site.channelDepthM,
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
+}
+
+/**
+ * The atoll's ring level for a site whose current crosses the rim, so the head across the atoll drives it.
+ * None for a wall running along the reef or a lagoon site, where there is no channel between ocean and lagoon.
+ */
+async function ringLevelFor(
+  site: Site,
+  atoll: Atoll | undefined,
+  alongHeadingDeg: number | null,
+  options: FetchOptions = {},
+): Promise<RingLevel[] | undefined> {
+  if (!atoll || alongHeadingDeg != null || site.siteType === "lagoon") return undefined;
+  const level = await atollRingLevel(atoll, options);
+  return level.length > 0 ? level : undefined;
 }
 
 /** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
@@ -128,6 +146,7 @@ export async function loadSite(
     marine.stale,
     site,
     along,
+    await ringLevelFor(site, atoll, along, options),
   );
 }
 
@@ -137,6 +156,8 @@ export type ReportTide = {
   rangeM: number | null;
   /** Through-flow at the report hour, residual metres per hour. Null when that hour is missing. */
   throughflowM: number | null;
+  /** Head drive round the report hour, aligned with slopeWindowM. Null where the site has no ring level. */
+  headWindowM: number[] | null;
 };
 
 /** Same fetch as loadSite. The tide saved with a report, or null when there is no series. */
@@ -150,7 +171,10 @@ export async function reportTideForSite(
   if (!marine.ok) return null;
   const slopeWindowM = residualSlopeWindow(marine.hours, time);
   if (!slopeWindowM) return null;
+  const along = flowsAlongReef(site, mates) ? alongReefHeading(marine.bearing) : null;
+  const ring = await ringLevelFor(site, atoll, along);
   return {
+    headWindowM: headWindowAt(marine.hours, time, ring),
     slopeWindowM,
     rangeM: residualRangeAt(marine.hours, time),
     throughflowM: throughflowAt(marine.hours, time, marine.bearing),
