@@ -5,6 +5,7 @@ import { inwardBearingDeg } from "../lib/bearing";
 import { rimForAtoll } from "../lib/rim";
 import { marineCacheDir, marineHoursFromApi, seawardPoint } from "../lib/marine";
 import { replayReports, type BenchmarkMetrics } from "../lib/replay";
+import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
 import { listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
 
@@ -176,6 +177,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       rimForAtoll(atoll),
     );
     const seaward = seawardPoint(site.lat, site.lon, bearing);
+    const alongHeadingDeg = flowsAlongReef(site, catalog.sites) ? alongReefHeading(bearing) : undefined;
     const benchmarkOnly = options.mode === "benchmark";
     const hours =
       cachedHoursAt(seaward.lat, seaward.lon, benchmarkOnly) ??
@@ -191,6 +193,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       channelDepthM: site.channelDepthM,
       // As on the site page: a lagoon site never shows high confidence.
       allowHighConfidence: site.siteType !== "lagoon",
+      alongHeadingDeg,
     });
 
     const m = res.metrics;

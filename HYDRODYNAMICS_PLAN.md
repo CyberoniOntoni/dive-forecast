@@ -318,6 +318,40 @@ The owner pointed out that an outer wall with an island or unbroken reef behind 
 
 At ×3 the bands fall slack 35 %, mild 44 %, strong 19 %, too strong 3 %. Strong drift (Addu, 0.4–0.7 m/s) still holds some walls one way for days, which the owner expects. No observations back G or the bands yet; reports are what correct them (Stage C).
 
+### 4.7 Model review (2026-10-01)
+
+A full review of the model after through-flow and along-reef flow, checked against the marine cache (337 series around 30 Sep, near spring tide) and the live map at 07:29 on 1 Oct (mid-ebb).
+
+**Fixed (model version /9):**
+
+- **Gaps in the current.** An hour with too few current samples used to fall back to the seasonal curve (0.35–0.43 m/s), about 2.4 times the measured 25-hour drift (median 0.16 m/s). That made the through-flow jump at any API gap. It now takes the nearest measured drift. Only a series with no current at all uses the curve, scaled by `SEASONAL_DRIFT_SCALE` = 0.4.
+- **Forecast horizon.** It was `forecast_days=3`, and the 25-hour mean drops the last 12 hours, so the forecast reached about two days ahead. It is now 7, about six and a half days. The current runs to the end of an 8-day request.
+- **Wall reports keep their meaning.** A report at an along-reef site now saves `alongHeadingDeg`, the compass heading "incoming" meant. `alongReportDirection` reads a report against today's heading:
+  - It flips the report if the bearing has since turned round.
+  - Without a saved heading it uses the bearing in the report's saved prediction from /8 on.
+  - It gives no reading for reports from before /8, when "incoming" meant into the atoll.
+- **Replay at walls.** Replay routes along-reef sites through `alongReefHours` and reads their reports with `alongReportDirection`. The fixtures hold no wall reports, so the benchmark does not change.
+
+`verify` needs no change: each report is scored against the prediction saved with it, under the model it was filed under.
+
+**Open, needs the owner:**
+
+1. **The atoll still behaves as a bowl at mid-tide.**
+   - Through-flow adds about 0.7 × 0.09 = 0.06 m/h; a spring tide's slope is about 0.2 m/h.
+   - So near mid-tide the ocean slope decides every channel together: at mid-ebb, 180 of 196 channels were outgoing.
+   - The missing term is the head difference across the atoll (§4.2 `F_rim`). The tide reaches opposite rims at different times, as the along-reef check showed (§4.6).
+   - Next step: drive channels from sea level outside the channel minus sea level outside the opposite rim, with a gate that opposite rims do not all turn together.
+2. **"Too strong" at every spring tide.**
+   - The 25-hour range was p10 0.76 m, p50 0.93 m, p90 1.01 m. `strengthFromRange` gives too strong from 0.85 m, so every unconstricted pass peaks too strong at every spring tide (71 channels at that hour), and the whole day is slack at neaps.
+   - The thresholds should come from the Maldives range climatology and the owner's sense of how often a kandu is undiveable.
+
+**Out of reach without new data:**
+
+- No wind forcing beyond what the ocean model's drift carries.
+- The current is the surface current, including Stokes drift, not the current at dive depth.
+- Lagoon thilas use the across model at a sample point still inside the lagoon.
+- Pass geometry is only width × depth.
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

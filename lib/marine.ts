@@ -201,8 +201,8 @@ function marineQuery(lat: number, lon: number): string {
     timezone: "Indian/Maldives",
     past_days: "1",
     // The residual needs 12 hours on each side, so the last 12 fetched hours are never shown.
-    // Three days keeps all of tomorrow on the page.
-    forecast_days: "3",
+    // Seven days shows about six and a half ahead, for planning a trip. The current runs to the end of it.
+    forecast_days: "7",
   });
   return params.toString();
 }

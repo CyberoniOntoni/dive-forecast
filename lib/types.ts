@@ -96,6 +96,11 @@ export type Report = {
    * times THROUGHFLOW_SLOPE_PER_MS. Added to the stored tide slopes. Absent on older reports.
    */
   throughflowM?: number | null;
+  /**
+   * At a wall whose current runs along the reef: the compass heading "incoming" meant when the report was filed
+   * (inward bearing + 90°). Saved so the report keeps its meaning if the site's bearing changes. Absent elsewhere.
+   */
+  alongHeadingDeg?: number;
   /** What the forecast said for this hour when the report was filed. Absent when there was no forecast. */
   predicted?: ForecastAtReport;
 };

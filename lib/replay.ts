@@ -1,4 +1,4 @@
-import { forecastHours, parseWall } from "./forecast";
+import { alongReefHours, alongReportDirection, forecastHours, parseWall } from "./forecast";
 import type { HourForecast, MarineHour, Report } from "./types";
 
 /** Matches forecast nearestIndex: a report further than 90 minutes is not in the series. */
@@ -32,6 +32,11 @@ export type ReplayInput = {
   channelWidthM?: number;
   channelDepthM?: number;
   allowHighConfidence?: boolean;
+  /**
+   * Set for a wall whose current runs along the reef: its forecast is alongReefHours, and each report is read against
+   * this heading. A report with no along-reef reading (filed under an older model) is left out.
+   */
+  alongHeadingDeg?: number;
 };
 
 /** Score each report with forecastHours using only earlier reports. No network and no invented tide. */
@@ -47,17 +52,29 @@ export function replayReports(input: ReplayInput): ReplayResult {
   const tierCounts = { high: 0, medium: 0, low: 0 };
   const tierMatches = { high: 0, medium: 0, low: 0 };
 
-  for (const report of reports) {
-    if (!inSeries(input.hours, report.time)) continue;
+  const along = input.alongHeadingDeg;
+  // Reports do not move the along-reef forecast, so one series serves every report.
+  const alongForecast = along == null ? null : alongReefHours({ hours: [...input.hours], alongHeadingDeg: along });
+
+  for (const original of reports) {
+    if (!inSeries(input.hours, original.time)) continue;
+    let report = original;
+    if (along != null) {
+      const direction = alongReportDirection(original, along);
+      if (direction == null) continue;
+      report = { ...original, direction };
+    }
     const earlier = reports.filter((item) => isEarlier(item.time, report.time));
-    const forecast = forecastHours({
-      hours: [...input.hours],
-      inwardBearingDeg: input.inwardBearingDeg,
-      reports: earlier,
-      channelWidthM: input.channelWidthM,
-      channelDepthM: input.channelDepthM,
-      allowHighConfidence: input.allowHighConfidence,
-    });
+    const forecast =
+      alongForecast ??
+      forecastHours({
+        hours: [...input.hours],
+        inwardBearingDeg: input.inwardBearingDeg,
+        reports: earlier,
+        channelWidthM: input.channelWidthM,
+        channelDepthM: input.channelDepthM,
+        allowHighConfidence: input.allowHighConfidence,
+      });
     const hour = nearestForecast(forecast, report.time);
     if (!hour) continue;
 

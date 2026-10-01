@@ -4,7 +4,7 @@ import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { ALONG_REEF_NOTE, LAGOON_NOTE } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
-import { loadSite, reportTideForSite, type ReportTide } from "./load-site";
+import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import {
   addReport as persistReport,
   addUserSite,
@@ -85,6 +85,8 @@ export async function addReport(input: unknown): Promise<Report> {
     if (tide.rangeM != null) report.rangeM = tide.rangeM;
     if (tide.throughflowM != null) report.throughflowM = tide.throughflowM;
   }
+  const along = reportAlongHeading(site);
+  if (along != null) report.alongHeadingDeg = Math.round(along);
   if (predicted) report.predicted = predicted;
   return persistReport(report);
 }
@@ -120,6 +122,16 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
     const shown = await loadSite(site, catalog.sites, atoll, earlier);
     const modelOnly = await loadSite(site, catalog.sites, atoll, []);
     return forecastAtReport(shown, modelOnly, time);
+  } catch {
+    return null;
+  }
+}
+
+/** Never blocks a report: a site whose heading cannot be resolved saves none. */
+function reportAlongHeading(site: Site): number | null {
+  try {
+    const catalog = readCatalog();
+    return alongHeadingFor(site, catalog.sites, catalog.atolls.find((item) => item.id === site.atollId));
   } catch {
     return null;
   }

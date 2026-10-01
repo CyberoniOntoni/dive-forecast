@@ -30,7 +30,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+alongreef/8";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+alongreef/9";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -195,6 +195,30 @@ export function alongReefHours(input: AlongReefInput): HourForecast[] {
     });
   });
   return forecast;
+}
+
+/** The first model version that read wall reports along the reef. Before it, "incoming" meant into the atoll. */
+const FIRST_ALONG_REEF_VERSION = 8;
+
+/**
+ * A wall report's direction against today's reef heading, or null when it cannot be read along the reef.
+ * The heading saved with the report decides; failing that, the bearing in its saved prediction, if that prediction
+ * came from a model that already read walls along the reef. A report from before that meant into or out of the
+ * atoll and has no along-reef reading. A saved heading more than 90° from today's flips the direction.
+ */
+export function alongReportDirection(report: Report, alongHeadingDeg: number): Direction | null {
+  let saved: number | null = typeof report.alongHeadingDeg === "number" ? report.alongHeadingDeg : null;
+  if (saved == null && report.predicted && modelVersionNumber(report.predicted.modelVersion) >= FIRST_ALONG_REEF_VERSION) {
+    saved = (((report.predicted.bearingDeg + 90) % 360) + 360) % 360;
+  }
+  if (saved == null || !Number.isFinite(saved)) return null;
+  const apart = Math.abs(((saved - alongHeadingDeg + 540) % 360) - 180);
+  return apart > 90 ? opposite(report.direction) : report.direction;
+}
+
+function modelVersionNumber(version: string): number {
+  const match = /\/(\d+)$/.exec(version);
+  return match ? Number(match[1]) : 0;
 }
 
 export function alongReefStrength(speed: number): Strength {
@@ -846,7 +870,8 @@ function isSlackReport(item: ClassifiedReport): boolean {
  * Hours with the current replaced by what the nudge should see. Times and sea level are untouched.
  * The drift is the vector mean over the 25 hours around each hour, with the window slid inward at the ends of the
  * series so it stays a full tidal cycle. A short series (under 24 hours) cannot remove the tide and averages what it has.
- * An hour with too few current samples keeps a null current, which falls back to the seasonal curve.
+ * An hour with too few current samples takes the drift of the nearest hour that has one. Only a series with no usable
+ * current at all keeps null currents, which fall back to the scaled seasonal curve (throughflowFor).
  */
 function currentForNudge(hours: readonly MarineHour[]): MarineHour[] {
   if (NUDGE_SOURCE === "off") return hours.map((hour) => ({ ...hour, currentVelocityMs: 0 }));
@@ -858,7 +883,7 @@ function currentForNudge(hours: readonly MarineHour[]): MarineHour[] {
   const full = last - first >= 2 * DRIFT_HALF_HOURS * HOUR_MS;
   const east = hours.map((hour) => currentComponent(hour, Math.sin));
   const north = hours.map((hour) => currentComponent(hour, Math.cos));
-  return hours.map((hour, index) => {
+  const drifted = hours.map((hour, index) => {
     if (Number.isNaN(times[index])) return hour;
     const center = full
       ? Math.min(last - DRIFT_HALF_HOURS * HOUR_MS, Math.max(first + DRIFT_HALF_HOURS * HOUR_MS, times[index]))
@@ -883,6 +908,26 @@ function currentForNudge(hours: readonly MarineHour[]): MarineHour[] {
       currentVelocityMs: Math.hypot(meanEast, meanNorth),
       currentDirectionDeg: ((Math.atan2(meanEast, meanNorth) * 180) / Math.PI + 360) % 360,
     };
+  });
+  return fillDriftGaps(drifted, times);
+}
+
+/**
+ * A gap in the current takes the drift of the nearest hour that has one, so it does not jump to the seasonal curve,
+ * which runs well above the measured drift. Equal distance keeps the earlier hour.
+ */
+function fillDriftGaps(drifted: MarineHour[], times: readonly number[]): MarineHour[] {
+  const measured = drifted
+    .map((hour, index) => ({ hour, time: times[index] }))
+    .filter(({ hour, time }) => !Number.isNaN(time) && hour.currentVelocityMs != null && hour.currentDirectionDeg != null);
+  if (measured.length === 0) return drifted;
+  return drifted.map((hour, index) => {
+    if (Number.isNaN(times[index]) || (hour.currentVelocityMs != null && hour.currentDirectionDeg != null)) return hour;
+    let nearest = measured[0];
+    for (const candidate of measured) {
+      if (Math.abs(candidate.time - times[index]) < Math.abs(nearest.time - times[index])) nearest = candidate;
+    }
+    return { ...hour, currentVelocityMs: nearest.hour.currentVelocityMs, currentDirectionDeg: nearest.hour.currentDirectionDeg };
   });
 }
 
@@ -917,10 +962,19 @@ export function monsoonInwardFlux(drift: OceanDrift, inwardBearingDeg: number): 
   return drift.velocityMs * Math.cos(radians);
 }
 
+/**
+ * The seasonal curve's speed against the measured 25-hour drift: 0.16 m/s median in the cached series around
+ * 30 Sep 2026, where the curve gives 0.39 m/s. Applied only when a series has no usable current at all.
+ */
+export const SEASONAL_DRIFT_SCALE = 0.4;
+
 /** Through-flow for one hour, in slope units. A calm hour (exactly zero drift) has none. */
 function throughflowFor(hour: MarineHour, inwardBearingDeg: number): number {
   if (hour.currentVelocityMs === 0) return 0;
-  return THROUGHFLOW_SLOPE_PER_MS * monsoonInwardFlux(resolveHourDrift(hour), inwardBearingDeg);
+  const measured = hour.currentVelocityMs != null && Number.isFinite(hour.currentVelocityMs) &&
+    hour.currentDirectionDeg != null && Number.isFinite(hour.currentDirectionDeg);
+  const scale = measured ? 1 : SEASONAL_DRIFT_SCALE;
+  return scale * THROUGHFLOW_SLOPE_PER_MS * monsoonInwardFlux(resolveHourDrift(hour), inwardBearingDeg);
 }
 
 /** Through-flow for each hour of a series whose current is already the 25-hour drift (currentForNudge). */

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { forecastHours } from "./forecast";
+import {
+  forecastHours,
+  getMaldivesMonsoonDrift,
+  monsoonInwardFlux,
+  SEASONAL_DRIFT_SCALE,
+  THROUGHFLOW_SLOPE_PER_MS,
+  throughflowAt,
+} from "./forecast";
 import type { MarineHour } from "./types";
 
 const M2_HOURS = 12.4206012;
@@ -68,5 +75,23 @@ describe("through-flow uses the drift, not the tidal current", () => {
       index % 2 === 0 ? { ...hour, currentVelocityMs: null, currentDirectionDeg: null } : hour,
     );
     expect(() => forecastHours({ hours, inwardBearingDeg: 90, reports: [] })).not.toThrow();
+  });
+});
+
+describe("gaps in the current", () => {
+  it("fills a gap with the nearest measured drift, not the seasonal curve", () => {
+    const full = series({ driftMs: 0.2, driftDeg: 90 });
+    const gappy = full.map((hour, index) =>
+      index >= 20 && index < 50 ? { ...hour, currentVelocityMs: null, currentDirectionDeg: null } : hour,
+    );
+    expect(strengths(gappy)).toEqual(strengths(full));
+  });
+
+  it("scales the seasonal curve to the measured drift when a series has no current at all", () => {
+    const none = series().map((hour) => ({ ...hour, currentVelocityMs: null, currentDirectionDeg: null }));
+    const time = none[36].time;
+    const seasonal = getMaldivesMonsoonDrift(new Date(`${time}:00Z`));
+    const expected = SEASONAL_DRIFT_SCALE * THROUGHFLOW_SLOPE_PER_MS * monsoonInwardFlux(seasonal, 90);
+    expect(throughflowAt(none, time, 90)).toBeCloseTo(expected, 6);
   });
 });
