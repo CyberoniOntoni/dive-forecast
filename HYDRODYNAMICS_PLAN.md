@@ -410,6 +410,32 @@ At 2.0 the very-strong days fall almost all on channels facing this monsoon's cu
 
 **Not checked:** January to March. The marine API gives at most 92 past days, so the NE monsoon cannot be checked until it comes. If channels facing the NE current reach very strong far more or less often than the owner sees, that is the place to adjust.
 
+### 4.10 Lagoon flow (2026-10-01)
+
+115 of 288 sites are inside the lagoon. Until now they used the channel model at a sample point still inside the lagoon, so every one said "incoming" on the rising tide: the bowl again, and "incoming" means nothing for a thila mid-lagoon. The owner: on the flood, water spreads into the lagoon from the rim and channels, so a thila runs away from the nearest rim or channel, and back toward it on the ebb. The monsoon drift crosses the lagoon from the side facing the current. Lagoon thilas are usually weaker than the channels, mild to strong, but those near a channel can be as strong; very strong is rare.
+
+**Model** (`lib/lagoon-flow.ts`): the lagoon current is the water exchanged through the rim's openings, spreading from or drawing toward each one (2-D sources):
+
+    u(site) = Σ_k q_k · w_k · (site − p_k) / (2π |site − p_k|²)  +  sink
+
+- **The porous rim:** the 12 ring samples on the outline plus the midpoints between them, each standing for its share of the perimeter. `q` is the channel model's net flow there (tide slope + through-flow + head across the atoll) along the outline's inward normal.
+- **Channels:** each across-rim dive site (pass, channel thila, corner) is an extra opening, with its own net flow and weight `CHANNEL_WEIGHT_KM` = 2 km.
+- **The sink:** the same water rises or falls evenly over the lagoon area, taken from a grid of cells inside the outline. The first gate run showed it is needed: openings spread evenly round a closed rim give no flow inside at all (2-D sources on a ring cancel there). Without it, filling vanished and only the cross-lagoon drift was left.
+- **Display:** each site's flow is projected on its main axis (the principal axis of its hourly flow) and shown as a compass direction, as along a reef. Reports at lagoon sites save that heading (`alongHeadingDeg`). Confidence stays low.
+- **Fallback:** an atoll with no outline or ring yet keeps the channel model.
+
+**Calibration** (`npm run lagoon-calibrate`): 99 days (1 Jul – 7 Oct 2026, SW monsoon), 13 atolls, 115 lagoon sites, 81 channels, `CHANNEL_WEIGHT_KM` = 2.
+
+- **Turns with the tide:** a median of 2.6 turns a day along the main axis (p25 1.7).
+- **Flood spreads inward:**
+  - Thilas within 3 km of the rim run away from it on 69 % of mid-flood hours. Without the sink it was 48 %, which is chance.
+  - With the head across the atoll left out it would be 85 %. The owner chose to keep the head, so the lagoon carries what the channels show: water crossing from channels running in to channels running out pulls some thilas toward a rim on the flood.
+- **The monsoon shows:** the 99-day mean lagoon flow heads east in 12 of 13 atolls, with the SW monsoon.
+- **Same direction at once:** sites across one lagoon mostly point the same way at once (0.91 on a 0–1 scale). That is because lagoon dive sites cluster near one rim (e.g. North Malé east), not a flaw. The planned gate on this did not pass, and the owner accepted the reading.
+- **Bands** (`LAGOON_BANDS`: slack 0.02, mild 0.2, strong 0.55): hours are slack 10 %, mild 71 %, strong 18 %, very strong under 1 %, against 44 % strong for channels. Very strong is reached on 2 % of lagoon-days. Thilas 1–2 km from a channel (Long Reef, Ilkka Reef, Maagiri Thila, Chicken Island) peak strong on a typical day. A first cut with mild below 0.15 gave 32 % strong hours. A local check then showed more lagoon sites strong than channels at the same hour, so mild went up to 0.2.
+
+**Reports:** lagoon reports from before this model meant into or out of the atoll and have no reading along the new axis. Replay leaves lagoon sites out, since it has no data for the lagoon's openings. This drops Alimatha's six fixture reports, and the benchmark scores 30 reports.
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

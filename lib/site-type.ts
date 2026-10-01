@@ -67,6 +67,6 @@ function distanceKm(a: Pick<Site, "lat" | "lon">, b: Pick<Site, "lat" | "lon">):
 export const ALONG_REEF_NOTE =
   "Outer wall: the current runs along the reef and turns with the tide, and the monsoon drift makes one way stronger or longer. Taken from the ocean model, not checked against reports yet.";
 
-/** The forecast follows the ocean tide through the passes; inside the lagoon, flow also depends on the reefs around. */
+/** Inside the lagoon the flow comes from the water exchanged through the rim and channels: approximate. */
 export const LAGOON_NOTE =
-  "Inside the lagoon. The forecast is built for the passes, so it is less reliable here. Thilas inside the atoll can still run strong.";
+  "Inside the lagoon: the flow comes from the water moving in and out through the rim and channels. It spreads inward on the flood and back out on the ebb, and the monsoon drift crosses the lagoon. Approximate; thilas near a channel can still run strong.";

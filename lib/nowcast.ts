@@ -10,8 +10,10 @@ export type SiteNowcast = {
   inwardBearingDeg: number | null;
   /** Where the bearing came from. Absent or null draws no estimate note. */
   bearingSource?: BearingSource | null;
-  /** Set for a wall whose current runs along the reef: the heading its "incoming" means. Absent or null otherwise. */
+  /** Set for a site forecast along a compass axis (a wall, or a lagoon site): the heading its "incoming" means. */
   alongHeadingDeg?: number | null;
+  /** True inside the lagoon, where the flow is not along a reef. */
+  lagoon?: boolean;
   hour: HourForecast | null;
   unavailable: boolean;
   /** True when this hour is the last cached series. */
@@ -73,6 +75,7 @@ async function nowcastOne(
     inwardBearingDeg: loaded.bearing,
     bearingSource: loaded.bearingSource,
     alongHeadingDeg: loaded.alongHeadingDeg,
+    lagoon: loaded.siteType === "lagoon",
     hour: hasHours ? hour : null,
     unavailable: !hasHours,
     stale: hasHours && loaded.stale,

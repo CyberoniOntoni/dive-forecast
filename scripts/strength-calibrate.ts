@@ -1,13 +1,11 @@
-import fs from "fs";
-import os from "os";
-import path from "path";
 import { ringLevelFromSeries, ringPoints } from "../lib/atoll-ring";
 import { resolveBearing } from "../lib/bearing";
 import { ALONG_REEF_BANDS_MS, alongReefHours, forecastHours, RANGE_BANDS_M } from "../lib/forecast";
-import { marineHoursFromApi, seawardPoint } from "../lib/marine";
+import { seawardPoint } from "../lib/marine";
 import { rimForAtoll } from "../lib/rim";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
+import { limited, longSeries } from "./long-series";
 import { STRENGTHS, type MarineHour, type RingLevel, type Site, type Strength } from "../lib/types";
 
 /**
@@ -28,50 +26,6 @@ const CANDIDATES: { name: string; bands: typeof RANGE_BANDS_M }[] = [
   { name: "strong 2.0", bands: { slack: 0.25, mild: 0.6, strong: 2.0 } },
   { name: "strong 2.3", bands: { slack: 0.25, mild: 0.6, strong: 2.3 } },
 ];
-
-const CACHE_DIR = path.join(os.tmpdir(), "dive-current-strength-calibrate");
-const MAX_REQUESTS = 4;
-
-async function longSeries(lat: number, lon: number): Promise<MarineHour[] | null> {
-  const file = path.join(CACHE_DIR, `${lat.toFixed(4)}_${lon.toFixed(4)}.json`);
-  try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as MarineHour[];
-  } catch {
-    // Not cached yet.
-  }
-  const params = new URLSearchParams({
-    latitude: String(lat),
-    longitude: String(lon),
-    hourly: "sea_level_height_msl,ocean_current_velocity,ocean_current_direction",
-    cell_selection: "sea",
-    timezone: "Indian/Maldives",
-    past_days: "92",
-    forecast_days: "7",
-  });
-  const response = await fetch(`https://marine-api.open-meteo.com/v1/marine?${params}`);
-  if (!response.ok) return null;
-  const hours = marineHoursFromApi(await response.json());
-  if (!hours || hours.length === 0) return null;
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(hours));
-  return hours;
-}
-
-/** Runs tasks with at most MAX_REQUESTS at once, keeping their order. */
-async function limited<T>(tasks: (() => Promise<T>)[]): Promise<T[]> {
-  const results = new Array<T>(tasks.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: MAX_REQUESTS }, async () => {
-      while (next < tasks.length) {
-        const index = next;
-        next += 1;
-        results[index] = await tasks[index]();
-      }
-    }),
-  );
-  return results;
-}
 
 type Channel = { site: Site; bearing: number; hours: MarineHour[]; ring: RingLevel[] | undefined };
 type Wall = { site: Site; heading: number; hours: MarineHour[] };
