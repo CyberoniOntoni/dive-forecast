@@ -1,5 +1,7 @@
 # Project: dive-current
 
+> **Historical (2026-09).** This is the original milestone plan the engine was built from. The model has moved on: through-flow now decides direction with the tide, walls run along the reef, there is a head across each atoll, and lagoon sites have their own flow model. The milestone statuses below are as they were then. For the model as it works now, see `FORECAST_MODEL.md`; for why, see `HYDRODYNAMICS_PLAN.md` §4.5–4.10.
+
 ## Architecture
 `dive-current` is a Next.js / TypeScript engine predicting marine currents for Maldives dive sites based on astronomical tides, Open-Meteo ocean models, atoll pass geometry, and crowdsourced diver reports.
 
@@ -55,7 +57,7 @@ export type ForecastInput = {
   channelDepthM?: number;
 };
 ```
-- Constriction factor: $C_{\text{constrict}} = \text{clamp}\left( (A_{\text{ref}} / (W \cdot D))^\gamma, C_{\min}, C_{\max} \right)$ with $A_{\text{ref}} = 2{,}000{,}000\text{ m}^2$, $\gamma \approx 0.35$, $C_{\min} = 1.0$, $C_{\max} = 2.5$.
+- Constriction factor: $C_{\text{constrict}} = \text{clamp}\left( (A_{\text{ref}} / (W \cdot D))^\gamma, C_{\min}, C_{\max} \right)$ with $A_{\text{ref}} = 31{,}500\text{ m}^2$ (the median measured dive-site channel; it was 2,000,000 m², Vaadhoo Kandu, which pinned every measured pass at the maximum), $\gamma \approx 0.35$, $C_{\min} = 1.0$, $C_{\max} = 2.5$.
 - Unconstricted sites (missing width/depth) strictly produce $C_{\text{constrict}} = 1.0$ for backward compatibility.
 
 ### Monsoon & Climatology (`lib/forecast.ts`)
