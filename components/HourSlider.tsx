@@ -8,7 +8,7 @@ const STRENGTH_LABEL: Record<Strength, string> = {
   slack: "Slack",
   mild: "Mild",
   strong: "Strong",
-  too_strong: "Too strong",
+  too_strong: "Very strong",
 };
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -238,7 +238,7 @@ function directionTone(direction: Direction): string {
   return direction === "incoming" ? "text-incoming" : "text-outgoing";
 }
 
-/** Too strong uses the shared stop token. Other bands stay foam. */
+/** Very strong uses the shared stop token. Other bands stay foam. */
 function strengthTone(strength: Strength): string {
   return strength === "too_strong" ? "text-stop" : "text-foam";
 }

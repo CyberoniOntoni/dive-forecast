@@ -184,11 +184,11 @@ describe("forecastHours", () => {
   });
 
   it("applies channel narrowing to the envelope only, not again to the hourly ramp", () => {
-    // A 1.2 m range is too strong with or without a narrow channel, so the two envelopes match.
+    // A 2.2 m range is very strong with or without a narrow channel, so the two envelopes match.
     // A 13-hour period spreads the hourly slopes so some sit where the old doubled narrowing moved them a band.
     const hours = marineFromLevels(
       "2026-09-22T00:00",
-      Array.from({ length: 72 }, (_, index) => 0.6 * Math.sin((2 * Math.PI * index) / 13)),
+      Array.from({ length: 72 }, (_, index) => 1.1 * Math.sin((2 * Math.PI * index) / 13)),
     );
     const open = forecastHours({ hours, inwardBearingDeg: 0 });
     const narrow = forecastHours({ hours, inwardBearingDeg: 0, channelWidthM: 50, channelDepthM: 10 });
@@ -280,7 +280,8 @@ describe("forecastHours", () => {
     const hours = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
     expect(strengthAt(plain, "2026-09-23T00:00")).toBe("slack");
-    expect(strengthAt(plain, "2026-09-23T03:00")).toBe("too_strong");
+    // A 1 m spring tide on its own tops out strong.
+    expect(strengthAt(plain, "2026-09-23T03:00")).toBe("strong");
 
     const slackPrior: Report[] = [
       { id: "s1", siteId: "s", time: "2026-07-01T00:00", direction: "incoming", strength: "too_strong", slopeM: 0.01 },
@@ -294,7 +295,7 @@ describe("forecastHours", () => {
       { id: "t2", siteId: "s", time: "2026-07-02T06:00", direction: "outgoing", strength: "slack", slopeM: -0.08 },
     ];
     const slower = forecastHours({ hours, inwardBearingDeg: 0, reports: steepPrior });
-    expect(strengthAt(slower, "2026-09-23T03:00")).not.toBe("too_strong");
+    expect(strengthAt(slower, "2026-09-23T03:00")).not.toBe("strong");
 
     const missing = slackPrior.map((report) => ({ ...report, slopeM: null }));
     const unchanged = forecastHours({ hours, inwardBearingDeg: 0, reports: missing });
@@ -304,14 +305,20 @@ describe("forecastHours", () => {
   it("hourly-strength follows the slope up to the day's range envelope", () => {
     const spring = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const forecast = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [] });
-    // The rise steepens 0.01, 0.05, 0.11, 0.2 m/hour, so the band climbs with it.
+    // The rise steepens 0.01, 0.05, 0.11, 0.2 m/hour, so the band climbs with it. A 1 m spring tops out strong.
     expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("slack");
     expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("mild");
     expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("strong");
-    expect(strengthAt(forecast, "2026-09-23T03:00")).toBe("too_strong");
-    expect(strengthAt(forecast, "2026-09-23T04:00")).toBe("too_strong");
+    expect(strengthAt(forecast, "2026-09-23T03:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-23T04:00")).toBe("strong");
+    // Through a narrow channel the same tide climbs all four bands.
+    const narrow = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [], channelWidthM: 50, channelDepthM: 10 });
+    expect(strengthAt(narrow, "2026-09-23T00:00")).toBe("slack");
+    expect(strengthAt(narrow, "2026-09-23T01:00")).toBe("mild");
+    expect(strengthAt(narrow, "2026-09-23T02:00")).toBe("strong");
+    expect(strengthAt(narrow, "2026-09-23T03:00")).toBe("too_strong");
 
-    const neap = marineFromLevels("2026-09-23T00:00", [0, 0.08, 0.16, 0.24, 0.3, 0.3]);
+    const neap = marineFromLevels("2026-09-23T00:00", [0, 0.05, 0.1, 0.15, 0.2, 0.2]);
     const neapForecast = forecastHours({ hours: neap, inwardBearingDeg: 0, reports: [] });
     expect(neapForecast.length).toBeGreaterThan(0);
     expect(neapForecast.every((hour) => hour.strength === "slack")).toBe(true);
@@ -376,8 +383,8 @@ describe("forecastHours", () => {
     // A 12 hour sine sampled hourly only lands in two bands; the spring-day test above covers the full climb.
     expect(new Set(stretch.map((hour) => hour.strength)).size).toBeGreaterThanOrEqual(2);
     // The steepest hour (the sine crosses zero at 00:00) carries the top band, and the crest hour is weaker.
-    expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("too_strong");
-    expect(band(strengthAt(forecast, "2026-09-23T03:00")!)).toBeLessThan(band("too_strong"));
+    expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("strong");
+    expect(band(strengthAt(forecast, "2026-09-23T03:00")!)).toBeLessThan(band("strong"));
   });
 
   it("a near-zero residual is slack and does not copy the previous direction", () => {
@@ -649,7 +656,7 @@ describe("forecastHours", () => {
     });
     const hour = "2026-09-24T16:00";
     expect(directionAt(fitted, hour)).toBe(directionAt(control, hour));
-    expect(strengthAt(control, hour)).toBe("too_strong");
+    expect(strengthAt(control, hour)).toBe("strong");
     expect(strengthAt(fitted, hour)).toBe(strengthAt(control, hour));
   });
 

@@ -82,7 +82,8 @@ describe("alongReefStrength", () => {
     expect(alongReefStrength(0.1)).toBe("slack");
     expect(alongReefStrength(0.3)).toBe("mild");
     expect(alongReefStrength(0.7)).toBe("strong");
-    expect(alongReefStrength(1.2)).toBe("too_strong");
+    expect(alongReefStrength(1.2)).toBe("strong");
+    expect(alongReefStrength(1.4)).toBe("too_strong");
   });
 });
 

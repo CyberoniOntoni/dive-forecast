@@ -63,7 +63,7 @@ export function ReportForm({ siteId, alongHeadingDeg = null }: { siteId: string;
           </div>
         </fieldset>
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-          <legend className="text-sm font-medium text-foam">Slack, mild, strong, or too strong</legend>
+          <legend className="text-sm font-medium text-foam">Slack, mild, strong, or very strong</legend>
           <div className="grid grid-cols-2 gap-2">
             <label className={`${CHOICE} has-[:checked]:border-foam`}>
               <input type="radio" name="strength" value="slack" required className="size-5" />
@@ -79,7 +79,7 @@ export function ReportForm({ siteId, alongHeadingDeg = null }: { siteId: string;
             </label>
             <label className={`${CHOICE} has-[:checked]:border-foam`}>
               <input type="radio" name="strength" value="too_strong" required className="size-5" />
-              Too strong
+              Very strong
             </label>
           </div>
         </fieldset>
