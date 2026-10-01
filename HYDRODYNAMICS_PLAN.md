@@ -290,6 +290,34 @@ K = 0.7 meets "most of the day" on this data. In peak monsoon the drift is rough
 
 **Still open:** the per-rim hydraulic head term (`F_rim`, §4.2) and neighbouring channels that run opposite ways (§5.1) need reports.
 
+### 4.6 Along-reef flow at outer walls (2026-10-01)
+
+The owner pointed out that an outer wall with an island or unbroken reef behind it (Cathedral, Vaadhoo Caves) cannot have a current running into or out of the atoll: water cannot cross the land. Their experience:
+
+- Along the open outer wall the current runs parallel to the reef, as one continuous stream along the whole flank, not splitting at a midpoint between channels. It turns with the tide, and the monsoon drift biases it one way.
+- Within a few hundred metres of a channel mouth the channel's draw takes over: the flood is pulled round the corner into the pass, the ebb plumes out of it.
+
+**Which sites** (`flowsAlongReef` in `lib/site-type.ts`): `outer-reef` sites, except "Corner" dives and walls within 0.8 km of a pass pin in the same atoll. Those keep the across-rim model.
+
+**Model** (`alongReefHours` in `lib/forecast.ts`): the hourly Open-Meteo current at the sample point (SMOC: FES2014 tide + drift + Stokes), projected on the reef heading (inward bearing + 90°). It is split into the 25-hour mean (drift) and the rest (tidal stream):
+
+    v = G · (v_hour − v_drift) + v_drift,   G = ALONG_REEF_TIDE_GAIN = 3
+
+"incoming" means toward the reef heading, "outgoing" the other way; the UI shows the compass point ("Running NE") in a neutral colour. Strength bands on |v|: slack < 0.15, mild < 0.5, strong < 1.0, too strong above. Confidence is always low and reports do not pull it yet.
+
+**Calibration** (`npm run along-reef-calibrate`, 92 walls, cached series around 30 Sep 2026):
+
+- The raw projected current did not pass the first gate: a median of 1.5 turns a day, one way 82 % of hours. The drift hides the tide.
+- The tidal part alone turns 3.3 times a day (quartiles 3.3 / 3.3 / 4.0) and follows the sea level (median |r| 0.58, mostly 0.6–0.9). It runs fastest around high and low water, as a progressive wave along the flank would. Neighbouring walls set the same way at the same hour, so it gives the owner's continuous flank stream without a split point.
+- The gain sets how much the tide outweighs the drift. The owner chose ×3:
+
+| G | 1 | 2 | **3** | 4 |
+|---|---|---|---|---|
+| Walls turning at least twice a day | 40 of 95 | 51 | **68** | 81 |
+| Median share of hours running one way | 83 % | 72 % | **67 %** | 63 % |
+
+At ×3 the bands fall slack 35 %, mild 44 %, strong 19 %, too strong 3 %. Strong drift (Addu, 0.4–0.7 m/s) still holds some walls one way for days, which the owner expects. No observations back G or the bands yet; reports are what correct them (Stage C).
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

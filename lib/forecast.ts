@@ -30,7 +30,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow/7";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+alongreef/8";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -149,6 +149,63 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
     allowHighConfidence,
     constriction,
   );
+}
+
+/**
+ * The tidal part of the along-reef current is scaled by this; the drift is added unscaled. The 8 km grid smooths the
+ * tidal stream along the walls, so taken as is the drift outweighs it at about half the outer walls, and they would
+ * run one way all day. ×3 lets most walls turn with the tide while a strong monsoon still holds some one way.
+ * Set with the owner from the along-reef calibration (HYDRODYNAMICS_PLAN §4.6); no observations back it yet.
+ */
+export const ALONG_REEF_TIDE_GAIN = 3;
+
+/** Along-reef index, m/s after the gain: slack below the first, then mild, strong, too strong. */
+export const ALONG_REEF_BANDS_MS = [0.15, 0.5, 1.0] as const;
+
+export type AlongReefInput = {
+  hours: MarineHour[];
+  /** Compass heading along the reef that counts as "incoming": the inward bearing turned 90° clockwise. */
+  alongHeadingDeg: number;
+};
+
+/**
+ * Outer walls with land or unbroken reef behind them: the water runs along the reef, not into the atoll.
+ * The hourly current projected on the reef line, with its tidal part (the hour less the 25-hour drift) scaled by
+ * ALONG_REEF_TIDE_GAIN. "incoming" means toward alongHeadingDeg, "outgoing" the opposite way along the reef.
+ * Reports do not pull it yet, and its confidence is always low.
+ */
+export function alongReefHours(input: AlongReefInput): HourForecast[] {
+  const hours = input.hours;
+  const drift = currentForNudge(hours);
+  const residual = residualSeries(hours);
+  const forecast: HourForecast[] = [];
+  hours.forEach((hour, index) => {
+    const level = residual[index];
+    if (level == null) return;
+    const total = alongComponent(hour, input.alongHeadingDeg);
+    const mean = alongComponent(drift[index], input.alongHeadingDeg);
+    if (!Number.isFinite(total) || !Number.isFinite(mean)) return;
+    const along = ALONG_REEF_TIDE_GAIN * (total - mean) + mean;
+    forecast.push({
+      time: hour.time,
+      direction: along >= 0 ? "incoming" : "outgoing",
+      strength: alongReefStrength(Math.abs(along)),
+      confidence: "low",
+      levelM: level,
+    });
+  });
+  return forecast;
+}
+
+export function alongReefStrength(speed: number): Strength {
+  const index = ALONG_REEF_BANDS_MS.findIndex((floor) => speed < floor);
+  return STRENGTHS[index < 0 ? STRENGTHS.length - 1 : index];
+}
+
+/** The hour's current along a compass heading, m/s, or NaN when it has none. */
+function alongComponent(hour: MarineHour, headingDeg: number): number {
+  const radians = (headingDeg * Math.PI) / 180;
+  return currentComponent(hour, Math.sin) * Math.sin(radians) + currentComponent(hour, Math.cos) * Math.cos(radians);
 }
 
 /** One pass: in-series, one stored slope, a real slope window, or unusable. */

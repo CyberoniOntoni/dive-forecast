@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
+import { compassWord } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
 
 const CHOICE =
@@ -8,7 +9,12 @@ const CHOICE =
 
 const INITIAL: ReportActionState = { success: false, error: null };
 
-export function ReportForm({ siteId }: { siteId: string }) {
+/**
+ * Along a reef the two choices are the compass points the reef runs to, stored with the forecast's fixed meaning:
+ * "incoming" toward the reef heading, "outgoing" the opposite way.
+ */
+export function ReportForm({ siteId, alongHeadingDeg = null }: { siteId: string; alongHeadingDeg?: number | null }) {
+  const along = alongHeadingDeg == null ? null : [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)];
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(
     async (_prev: ReportActionState, formData: FormData) => {
@@ -42,15 +48,17 @@ export function ReportForm({ siteId }: { siteId: string }) {
           />
         </label>
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-          <legend className="text-sm font-medium text-foam">Incoming or outgoing</legend>
+          <legend className="text-sm font-medium text-foam">
+            {along ? "Which way along the reef" : "Incoming or outgoing"}
+          </legend>
           <div className="grid grid-cols-2 gap-2">
             <label className={`${CHOICE} has-[:checked]:border-incoming has-[:checked]:text-incoming`}>
               <input type="radio" name="direction" value="incoming" required className="size-5 accent-incoming" />
-              Incoming
+              {along ? `Running ${along[0]}` : "Incoming"}
             </label>
             <label className={`${CHOICE} has-[:checked]:border-outgoing has-[:checked]:text-outgoing`}>
               <input type="radio" name="direction" value="outgoing" required className="size-5 accent-outgoing" />
-              Outgoing
+              {along ? `Running ${along[1]}` : "Outgoing"}
             </label>
           </div>
         </fieldset>

@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { forecastHours, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
+import { alongReefHours, forecastHours, residualRangeAt, residualSlopeWindow, throughflowAt } from "./forecast";
+import { alongReefHeading, flowsAlongReef } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, Site, SiteType } from "./types";
 
@@ -13,6 +14,11 @@ export type SiteLoad = {
   bearingSource: BearingSource | null;
   /** Where the site sits, when classified. A lagoon site never shows high confidence. */
   siteType: SiteType | null;
+  /**
+   * Set for a wall whose current runs along the reef: the compass heading its "incoming" means. Null for a site
+   * whose current crosses the rim, where incoming follows the inward bearing.
+   */
+  alongHeadingDeg: number | null;
   hours: HourForecast[];
   unavailable: boolean;
   stale: boolean;
@@ -23,8 +29,9 @@ function unavailableLoad(
   bearing: number | null,
   bearingSource: BearingSource | null,
   siteType: SiteType | null,
+  alongHeadingDeg: number | null,
 ): SiteLoad {
-  return { bearing, bearingSource, siteType, hours: [], unavailable: true, stale: false, fetchedAt: null };
+  return { bearing, bearingSource, siteType, alongHeadingDeg, hours: [], unavailable: true, stale: false, fetchedAt: null };
 }
 
 function forecastedLoad(
@@ -35,8 +42,13 @@ function forecastedLoad(
   fetchedAt: number,
   stale: boolean,
   site: Site,
+  alongHeadingDeg: number | null,
 ): SiteLoad {
   const siteType = site.siteType ?? null;
+  if (alongHeadingDeg != null) {
+    const hours = alongReefHours({ hours: marineHours, alongHeadingDeg });
+    return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
+  }
   // The model follows the ocean tide through the passes. Inside the lagoon it is never that sure.
   const allowHigh = replayAllowsHigh() && siteType !== "lagoon";
   const hours = forecastHours({
@@ -47,7 +59,7 @@ function forecastedLoad(
     channelDepthM: site.channelDepthM,
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
-  return { bearing, bearingSource, siteType, hours, unavailable: false, stale, fetchedAt };
+  return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
 }
 
 /** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
@@ -98,7 +110,8 @@ export async function loadSite(
   options: FetchOptions = {},
 ): Promise<SiteLoad> {
   const marine = await checkedMarine(site, mates, atoll, options);
-  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null);
+  const along = marine.bearing != null && flowsAlongReef(site, mates) ? alongReefHeading(marine.bearing) : null;
+  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null, along);
   return forecastedLoad(
     marine.bearing,
     marine.bearingSource,
@@ -107,6 +120,7 @@ export async function loadSite(
     marine.fetchedAt,
     marine.stale,
     site,
+    along,
   );
 }
 
