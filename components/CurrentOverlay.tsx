@@ -3,7 +3,16 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
-import { inView, loadSheetOpen, saveSheetOpen, siteCountLabel, type MapView } from "@/lib/map-view";
+import { loadSheetOpen, saveSheetOpen, siteCountLabel, type MapView } from "@/lib/map-view";
+import {
+  atollChoices,
+  filterCountLabel,
+  filterListSites,
+  loadListFilterText,
+  parseListFilter,
+  saveListFilter,
+  type ListFilter,
+} from "@/lib/site-search";
 import { listAtollLabel, repeatedNames } from "@/lib/site-labels";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
@@ -24,6 +33,10 @@ function noSubscription(): () => void {
 
 function closedOnServer(): boolean {
   return false;
+}
+
+function noFilterOnServer(): string {
+  return "";
 }
 
 function chevronTurn(expanded: boolean): string {
@@ -61,6 +74,7 @@ export function CurrentOverlay({
   adding,
   onAddingChange,
   onAdded,
+  onFocusAtoll,
 }: {
   siteGlances: readonly SiteGlance[];
   atollNames: Readonly<Record<string, string>>;
@@ -71,6 +85,8 @@ export function CurrentOverlay({
   adding: boolean;
   onAddingChange: (open: boolean) => void;
   onAdded: () => void;
+  /** Frame the map on an atoll's sites when the list is narrowed to it. */
+  onFocusAtoll: (atollId: string) => void;
 }) {
   // Back from a site page, the phone list opens as it was. The server renders it closed; the browser reads the tab's
   // saved state, so hydration does not mismatch.
@@ -79,10 +95,24 @@ export function CurrentOverlay({
   const expanded = toggled ?? savedOpen;
   // Counted over every site, not just those in view, so a label does not come and go as the map moves.
   const repeated = useMemo(() => repeatedNames(siteGlances.map(({ site }) => site)), [siteGlances]);
-  const visible = view ? siteGlances.filter(({ site }) => inView(site.lat, site.lon, view)) : siteGlances;
-  const countLabel = siteCountLabel(visible.length, siteGlances.length);
+  // A search or an atoll kept for the tab, so it is still there back from a site page. The server renders no filter.
+  const savedFilterText = useSyncExternalStore(noSubscription, loadListFilterText, noFilterOnServer);
+  const [edited, setEdited] = useState<ListFilter | null>(null);
+  const filter = edited ?? (savedFilterText ? parseListFilter(savedFilterText) : { query: "", atollId: "" });
+  const atolls = useMemo(() => atollChoices(siteGlances.map(({ site }) => site), atollNames), [siteGlances, atollNames]);
+  const visible = filterListSites(siteGlances, filter, view, atollNames);
+  const filtered = Boolean(filter.query.trim() || filter.atollId);
+  const countLabel =
+    filterCountLabel(visible.length, filter, atollNames[filter.atollId]) ??
+    siteCountLabel(visible.length, siteGlances.length);
   // W9: copy then sort. Equal ranks stay in the name order already on the list.
   const ranked = [...visible].sort((left, right) => glanceRank(left.glance) - glanceRank(right.glance));
+
+  function changeFilter(next: ListFilter) {
+    setEdited(next);
+    saveListFilter(next);
+    if (next.atollId && next.atollId !== filter.atollId) onFocusAtoll(next.atollId);
+  }
 
   function toggleSheet() {
     // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
@@ -138,14 +168,67 @@ export function CurrentOverlay({
           </button>
           {adding ? <AddSiteForm point={draft} onAdded={onAdded} /> : null}
         </div>
+        <div className="flex flex-col gap-2 px-3 pb-3" role="search">
+          <label className="sr-only" htmlFor="site-search">
+            Search sites
+          </label>
+          <div className="flex min-w-0 gap-2">
+            <input
+              id="site-search"
+              type="search"
+              placeholder="Search sites"
+              autoComplete="off"
+              maxLength={80}
+              value={filter.query}
+              onChange={(event) => changeFilter({ ...filter, query: event.target.value })}
+              className="min-h-11 w-full min-w-0 flex-1 rounded-md border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            />
+            {filtered ? (
+              <button
+                type="button"
+                onClick={() => changeFilter({ query: "", atollId: "" })}
+                className="min-h-11 shrink-0 rounded-md border border-foam/25 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <label className="sr-only" htmlFor="site-atoll">
+            Atoll
+          </label>
+          <select
+            id="site-atoll"
+            value={filter.atollId}
+            onChange={(event) => changeFilter({ ...filter, atollId: event.target.value })}
+            className="min-h-11 w-full min-w-0 rounded-md border border-foam/25 bg-ink px-3 text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          >
+            <option value="">All atolls (sites in view)</option>
+            {atolls.map((atoll) => (
+              <option key={atoll.id} value={atoll.id}>
+                {atoll.name} ({atoll.count})
+              </option>
+            ))}
+          </select>
+        </div>
         <nav aria-label="Dive sites">
           <ul className="pb-2">
             {ranked.map((item) => (
-              <SiteRow key={item.site.id} {...item} atoll={listAtollLabel(item.site, repeated, atollNames)} />
+              <SiteRow
+                key={item.site.id}
+                {...item}
+                // A search spans atolls, so every row names its atoll; otherwise only repeated names do.
+                atoll={
+                  filter.query.trim() && !filter.atollId
+                    ? (atollNames[item.site.atollId] ?? null)
+                    : listAtollLabel(item.site, repeated, atollNames)
+                }
+              />
             ))}
           </ul>
           {ranked.length === 0 && siteGlances.length > 0 ? (
-            <p className="px-3 pb-3 text-sm text-foam/80">No sites here. Zoom out.</p>
+            <p className="px-3 pb-3 text-sm text-foam/80">
+              {filtered ? "No sites match. Try fewer letters, or clear the search." : "No sites here. Zoom out."}
+            </p>
           ) : null}
         </nav>
       </div>
