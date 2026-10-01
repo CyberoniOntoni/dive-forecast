@@ -26,6 +26,8 @@ type MapProps = {
   onPick: (point: Point) => void;
   onOpen: (id: string) => void;
   onView: (view: MapView) => void;
+  /** An atoll to frame, from the list's filter. The count changes each time, so picking the same atoll again reframes. */
+  focus: { atollId: string; count: number } | null;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -332,7 +334,7 @@ const LeafletMap = dynamic(
     (globalThis as { L?: LeafletLib }).L = L;
     await import("leaflet.markercluster");
 
-    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen, onView }: MapProps) {
+    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen, onView, focus }: MapProps) {
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
       const pinsRef = useRef<MarkerClusterGroup | null>(null);
@@ -401,6 +403,17 @@ const LeafletMap = dynamic(
         draftMarkerRef.current = placeDraftPin(L, map, draft);
       }, [draft, mapEpoch]);
 
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0 || !focus) return;
+        const points = siteGlances
+          .filter(({ site }) => site.atollId === focus.atollId)
+          .map(({ site }) => L.latLng(site.lat, site.lon));
+        if (points.length > 0) map.fitBounds(L.latLngBounds(points), framePadding());
+        // Reframe only when a new atoll is picked, not when the forecast refreshes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [focus, mapEpoch]);
+
       return <div ref={containerRef} className="dive-map absolute inset-0" />;
     }
 
@@ -430,6 +443,7 @@ export function SiteMap({
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
+  const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -459,6 +473,7 @@ export function SiteMap({
           adding={adding}
           onAddingChange={setAddingMode}
           onAdded={finishAdd}
+          onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
         />
         {/* h-full: the page body is a 100dvh column. Without it the map collapses on a wide window. */}
         <div className="relative z-0 h-full min-h-0 min-w-0 flex-1">
@@ -468,6 +483,7 @@ export function SiteMap({
             adding={adding}
             onPick={setDraft}
             onView={setView}
+            focus={focus}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
