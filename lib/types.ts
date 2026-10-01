@@ -14,7 +14,7 @@ export type { OceanDrift } from "./seasonal";
  * - lagoon: inside the atoll, away from the rim. Current is weaker and less tied to the tide.
  * Wrecks and giris take the type of where they lie.
  */
-export const SITE_TYPES = ["pass", "channel-thila", "outer-reef", "lagoon"] as const;
+export const SITE_TYPES = ["pass", "channel-thila", "outer-reef", "lagoon", "strait-wall"] as const;
 export type SiteType = (typeof SITE_TYPES)[number];
 
 /** atollId of a pin that is not in or near a seeded atoll. It has no forecast and draws no arrow. */

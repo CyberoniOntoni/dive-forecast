@@ -5,6 +5,7 @@ import { rimForAtoll } from "./rim";
 import { atollRing, atollRingLevel } from "./atoll-ring";
 import {
   alongReefHours,
+  straitHours,
   forecastHours,
   headWindowAt,
   residualLevels,
@@ -13,7 +14,7 @@ import {
   throughflowAt,
 } from "./forecast";
 import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
-import { alongReefHeading, flowsAlongReef } from "./site-type";
+import { alongReefHeading, crossesRim, flowsAlongReef, straitHeading } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, RingLevel, Site, SiteType } from "./types";
 
@@ -96,7 +97,7 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
     const rim = rimForAtoll(atoll);
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     const channels = mates.filter(
-      (mate) => mate.atollId === atoll.id && mate.siteType && mate.siteType !== "lagoon" && !flowsAlongReef(mate, mates),
+      (mate) => mate.atollId === atoll.id && crossesRim(mate, mates),
     );
     const fetched = await Promise.all(
       channels.map(async (channel) => {
@@ -153,7 +154,7 @@ async function ringLevelFor(
   alongHeadingDeg: number | null,
   options: FetchOptions = {},
 ): Promise<RingLevel[] | undefined> {
-  if (!atoll || alongHeadingDeg != null || site.siteType === "lagoon") return undefined;
+  if (!atoll || alongHeadingDeg != null || site.siteType === "lagoon" || site.siteType === "strait-wall") return undefined;
   const level = await atollRingLevel(atoll, options);
   return level.length > 0 ? level : undefined;
 }
@@ -199,9 +200,12 @@ async function checkedMarine(
 
 /** The reef heading "incoming" means at a wall whose current runs along the reef; null elsewhere or with no atoll. */
 export function alongHeadingFor(site: Site, mates: readonly Site[], atoll: Atoll | undefined): number | null {
-  if (!atoll || !flowsAlongReef(site, mates)) return null;
+  if (!atoll) return null;
+  const strait = site.siteType === "strait-wall";
+  if (!strait && !flowsAlongReef(site, mates)) return null;
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
-  return alongReefHeading(resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg);
+  const deg = resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg;
+  return strait ? straitHeading(deg) : alongReefHeading(deg);
 }
 
 /** Inward bearing, marine fetch, and forecast hours. A missing atoll or cache is unavailable. */
@@ -215,6 +219,19 @@ export async function loadSite(
   const marine = await checkedMarine(site, mates, atoll, options);
   const along = marine.bearing != null && flowsAlongReef(site, mates) ? alongReefHeading(marine.bearing) : null;
   if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, site.siteType ?? null, along);
+  if (site.siteType === "strait-wall" && marine.bearing != null) {
+    const axis = straitHeading(marine.bearing);
+    return {
+      bearing: marine.bearing,
+      bearingSource: marine.bearingSource,
+      siteType: "strait-wall",
+      alongHeadingDeg: axis,
+      hours: straitHours({ hours: marine.hours, axisDeg: axis }),
+      unavailable: false,
+      stale: marine.stale,
+      fetchedAt: marine.fetchedAt,
+    };
+  }
   if (site.siteType === "lagoon" && atoll) {
     const lagoon = await lagoonLoad(site, mates, atoll, marine.hours, options);
     if (lagoon) {

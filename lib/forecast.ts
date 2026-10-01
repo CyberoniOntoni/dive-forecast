@@ -31,7 +31,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon/12";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/13";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -242,6 +242,76 @@ export function alongReefHours(input: AlongReefInput): HourForecast[] {
     });
   });
   return forecast;
+}
+
+/**
+ * Walls of an ocean strait between atolls (Vaadhoo Kandu). The owner's account (HYDRODYNAMICS_PLAN §4.11): the
+ * monsoon sets the main direction (west in the NE monsoon, east in the SW), the semi-diurnal tide crosses the
+ * archipelago eastward so the rising tide pushes east and the falling tide pulls west, and the strait funnels both
+ * like a venturi. So the flow through the strait, in m/s toward the east:
+ *
+ *     v = STRAIT_TIDE_GAIN · tide slope (m/h)  +  STRAIT_DRIFT_GAIN · 25-hour drift along the strait (m/s)
+ *
+ * A spring flood with the SW drift rips east; on the ebb the east-running drift slackens or briefly turns west.
+ * Gains from scripts/strait-calibrate.ts against the owner's speeds (99 days, SW monsoon): east 93 % of hours, west
+ * on 23 % of mid-ebb hours, neap-day peak 0.76 m/s, spring-day peak 1.19 m/s, very strong on 16 % of days.
+ */
+export const STRAIT_TIDE_GAIN = 2.5;
+export const STRAIT_DRIFT_GAIN = 3.5;
+
+/**
+ * Strait flow bands, m/s, from the owner's dive speeds: mild days run 0.4–0.8 m/s (0.8–1.5 kn), spring tides with
+ * the monsoon 1.0–1.8 m/s, very strong from about 2.5 kn. Mutable only so scripts/strait-calibrate.ts can sweep it.
+ */
+export const STRAIT_BANDS_MS = { slack: 0.2, mild: 0.6, strong: 1.3 };
+
+export type StraitInput = {
+  hours: MarineHour[];
+  /** The strait's axis at the wall, pointing east (straitHeading). "incoming" means running that way. */
+  axisDeg: number;
+};
+
+/**
+ * The flow through a strait at one of its walls, m/s toward axisDeg (eastward), hour by hour, with the tide slope
+ * and residual level of each hour. Gains default to the shipped constants; the calibration sweeps them.
+ */
+export function straitFlow(
+  input: StraitInput,
+  gains: { tide: number; drift: number } = { tide: STRAIT_TIDE_GAIN, drift: STRAIT_DRIFT_GAIN },
+): { time: string; speedMs: number; slope: number; levelM: number }[] {
+  const hours = input.hours;
+  const drift = currentForNudge(hours);
+  const residual = residualSeries(hours);
+  // The tide pushes east: its share along the axis.
+  const eastShare = Math.cos(((input.axisDeg - 90) * Math.PI) / 180);
+  const flow: { time: string; speedMs: number; slope: number; levelM: number }[] = [];
+  hours.forEach((hour, index) => {
+    const level = residual[index];
+    if (level == null) return;
+    const slope = slopeFromResidual(residual, index);
+    const driftAlong = alongComponent(drift[index], input.axisDeg);
+    if (slope == null || !Number.isFinite(driftAlong)) return;
+    flow.push({ time: hour.time, speedMs: gains.tide * slope * eastShare + gains.drift * driftAlong, slope, levelM: level });
+  });
+  return flow;
+}
+
+/** Hour by hour flow through a strait at one of its walls; "incoming" runs toward axisDeg (eastward). Always low. */
+export function straitHours(input: StraitInput): HourForecast[] {
+  return straitFlow(input).map((hour) => ({
+    time: hour.time,
+    direction: hour.speedMs >= 0 ? "incoming" : "outgoing",
+    strength: straitStrength(Math.abs(hour.speedMs)),
+    confidence: "low",
+    levelM: hour.levelM,
+  }));
+}
+
+export function straitStrength(speed: number): Strength {
+  if (speed < STRAIT_BANDS_MS.slack) return "slack";
+  if (speed < STRAIT_BANDS_MS.mild) return "mild";
+  if (speed < STRAIT_BANDS_MS.strong) return "strong";
+  return "too_strong";
 }
 
 /** The first model version that read wall reports along the reef. Before it, "incoming" meant into the atoll. */

@@ -438,6 +438,42 @@ At 2.0 the very-strong days fall almost all on channels facing this monsoon's cu
 
 **Reports:** lagoon reports from before this model meant into or out of the atoll and have no reading along the new axis. Replay leaves lagoon sites out, since it has no data for the lagoon's openings. This drops Alimatha's six fixture reports, and the benchmark scores 30 reports.
 
+### 4.11 Strait walls: Vaadhoo Kandu (2026-10-01)
+
+The owner reviewed Vaadhoo Caves, Coral Garden (South Malé) and Vaadhoo House Reef, which had been forecast as ordinary outer walls running along the reef. Vaadhoo Kandu is an inter-atoll ocean strait: about 5 km wide and 300–400 m deep, between shallow rims, carrying the ocean between east and west. Its walls are drift dives along that conduit. The owner's account:
+
+- **Which way:** the monsoon sets the main direction: west in the NE monsoon (Iruvai, about Dec–Apr), east in the SW (Hulhangu, about May–Nov). The semi-diurnal tide crosses the archipelago eastward, so the flood pushes east and the ebb pulls west. In the SW monsoon a flood makes it rip east; on the ebb it weakens, slacks or briefly turns west around peak spring ebbs. In the NE monsoon the ebb supercharges the westward set and the flood brakes it.
+- **How strong:** faster than open ocean, because the gap funnels swell and tide like a venturi. Mild days run 0.8–1.5 kn (0.4–0.8 m/s). Spring tides with peak monsoon run 2.0–3.5+ kn (1.0–1.8 m/s); at Vaadhoo Caves drifts can be impossible to stop in. The wall model's strong 21–29 % of hours and never very strong understated it.
+
+**Model** (`straitHours`): a new site type, `strait-wall`, set by hand on the seven walls the owner named:
+- **South Malé's north rim:** Vaadhoo Caves, Coral Garden, Vaadhoo House Reef, Velassaru Caves.
+- **North Malé's south rim:** Lions Head, Old Shark Point, Hans Hass Place.
+
+    v (m/s, east) = STRAIT_TIDE_GAIN · tide slope (m/h) + STRAIT_DRIFT_GAIN · 25-hour drift along the strait (m/s)
+
+- **The axis** is the reef line turned to point east (`straitHeading`), so "incoming" always means running east. The page shows "Running E" or "Running W".
+- **Bands** are real speeds from the owner: slack < 0.2, mild < 0.6, strong < 1.3, very strong ≥ 1.3 m/s (about 2.5 kn).
+- **Excluded from the other models:** strait walls are not channels or lagoon openings (`crossesRim`), and replay leaves them out.
+
+**Calibration** (`npm run strait-calibrate`, 99 days, 1 Jul – 7 Oct 2026, SW monsoon):
+
+| Tide / drift gain | East hours | East at mid-flood | West at mid-ebb | Daily peak, neap / all / spring p50 (m/s) | p90 | Very-strong days |
+|---|---|---|---|---|---|---|
+| 4 / 2 | 74 % | 100 % | 91 % | 0.62 / 0.90 / 1.20 | 1.29 | 10 % |
+| 2 / 3 | 93 % | 100 % | 21 % | 0.64 / 0.79 / 0.99 | 1.17 | 4 % |
+| **2.5 / 3.5** | **93 %** | **100 %** | **23 %** | **0.76 / 0.95 / 1.19** | **1.39** | **16 %** |
+| 3 / 4 | 93 % | 100 % | 24 % | 0.89 / 1.10 / 1.39 | 1.62 | 33 % |
+| 4 / 6 | 93 % | 100 % | 21 % | 1.28 / 1.59 / 1.98 | 2.34 | 70 % |
+
+With the tide weighted over the drift (4 / 2), the ebb ran west 91 % of the time: too tide-led for the owner's "slackens or briefly turns west". With the drift weighted heavily (4 / 6), neap days would already be strong. 2.5 / 3.5 fits each figure the owner gave:
+- SW monsoon east (93 % of hours);
+- flood east (100 %);
+- ebb mostly east or slack, west on 23 % of mid-ebb hours;
+- mild days about 0.76 m/s;
+- spring days with the monsoon about 1.2 m/s, very strong on 16 % of days in a window that includes the July–August peak.
+
+**Not checked:** the NE monsoon, as for every model (§4.9). The tide-pushes-east rule is the owner's; the sign of the tide term is the place to look if westward floods turn up in reports.
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

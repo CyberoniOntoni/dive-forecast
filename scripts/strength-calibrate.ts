@@ -3,7 +3,7 @@ import { resolveBearing } from "../lib/bearing";
 import { ALONG_REEF_BANDS_MS, alongReefHours, forecastHours, RANGE_BANDS_M } from "../lib/forecast";
 import { seawardPoint } from "../lib/marine";
 import { rimForAtoll } from "../lib/rim";
-import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
+import { alongReefHeading, crossesRim, flowsAlongReef } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
 import { limited, longSeries } from "./long-series";
 import { STRENGTHS, type MarineHour, type RingLevel, type Site, type Strength } from "../lib/types";
@@ -94,7 +94,7 @@ async function loadChannels(): Promise<Channel[]> {
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     const sites = catalog.sites.filter(
       (site) =>
-        site.atollId === atoll.id && site.siteType && site.siteType !== "lagoon" && !flowsAlongReef(site, catalog.sites),
+        site.atollId === atoll.id && crossesRim(site, catalog.sites),
     );
     const loaded = await limited(
       sites.map((site) => async () => {
