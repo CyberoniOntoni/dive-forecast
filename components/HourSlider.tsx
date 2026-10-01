@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { compassWord } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, HourForecast, Strength } from "@/lib/types";
 
@@ -91,13 +92,24 @@ export function HourSlider({
         {bearing == null ? null : (
           <div className={`relative grid h-28 w-28 shrink-0 place-items-center rounded-full border border-foam/20 bg-ink/50 ${tone}`}>
             <svg
-              viewBox="0 0 64 64"
-              className={`h-16 w-16 ${quiet}`}
+              viewBox={dialViewBox(hour.strength)}
+              className={`h-20 w-20 ${quiet}`}
               style={{ transform: `rotate(${bearing}deg)` }}
               role="img"
               aria-label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`}
             >
-              <path d="M32 4l11 30h-7v26h-8V34h-7L32 4z" fill="currentColor" />
+              {bearingSource === "fallback" ? (
+                <path
+                  d={arrowPath(ARROW_LENGTH[hour.strength])}
+                  fill="currentColor"
+                  fillOpacity={0.22}
+                  stroke="currentColor"
+                  strokeWidth={1}
+                  strokeLinejoin="round"
+                />
+              ) : (
+                <path d={arrowPath(ARROW_LENGTH[hour.strength])} fill="currentColor" />
+              )}
             </svg>
           </div>
         )}
@@ -226,6 +238,16 @@ function residualPoints(hours: HourForecast[]): { x: number; y: number }[] | nul
       y: 14 + (1 - rise) * 72,
     };
   });
+}
+
+/**
+ * A square box centred on the arrow's middle, so the dial turns it about its centre. Every strength shares the
+ * box size, so a stronger hour draws a longer arrow, as on the map.
+ */
+function dialViewBox(strength: Strength): string {
+  const size = 34;
+  const middle = ARROW_LENGTH[strength] / 2;
+  return `${ARROW_WIDTH / 2 - size / 2} ${middle - size / 2} ${size} ${size}`;
 }
 
 /** Incoming follows the atoll inward bearing, or the reef heading along a wall. Outgoing is 180° opposite. Not the ocean vector. */
