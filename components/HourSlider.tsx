@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { compassWord } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
@@ -20,6 +21,7 @@ export function HourSlider({
   hours,
   unavailable,
   inwardBearingDeg,
+  alongHeadingDeg = null,
   bearingSource = null,
   unseeded = false,
   notice,
@@ -32,6 +34,8 @@ export function HourSlider({
   hours: HourForecast[];
   unavailable: boolean;
   inwardBearingDeg: number | null;
+  /** Set for a wall whose current runs along the reef: the heading "incoming" means there. Words become compass points. */
+  alongHeadingDeg?: number | null;
   /** Where the bearing came from. The fallback heuristic gets an estimate note. */
   bearingSource?: BearingSource | null;
   /** True for an app-added pin that is not in or near a seeded atoll. */
@@ -70,10 +74,12 @@ export function HourSlider({
   const selected = clampHourIndex(index, hours.length);
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
-  const bearing = inwardBearingDeg == null ? null : callBearing(hour.direction, inwardBearingDeg);
-  const tone = directionTone(hour.direction);
+  const axis = inwardBearingDeg == null ? null : (alongHeadingDeg ?? inwardBearingDeg);
+  const bearing = axis == null ? null : callBearing(hour.direction, axis);
+  const wordFor = (direction: Direction) => wayWord(direction, alongHeadingDeg);
+  const tone = alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
   const quiet = arrowOpacity(hour.confidence);
-  const way = directionWord(hour.direction);
+  const way = wordFor(hour.direction);
   const spans = daySpans(hours);
 
   return (
@@ -89,7 +95,7 @@ export function HourSlider({
               className={`h-16 w-16 ${quiet}`}
               style={{ transform: `rotate(${bearing}deg)` }}
               role="img"
-              aria-label={arrowLabel(hour.direction, bearing)}
+              aria-label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`}
             >
               <path d="M32 4l11 30h-7v26h-8V34h-7L32 4z" fill="currentColor" />
             </svg>
@@ -152,7 +158,7 @@ export function HourSlider({
             aria-valuemin={0}
             aria-valuemax={hours.length - 1}
             aria-valuenow={selected}
-            aria-valuetext={hourValueText(hour, today)}
+            aria-valuetext={hourValueText(hour, today, wordFor(hour.direction))}
             className={`${RANGE_TRACK} ${RANGE_FOCUS} ${tone} ${RANGE_THUMB}`}
           />
         </label>
@@ -222,7 +228,7 @@ function residualPoints(hours: HourForecast[]): { x: number; y: number }[] | nul
   });
 }
 
-/** Incoming follows the atoll inward bearing. Outgoing is 180° opposite. Not the ocean vector. */
+/** Incoming follows the atoll inward bearing, or the reef heading along a wall. Outgoing is 180° opposite. Not the ocean vector. */
 function callBearing(direction: Direction, inwardBearingDeg: number): number {
   const inward = ((inwardBearingDeg % 360) + 360) % 360;
   return direction === "incoming" ? inward : (inward + 180) % 360;
@@ -237,8 +243,10 @@ function strengthTone(strength: Strength): string {
   return strength === "too_strong" ? "text-stop" : "text-foam";
 }
 
-function directionWord(direction: Direction): string {
-  return direction === "incoming" ? "Incoming" : "Outgoing";
+/** Incoming or Outgoing across the rim; "Running NE" along a reef, from the reef heading. */
+function wayWord(direction: Direction, alongHeadingDeg: number | null): string {
+  if (alongHeadingDeg == null) return direction === "incoming" ? "Incoming" : "Outgoing";
+  return `Running ${compassWord(callBearing(direction, alongHeadingDeg))}`;
 }
 
 function arrowOpacity(confidence: Confidence): string {
@@ -253,17 +261,13 @@ function confidenceText(confidence: Confidence): string {
   return "text-foam";
 }
 
-function arrowLabel(direction: Direction, bearing: number): string {
-  return `${directionWord(direction)} arrow, ${Math.round(bearing)} degrees clockwise from north`;
-}
-
 function hourWhen(time: string, today: string): string {
   return `${dayName(time.slice(0, 10), today)} ${clock(time)}`;
 }
 
-function hourValueText(hour: HourForecast, today: string): string {
+function hourValueText(hour: HourForecast, today: string, way: string): string {
   const when = hourWhen(hour.time, today);
-  return `${when}, ${hour.direction}, ${STRENGTH_LABEL[hour.strength]}, ${hour.confidence} confidence`;
+  return `${when}, ${way.toLowerCase()}, ${STRENGTH_LABEL[hour.strength]}, ${hour.confidence} confidence`;
 }
 
 function dayShare(span: { start: number; end: number }, hourCount: number): string {

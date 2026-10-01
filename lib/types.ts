@@ -159,6 +159,8 @@ export type SiteForecast = {
   bearingSource: BearingSource | null;
   /** Where the site sits, when classified. */
   siteType: SiteType | null;
+  /** Set for a wall whose current runs along the reef: the compass heading its "incoming" means. Null otherwise. */
+  alongHeadingDeg: number | null;
   /** A note about how far to trust the forecast at this kind of site. Null when there is none. */
   siteNote: string | null;
   /** Unix ms when the marine series was cached. Null when no cache exists. */

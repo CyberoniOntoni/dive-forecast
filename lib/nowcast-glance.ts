@@ -20,11 +20,13 @@ export type NowcastGlance = {
   /** Degrees clockwise from north. Null when there is no arrow. */
   arrowBearing: number | null;
   direction: Direction | null;
+  /** What the list says for the way the water runs: "incoming", "outgoing", or "running NE" along a reef. */
+  way: string | null;
   /** Slack, mild, strong, or too strong. Null when this hour has no forecast. */
   strength: Strength | null;
   confidence: Confidence | null;
   opacity: number | null;
-  /** var(--stop), var(--incoming), or var(--outgoing). Null when there is no forecast. */
+  /** var(--stop), var(--incoming), var(--outgoing), or var(--foam) along a reef. Null when there is no forecast. */
   color: string | null;
   /** Unix ms when the marine series was fetched. Null when this hour has no forecast. */
   fetchedAt: number | null;
@@ -38,6 +40,7 @@ function noForecastGlance(name: string): NowcastGlance {
     spoken: name,
     arrowBearing: null,
     direction: null,
+    way: null,
     strength: null,
     confidence: null,
     opacity: null,
@@ -47,7 +50,10 @@ function noForecastGlance(name: string): NowcastGlance {
   };
 }
 
-/** Incoming follows the inward bearing. Outgoing is 180 opposite, wrapped to 0-360. Not the ocean vector. */
+/**
+ * Incoming follows the inward bearing. Outgoing is 180 opposite, wrapped to 0-360. Not the ocean vector.
+ * Along a reef, incoming follows the reef heading instead, and the words are a compass direction.
+ */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
   // A stale hour still has direction and strength. Empty only when there is no hour.
   if (!nowcast?.hour || nowcast.inwardBearingDeg == null) return noForecastGlance(name);
@@ -55,20 +61,25 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
   const hour = nowcast.hour;
   const label = strengthLabel(hour.strength);
   const estimatedHeading = nowcast.bearingSource === "fallback";
+  const along = nowcast.alongHeadingDeg ?? null;
+  const arrowBearing = passArrowBearing(along ?? nowcast.inwardBearingDeg, hour.direction);
+  const way = along == null ? hour.direction : `running ${compassWord(arrowBearing)}`;
+  const spokenWay = along == null ? way : `${way} along the reef`;
   const base = showStrength
-    ? `${name}, ${hour.direction}, ${label}, ${hour.confidence}`
-    : `${name}, ${hour.direction}, ${hour.confidence}`;
+    ? `${name}, ${spokenWay}, ${label}, ${hour.confidence}`
+    : `${name}, ${spokenWay}, ${hour.confidence}`;
   const spoken = estimatedHeading ? `${base}, heading estimated` : base;
   return {
     label,
     spoken,
     estimatedHeading,
-    arrowBearing: passArrowBearing(nowcast.inwardBearingDeg, hour.direction),
+    arrowBearing,
     direction: hour.direction,
+    way,
     strength: hour.strength,
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
-    color: glanceColor(hour.direction, hour.strength),
+    color: along == null ? glanceColor(hour.direction, hour.strength) : alongColor(hour.strength),
     fetchedAt: nowcast.fetchedAt ?? null,
   };
 }
@@ -92,6 +103,19 @@ export function glanceRank(glance: NowcastGlance): number {
 export function glanceColor(direction: Direction, strength: Strength): string {
   if (strength === "too_strong") return "var(--stop)";
   return direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+}
+
+/** Along a reef the way is a compass heading, not in or out, so it takes no in/out colour. Too strong is still the stop token. */
+export function alongColor(strength: Strength): string {
+  return strength === "too_strong" ? "var(--stop)" : "var(--foam)";
+}
+
+const COMPASS_WORDS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;
+
+/** The nearest of the eight compass points to a heading in degrees. */
+export function compassWord(headingDeg: number): string {
+  const wrapped = ((headingDeg % 360) + 360) % 360;
+  return COMPASS_WORDS[Math.round(wrapped / 45) % 8];
 }
 
 export function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {

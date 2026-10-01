@@ -180,7 +180,7 @@ function CurrentBits({ glance, age }: { glance: NowcastGlance; age: string | nul
   return (
     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap text-xs" style={{ opacity: glance.opacity }}>
       <span className="font-medium" style={{ color }}>
-        {glance.direction}
+        {glance.way}
       </span>
       <span style={{ color }}>{glance.label}</span>
       <span>{glance.confidence}</span>

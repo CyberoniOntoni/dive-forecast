@@ -57,6 +57,7 @@ export default async function SitePage({
         unavailable={forecast.unavailable}
         stale={forecast.stale}
         inwardBearingDeg={forecast.inwardBearingDeg}
+        alongHeadingDeg={forecast.alongHeadingDeg}
         bearingSource={forecast.bearingSource}
         unseeded={site.atollId === UNSEEDED_ATOLL_ID}
         notice={forecast.notice}
@@ -67,7 +68,7 @@ export default async function SitePage({
       />
       <div className="flex min-w-0 flex-col gap-4">
         <RatingForm key={`rating-${site.id}`} siteId={site.id} score={rating ? rating.score : null} />
-        <ReportForm key={`report-${site.id}`} siteId={site.id} />
+        <ReportForm key={`report-${site.id}`} siteId={site.id} alongHeadingDeg={forecast.alongHeadingDeg} />
       </div>
     </main>
   );

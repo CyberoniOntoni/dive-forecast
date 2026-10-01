@@ -11,6 +11,7 @@ import { inwardBearingDeg } from "../lib/bearing";
 import { loadSite, type SiteLoad } from "../lib/load-site";
 import * as Marine from "../lib/marine";
 import { rimForAtoll } from "../lib/rim";
+import { flowsAlongReef } from "../lib/site-type";
 import type { Atoll, Catalog, MarineHour, Report as DiverReport, Site, Strength } from "../lib/types";
 
 const SITES_PATH = path.join(process.cwd(), "data", "sites.json");
@@ -323,7 +324,10 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
   describe("4. Exact Baseline Forecasts for Non-Pass Thilas / Sites Without Channel Dimensions", () => {
     it("all unconstricted sites produce exact identical forecasts as explicit baseline (constriction = 1.0)", async () => {
-      const unconstrictedSites = sites.filter((s) => s.channelWidthM === undefined && s.channelDepthM === undefined);
+      // Walls whose current runs along the reef take the along-reef path, which has no constriction.
+      const unconstrictedSites = sites.filter(
+        (s) => s.channelWidthM === undefined && s.channelDepthM === undefined && !flowsAlongReef(s, sites),
+      );
       expect(unconstrictedSites.length).toBeGreaterThanOrEqual(10);
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
