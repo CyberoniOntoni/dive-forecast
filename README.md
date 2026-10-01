@@ -41,7 +41,7 @@ They are served from static tiles in `public/overlays/`, built from the Atlas re
 1. Sign in at allencoralatlas.org, download the Maldives area (Geomorphic map, Benthic map and Reef extent, as GeoPackage) and unzip it into `data/sources/aca/` (gitignored).
 2. `npm run atlas-overlays` rewrites the tiles and their indexes (`-- reefZones`, `bottomTypes` or `reefOutline` for one).
 
-The Atlas maps only the shallow reef tops, so it does not decide a site's type (see `ADDING_SITES.md`). Whether Esri's terms allow this public map is still open (roadmap item 7).
+The Atlas maps only the shallow reef tops, so it does not decide a site's type (see `ADDING_SITES.md`). Whether Esri's terms allow this public map is still open (roadmap item 6).
 
 `data/marine-cache` holds fetched Open-Meteo hours and is not part of the repo. `data/store.json` holds reports, ratings, and sites added in the app.
 

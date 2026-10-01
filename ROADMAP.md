@@ -40,7 +40,7 @@ Reports still sit in `data/store.json`. The ocean feed is still Open-Meteo’s f
 
 2. **Shorten the report form.** In `components/ReportForm.tsx`, default the time to the current Maldives hour. Replace the radio lists with two direction buttons and four strength buttons. Done when a report can be saved in two taps after the time, and the saved report still has site, time, direction, and strength.
 
-3. **Separate overlapping pins.** When several North Malé sites fall on the same screen point below zoom 10, spread those markers so each arrow can be tapped. Done when Banana Reef and its neighbors are separate targets at the default zoom.
+3. **Separate overlapping pins.** When several North Malé sites fall on the same screen point below zoom 10, spread those markers so each arrow can be tapped. Done when Banana Reef and its neighbors are separate targets at the default zoom. *Partly done: overlapping pins now group into numbered clusters that zoom in when tapped, and the side list shows every site in view. They are not yet separate targets at the default zoom.*
 
 4. **Finish the phone check.** At a 390 px width, confirm the map is at least half the screen, the now list starts collapsed, and every button and the zoom control is at least 44 px. Fix the ones that are smaller. Done when that pass finds no target under 44 px.
 
