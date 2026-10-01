@@ -62,9 +62,19 @@ export type Site = {
 /** Where a resolved bearing came from. */
 export type BearingSource = "override" | "rim-derived" | "fallback";
 
+/** An atoll's ring level at one hour: the mean residual sea level round its outline, standing for the lagoon. */
+export type RingLevel = { time: string; levelM: number };
+
 export type ForecastInput = {
   hours: MarineHour[];
   inwardBearingDeg: number;
+  /**
+   * The atoll's ring level. With it, the head between the ocean outside the channel and the lagoon behind it drives
+   * the channel too (ATOLL_HEAD_TAU_HOURS). Absent: no head term.
+   */
+  ringLevel?: readonly RingLevel[];
+  /** Overrides ATOLL_HEAD_TAU_HOURS. For calibration. */
+  headTauHours?: number;
   reports?: readonly Report[];
   allowHighConfidence?: boolean;
   channelWidthM?: number;
@@ -96,6 +106,12 @@ export type Report = {
    * times THROUGHFLOW_SLOPE_PER_MS. Added to the stored tide slopes. Absent on older reports.
    */
   throughflowM?: number | null;
+  /**
+   * Head drive across the atoll from 6 hours before the report through 6 after, residual metres per hour: the level
+   * outside the channel less the atoll's ring level, over ATOLL_HEAD_TAU_HOURS. Aligned with slopeWindowM and added
+   * to it. Absent on older reports, at sites without a ring level, and when the fetch failed.
+   */
+  headWindowM?: number[] | null;
   /**
    * At a wall whose current runs along the reef: the compass heading "incoming" meant when the report was filed
    * (inward bearing + 90°). Saved so the report keeps its meaning if the site's bearing changes. Absent elsewhere.
