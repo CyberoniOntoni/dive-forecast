@@ -182,7 +182,7 @@ Summary: 12 overrides (7 measured, 1 low-trust estimate, 4 pinned), 4 rim-derive
 5. **New-site workflow**: adding a site to an existing atoll needs no bearing work. Adding a new atoll needs its rim polygon added, and the sanity test in 3.7 step 4 will fail until it is.
 6. **UI trust marker**: surface `BearingSource`; render `fallback` arrows as low-trust.
 
-**A2 result (implemented)**: `data/rims.json` holds the six OSM outlines; `lib/rim.ts` averages inward normals of rim segments within 1.5 km of the pin and only applies when the pin is within 0.8 km of the rim. Order is now override, then rim-derived, then the legacy heuristic (`resolveBearing`). Against the measured sites the rim normal was within ~12° for Kandooma, Rasdhoo, Miyaru, Kuredu and Devana. It would have regressed four previously-fine sites (Fotteyo 134°, Kuda Faru 60°, Hp Reef 51°, Embudhoo 28°), so those are pinned to their previous heuristic output (298, 155, 271, 216) and behave exactly as before. Internal thilas and pins more than 0.8 km from the rim stay on the heuristic (11 sites). Kuda Giri was on the wrong heuristic value (357°) and now has an estimated override (see the 3.6 table). The seeded-data sanity test lives in `lib/rim.test.ts`; Fotteyo is exempt because the OSM outline is a thin spike at Vaavu's east tip. Still open: the UI trust marker for `BearingSource`, and removing the `?? 0` in `lib/nowcast.ts`.
+**A2 result (implemented)**: `data/rims.json` holds the six OSM outlines; `lib/rim.ts` averages inward normals of rim segments within 1.5 km of the pin and only applies when the pin is within 0.8 km of the rim. Order is now override, then rim-derived, then the legacy heuristic (`resolveBearing`). Against the measured sites the rim normal was within ~12° for Kandooma, Rasdhoo, Miyaru, Kuredu and Devana. It would have regressed four previously-fine sites (Fotteyo 134°, Kuda Faru 60°, Hp Reef 51°, Embudhoo 28°), so those are pinned to their previous heuristic output (298, 155, 271, 216) and behave exactly as before. Internal thilas and pins more than 0.8 km from the rim stay on the heuristic (11 sites). Kuda Giri was on the wrong heuristic value (357°) and now has an estimated override (see the 3.6 table). The seeded-data sanity test lives in `lib/rim.test.ts`; Fotteyo is exempt because the OSM outline is a thin spike at Vaavu's east tip. The UI trust marker for `BearingSource` and the removal of the `?? 0` in `lib/nowcast.ts`, open at the time, were done later (§6, Phases 1a and 1b).
 
 ---
 
@@ -290,7 +290,7 @@ K = 0.7 meets "most of the day" on this data. In peak monsoon the drift is rough
 
 **Benchmark** (curated scenarios written for the tide-only model, so not a gate): direction 91.3 % → 84.8 %, slack timing 20 → 95 min, false-high 0 %. Through-flow moves the turns away from high and low water on purpose, and the scenarios assume slack at high and low water everywhere.
 
-**Still open:** the per-rim hydraulic head term (`F_rim`, §4.2) and neighbouring channels that run opposite ways (§5.1) need reports.
+**Open at the time:** the per-rim hydraulic head term (`F_rim`, §4.2), since shipped from the ocean model's sea levels as the head across the atoll (§4.8). Neighbouring channels that run opposite ways (§5.1) still need reports.
 
 ### 4.6 Along-reef flow at outer walls (2026-10-01)
 
@@ -336,14 +336,14 @@ A full review of the model after through-flow and along-reef flow, checked again
 
 `verify` needs no change: each report is scored against the prediction saved with it, under the model it was filed under.
 
-**Open, needs the owner:**
+**Open at the time, both since done:**
 
-1. **The atoll still behaves as a bowl at mid-tide.**
+1. **The atoll still behaves as a bowl at mid-tide.** *Done in §4.8 (head across the atoll).*
    - Through-flow adds about 0.7 × 0.09 = 0.06 m/h; a spring tide's slope is about 0.2 m/h.
    - So near mid-tide the ocean slope decides every channel together: at mid-ebb, 180 of 196 channels were outgoing.
    - The missing term is the head difference across the atoll (§4.2 `F_rim`). The tide reaches opposite rims at different times, as the along-reef check showed (§4.6).
    - Next step: drive channels from sea level outside the channel minus sea level outside the opposite rim, with a gate that opposite rims do not all turn together.
-2. **"Too strong" at every spring tide.**
+2. **"Too strong" at every spring tide.** *Done in §4.9 (strength bands, "very strong").*
    - The 25-hour range was p10 0.76 m, p50 0.93 m, p90 1.01 m. `strengthFromRange` gives too strong from 0.85 m, so every unconstricted pass peaks too strong at every spring tide (71 channels at that hour), and the whole day is slack at neaps.
    - The thresholds should come from the Maldives range climatology and the owner's sense of how often a kandu is undiveable.
 
@@ -453,6 +453,15 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 
 ## 6. Execution Checklist
 
+### What is still open (2026-10-01)
+
+Everything open needs data the project does not have yet:
+
+- [ ] **Fit the model to real dives (Stage C, §5).** K, τ, the along-reef gain, the lagoon channel weight and every strength band were set from the ocean model and the owner's experience. Refit them, and extend the per-site fits, once `npm run verify` has enough real reports.
+- [ ] **Check January to March (§4.9).** The NE monsoon has not been in any calibration, because the marine API gives at most 92 past days. Rerun `strength-calibrate` and `lagoon-calibrate` in or after that season, or check against reports from it.
+- [ ] **Neighbouring channels that run opposite ways (§5.1).** No general model predicts them; they need reports from each channel.
+- [ ] **Out of reach without new data sources:** current at dive depth instead of the surface, wind forcing, pass geometry beyond width × depth, and lagoon reefs and depth. See `FORECAST_MODEL.md`, Known limits.
+
 ### Phase 1a: Stage A1 Execution (override + guardrail)
 - [x] Measure the 7 channel centerline azimuths against satellite imagery. Six measured, Kuda Giri is a low-trust estimate (no pass); Himandhoo later measured.
 - [x] Add `inwardBearingDeg?: number` to `Site` and the `BearingSource` type to `lib/types.ts`. `rimFacing` deferred to Stage B.
@@ -463,7 +472,7 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 - [x] Update `divesite_audit.md` §5 and §7 to reflect the reversed product rule.
 - [x] Verify `seawardPoint(...)` points into open ocean (`npm run bearings`), and add benchmark fixtures for the moved sample points.
 - [x] Add unit tests in `lib/bearing.test.ts`.
-- [ ] Audit `monsoonNudge` impact on historical reports, verifying Vaavu June–August reports. *Not done. No June–August reports exist, and the September comparison against the benchmark file was invalid because those are fixtures (see 3.9). Reopen when real summer reports arrive.*
+- [x] ~~Audit `monsoonNudge` impact on historical reports, verifying Vaavu June–August reports.~~ *No longer applies: the strength nudge was retired when through-flow shipped (§4.5). No June–August reports existed, and the September comparison against the benchmark file was invalid because those are fixtures (see 3.9).*
 - [x] Verify `npm test` and `npm run build` pass 100%. CI runs both on every PR.
 
 ### Phase 1b: Stage A2 Execution (rim-derived default)
@@ -482,11 +491,11 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 
 ### Phase 2: Stage B Preparation & Tuning (superseded by §4.5–4.10)
 
-The list below is the original plan. Through-flow shipped as an equivalent tide slope with one constant (§4.5), without a feature flag or a grid search over reports. The sign convention is tested (`tests/challenger-m2-*`).
+The list below is the original plan. Through-flow shipped as an equivalent tide slope with one constant (§4.5), calibrated against the owner's experience instead of a grid search over reports, and without a feature flag.
 
-- [ ] Fix and unit-test the rim sign convention (4.2).
-- [ ] Implement `enableThroughflowReversal` feature flag in `lib/forecast.ts`.
-- [ ] Formulate through-flow in terms of equivalent tidal slope $\Delta S_{\text{throughflow}}$ (no parallel velocity systems).
-- [ ] Execute multi-parameter grid search calibration for $(\beta, \lambda, S_{\text{ref}})$ across historical reports.
-- [ ] Update `lib/forecast.ts` direction contract with the medium-confidence guardrail.
-- [ ] Retune vitest test suites to encode the new coupled contract.
+- [x] Fix and unit-test the rim sign convention (4.2). *The NE/SW × east/west sign table is a test in `lib/forecast.test.ts`.*
+- [x] ~~Implement `enableThroughflowReversal` feature flag in `lib/forecast.ts`.~~ *Not needed: through-flow shipped as the model, versioned by `FORECAST_MODEL_VERSION` (`/7`).*
+- [x] Formulate through-flow in terms of equivalent tidal slope $\Delta S_{\text{throughflow}}$ (no parallel velocity systems). *`K · F_inward`, §4.5.*
+- [x] ~~Execute multi-parameter grid search calibration for $(\beta, \lambda, S_{\text{ref}})$ across historical reports.~~ *Replaced by one-constant sweeps against the owner's experience (§4.5–4.10), since there are no real reports. Refitting against reports is Stage C.*
+- [x] Update `lib/forecast.ts` direction contract. *Net flow (tide + through-flow + head) decides direction. There is no separate medium-confidence guardrail: confidence comes from reports as before, and walls and lagoon sites stay low.*
+- [x] Retune vitest test suites to encode the new coupled contract. *Done with each change in §4.5–4.10.*
