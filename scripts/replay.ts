@@ -172,6 +172,8 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     // A lagoon site is forecast from the flow through its atoll's rim and channels, which replay has no data for.
     // Its fixture reports were written as into or out of the atoll and have no reading along its flow's axis.
     if (site.siteType === "lagoon") continue;
+    // A strait wall runs east or west through the strait, which the fixtures' in/out reports do not describe.
+    if (site.siteType === "strait-wall") continue;
 
     const bearing = inwardBearingDeg(
       site,

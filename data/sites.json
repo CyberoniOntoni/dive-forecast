@@ -445,8 +445,8 @@
       "channelWidthM": 5000,
       "channelDepthM": 400,
       "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "fulidhoo-caves",
@@ -1205,8 +1205,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "old-shark-point",
@@ -1218,8 +1218,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "lions-head",
@@ -1231,8 +1231,8 @@
       "diveTopM": 3,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "bandos",
@@ -1545,8 +1545,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "vaadhoo-housereef",
@@ -1558,8 +1558,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "coral-garden-3",
@@ -1571,8 +1571,8 @@
       "diveTopM": 5,
       "diveMaxM": 12,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "embudhoo-canyon",

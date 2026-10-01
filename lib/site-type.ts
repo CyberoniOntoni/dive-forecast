@@ -8,6 +8,7 @@ export const SITE_TYPE_LABEL: Record<SiteType, string> = {
   "channel-thila": "Channel thila",
   "outer-reef": "Outer reef",
   lagoon: "Lagoon",
+  "strait-wall": "Strait wall",
 };
 
 const PASS_NAME = /\bkandu\b|\bkandoo\b|\bexpress\b/i;
@@ -52,6 +53,27 @@ export function flowsAlongReef(
   );
 }
 
+/**
+ * True for a site whose current runs into and out of the atoll across the rim: a pass, a channel thila, or an outer
+ * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not.
+ */
+export function crossesRim(
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
+  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
+): boolean {
+  if (!site.siteType || site.siteType === "lagoon" || site.siteType === "strait-wall") return false;
+  return !flowsAlongReef(site, mates);
+}
+
+/**
+ * The compass axis a strait wall's forecast runs along: its reef line, turned to point east (within 90° of it), so
+ * "incoming" is always the eastward way. Strait walls are set by hand (`siteType: "strait-wall"`).
+ */
+export function straitHeading(inwardBearingDeg: number): number {
+  const along = alongReefHeading(inwardBearingDeg);
+  return Math.cos(((along - 90) * Math.PI) / 180) >= 0 ? along : (along + 180) % 360;
+}
+
 /** The heading along the reef that an along-reef forecast calls "incoming": the inward bearing turned 90° clockwise. */
 export function alongReefHeading(inwardBearingDeg: number): number {
   return (((inwardBearingDeg + 90) % 360) + 360) % 360;
@@ -62,6 +84,10 @@ function distanceKm(a: Pick<Site, "lat" | "lon">, b: Pick<Site, "lat" | "lon">):
   const east = (b.lon - a.lon) * 111.32 * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
   return Math.hypot(north, east);
 }
+
+/** Walls of an ocean strait between atolls (Vaadhoo Kandu): the flow runs through the strait, east or west. */
+export const STRAIT_NOTE =
+  "Strait wall: the current runs through the channel between the atolls, east or west. The monsoon sets the main direction (west in the NE monsoon, east in the SW), the rising tide pushes east and the falling tide west, and the strait speeds it up. Not checked against reports yet.";
 
 /** Outer walls: the stream along the reef comes from the ocean model's tide and drift, not from the passes. */
 export const ALONG_REEF_NOTE =

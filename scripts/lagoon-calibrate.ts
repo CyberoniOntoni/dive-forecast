@@ -3,7 +3,7 @@ import { resolveBearing } from "../lib/bearing";
 import { CHANNEL_WEIGHT_KM, channelSource, LAGOON_BANDS, lagoonSink, lagoonVelocity, mainAxisDeg, rimSources, type LagoonSink, type LagoonSource } from "../lib/lagoon-flow";
 import { seawardPoint } from "../lib/marine";
 import { rimForAtoll } from "../lib/rim";
-import { flowsAlongReef } from "../lib/site-type";
+import { crossesRim } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
 import type { MarineHour, Site } from "../lib/types";
 import { limited, longSeries } from "./long-series";
@@ -60,7 +60,7 @@ async function loadAtolls(): Promise<Atoll[]> {
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     const across = catalog.sites.filter(
       (site) =>
-        site.atollId === atoll.id && site.siteType && site.siteType !== "lagoon" && !flowsAlongReef(site, catalog.sites),
+        site.atollId === atoll.id && crossesRim(site, catalog.sites),
     );
     const channels = (
       await limited(

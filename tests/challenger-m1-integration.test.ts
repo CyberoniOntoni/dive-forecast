@@ -324,9 +324,13 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
   describe("4. Exact Baseline Forecasts for Non-Pass Thilas / Sites Without Channel Dimensions", () => {
     it("all unconstricted sites produce exact identical forecasts as explicit baseline (constriction = 1.0)", async () => {
-      // Walls whose current runs along the reef take the along-reef path, which has no constriction.
+      // Walls whose current runs along the reef, and strait walls, take their own paths, which have no constriction.
       const unconstrictedSites = sites.filter(
-        (s) => s.channelWidthM === undefined && s.channelDepthM === undefined && !flowsAlongReef(s, sites),
+        (s) =>
+          s.channelWidthM === undefined &&
+          s.channelDepthM === undefined &&
+          !flowsAlongReef(s, sites) &&
+          s.siteType !== "strait-wall",
       );
       expect(unconstrictedSites.length).toBeGreaterThanOrEqual(10);
 

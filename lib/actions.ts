@@ -2,7 +2,7 @@
 
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
-import { ALONG_REEF_NOTE, LAGOON_NOTE } from "./site-type";
+import { ALONG_REEF_NOTE, LAGOON_NOTE, STRAIT_NOTE } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
@@ -176,7 +176,14 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     bearingSource: loaded.bearingSource,
     siteType: loaded.siteType,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    siteNote: loaded.siteType === "lagoon" ? LAGOON_NOTE : loaded.alongHeadingDeg != null ? ALONG_REEF_NOTE : null,
+    siteNote:
+      loaded.siteType === "lagoon"
+        ? LAGOON_NOTE
+        : loaded.siteType === "strait-wall"
+          ? STRAIT_NOTE
+          : loaded.alongHeadingDeg != null
+            ? ALONG_REEF_NOTE
+            : null,
     fetchedAt: loaded.fetchedAt,
   };
 }

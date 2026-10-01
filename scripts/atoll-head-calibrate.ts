@@ -3,7 +3,7 @@ import { resolveBearing } from "../lib/bearing";
 import { forecastHours, residualLevels, throughflowAt } from "../lib/forecast";
 import { fetchMarine, siteMarineHours } from "../lib/marine";
 import { rimForAtoll } from "../lib/rim";
-import { flowsAlongReef } from "../lib/site-type";
+import { crossesRim } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
 import { STRENGTHS, type MarineHour, type RingLevel, type Site } from "../lib/types";
 
@@ -124,8 +124,7 @@ async function loadChannels(): Promise<{ channels: Channel[]; atolls: number }> 
     const ringAt = new Map(level.map((item) => [item.time, item.levelM]));
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     for (const site of catalog.sites) {
-      if (site.atollId !== atoll.id || !site.siteType || site.siteType === "lagoon") continue;
-      if (flowsAlongReef(site, catalog.sites)) continue;
+      if (site.atollId !== atoll.id || !crossesRim(site, catalog.sites)) continue;
       const { deg } = resolveBearing(site, catalog.sites, outside, ring);
       const marine = await siteMarineHours(site.lat, site.lon, deg, outside.lat, outside.lon);
       if (!marine.ok) continue;

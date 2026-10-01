@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon/12`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/13`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -19,13 +19,14 @@ For every point it needs, the app fetches hourly **sea level** and **ocean curre
 
 ## Which model a site gets
 
-Every site has a type (`lib/site-type.ts`, `ADDING_SITES.md` §5): rim pass, channel thila, outer reef, or lagoon. The type and position pick one of three models:
+Every site has a type (`lib/site-type.ts`, `ADDING_SITES.md` §5): rim pass, channel thila, outer reef, lagoon, or strait wall. The type and position pick one of four models:
 
 | Site | Model | What it shows |
 |---|---|---|
 | Pass, channel thila, outer-reef "Corner", and an outer wall within 0.8 km of a pass in the same atoll (the channel's funnel) | **Across the rim** | Incoming / outgoing, along the inward bearing |
 | Any other outer-reef site: a wall with land or unbroken reef behind it (`flowsAlongReef`) | **Along the reef** | A compass direction ("Running NE"), along the reef |
 | Lagoon (pin more than 0.8 km inside the outline) | **Lagoon flow** | A compass direction along the site's main flow axis |
+| Strait wall, set by hand: the walls of Vaadhoo Kandu, the strait between North and South Malé | **Through the strait** | East or west ("Running E") |
 
 A site's **inward bearing** comes from, in order:
 - an explicit `inwardBearingDeg`;
@@ -101,6 +102,39 @@ Over 99 days of ocean data (1 Jul – 7 Oct 2026):
 
   Very strong is reached on 4 % of wall-days.
 - **Confidence** is always low, and reports do not pull it yet.
+
+## Through the strait: Vaadhoo Kandu walls
+
+`straitHours` in `lib/forecast.ts`. Vaadhoo Kandu is an ocean strait between North and South Malé, not a pass into a lagoon: about 5 km wide and 300–400 m deep between shallow rims, carrying the ocean from east to west or back.
+
+Seven walls are strait walls, set by hand from the owner's knowledge:
+- **South Malé's north rim:** Vaadhoo Caves, Coral Garden, Vaadhoo House Reef, Velassaru Caves.
+- **North Malé's south rim:** Lions Head, Old Shark Point, Hans Hass Place.
+
+How the strait runs, per the owner:
+- **The monsoon sets the main direction:** west in the NE monsoon (about Dec–Apr), east in the SW (about May–Nov).
+- **The tide pushes and pulls:** the semi-diurnal tide crosses the archipelago eastward, so the rising tide pushes east and the falling tide pulls west.
+- **The strait funnels both like a venturi.**
+
+The flow at a wall, in m/s toward the east along the strait's axis:
+
+    v = 2.5 · tide slope (m/h) + 3.5 · 25-hour drift along the strait (m/s)      (STRAIT_TIDE_GAIN, STRAIT_DRIFT_GAIN)
+
+- **SW monsoon:** a spring flood rips east, and on the ebb the eastward drift slackens or briefly turns west. In the NE monsoon the ebb supercharges the westward set and the flood brakes it.
+- **Strength:** real speeds in m/s (`STRAIT_BANDS_MS`):
+
+  | Band | Speed |
+  |---|---|
+  | slack | below 0.2 m/s |
+  | mild | below 0.6 m/s |
+  | strong | below 1.3 m/s |
+  | very strong | 1.3 m/s and above (about 2.5 kn) |
+
+- **Over 99 days of the SW monsoon:**
+  - The walls run east 93 % of hours, and west on 23 % of mid-ebb hours.
+  - Neap days peak at about 0.76 m/s and spring days at 1.19 m/s (p90 1.39).
+  - 16 % of days reach very strong.
+- **Confidence** is always low.
 
 ## Lagoon flow
 
@@ -181,6 +215,8 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | Ring points | 12, at least 9 for a level | `atoll-ring.ts` | §4.8 |
 | `CHANNEL_WEIGHT_KM` | 2 km | `lagoon-flow.ts` | §4.10 |
 | `LAGOON_BANDS` | 0.02 / 0.2 / 0.55 | `lagoon-flow.ts` | owner + 99 days, §4.10 |
+| `STRAIT_TIDE_GAIN`, `STRAIT_DRIFT_GAIN` | 2.5 m/s per m/h, 3.5 | `forecast.ts` | owner + 99 days, §4.11 |
+| `STRAIT_BANDS_MS` | 0.2 / 0.6 / 1.3 m/s | `forecast.ts` | owner's dive speeds, §4.11 |
 | Report half-life | 90 days | `forecast.ts` | original model |
 
 **Calibration scripts** (all `npm run <name>`):
@@ -192,6 +228,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `atoll-head-calibrate` | checks the head and sweeps τ | point `MARINE_CACHE_DIR` at a fresh directory, so all series come from one model run |
 | `strength-calibrate` | sweeps the channel and wall bands | 99 days, cached under the OS temp directory by `scripts/long-series.ts` |
 | `lagoon-calibrate` | checks the lagoon flow and sweeps the channel weight | same 99-day cache |
+| `strait-calibrate` | sweeps the strait gains | same 99-day cache |
 
 ## Model versions
 
@@ -204,6 +241,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…+head…/10` | 1 Oct | Head across the atoll (§4.8). |
 | `…/11` | 1 Oct | Strength bands from the range climatology, "very strong" (§4.9). |
 | `…+lagoon/12` | 1 Oct | Lagoon flow (§4.10). |
+| `…+strait/13` | 1 Oct | Vaadhoo Kandu walls run through the strait (§4.11). |
 
 ## Known limits
 
