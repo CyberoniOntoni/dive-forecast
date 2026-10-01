@@ -31,7 +31,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef/10";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef/11";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -203,8 +203,11 @@ function addSeries(left: readonly number[], right: readonly number[]): number[] 
  */
 export const ALONG_REEF_TIDE_GAIN = 3;
 
-/** Along-reef index, m/s after the gain: slack below the first, then mild, strong, too strong. */
-export const ALONG_REEF_BANDS_MS = [0.15, 0.5, 1.0] as const;
+/**
+ * Along-reef index, m/s after the gain: slack below `slack`, then mild, strong, and very strong from `strong` up.
+ * Mutable only so scripts/strength-calibrate.ts can sweep it.
+ */
+export const ALONG_REEF_BANDS_MS = { slack: 0.15, mild: 0.5, strong: 1.3 };
 
 export type AlongReefInput = {
   hours: MarineHour[];
@@ -266,8 +269,10 @@ function modelVersionNumber(version: string): number {
 }
 
 export function alongReefStrength(speed: number): Strength {
-  const index = ALONG_REEF_BANDS_MS.findIndex((floor) => speed < floor);
-  return STRENGTHS[index < 0 ? STRENGTHS.length - 1 : index];
+  if (speed < ALONG_REEF_BANDS_MS.slack) return "slack";
+  if (speed < ALONG_REEF_BANDS_MS.mild) return "mild";
+  if (speed < ALONG_REEF_BANDS_MS.strong) return "strong";
+  return "too_strong";
 }
 
 /** The hour's current along a compass heading, m/s, or NaN when it has none. */
@@ -1209,12 +1214,22 @@ function nextSignedDirection(
   return null;
 }
 
+/**
+ * The day's top band from its effective tidal range, metres: slack below `slack`, then mild, strong, and very strong
+ * (stored as too_strong) from `strong` up. Set against the range climatology and the owner's experience: neap days
+ * peak mild, most days strong, and very strong takes more than the tide alone (a monsoon push, the head across the
+ * atoll, or a narrow channel), so it is rare outside the NE monsoon. HYDRODYNAMICS_PLAN §4.9.
+ * Mutable only so scripts/strength-calibrate.ts can sweep it.
+ */
+export const RANGE_BANDS_M = { slack: 0.25, mild: 0.6, strong: 2.0 };
+
 export function strengthFromRange(range: number, constriction: number = 1.0): Strength {
   const effectiveRange = range * constriction;
-  if (effectiveRange < 0.35) return "slack";
-  if (range < 0.35) return "mild";
-  if (effectiveRange < 0.6) return "mild";
-  if (effectiveRange < 0.85) return "strong";
+  if (effectiveRange < RANGE_BANDS_M.slack) return "slack";
+  // Narrowing cannot lift a day with almost no tide past mild.
+  if (range < RANGE_BANDS_M.slack) return "mild";
+  if (effectiveRange < RANGE_BANDS_M.mild) return "mild";
+  if (effectiveRange < RANGE_BANDS_M.strong) return "strong";
   return "too_strong";
 }
 

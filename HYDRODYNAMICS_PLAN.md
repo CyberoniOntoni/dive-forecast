@@ -303,7 +303,7 @@ The owner pointed out that an outer wall with an island or unbroken reef behind 
 
     v = G · (v_hour − v_drift) + v_drift,   G = ALONG_REEF_TIDE_GAIN = 3
 
-"incoming" means toward the reef heading, "outgoing" the other way; the UI shows the compass point ("Running NE") in a neutral colour. Strength bands on |v|: slack < 0.15, mild < 0.5, strong < 1.0, too strong above. Confidence is always low and reports do not pull it yet.
+"incoming" means toward the reef heading, "outgoing" the other way; the UI shows the compass point ("Running NE") in a neutral colour. Strength bands on |v|: slack < 0.15, mild < 0.5, strong < 1.0, too strong above (very strong from 1.3 since §4.9). Confidence is always low and reports do not pull it yet.
 
 **Calibration** (`npm run along-reef-calibrate`, 92 walls, cached series around 30 Sep 2026):
 
@@ -380,6 +380,35 @@ The review (§4.7) found that every channel still turned together at mid-tide: e
 | Too strong | 18 % | 18 % | 19 % | **21 %** | 28 % | 28 % |
 
 The planned gate asked for an effect at τ ≥ 0.5 h, and it did not pass. The owner chose 0.25 h: a quarter-hour lag is plausible for lagoons with many wide passes, opposite rims part ways for about a quarter of mid-tide hours, and the monsoon pattern holds. τ is a judgement, not a fit; reports from both sides of an atoll should set it (Stage C).
+
+### 4.9 Strength bands (2026-10-01)
+
+The review (§4.7) found "too strong" at every channel without measured dimensions on about a third of days: it started at a 0.85 m effective range, and the daily range over 1 Jul – 7 Oct 2026 was p10 0.39, p25 0.54, p50 0.74, p75 0.87, p90 0.93, max 1.11 m. The owner: channels are very rarely undiveable. That depends on the diver, and the flow can be very strong, especially January to March.
+
+**Changes:**
+
+- **The top band is shown as "very strong"** (still the red stop colour; stored as `too_strong`), describing the flow rather than whether it can be dived.
+- **Channels (`RANGE_BANDS_M`):** slack below 0.25 m effective range, mild below 0.6, strong below 2.0, very strong from 2.0. Neap days peak mild and most days peak strong. A spring tide alone tops out strong; very strong takes the monsoon push, the head across the atoll or a narrow channel on top.
+- **Walls (`ALONG_REEF_BANDS_MS`):** very strong from 1.3 (was 1.0).
+
+**Calibration** (`npm run strength-calibrate`): 92 past and 7 forecast days, 1 Jul – 7 Oct 2026 (SW monsoon), for 81 channels and 92 walls. The full model runs in eight-day pieces, as the app does.
+
+| Channel bands (slack / mild / strong, m) | Hours slack | mild | strong | very strong | Channel-days peaking very strong |
+|---|---|---|---|---|---|
+| before: 0.35 / 0.6 / 0.85 | 9 % | 36 % | 32 % | 23 % | 73 % |
+| 0.25 / 0.6 / 1.3 | 9 % | 43 % | 39 % | 9 % | 28 % |
+| 0.25 / 0.6 / 1.7 | 9 % | 45 % | 42 % | 3 % | 10 % |
+| **0.25 / 0.6 / 2.0** | **9 %** | **46 %** | **44 %** | **1 %** | **3 %** |
+| 0.25 / 0.6 / 2.3 | 9 % | 46 % | 44 % | 0 % | 1 % |
+
+At 2.0 the very-strong days fall almost all on channels facing this monsoon's current (Gangehi Kandu, Ziyaarai Thila, Kuda Thila, Kurali Kandu, Madi Thila), which is the monsoon-driven pattern the owner describes.
+
+| Wall bands (very strong from) | 1.0 (before) | **1.3** | 1.6 | 2.0 |
+|---|---|---|---|---|
+| Hours very strong | 2 % | **1 %** | 0 % | 0 % |
+| Wall-days peaking very strong | 12 % | **4 %** | 2 % | 1 % |
+
+**Not checked:** January to March. The marine API gives at most 92 past days, so the NE monsoon cannot be checked until it comes. If channels facing the NE current reach very strong far more or less often than the owner sees, that is the place to adjust.
 
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 

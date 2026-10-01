@@ -2,7 +2,8 @@ import type { SiteNowcast } from "./nowcast";
 import type { Confidence, Direction, Strength } from "./types";
 
 export function strengthLabel(strength: Strength): string {
-  return strength === "too_strong" ? "too strong" : strength;
+  // Stored as too_strong; shown as "very strong", since whether it can be dived depends on the diver.
+  return strength === "too_strong" ? "very strong" : strength;
 }
 
 /** Low confidence draws quieter. High stays solid. */
@@ -22,7 +23,7 @@ export type NowcastGlance = {
   direction: Direction | null;
   /** What the list says for the way the water runs: "incoming", "outgoing", or "running NE" along a reef. */
   way: string | null;
-  /** Slack, mild, strong, or too strong. Null when this hour has no forecast. */
+  /** Slack, mild, strong, or very strong. Null when this hour has no forecast. */
   strength: Strength | null;
   confidence: Confidence | null;
   opacity: number | null;
@@ -84,7 +85,7 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
   };
 }
 
-/** Smaller is earlier. Too strong, strong, mild, slack, then no forecast. One band shares a rank. */
+/** Smaller is earlier. Very strong, strong, mild, slack, then no forecast. One band shares a rank. */
 const STRENGTH_RANK: Record<Strength, number> = {
   too_strong: 0,
   strong: 1,
@@ -99,13 +100,13 @@ export function glanceRank(glance: NowcastGlance): number {
   return STRENGTH_RANK[glance.strength];
 }
 
-/** Too strong is the stop token. Every other band keeps incoming or outgoing. Not a second hex. */
+/** Very strong is the stop token. Every other band keeps incoming or outgoing. Not a second hex. */
 export function glanceColor(direction: Direction, strength: Strength): string {
   if (strength === "too_strong") return "var(--stop)";
   return direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
 }
 
-/** Along a reef the way is a compass heading, not in or out, so it takes no in/out colour. Too strong is still the stop token. */
+/** Along a reef the way is a compass heading, not in or out, so it takes no in/out colour. Very strong is still the stop token. */
 export function alongColor(strength: Strength): string {
   return strength === "too_strong" ? "var(--stop)" : "var(--foam)";
 }
