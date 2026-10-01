@@ -5,6 +5,7 @@ import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { ALONG_REEF_NOTE, LAGOON_NOTE } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
+import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import {
   addReport as persistReport,
   addUserSite,
@@ -171,6 +172,18 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     siteNote: loaded.siteType === "lagoon" ? LAGOON_NOTE : loaded.alongHeadingDeg != null ? ALONG_REEF_NOTE : null,
     fetchedAt: loaded.fetchedAt,
   };
+}
+
+/**
+ * The site's newest reports, as the site page lists them. `siteOnAxis` is true when the site's forecast reads as a
+ * compass direction (a wall or lagoon site), so older in/out reports there are marked.
+ */
+export async function getRecentReports(siteId: string, siteOnAxis: boolean): Promise<RecentReportRow[]> {
+  requireSiteId(siteId);
+  return recentReportRows(reportsForSite(siteId), {
+    nowWall: toMaldivesWall(new Date().toISOString()),
+    siteOnAxis,
+  });
 }
 
 function unavailableForecast(): SiteForecast {

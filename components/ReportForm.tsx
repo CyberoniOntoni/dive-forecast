@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { compassWord } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
 
@@ -16,10 +17,15 @@ const INITIAL: ReportActionState = { success: false, error: null };
 export function ReportForm({ siteId, alongHeadingDeg = null }: { siteId: string; alongHeadingDeg?: number | null }) {
   const along = alongHeadingDeg == null ? null : [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)];
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(
     async (_prev: ReportActionState, formData: FormData) => {
       const next = await addReportAction(siteId, formData);
-      if (next.success) formRef.current?.reset();
+      if (next.success) {
+        formRef.current?.reset();
+        // The new report joins the list on the page, and the hours above take its pull.
+        router.refresh();
+      }
       return next;
     },
     INITIAL,

@@ -7,11 +7,12 @@ import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker, Ma
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
+import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { addMapLayers } from "@/lib/map-layers";
-import type { MapView } from "@/lib/map-view";
+import { loadMapView, saveMapView, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
-import type { Site } from "@/lib/types";
+import type { Site, Strength } from "@/lib/types";
 
 type Point = { lat: number; lon: number };
 type LeafletLib = typeof import("leaflet");
@@ -32,6 +33,7 @@ const CLUSTER_UNTIL_ZOOM = 11;
 
 type ArrowFields = {
   bearing: number;
+  strength: Strength;
   opacity: number;
   label: string;
   color: string;
@@ -54,7 +56,7 @@ function pinHtml(glance: NowcastGlance, showStrength: boolean, age: string | nul
   if (!arrow) return missingPin(spoken);
   const note = pinNote(showStrength ? arrow.label : "", age);
   const strengthMark = note ? strengthBadge(escapeHtml(note)) : "";
-  return arrowPin(spoken, arrow.opacity, arrow.bearing, arrow.color, strengthMark, arrow.estimated);
+  return arrowPin(spoken, arrow, strengthMark);
 }
 
 function pinIcon(L: LeafletLib, glance: NowcastGlance, showStrength: boolean, age: string | null) {
@@ -82,6 +84,7 @@ function arrowFields(glance: NowcastGlance): ArrowFields | null {
   if (!hasForecast(glance) || glance.color == null) return null;
   return {
     bearing: glance.arrowBearing,
+    strength: glance.strength ?? "mild",
     opacity: glance.opacity,
     label: glance.label,
     color: glance.color,
@@ -97,24 +100,14 @@ function strengthBadge(strength: string): string {
   return `<span style="position:absolute;left:50%;top:calc(100% + 2px);transform:translateX(-50%);white-space:nowrap;border-radius:999px;background:var(--glass);color:var(--foam);border:1px solid color-mix(in srgb, var(--foam) 28%, transparent);padding:1px 6px;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif">${strength}</span>`;
 }
 
-/** A solid arrow has a measured or rim-derived heading. An outlined arrow is an estimate. */
-function arrowShape(estimated: boolean): string {
-  const outline = "M8 1.2 14.2 12.2H10.4V28H5.6V12.2H1.8Z";
-  if (estimated) {
-    return `<path d="${outline}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>`;
-  }
-  return `<path d="${outline}" fill="currentColor" stroke="var(--ink)" stroke-width="1.2" stroke-linejoin="round"/>`;
-}
-
-function arrowPin(
-  spoken: string,
-  opacity: number,
-  bearing: number,
-  color: string,
-  strengthMark: string,
-  estimated: boolean,
-): string {
-  return `<div style="width:${PIN_SIZE}px;height:${PIN_SIZE}px;position:relative;opacity:${opacity}" aria-label="${spoken}"><div style="position:absolute;left:50%;top:50%;width:16px;height:30px;margin-left:-8px;margin-top:-30px;transform:rotate(${bearing}deg);transform-origin:8px 30px;color:${color}"><svg width="16" height="30" viewBox="0 0 16 30" aria-hidden="true">${arrowShape(estimated)}</svg></div><span style="position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;border-radius:999px;background:${color};box-shadow:0 0 0 2px var(--ink)"></span>${strengthMark}</div>`;
+/**
+ * A slim tapered arrow from the pin's dot, rotated about its tail. Its length grows with strength; a measured or
+ * rim-derived heading is solid, an estimated one a dashed outline (lib/arrow-shape.ts).
+ */
+function arrowPin(spoken: string, arrow: ArrowFields, strengthMark: string): string {
+  const length = ARROW_LENGTH[arrow.strength];
+  const half = ARROW_WIDTH / 2;
+  return `<div style="width:${PIN_SIZE}px;height:${PIN_SIZE}px;position:relative;opacity:${arrow.opacity}" aria-label="${spoken}"><div style="position:absolute;left:50%;top:50%;width:${ARROW_WIDTH}px;height:${length}px;margin-left:-${half}px;margin-top:-${length}px;transform:rotate(${arrow.bearing}deg);transform-origin:${half}px ${length}px;color:${arrow.color}"><svg width="${ARROW_WIDTH}" height="${length}" viewBox="0 0 ${ARROW_WIDTH} ${length}" overflow="visible" aria-hidden="true">${arrowSvgBody(arrow.strength, arrow.estimated)}</svg></div><span style="position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:999px;background:${arrow.color};box-shadow:0 0 0 2px var(--ink)"></span>${strengthMark}</div>`;
 }
 
 function framePadding() {
@@ -193,13 +186,18 @@ function mountDiveMap(
   const reportView = () => {
     const bounds = map.getBounds();
     hooks.onView({ south: bounds.getSouth(), west: bounds.getWest(), north: bounds.getNorth(), east: bounds.getEast() });
+    // Kept for this tab, so "Back to map" (or the browser's back) opens the map where it was.
+    const center = map.getCenter();
+    saveMapView({ lat: center.lat, lon: center.lng, zoom: map.getZoom() });
   };
   map.on("zoomend", () => {
     hooks.onZoom(map.getZoom());
   });
   map.on("moveend", reportView);
 
-  frameSites(L, map, siteGlances);
+  const saved = loadMapView();
+  if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
+  else frameSites(L, map, siteGlances);
 
   map.on("click", (event: LeafletMouseEvent) => {
     if (!hooks.isAdding()) return;

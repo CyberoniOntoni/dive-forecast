@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { HourSlider } from "@/components/HourSlider";
 import { RatingForm } from "@/components/RatingForm";
+import { RecentReports } from "@/components/RecentReports";
 import { ReportForm } from "@/components/ReportForm";
-import { forecastSite, getRating, getSite } from "@/lib/actions";
+import { forecastSite, getRating, getRecentReports, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
@@ -36,6 +37,8 @@ export default async function SitePage({
   if (!site) notFound();
 
   const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id)]);
+  // Wall and lagoon reports read as compass directions, so the list needs to know which kind of site this is.
+  const recent = await getRecentReports(site.id, forecast.alongHeadingDeg != null);
   const maldivesWall = toMaldivesWall(new Date().toISOString());
 
   return (
@@ -66,6 +69,7 @@ export default async function SitePage({
         maldivesWall={maldivesWall}
         initialIndex={startingIndex(forecast.hours, maldivesWall)}
       />
+      <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">
         <RatingForm key={`rating-${site.id}`} siteId={site.id} score={rating ? rating.score : null} />
         <ReportForm key={`report-${site.id}`} siteId={site.id} alongHeadingDeg={forecast.alongHeadingDeg} />

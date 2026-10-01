@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
-import { inView, siteCountLabel, type MapView } from "@/lib/map-view";
+import { inView, loadSheetOpen, saveSheetOpen, siteCountLabel, type MapView } from "@/lib/map-view";
 import { listAtollLabel, repeatedNames } from "@/lib/site-labels";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
@@ -16,6 +16,15 @@ export type SiteGlance = {
 };
 
 type Point = { lat: number; lon: number };
+
+/** The saved sheet state only changes through this component, so there is nothing to subscribe to. */
+function noSubscription(): () => void {
+  return () => {};
+}
+
+function closedOnServer(): boolean {
+  return false;
+}
 
 function chevronTurn(expanded: boolean): string {
   return expanded ? "rotate(135deg)" : "rotate(-45deg)";
@@ -63,7 +72,11 @@ export function CurrentOverlay({
   onAddingChange: (open: boolean) => void;
   onAdded: () => void;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  // Back from a site page, the phone list opens as it was. The server renders it closed; the browser reads the tab's
+  // saved state, so hydration does not mismatch.
+  const savedOpen = useSyncExternalStore(noSubscription, loadSheetOpen, closedOnServer);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const expanded = toggled ?? savedOpen;
   // Counted over every site, not just those in view, so a label does not come and go as the map moves.
   const repeated = useMemo(() => repeatedNames(siteGlances.map(({ site }) => site)), [siteGlances]);
   const visible = view ? siteGlances.filter(({ site }) => inView(site.lat, site.lon, view)) : siteGlances;
@@ -74,7 +87,8 @@ export function CurrentOverlay({
   function toggleSheet() {
     // Closing the sheet also leaves add mode, so a collapsed sheet does not keep a hidden form.
     if (expanded) onAddingChange(false);
-    setExpanded((open) => !open);
+    saveSheetOpen(!expanded);
+    setToggled(!expanded);
   }
 
   return (
