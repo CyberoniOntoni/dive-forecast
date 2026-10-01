@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { ALONG_REEF_TIDE_GAIN, alongReefHours, alongReefStrength } from "./forecast";
+import { ALONG_REEF_TIDE_GAIN, alongReefHours, alongReefStrength, alongReportDirection } from "./forecast";
+import { replayReports } from "./replay";
 import { compassWord, nowcastGlance } from "./nowcast-glance";
 import type { SiteNowcast } from "./nowcast";
 import { alongReefHeading, flowsAlongReef } from "./site-type";
-import type { MarineHour, Site } from "./types";
+import type { MarineHour, Report, Site } from "./types";
 
 const M2 = 12.42;
 
@@ -145,5 +146,59 @@ describe("along-reef glance", () => {
     expect(glance("outgoing").spoken).toBe("Wall, running S along the reef, mild, low");
     expect(glance("incoming").color).toBe("var(--foam)");
     expect(glance("incoming", "too_strong").color).toBe("var(--stop)");
+  });
+});
+
+describe("alongReportDirection", () => {
+  const base: Report = {
+    id: "r",
+    siteId: "wall",
+    time: "2026-09-02T10:00",
+    direction: "incoming",
+    strength: "mild",
+  };
+  const predicted = (modelVersion: string, bearingDeg: number): Report["predicted"] => ({
+    modelVersion,
+    nudge: "drift",
+    issuedAt: null,
+    stale: false,
+    bearingDeg,
+    bearingSource: "rim-derived",
+    shown: { direction: "incoming", strength: "mild", confidence: "low" },
+    modelOnly: null,
+  });
+
+  it("keeps the direction while the saved heading still matches", () => {
+    expect(alongReportDirection({ ...base, alongHeadingDeg: 10 }, 350)).toBe("incoming");
+  });
+
+  it("flips it when the reef heading has turned round since the report", () => {
+    expect(alongReportDirection({ ...base, alongHeadingDeg: 0 }, 180)).toBe("outgoing");
+    expect(alongReportDirection({ ...base, alongHeadingDeg: 0 }, 135)).toBe("outgoing");
+  });
+
+  it("falls back to the bearing in an along-reef prediction", () => {
+    // Bearing 270 means the reef heading was 0.
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow+alongreef/8", 270) }, 0)).toBe("incoming");
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow+alongreef/9", 270) }, 180)).toBe("outgoing");
+  });
+
+  it("has no reading for a report filed when walls were forecast into and out of the atoll", () => {
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow/7", 270) }, 0)).toBeNull();
+    expect(alongReportDirection(base, 0)).toBeNull();
+  });
+});
+
+describe("replay at a wall", () => {
+  it("scores reports with the along-reef forecast, read against the reef heading", () => {
+    const hours = series(0, 0.3);
+    const at = hours[30].time;
+    const right: Report = { id: "a", siteId: "w", time: at, direction: "incoming", strength: "mild", alongHeadingDeg: 0 };
+    // The same water reported against a heading that has since turned round.
+    const turned: Report = { ...right, id: "b", direction: "outgoing", alongHeadingDeg: 180 };
+    const old: Report = { ...right, id: "c", alongHeadingDeg: undefined };
+    const result = replayReports({ hours, inwardBearingDeg: 270, reports: [right, turned, old], alongHeadingDeg: 0 });
+    expect(result.metrics.totalReports).toBe(2);
+    expect(result.metrics.directionalAccuracyPct).toBe(100);
   });
 });

@@ -339,8 +339,8 @@ describe("marine fetch", () => {
       const result = await fetchMarine(lat, lon);
       expect(result.ok).toBe(true);
       expect(urls[0].startsWith("https://marine-api.open-meteo.com/v1/marine?")).toBe(true);
-      // The last 12 hours have no 25-hour mean, so a third forecast day keeps tomorrow afternoon on the page.
-      expect(new URL(urls[0]).searchParams.get("forecast_days")).toBe("3");
+      // The last 12 hours have no 25-hour mean, so seven forecast days show about six and a half ahead.
+      expect(new URL(urls[0]).searchParams.get("forecast_days")).toBe("7");
     } finally {
       vi.unstubAllGlobals();
       vi.restoreAllMocks();

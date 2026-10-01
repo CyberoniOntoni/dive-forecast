@@ -140,12 +140,12 @@ export function HourSlider({
               className="min-w-0 truncate"
               style={{ flex: dayShare(span, hours.length) }}
             >
-              {dayName(span.date, today)}
+              {spans.length > 4 ? shortDayName(span.date, today) : dayName(span.date, today)}
             </span>
           ))}
         </div>
         <label className="block min-w-0" htmlFor="forecast-hour">
-          <span className="sr-only">Today and tomorrow</span>
+          <span className="sr-only">Forecast hour</span>
           <input
             id="forecast-hour"
             type="range"
@@ -303,6 +303,17 @@ function dayName(date: string, today: string): string {
   if (date === today) return `Today · ${pretty}`;
   if (date === addUtcDay(today)) return `Tomorrow · ${pretty}`;
   return pretty;
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** A week of labels has to fit a phone: "Today", then "Fri 2". */
+function shortDayName(date: string, today: string): string {
+  if (date === today) return "Today";
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const weekday = WEEKDAYS[new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay()];
+  return `${weekday} ${Number(match[3])}`;
 }
 
 function fetchedCaption(wall: string): string {

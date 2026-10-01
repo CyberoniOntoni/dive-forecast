@@ -49,7 +49,9 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
 
       expect(result.ok).toBe(true);
       expect(result.failures).toBe(0);
-      expect(result.metrics.totalReports).toBe(46);
+      // Rasdhoo Madivaru is an outer wall forecast along the reef. Its ten fixture reports were written as into and
+      // out of the atoll, so they have no along-reef reading and are left out.
+      expect(result.metrics.totalReports).toBe(36);
       expect(result.metrics.directionalAccuracyPct).toBeGreaterThan(80);
       expect(result.metrics.slackTimingDeviationMins).toBeGreaterThanOrEqual(0);
       expect(result.datasetName).toContain("benchmark-reports.json");
@@ -66,14 +68,19 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
   });
 
   describe("2. CLI Flag Variations & Boundary Edge Cases", () => {
-    it("filters precisely to single site when --site rasdhoo-madivaru is provided", () => {
-      const options = parseCliArgs(["--benchmark", "--site", "rasdhoo-madivaru"]);
+    it("filters precisely to single site when --site miyaru-kandu is provided", () => {
+      const options = parseCliArgs(["--benchmark", "--site", "miyaru-kandu"]);
       const result = runBenchmarkSuite(options);
 
       expect(result.siteResults).toHaveLength(1);
-      expect(result.siteResults[0].siteId).toBe("rasdhoo-madivaru");
-      expect(result.metrics.totalReports).toBe(10);
-      expect(result.metrics.directionalAccuracyPct).toBe(90.0);
+      expect(result.siteResults[0].siteId).toBe("miyaru-kandu");
+      expect(result.metrics.totalReports).toBe(9);
+      expect(result.metrics.directionalAccuracyPct).toBe(66.67);
+    });
+
+    it("scores no into-or-out fixture reports at an outer wall forecast along the reef", () => {
+      const result = runBenchmarkSuite(parseCliArgs(["--benchmark", "--site", "rasdhoo-madivaru"]));
+      expect(result.metrics.totalReports).toBe(0);
     });
 
     it("handles empty dataset array without crashing, throwing, or producing NaN", () => {

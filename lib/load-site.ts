@@ -101,6 +101,13 @@ async function checkedMarine(
   };
 }
 
+/** The reef heading "incoming" means at a wall whose current runs along the reef; null elsewhere or with no atoll. */
+export function alongHeadingFor(site: Site, mates: readonly Site[], atoll: Atoll | undefined): number | null {
+  if (!atoll || !flowsAlongReef(site, mates)) return null;
+  const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
+  return alongReefHeading(resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg);
+}
+
 /** Inward bearing, marine fetch, and forecast hours. A missing atoll or cache is unavailable. */
 export async function loadSite(
   site: Site,
