@@ -10,6 +10,7 @@ import { toMaldivesWall } from "@/lib/forecast";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
+import { currentWallHour, timeZoneForSite } from "@/lib/site-time";
 import { readCatalog } from "@/lib/store";
 import { UNSEEDED_ATOLL_ID, type HourForecast, type Site } from "@/lib/types";
 
@@ -39,6 +40,8 @@ export default async function SitePage({
   const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id)]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which kind of site this is.
   const recent = await getRecentReports(site.id, forecast.alongHeadingDeg != null);
+  // Reports are entered in the site's own country's time, whatever the diver's clock says.
+  const zone = timeZoneForSite(site);
   const maldivesWall = toMaldivesWall(new Date().toISOString());
 
   return (
@@ -72,7 +75,13 @@ export default async function SitePage({
       <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">
         <RatingForm key={`rating-${site.id}`} siteId={site.id} score={rating ? rating.score : null} />
-        <ReportForm key={`report-${site.id}`} siteId={site.id} alongHeadingDeg={forecast.alongHeadingDeg} />
+        <ReportForm
+          key={`report-${site.id}`}
+          siteId={site.id}
+          alongHeadingDeg={forecast.alongHeadingDeg}
+          zone={zone}
+          defaultTime={currentWallHour(zone)}
+        />
       </div>
     </main>
   );

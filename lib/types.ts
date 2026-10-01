@@ -119,6 +119,8 @@ export type Report = {
   alongHeadingDeg?: number;
   /** What the forecast said for this hour when the report was filed. Absent when there was no forecast. */
   predicted?: ForecastAtReport;
+  /** When the report was filed, ISO UTC. Absent on reports filed before it was recorded (1 Oct 2026). */
+  filedAt?: string;
 };
 
 /**
