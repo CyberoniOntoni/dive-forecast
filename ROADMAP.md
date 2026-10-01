@@ -7,9 +7,9 @@ Marine-life forecasts, visibility as its own product, and 3D seafloor maps are n
 ## Shipped
 
 - Map of seeded Maldives sites with the current Maldives hour.
-- Incoming or outgoing, strength (slack, mild, strong, too strong), and confidence.
-- Arrow on each pin. Too-strong and low confidence are quieter or louder with the rest of the glance.
-- Site page with a time slider for today and tomorrow, opened on the current hour.
+- Direction, strength (slack, mild, strong, very strong), and confidence. Channels show incoming or outgoing; outer walls and lagoon sites show a compass direction.
+- Arrow on each pin. Very strong and low confidence are quieter or louder with the rest of the glance. Pins cluster when zoomed out, and the side list shows the sites in view.
+- Site page with a time slider for about a week ahead, opened on the current hour.
 - One strength for an incoming or outgoing run. Slack is the turn.
 - After-dive report: direction and strength. The report stores the tide slope and can move the next forecast.
 - Site quality rating. It does not change the current.
@@ -20,8 +20,15 @@ Marine-life forecasts, visibility as its own product, and 3D seafloor maps are n
 - A replay of past reports. A high-confidence hour with the wrong direction fails it, and `confidenceFor` will not return high while `data/replay.json` says the replay failed.
 - Kuda Haa stays on North Malé. The Purely Maldives fact sheet names that coordinate. It is not the Baa manta site.
 - The residual tide is drawn under the slider, with a marker on the selected hour.
-- Too strong uses a stop color on the pin, in the now list, and on the slider. The list sorts too strong, then strong, then mild, then slack.
+- Very strong (stored as `too_strong`) uses a stop color on the pin, in the now list, and on the slider. The list sorts very strong, then strong, then mild, then slack. Very strong is rare: it takes the monsoon push, the head across the atoll or a narrow channel on top of a spring tide.
 - A stale or failed refresh keeps the last cached hours and shows their age. No cache still says unavailable.
+- 288 sites in 15 atolls, imported atoll by atoll from the Dive Maldives guide with owner review, each with a site type (rim pass, channel thila, outer reef, lagoon).
+- Map layers that can each be switched on or off: satellite, street map, OpenSeaMap seamarks and depths, a coordinate grid, and Allen Coral Atlas reef outline, zones and bottom types.
+- Monsoon through-flow: channels facing the monsoon current run in most of the day, the far side runs out.
+- Outer walls run along the reef and turn with the tide; corners and walls at a channel mouth keep in and out.
+- The level difference across each atoll, so channels on opposite rims can run opposite ways.
+- Lagoon flow: thilas inside the atoll follow the water moving through the rim and channels.
+- The model, its constants and its limits are written down in `FORECAST_MODEL.md`.
 
 ## Before production
 
@@ -43,7 +50,7 @@ Reports still sit in `data/store.json`. The ocean feed is still Open-Meteo’s f
 
 6. **Write down the ocean and map license, then comply.** Read the current Open-Meteo and Esri World Imagery terms. Record the decision in the README: stay on the non-commercial tier, or name the paid plan. If Esri’s terms do not allow this public map, switch the tile URL in `components/SiteMap.tsx`. Leave the Open-Meteo and SMOC attribution on the page. Done when the README states the decision and the live map matches it.
 
-7. **Put the app on one HTTPS address.** Deploy the Next.js app. The fetch time and the attribution are visible on that URL. Done when that address loads the map and a site page.
+7. **Put the app on one HTTPS address.** Deploy the Next.js app. The fetch time and the attribution are visible on that URL. Done when that address loads the map and a site page. *Done: the app runs at one HTTPS address with the fetch time and attribution on the page.*
 
 ## Later
 
@@ -52,4 +59,3 @@ Held back on purpose.
 - A 3–4 dive slate for today or tomorrow, chosen from the boat’s reach.
 - A wishlist for mantas, sharks, or whale sharks, as a property of the site.
 - Other countries.
-- A week-long slider. Crews plan the next morning here. A longer horizon is what DiveSight and Navionics already offer, and it can wait until today and tomorrow are trusted.

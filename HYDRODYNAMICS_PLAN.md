@@ -4,7 +4,7 @@
 **Purpose**: Rigorous, phased engineering specification to upgrade the forecast engine from an uncoupled tidal breather heuristic to an oceanographically grounded channel pass model. Aligns geometric channel axes, accounts for monsoon-driven through-flow, eliminates speculative parallel physics, and grounds predictions in empirical diver calibration.
 
 
-> **Status (2026-10-01):** Stages A1 and A2 are shipped. Stage B is shipped in a simplified, one-constant form (§4.5), calibrated to the owner's knowledge of how the channels run instead of to reports. Stage C still needs diver reports: the reports in `data/benchmark-reports.json` are curated fixtures, so the project has no ground truth. Section 3.9 is the findings log; section 6 is the checklist.
+> **Status (2026-10-01):** Stages A1 and A2 are shipped. Stage B is shipped and extended (§4.5–4.10): through-flow, walls running along the reef, the head across the atoll, strength bands from the range climatology, and lagoon flow. Each step was calibrated against the ocean model's data and the owner's knowledge of how the water runs, not against reports. Stage C still needs diver reports: the reports in `data/benchmark-reports.json` are curated fixtures, so the project has no ground truth. How the model works today is summarised in `FORECAST_MODEL.md`. Section 3.9 is the findings log; section 6 is the checklist.
 ---
 
 ## 1. Executive Summary & Critical Reality Check
@@ -17,9 +17,9 @@ In Maldives atolls, channel current is physically driven by two interacting mech
 
 ### 1.2 Engineering Realities & Honest Schedule
 A scientifically sound model cannot be delivered as an uncalibrated "3-hour patch". Attempting to ship free hydrodynamic constants without empirical tuning creates "monsoon-shaped cartoons" that fail at the critical dive hour. Specifically:
-- **Direction Contract Change**: Today, the locked product contract states: *Residual tide slope dictates direction; ocean drift only nudges strength*. Letting through-flow flip the direction of weak tides is a major product behavior change that requires rewriting test baselines and replay benchmarks.
+- **Direction Contract Change**: When this plan was written, the product contract was *residual tide slope dictates direction; ocean drift only nudges strength*. Letting through-flow flip the direction of weak tides was a major behaviour change, and it rewrote test baselines and the replay benchmark when it shipped (§4.5). The old contract no longer holds.
 - **Opposite Neighbor Passes**: Macro rim classification (`east`/`west`) cannot explain why two adjacent eastern channels run in opposite directions (caused by local reef-flat wave radiation stress and hydraulic return relief). That requires per-pass empirical calibration from diver reports over time.
-- **No Parallel Strength Systems**: The app already possesses a validated relative strength model based on tidal slope, spring/neap range, and constriction (`hourlyStrength`, `strengthFromRange`, `NUDGE_BAND`). Any through-flow physics must integrate with this system, not invent conflicting absolute velocity thresholds (e.g. 0.1 / 0.5 m/s).
+- **No Parallel Strength Systems**: The channel model grades strength from the tidal slope, spring/neap range and constriction (`hourlyStrength`, `strengthFromRange`). Through-flow and head feed that system as extra slope; they do not add absolute velocity thresholds. Walls and lagoon sites have no channel to grade, so they band their own flow index (§4.6, §4.10). `NUDGE_BAND` was retired in §4.5.
 - **Phased Approach**: We separate **high-confidence geometric corrections** (Stage A) from **complex hydrodynamics and direction flipping** (Stage B), followed by **empirical reporting calibration** (Stage C).
 
 ---
@@ -206,7 +206,9 @@ Summary: 12 overrides (7 measured, 1 low-trust estimate, 4 pinned), 4 rim-derive
   - *Decision (2026-09-29):* the strength nudge now uses the tide-removed drift, the 25-hour vector mean of the current (`currentForNudge` in `lib/forecast.ts`), instead of the hourly total current. Over the same 60 days and 25 sites it moves 4% of non-slack hours up and 8% down versus the nudge off, against 8% and 12% before. `NUDGE_SOURCE` (`"drift"` or `"off"`) is a one-line switch; `"off"` changes 0% of hours and would need four nudge-asserting tests updated. This is a hypothesis, not a validated improvement: with no real reports there is nothing to score it against. Revisit when real reports exist, and compare drift, off, and the old hourly current on them.
 - **Vaavu monsoon-nudge check (2026-09-29). RETRACTED, see the first entry above.** Kept for the record of what was done. It compared model strength for the Vaavu passes under the old and new bearings against the curated benchmark scenarios, and it described the nudge as driven by the SW-monsoon curve. Both were wrong: the scenarios are not observations, and the nudge is fed by the hourly API current (tide included), not the curve. What still stands: moving Miyaru from 126 to 280 degrees and Alimatha from 118 to 250 degrees changes no direction (the nudge never flips direction), and lowers modelled incoming strength by one to two bands under the hourly current.
 
-## 4. Stage B: Monsoon Through-Flow Modeling (ON HOLD)
+## 4. Stage B: Monsoon Through-Flow Modeling (shipped, §4.5–4.10)
+
+§4.0–4.4 are the original, more cautious plan. What shipped is in §4.5 onwards, and the 4.0 reports gate was replaced by the owner's experience (§4.5).
 
 ### 4.0 Entry Gates (all must hold before starting)
 1. **Rim sign fixed and tested** (see 4.2). As originally written the coupling was inverted. *Status: text corrected, no code or test yet.*
@@ -478,7 +480,10 @@ Adjacent channels (e.g. Miyaru Kandu vs Devana Kandu) can experience opposite fl
 - [x] `ADDING_SITES.md` checklist and `npm run bearings`.
 - [x] OpenStreetMap credit in the footer.
 
-### Phase 2: Stage B Preparation & Tuning (ON HOLD until 4.0 gates pass)
+### Phase 2: Stage B Preparation & Tuning (superseded by §4.5–4.10)
+
+The list below is the original plan. Through-flow shipped as an equivalent tide slope with one constant (§4.5), without a feature flag or a grid search over reports. The sign convention is tested (`tests/challenger-m2-*`).
+
 - [ ] Fix and unit-test the rim sign convention (4.2).
 - [ ] Implement `enableThroughflowReversal` feature flag in `lib/forecast.ts`.
 - [ ] Formulate through-flow in terms of equivalent tidal slope $\Delta S_{\text{throughflow}}$ (no parallel velocity systems).

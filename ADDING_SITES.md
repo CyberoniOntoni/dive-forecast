@@ -70,7 +70,13 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
 
 ## 5. Site type
 
-Every site has a type: rim pass, channel thila, outer reef or lagoon. A lagoon site never shows high confidence, and its page says the forecast is less reliable there.
+Every site has a type: rim pass, channel thila, outer reef or lagoon. The type picks the model (`FORECAST_MODEL.md`), so check it:
+
+- **Pass, channel thila:** incoming or outgoing across the rim.
+- **Outer reef:** a wall with land or solid reef behind it runs along the reef, shown as a compass direction. Two exceptions keep the across-rim model, because the channel's draw takes over there: a name containing "Corner" (a corner dive at a channel mouth), and a wall within 0.8 km of a pass pin in the same atoll.
+- **Lagoon:** a compass direction from the flow through the atoll's rim and channels. It never shows high confidence.
+
+A wrong type gives the wrong kind of answer, not just a weaker one. For example, a channel typed outer reef shows a direction along the reef instead of in or out.
 
 ```bash
 npm run site-types              # the derived type for each site, and why
