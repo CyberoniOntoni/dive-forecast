@@ -6,6 +6,7 @@ import { ALONG_REEF_NOTE, LAGOON_NOTE } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
+import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
   addReport as persistReport,
   addUserSite,
@@ -70,7 +71,12 @@ export async function addReport(input: unknown): Promise<Report> {
   requireDirection(body.direction as Direction);
   requireStrength(body.strength as Strength);
 
+  // A report's time is the dive site's own wall clock (lib/site-time.ts); today that is always the Maldives.
+  const zone = timeZoneForSite(site);
   const time = toMaldivesWall(body.time as string);
+  const filedAt = new Date();
+  requireNotAhead(time, zone, filedAt.getTime());
+  requireNotDuplicate(site.id, time, body.direction as Direction, body.strength as Strength, filedAt.getTime());
   const tide = await reportTide(site, time);
   const predicted = await predictionAtReport(site, time);
   const report: Report = {
@@ -80,6 +86,7 @@ export async function addReport(input: unknown): Promise<Report> {
     direction: body.direction as Direction,
     strength: body.strength as Strength,
     slopeM: tide ? tide.slopeWindowM[REPORT_HOUR_INDEX] : null,
+    filedAt: filedAt.toISOString(),
   };
   if (tide) {
     report.slopeWindowM = tide.slopeWindowM;
@@ -253,6 +260,27 @@ function requireLongitude(lon: unknown): number {
     throw new Error("Longitude is outside Maldives bounds [71, 76]");
   }
   return lon;
+}
+
+/** A dive more than an hour ahead of the site's clock is almost always a time entered in the diver's own zone. */
+const AHEAD_LIMIT_MS = 60 * 60 * 1000;
+/** An identical report filed again within this window is a double submission, not a second diver. */
+const DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
+
+function requireNotAhead(time: string, zone: SiteTimeZone, nowMs: number): void {
+  const siteNowMs = parseWall(currentWallTime(zone, nowMs));
+  if (parseWall(time) - siteNowMs > AHEAD_LIMIT_MS) {
+    throw new Error(`That time is still ahead in the ${zone.place}. Enter the dive in ${zoneLabel(zone)}.`);
+  }
+}
+
+function requireNotDuplicate(siteId: string, time: string, direction: Direction, strength: Strength, nowMs: number): void {
+  const repeat = reportsForSite(siteId).some((report) => {
+    if (report.time !== time || report.direction !== direction || report.strength !== strength) return false;
+    const filed = report.filedAt ? Date.parse(report.filedAt) : Number.NaN;
+    return Number.isFinite(filed) && nowMs - filed < DUPLICATE_WINDOW_MS;
+  });
+  if (repeat) throw new Error("This report is already saved.");
 }
 
 function requireSiteId(siteId: unknown): asserts siteId is string {

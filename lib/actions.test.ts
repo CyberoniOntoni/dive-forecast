@@ -141,7 +141,8 @@ describe("addReport saves the prediction", () => {
   it("the modelOnly prediction ignores earlier reports; the shown one may not", async () => {
     seedMarineCache("kandooma-thila");
     const first = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
-    const second = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "strong" });
+    // A second diver at the same hour: not the same report filed twice, which is refused.
+    const second = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T08:00", direction: "incoming", strength: "mild" });
     expect(second.predicted?.modelOnly).toEqual(first.predicted?.modelOnly);
   });
 
@@ -149,7 +150,8 @@ describe("addReport saves the prediction", () => {
     seedMarineCache("kandooma-thila");
     // Later dives filed first. They must not tune the forecast for an earlier dive filed after them.
     for (let index = 0; index < 3; index += 1) {
-      await addReport({ siteId: "kandooma-thila", time: "2026-09-27T14:00", direction: "outgoing", strength: "too_strong" });
+      // Three divers a minute apart; the identical report filed again would be refused as a double submission.
+      await addReport({ siteId: "kandooma-thila", time: `2026-09-27T14:0${index}`, direction: "outgoing", strength: "too_strong" });
     }
     const backDated = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T06:00", direction: "incoming", strength: "mild" });
     expect(backDated.predicted?.modelOnly).not.toBeNull();
@@ -169,5 +171,38 @@ describe("addReportAction", () => {
     const state = await addReportAction("", new FormData());
     expect(state).toEqual({ success: false, error: expect.any(String) });
     expect(state.error).toBeTruthy();
+  });
+});
+
+describe("addReport guards", () => {
+  it("saves when the report was filed", async () => {
+    const report = await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    expect(Date.parse(report.filedAt ?? "")).toBeGreaterThan(Date.now() - 60_000);
+  });
+
+  it("refuses the same report filed again, but not a different one", async () => {
+    const report = { siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" };
+    await addReport(report);
+    await expect(addReport(report)).rejects.toThrow("already saved");
+    await expect(addReport({ ...report, strength: "strong" })).resolves.toBeTruthy();
+  });
+
+  it("accepts the same report again once the double-submission window has passed", async () => {
+    const report = { siteId: "banana-reef", time: "2026-09-27T09:00", direction: "outgoing", strength: "mild" };
+    await addReport(report);
+    // Age the saved report past the 30-minute window.
+    const file = path.join(DATA_DIR, testFile);
+    const stored = JSON.parse(fs.readFileSync(file, "utf8")) as { reports: { filedAt?: string }[] };
+    for (const item of stored.reports) item.filedAt = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    fs.writeFileSync(file, JSON.stringify(stored));
+    await expect(addReport(report)).resolves.toBeTruthy();
+  });
+
+  it("refuses a dive time more than an hour ahead of the site's clock", async () => {
+    // Two hours ahead of now in the Maldives: almost always a time entered in the diver's own zone.
+    const ahead = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 16);
+    await expect(
+      addReport({ siteId: "banana-reef", time: ahead, direction: "outgoing", strength: "mild" }),
+    ).rejects.toThrow("still ahead in the Maldives");
   });
 });

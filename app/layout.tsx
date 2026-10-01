@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Dive current",
-  description: "Per-site Maldives current forecast from the tide slope and dive reports.",
+  description: "Maldives dive-site current forecast: which way and how strong, hour by hour for a week, from the tide, the monsoon current and divers' reports.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
