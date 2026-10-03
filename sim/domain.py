@@ -20,8 +20,9 @@ LAND_ZOOM = 12
 # Atolls in the domain (sites.json atollId).
 ATOLLS = ("north-male", "south-male")
 
-# The simulated window (Maldives dates, inclusive): the 10 days up to the run, from Open-Meteo (marine.py).
-WINDOW = ("2026-09-23", "2026-10-02")
+# The simulated window (Maldives dates, inclusive): the 15 days up to the run, a full spring-neap cycle, from
+# Open-Meteo (marine.py).
+WINDOW = ("2026-09-18", "2026-10-02")
 # The first day is spin-up: the simulation starts at rest and the lagoons take most of a day to settle.
 SPINUP_H = 24
 
