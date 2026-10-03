@@ -9,7 +9,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { addMapLayers } from "@/lib/map-layers";
-import { loadMapView, saveMapView, type MapView } from "@/lib/map-view";
+import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site, Strength } from "@/lib/types";
@@ -28,6 +28,10 @@ type MapProps = {
   onView: (view: MapView) => void;
   /** An atoll to frame, from the list's filter. The count changes each time, so picking the same atoll again reframes. */
   focus: { atollId: string; count: number } | null;
+  /** A site to centre and highlight, from a list row's "Show on map". The count changes each time, so it re-centres. */
+  spotlight: { siteId: string; count: number } | null;
+  /** The ring was dismissed on the map (a click): clear the spotlight state. */
+  onSpotlightClear: () => void;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -132,6 +136,10 @@ function leafletApi(mod: LeafletLib): LeafletLib {
 /** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left. */
 const MAP_STYLE = `
 .dive-pin{background:transparent;border:none}
+.dive-spotlight{background:transparent;border:none;pointer-events:none}
+.dive-spotlight span{position:absolute;inset:0;border-radius:999px;border:3px solid var(--foam);box-shadow:0 0 0 2px var(--ink),inset 0 0 0 2px var(--ink);animation:dive-spotlight-pulse 1.1s ease-out 3}
+@keyframes dive-spotlight-pulse{0%{transform:scale(.55);opacity:1}70%{transform:scale(1.35);opacity:.3}100%{transform:scale(1);opacity:.9}}
+@media (prefers-reduced-motion: reduce){.dive-spotlight span{animation:none}}
 .dive-map .leaflet-bar a{width:44px!important;height:44px!important;line-height:44px!important;background:var(--ink);color:var(--foam);border-bottom-color:color-mix(in srgb, var(--foam) 28%, transparent)}
 .dive-map .leaflet-bar a:hover,.dive-map .leaflet-bar a:focus{background:color-mix(in srgb, var(--ink) 78%, var(--foam));color:var(--foam)}
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
@@ -221,6 +229,36 @@ function mountDiveMap(
       resize.disconnect();
       map.remove();
     },
+  };
+}
+
+/** Frame bounds in the part of the map the list does not cover, at most `maxZoom` (framePadding's by default). */
+function frameOn(map: LeafletMapType, bounds: ReturnType<LeafletLib["latLngBounds"]>, maxZoom?: number, fly = false) {
+  const options = maxZoom == null ? framePadding() : { ...framePadding(), maxZoom };
+  if (fly) map.flyToBounds(bounds, { ...options, duration: 0.8 });
+  else map.fitBounds(bounds, options);
+}
+
+/**
+ * Ring one site and fly to it: centred, close enough that pins no longer cluster (spotlightZoom). The ring carries
+ * the site's label as a permanent tooltip, so it reads at once even while the pin is still inside a cluster. A click
+ * on the map calls `onClear`. Returns the cleanup, which removes the ring and the click listener.
+ */
+function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance, onClear: () => void): () => void {
+  const point = L.latLng(item.site.lat, item.site.lon);
+  const ring = L.marker(point, {
+    icon: L.divIcon({ className: "dive-spotlight", html: "<span></span>", iconSize: [52, 52], iconAnchor: [26, 26] }),
+    interactive: false,
+    keyboard: false,
+    zIndexOffset: -1000,
+  })
+    .bindTooltip(escapeHtml(withAge(item.glance.spoken, item.age)), { permanent: true, direction: "top", offset: [0, -26] })
+    .addTo(map);
+  map.on("click", onClear);
+  frameOn(map, L.latLngBounds(point, point), spotlightZoom(map.getZoom()), true);
+  return () => {
+    map.off("click", onClear);
+    ring.remove();
   };
 }
 
@@ -334,7 +372,18 @@ const LeafletMap = dynamic(
     (globalThis as { L?: LeafletLib }).L = L;
     await import("leaflet.markercluster");
 
-    function MapCanvas({ siteGlances, draft, adding, onPick, onOpen, onView, focus }: MapProps) {
+    function MapCanvas({
+      siteGlances,
+      draft,
+      adding,
+      onPick,
+      onOpen,
+      onView,
+      focus,
+      spotlight,
+      onSpotlightClear,
+    }: MapProps) {
+      const onSpotlightClearRef = useRef(onSpotlightClear);
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
       const pinsRef = useRef<MarkerClusterGroup | null>(null);
@@ -354,8 +403,9 @@ const LeafletMap = dynamic(
         onPickRef.current = onPick;
         onOpenRef.current = onOpen;
         onViewRef.current = onView;
+        onSpotlightClearRef.current = onSpotlightClear;
         addingRef.current = adding;
-      }, [onPick, onOpen, onView, adding]);
+      }, [onPick, onOpen, onView, onSpotlightClear, adding]);
 
       // W4: one canvas; this effect returns mounted.destroy. Marker updates stay below.
       useEffect(() => {
@@ -409,10 +459,21 @@ const LeafletMap = dynamic(
         const points = siteGlances
           .filter(({ site }) => site.atollId === focus.atollId)
           .map(({ site }) => L.latLng(site.lat, site.lon));
-        if (points.length > 0) map.fitBounds(L.latLngBounds(points), framePadding());
+        if (points.length > 0) frameOn(map, L.latLngBounds(points));
         // Reframe only when a new atoll is picked, not when the forecast refreshes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [focus, mapEpoch]);
+
+      // "Show on map": React's spotlight state is the only owner of the ring; a map click asks to clear it.
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0 || !spotlight) return;
+        const item = siteGlances.find(({ site }) => site.id === spotlight.siteId);
+        if (!item) return;
+        return attachSpotlight(L, map, item, () => onSpotlightClearRef.current());
+        // Fly only when a site is picked, not when the forecast refreshes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [spotlight, mapEpoch]);
 
       return <div ref={containerRef} className="dive-map absolute inset-0" />;
     }
@@ -444,6 +505,7 @@ export function SiteMap({
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
+  const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -474,6 +536,9 @@ export function SiteMap({
           onAddingChange={setAddingMode}
           onAdded={finishAdd}
           onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
+          onSpotlight={(siteId) =>
+            setSpotlight((current) => (siteId ? { siteId, count: (current?.count ?? 0) + 1 } : null))
+          }
         />
         {/* h-full: the page body is a 100dvh column. Without it the map collapses on a wide window. */}
         <div className="relative z-0 h-full min-h-0 min-w-0 flex-1">
@@ -484,6 +549,8 @@ export function SiteMap({
             onPick={setDraft}
             onView={setView}
             focus={focus}
+            spotlight={spotlight}
+            onSpotlightClear={() => setSpotlight(null)}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}

@@ -75,6 +75,7 @@ export function CurrentOverlay({
   onAddingChange,
   onAdded,
   onFocusAtoll,
+  onSpotlight,
 }: {
   siteGlances: readonly SiteGlance[];
   atollNames: Readonly<Record<string, string>>;
@@ -87,6 +88,8 @@ export function CurrentOverlay({
   onAdded: () => void;
   /** Frame the map on an atoll's sites when the list is narrowed to it. */
   onFocusAtoll: (atollId: string) => void;
+  /** Centre the map on a site and highlight it; null clears the highlight. */
+  onSpotlight: (siteId: string | null) => void;
 }) {
   // Back from a site page, the phone list opens as it was. The server renders it closed; the browser reads the tab's
   // saved state, so hydration does not mismatch.
@@ -112,6 +115,16 @@ export function CurrentOverlay({
     setEdited(next);
     saveListFilter(next);
     if (next.atollId && next.atollId !== filter.atollId) onFocusAtoll(next.atollId);
+  }
+
+  /** On a phone the open list covers half the map, so it folds down to show the site; the search stays. */
+  function showOnMap(siteId: string) {
+    if (typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches) {
+      onAddingChange(false);
+      saveSheetOpen(false);
+      setToggled(false);
+    }
+    onSpotlight(siteId);
   }
 
   function toggleSheet() {
@@ -186,7 +199,10 @@ export function CurrentOverlay({
             {filtered ? (
               <button
                 type="button"
-                onClick={() => changeFilter({ query: "", atollId: "" })}
+                onClick={() => {
+                  changeFilter({ query: "", atollId: "" });
+                  onSpotlight(null);
+                }}
                 className="min-h-11 shrink-0 rounded-md border border-foam/25 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
               >
                 Clear
@@ -216,6 +232,7 @@ export function CurrentOverlay({
               <SiteRow
                 key={item.site.id}
                 {...item}
+                onShowOnMap={showOnMap}
                 // A search spans atolls, so every row names its atoll; otherwise only repeated names do.
                 atoll={
                   filter.query.trim() && !filter.atollId
@@ -236,15 +253,25 @@ export function CurrentOverlay({
   );
 }
 
-function SiteRow({ site, glance, age, atoll }: SiteGlance & { atoll: string | null }) {
+/**
+ * One site: the row opens its forecast page, and the pin button beside it shows the site on the map. The button sits
+ * beside the link, not inside it, so each does one thing.
+ */
+export function SiteRow({
+  site,
+  glance,
+  age,
+  atoll,
+  onShowOnMap,
+}: SiteGlance & { atoll: string | null; onShowOnMap: (siteId: string) => void }) {
   const title = age ? `${glance.spoken}, ${age}` : glance.spoken;
   return (
-    <li className="border-b border-foam/10 last:border-b-0">
+    <li className="flex min-w-0 items-stretch border-b border-foam/10 last:border-b-0">
       <Link
         href={`/sites/${site.id}`}
         prefetch={false}
         title={title}
-        className="flex min-h-11 items-center gap-2 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
+        className="flex min-h-11 min-w-0 flex-1 items-center gap-2 pl-3 pr-1 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
         <span className="min-w-0 flex-1 truncate font-medium">
           {site.name}
@@ -252,6 +279,19 @@ function SiteRow({ site, glance, age, atoll }: SiteGlance & { atoll: string | nu
         </span>
         <CurrentBits glance={glance} age={age} />
       </Link>
+      <button
+        type="button"
+        onClick={() => onShowOnMap(site.id)}
+        aria-label={`Show ${site.name} on the map`}
+        title="Show on map"
+        className="grid w-11 shrink-0 place-items-center text-foam/70 hover:bg-foam/10 hover:text-foam focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
+      >
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+      </button>
     </li>
   );
 }
