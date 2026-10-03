@@ -1,47 +1,48 @@
-"""Forcing at the open boundary: the sea level on the west and east sides of the domain.
+"""Forcing at the open boundary: the sea level along the west and east edges of the domain, from Open-Meteo.
 
-From the cached Open-Meteo series in data/benchmark-marine-cache (25-30 Sep 2026; the live cache is not in the
-repo and the API is not reachable from every machine).
+Every ocean-model cell (1/12 degree) along each edge, from the domain's south wall to its north wall: the inner
+sea just west of the Malé atolls (73.21 E) and the open ocean just east of them (73.79 E), over domain.WINDOW
+(marine.py fetches and caches them). The solver interpolates each edge's level in latitude between these
+points, so the level the edge holds varies along it as the ocean model's does.
 
-East: three independent points in the open ocean east of the atolls, 4.2094,73.5447 (North Malé, south-east),
-3.9005,73.5042 (South Malé, north-east) and 3.6000,73.5235 (South Malé, south; 3.5933 and 3.5950 are the same
-ocean-model cell). Their sea levels agree within 2 cm: the east level is their mean.
-West: 4.2397,73.0153 in the inner sea off North Ari, the only cached point west of the Malé atolls. It runs up
-to 0.15 m off the east level through the tide: the tide crosses the double chain of atolls with a lag, and
-that head across the chain is what drives water through Vaadhoo Kandu and the atolls. The 25-hour means of
-the two sides differ by 1-2 cm, the ocean model's own monsoon set-up across the chain.
+The tide reaches the inner sea and the open ocean at slightly different times and heights: the head across the
+chain of atolls this leaves is what drives water through them. The ocean model also sets the inner sea's mean a
+centimetre or so off the ocean's (the monsoon's set-up across the chain); that is kept.
 
 Only the levels are imposed. Forcing the ocean model's current at the edges would push the full drift against
-a chain of atolls that blocks most of the cross-section. The drift (25-hour vector mean of the east points'
-current) is written for reference and for the comparison, not used by the solver.
+a chain of atolls that blocks most of the cross-section. The drift (25-hour vector mean of the east edge's
+current) is written for reference, not used by the solver.
 
-With SIM_CASE=uniform the west edge gets the east level too (domain.py).
+With SIM_CASE=uniform the west edge gets the east edge's levels too (domain.py).
 
-Writes sim/out/<case>/forcing.json: {start, hours: [{time, eta_w, eta_e, u, v}]} with time in Maldives wall clock,
-levels in m, drift u (east) and v (north) in m/s.
+Writes sim/out/<case>/forcing.json: {start, lats, hours: [{time, eta_w: [per lat], eta_e: [per lat], u, v}]}
+with time in Maldives wall clock, levels in m, drift u (east) and v (north) in m/s.
 """
 
 import json
-import os
+import math
 
 import numpy as np
 
-from domain import case, case_dir
-
-ROOT = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(ROOT)
-POINTS = ("4.2094_73.5447", "3.9005_73.5042", "3.6000_73.5235")
-WEST = "4.2397_73.0153"
-START, END = "2026-09-25T00:00", "2026-09-30T23:00"
+from domain import DOMAIN, EDGE_LON, case, case_dir
+from marine import CELL_DEG, fetch
 
 
-def load(point):
-    hours = json.load(open(os.path.join(REPO, "data", "benchmark-marine-cache", point + ".json")))["hours"]
-    hours = [h for h in hours if START <= h["time"] <= END]
+def edge_lats():
+    """Ocean-model cell centres from just south of the domain to just north of it."""
+    k0 = math.floor(DOMAIN["south"] / CELL_DEG - 0.5)
+    k1 = math.ceil(DOMAIN["north"] / CELL_DEG - 0.5)
+    return [round((k + 0.5) * CELL_DEG, 4) for k in range(k0, k1 + 1)]
+
+
+def load(lat, lon):
+    hours = fetch(lat, lon)
     t = [h["time"] for h in hours]
     eta = np.array([h["seaLevelM"] for h in hours], dtype=float)
-    rad = np.radians([h["currentDirectionDeg"] for h in hours])
-    speed = np.array([h["currentVelocityMs"] for h in hours], dtype=float)
+    if np.isnan(eta).any():
+        raise SystemExit(f"{lat},{lon}: sea level missing in {np.isnan(eta).sum()} hours")
+    rad = np.radians([h["currentDirectionDeg"] or 0 for h in hours])
+    speed = np.array([h["currentVelocityMs"] or 0 for h in hours], dtype=float)
     return t, eta, speed * np.sin(rad), speed * np.cos(rad)
 
 
@@ -56,27 +57,27 @@ def drift(x, half=12):
 
 
 def build():
-    series = [load(p) for p in POINTS]
-    times = series[0][0]
-    assert all(s[0] == times for s in series), "points must share hours"
-    eta = np.mean([s[1] for s in series], axis=0)
-    west = load(WEST)
-    assert west[0] == times, "west point must share hours"
-    eta_w = west[1] if case() == "chain" else eta
-    u = np.mean([drift(s[2]) for s in series], axis=0)
-    v = np.mean([drift(s[3]) for s in series], axis=0)
-    spread = np.max([np.abs(s[1] - eta).max() for s in series])
-    out = {"start": times[0], "east_points": POINTS, "west_point": WEST,
-           "hours": [{"time": t, "eta_w": round(float(w), 4), "eta_e": round(float(e), 4),
+    lats = edge_lats()
+    west = [load(lat, EDGE_LON["west"]) for lat in lats]
+    east = [load(lat, EDGE_LON["east"]) for lat in lats]
+    times = east[0][0]
+    assert all(s[0] == times for s in west + east), "edge points must share hours"
+    eta_e = np.array([s[1] for s in east]).T  # (hours, lats)
+    eta_w = np.array([s[1] for s in west]).T if case() == "chain" else eta_e
+    u = np.mean([drift(s[2]) for s in east], axis=0)
+    v = np.mean([drift(s[3]) for s in east], axis=0)
+    out = {"start": times[0], "case": case(), "lats": lats, "edge_lon": EDGE_LON,
+           "hours": [{"time": t, "eta_w": [round(float(x), 4) for x in w], "eta_e": [round(float(x), 4) for x in e],
                       "u": round(float(a), 4), "v": round(float(b), 4)}
-                     for t, w, e, a, b in zip(times, eta_w, eta, u, v)]}
-    out["case"] = case()
-    json.dump(out, open(os.path.join(case_dir(), "forcing.json"), "w"), indent=0)
-    speed = np.hypot(u, v)
-    heading = (np.degrees(np.arctan2(u, v)) + 360) % 360
-    print(f"{len(times)} hours from {times[0]}; tide range {eta.min():.2f}..{eta.max():.2f} m, east spread {spread:.3f} m,"
-          f" west - east {np.min(eta_w - eta):+.2f}..{np.max(eta_w - eta):+.2f} m (mean {np.mean(eta_w - eta):+.3f});"
-          f" drift {speed.min():.2f}-{speed.max():.2f} m/s toward {heading.min():.0f}-{heading.max():.0f} deg")
+                     for t, w, e, a, b in zip(times, eta_w, eta_e, u, v)]}
+    json.dump(out, open(f"{case_dir()}/forcing.json", "w"))
+    head = eta_w - eta_e
+    mean_head = head.mean(axis=1)
+    print(f"{len(times)} hours from {times[0]} to {times[-1]}, {len(lats)} points a side;"
+          f" ocean tide {eta_e.mean(axis=1).min():.2f}..{eta_e.mean(axis=1).max():.2f} m;"
+          f" west - east {head.min():+.3f}..{head.max():+.3f} m (edge mean {mean_head.min():+.3f}..{mean_head.max():+.3f},"
+          f" overall {head.mean():+.4f}); spread along the east edge {np.ptp(eta_e, axis=1).max():.3f} m,"
+          f" west {np.ptp(eta_w, axis=1).max():.3f} m; drift {np.hypot(u, v).min():.2f}-{np.hypot(u, v).max():.2f} m/s")
 
 
 if __name__ == "__main__":

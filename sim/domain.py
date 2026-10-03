@@ -17,8 +17,17 @@ TERRAIN_ZOOM = 10
 # Zoom 12 (about 38 m a pixel) is used only for land: a pixel above 0 m is an island.
 LAND_ZOOM = 12
 
-# Atolls in the domain (sites.json atollId) and the window the cached forcing covers.
+# Atolls in the domain (sites.json atollId).
 ATOLLS = ("north-male", "south-male")
+
+# The simulated window (Maldives dates, inclusive): the 10 days up to the run, from Open-Meteo (marine.py).
+WINDOW = ("2026-09-23", "2026-10-02")
+# The first day is spin-up: the simulation starts at rest and the lagoons take most of a day to settle.
+SPINUP_H = 24
+
+# The open edges are forced from the ocean-model cells just outside them (1/12 degree apart in latitude):
+# the inner sea along the west edge and the open ocean along the east edge.
+EDGE_LON = {"west": 73.2083, "east": 73.7917}
 
 
 # Forcing cases (forcing.py): "chain" drives the west and east edges with their own ocean-model levels, so the

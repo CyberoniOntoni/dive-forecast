@@ -1,3 +1,4 @@
+import { execFileSync } from "child_process";
 import fs from "fs";
 import os from "os";
 import path from "path";
@@ -13,11 +14,11 @@ import type { HourForecast, Site, Strength } from "../lib/types";
  *   python3 sim/fetch_terrain.py && python3 sim/grid.py && python3 sim/forcing.py && python3 sim/swe.py && python3 sim/export.py
  *   npm run sim-compare
  *
- * Both models get the same ocean: the forecast is fed through a stubbed Open-Meteo with the cached series that
- * sim/forcing.py builds the simulation's edges from. A point west of its atoll's centre gets the inner-sea series
- * (the simulation's west edge); any other point gets the nearest east-side series, current included. So the
- * forecast's head across the atoll sees the same west-east difference the simulation is driven by. With
- * SIM_CASE=uniform every point gets the nearest east-side series, as the simulation's edges do in that case.
+ * Both models get the same ocean: Open-Meteo is stubbed with the same 90-day series the simulation's edges come
+ * from (sim/marine.py's cache, sim/cache/marine/). Every point the forecast asks for (a site's seaward sample point,
+ * the atoll ring points) gets that point's own ocean-model cell over the simulated window, fetched once with curl
+ * if sim/forcing.py did not already fetch it. With SIM_CASE=uniform every point gets the east edge's series at its
+ * latitude instead, as the simulation's edges do in that case.
  *
  * The simulated current is projected on the axis the app shows for the site: the inward bearing at a channel,
  * the reef heading at a wall, the main axis in the lagoon, the strait's axis at a strait wall. Positive is
@@ -29,11 +30,16 @@ import type { HourForecast, Site, Strength } from "../lib/types";
 const CASE = process.env.SIM_CASE || "chain";
 const SIM = path.join(process.cwd(), "sim", "out", CASE);
 const ATOLLS = ["north-male", "south-male"];
-const EAST_POINTS = ["4.2094_73.5447", "3.9005_73.5042", "3.6000_73.5235"];
-const WEST_POINT = "4.2397_73.0153";
-/** Hours before this are the simulation's spin-up; the forecast has no 25-hour mean in its last 12 hours. */
-const FROM = "2026-09-26T00:00";
-const TO = "2026-09-30T11:00";
+const CACHE = path.join(process.cwd(), "sim", "cache", "marine");
+const CELL_DEG = 1 / 12;
+/** The forcing's window and edges (sim/domain.py), read from forcing.json. */
+type Forcing = { start: string; lats: number[]; edge_lon: { west: number; east: number }; hours: { time: string }[] };
+const forcing = JSON.parse(fs.readFileSync(path.join(SIM, "forcing.json"), "utf8")) as Forcing;
+const WINDOW = [forcing.start.slice(0, 10), forcing.hours[forcing.hours.length - 1].time.slice(0, 10)];
+const shift = (wall: string, hours: number) => new Date(parseWall(wall) + hours * 3_600_000).toISOString().slice(0, 16);
+/** The first day is the simulation's spin-up; the forecast has no 25-hour mean in its last 12 hours. */
+const FROM = shift(forcing.start, 24);
+const TO = shift(forcing.hours[forcing.hours.length - 1].time, -12);
 /** The app's real-speed bands (STRAIT_BANDS_MS), used for the simulated speed. */
 const SIM_BANDS = { slack: 0.2, mild: 0.6, strong: 1.3 };
 /** Below this the simulation's direction is not counted. */
@@ -42,57 +48,43 @@ const RANK: Record<Strength, number> = { slack: 0, mild: 1, strong: 2, too_stron
 
 type SimHour = { time: string; eta: number; u: number; v: number };
 type SimSite = { id: string; cell: [number, number]; offsetM: number; depthM: number; hours: SimHour[] };
-type CachedHour = { time: string; seaLevelM: number; currentVelocityMs: number; currentDirectionDeg: number };
 type Kind = "channel" | "along-reef" | "lagoon" | "strait";
 
-function series(name: string): CachedHour[] {
-  const file = path.join(process.cwd(), "data", "benchmark-marine-cache", `${name}.json`);
-  const hours = (JSON.parse(fs.readFileSync(file, "utf8")) as { hours: CachedHour[] }).hours;
-  return hours.filter((hour) => hour.time >= "2026-09-25T00:00" && hour.time <= "2026-09-30T23:00");
+/** The ocean-model cell a point falls in, as sim/marine.py keys its cache. */
+function cellKey(lat: number, lon: number): string {
+  const snap = (x: number) => Math.round((x - CELL_DEG / 2) / CELL_DEG) * CELL_DEG + CELL_DEG / 2;
+  return `${snap(lat).toFixed(4)}_${snap(lon).toFixed(4)}`;
 }
 
-function pointOf(name: string) {
-  const [lat, lon] = name.split("_").map(Number);
-  return { lat, lon };
+/** Open-Meteo's answer for a point over the window, from sim/marine.py's cache or fetched into it. */
+function marineBody(lat: number, lon: number): string {
+  const file = path.join(CACHE, `${WINDOW[0]}_${WINDOW[1]}_${cellKey(lat, lon)}.json`);
+  if (!fs.existsSync(file)) {
+    const query = new URLSearchParams({
+      latitude: lat.toFixed(4),
+      longitude: lon.toFixed(4),
+      hourly: "sea_level_height_msl,ocean_current_velocity,ocean_current_direction",
+      cell_selection: "sea",
+      timezone: "Indian/Maldives",
+      start_date: WINDOW[0],
+      end_date: WINDOW[1],
+    });
+    // curl, not fetch: it goes through the machine's proxy settings, and fetch is stubbed below.
+    const body = execFileSync("curl", ["-sS", "--fail", "--retry", "4", `https://marine-api.open-meteo.com/v1/marine?${query}`], { encoding: "utf8" });
+    fs.mkdirSync(CACHE, { recursive: true });
+    fs.writeFileSync(file, body);
+  }
+  return fs.readFileSync(file, "utf8");
 }
 
-const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
-  Math.hypot((a.lat - b.lat) * 111, (a.lon - b.lon) * 111 * Math.cos((a.lat * Math.PI) / 180));
-
-function atollCentres(sites: readonly Site[]) {
-  return ATOLLS.map((id) => {
-    const mates = sites.filter((site) => site.atollId === id);
-    return {
-      lat: mates.reduce((sum, site) => sum + site.lat, 0) / mates.length,
-      lon: mates.reduce((sum, site) => sum + site.lon, 0) / mates.length,
-    };
-  });
-}
-
-/** Which cached series a requested point gets: the inner sea west of its atoll, else the nearest east point. */
-function seriesFor(point: { lat: number; lon: number }, centres: { lat: number; lon: number }[]): string {
-  const centre = centres.reduce((best, item) => (km(point, item) < km(point, best) ? item : best));
-  if (CASE === "chain" && point.lon < centre.lon) return WEST_POINT;
-  return EAST_POINTS.reduce((best, name) => (km(point, pointOf(name)) < km(point, pointOf(best)) ? name : best));
-}
-
-function stubOpenMeteo(centres: { lat: number; lon: number }[]) {
-  const cache = new Map<string, CachedHour[]>();
-  const load = (name: string) => cache.get(name) ?? cache.set(name, series(name)).get(name)!;
+function stubOpenMeteo() {
   globalThis.fetch = (async (input: string | URL | Request) => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
-    const point = { lat: Number(url.searchParams.get("latitude")), lon: Number(url.searchParams.get("longitude")) };
-    const hours = load(seriesFor(point, centres));
-    const body = {
-      hourly_units: { ocean_current_velocity: "m/s" },
-      hourly: {
-        time: hours.map((hour) => hour.time),
-        sea_level_height_msl: hours.map((hour) => hour.seaLevelM),
-        ocean_current_velocity: hours.map((hour) => hour.currentVelocityMs),
-        ocean_current_direction: hours.map((hour) => hour.currentDirectionDeg),
-      },
-    };
-    return new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+    const lat = Number(url.searchParams.get("latitude"));
+    let lon = Number(url.searchParams.get("longitude"));
+    // The uniform case: the east edge's level at this latitude, as the simulation's west edge gets.
+    if (CASE === "uniform") lon = forcing.edge_lon.east;
+    return new Response(marineBody(lat, lon), { status: 200, headers: { "Content-Type": "application/json" } });
   }) as typeof fetch;
 }
 
@@ -162,11 +154,10 @@ async function main() {
   if (!fs.existsSync(simFile)) throw new Error(`no ${simFile}: run the simulation first (see the header)`);
   const sim = JSON.parse(fs.readFileSync(simFile, "utf8")) as { sites: SimSite[] };
   const catalog = readCatalog();
-  const centres = atollCentres(catalog.sites);
   process.env.MARINE_CACHE_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "sim-compare-"));
-  stubOpenMeteo(centres);
-  // The series end on 30 Sep; the forecast treats a series as stale 12 hours after its last hour.
-  const now = parseWall("2026-09-30T12:00");
+  stubOpenMeteo();
+  // The forecast treats a series as stale 12 hours after its last hour.
+  const now = parseWall(shift(forcing.hours[forcing.hours.length - 1].time, -11));
   Date.now = () => now;
 
   const rows: Row[] = [];
@@ -279,6 +270,19 @@ function print(rows: Row[], bench: BenchRow[]) {
         `${median(group.map((r) => r.correlation)).toFixed(2)} | ${median(group.map((r) => r.bestLag))} | ` +
         `${median(group.map((r) => r.simP95)).toFixed(2)} | ${pctOf(median(group.map((r) => r.simIncoming)))} | ${pctOf(median(group.map((r) => r.forecastIncoming)))} |`,
     );
+  }
+  console.log("\nDirection agrees, by month (hours both run):");
+  const months = [...new Set(rows.flatMap((row) => row.series.map((x) => x.time.slice(0, 7))))].sort();
+  console.log(`| Kind | ${months.join(" | ")} |`);
+  console.log(`|---|${months.map(() => "---").join("|")}|`);
+  for (const kind of ["channel", "along-reef", "lagoon", "strait"] as Kind[]) {
+    const group = rows.filter((row) => row.kind === kind);
+    if (!group.length) continue;
+    const cells = months.map((month) => {
+      const both = group.flatMap((row) => row.series).filter((x) => x.time.startsWith(month) && x.forecast !== 0 && Math.abs(x.sim) >= SIM_CALM_MS);
+      return pctOf(both.filter((x) => x.forecast > 0 === x.sim > 0).length / both.length);
+    });
+    console.log(`| ${kind} | ${cells.join(" | ")} |`);
   }
   console.log("\nPer site (direction agreement, correlation, best lag, sim p95):");
   for (const row of [...rows].sort((a, b) => a.kind.localeCompare(b.kind) || a.direction - b.direction)) {

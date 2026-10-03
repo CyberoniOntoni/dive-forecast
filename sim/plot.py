@@ -1,8 +1,10 @@
 """Figures for sim/README.md, written to sim/figures/.
 
   depth.png      the depth grid the simulation runs on
-  flow-*.png     simulated current over North Malé at the strongest flood and ebb hours, and the 4-day mean
-  sites.png      simulated current along each site's axis against the forecast, for a few sites
+  flow-*.png     simulated current over North Malé at the strongest flood and ebb hours of the last week, and the
+                 mean over the run (spin-up excluded)
+  sites.png      simulated current along each site's axis against the forecast, for a few sites, over the last
+                 SITES_DAYS of the run (the scores in each title are over the whole run)
 """
 
 import json
@@ -24,6 +26,7 @@ FIG = os.path.join(ROOT, "figures")
 # North Malé, in cells: rows (south to north) and columns (west to east).
 NM = (slice(335, 663), slice(60, 300))
 SITES = ("hp-reef", "embudhoo-express", "kandooma-thila", "lions-head", "okobe-thila", "rasfari")
+SITES_DAYS = 8
 
 
 def load():
@@ -52,10 +55,10 @@ def label_axes(ax, shape, rows=slice(None), cols=slice(None)):
 def flow_figure(grid, run, k, title, name, mean=False):
     h = grid["h"][NM]
     if mean:
-        ks = range(24, run["f_u"].shape[0])
-        u = np.mean([run["f_u"][i].astype(float) for i in ks], axis=0)[NM]
-        v = np.mean([run["f_v"][i].astype(float) for i in ks], axis=0)[NM]
+        u = run["mean_u"].astype(float)[NM]
+        v = run["mean_v"].astype(float)[NM]
     else:
+        k -= int(run["field_from"])
         u = run["f_u"][k].astype(float)[NM]
         v = run["f_v"][k].astype(float)[NM]
     speed = np.hypot(u, v)
@@ -81,14 +84,15 @@ def sites_figure():
     rows.sort(key=lambda r: SITES.index(r["id"]))
     fig, axes = plt.subplots(len(rows), 1, figsize=(10, 2.1 * len(rows)), sharex=True)
     for ax, row in zip(np.atleast_1d(axes), rows):
-        t = [datetime.fromisoformat(x["time"]) for x in row["series"]]
+        series = row["series"][-SITES_DAYS * 24:]
+        t = [datetime.fromisoformat(x["time"]) for x in series]
         ax.axhline(0, color="#888", lw=0.5)
-        ax.plot(t, [x["sim"] for x in row["series"]], color="#d62728", lw=1.4, label="simulation, m/s along axis")
+        ax.plot(t, [x["sim"] for x in series], color="#d62728", lw=1.4, label="simulation, m/s along axis")
         ax2 = ax.twinx()
-        ax2.step(t, [x["forecast"] for x in row["series"]], where="mid", color="#1f77b4", lw=1.1, label="forecast, signed band")
+        ax2.step(t, [x["forecast"] for x in series], where="mid", color="#1f77b4", lw=1.1, label="forecast, signed band")
         ax2.set_ylim(-3.3, 3.3)
         ax2.set_yticks([-3, -2, -1, 0, 1, 2, 3])
-        lim = max(0.3, max(abs(x["sim"]) for x in row["series"]) * 1.1)
+        lim = max(0.3, max(abs(x["sim"]) for x in series) * 1.1)
         ax.set_ylim(-lim, lim)
         ax.set_title(f"{row['name']} ({row['kind']}, axis {row['axisDeg']}°): direction agrees {pct(row['direction'])},"
                      f" r = {row['correlation']:.2f}, best lag {row['bestLag']} h", fontsize=9)
@@ -113,17 +117,19 @@ def save(fig, name):
 def main():
     grid, run, forcing = load()
     depth_figure(grid)
-    # Strongest flood and ebb into North Malé: the hours of steepest rise and fall of the ocean level after spin-up.
-    eta = np.array([x["eta_e"] for x in forcing["hours"]])
+    # Strongest flood and ebb into North Malé: the hours of steepest rise and fall of the ocean level in the
+    # stretch the hourly fields cover.
+    eta = np.array([np.mean(x["eta_e"]) for x in forcing["hours"]])
     slope = np.gradient(eta)
-    n = run["f_u"].shape[0]
-    ks = np.arange(24, n)
+    first = max(int(run["field_from"]), 24)
+    ks = np.arange(first, int(run["field_from"]) + run["f_u"].shape[0])
     flood = int(ks[np.argmax(slope[ks])])
     ebb = int(ks[np.argmin(slope[ks])])
     t = forcing["hours"]
     flow_figure(grid, run, flood, f"Rising tide, {t[flood]['time']}", "flow-flood.png")
     flow_figure(grid, run, ebb, f"Falling tide, {t[ebb]['time']}", "flow-ebb.png")
-    flow_figure(grid, run, None, "Mean over 26-30 Sep (tide removed)", "flow-mean.png", mean=True)
+    flow_figure(grid, run, None, f"Mean over {t[24]['time'][:10]} to {t[-1]['time'][:10]} (tide removed)",
+                "flow-mean.png", mean=True)
     if os.path.exists(os.path.join(case_dir(), "compare.json")):
         sites_figure()
     print(f"figures in {FIG}")

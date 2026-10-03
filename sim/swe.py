@@ -7,14 +7,16 @@ Staggered C-grid on the 200 m cells of grid.py; forward-backward explicit time s
 advection; Manning bottom friction, implicit; upwind total depth in the mass fluxes, so reef flats dry and
 flood without going negative (Stelling & Duinmeijer 2003). Land (islands) is a wall, and so are the north and
 south edges (domain.py). The west and east edges are open: a Flather (radiation) condition, plus a sponge a
-few km wide that holds the level to forcing.py's, the inner sea's on the west and the ocean's on the east
-(clamped in the outer three columns, relaxed inside them). The deep inner sea and open ocean carry a level
+few km wide that holds the level to forcing.py's, the inner sea's on the west and the ocean's on the east, each
+varying along its edge as the ocean model's does (clamped in the outer three columns, relaxed inside them). The deep inner sea and open ocean carry a level
 across the 10-20 km between the edge and the reefs with almost no loss, so the head drops where it should: across
 the atolls and the gaps between them.
 Nothing else is imposed: every current inside comes from those two levels, the depths and friction. The sea floor is capped at 400 m (grid.py) to keep the time step near 1.5 s.
 
-Writes sim/out/<case>/run.npz: hourly fields (eta, u, v at cell centres, float16) and 10-minute series at every
-dive site in the domain, sampled at the nearest open-water cell to the pin (site_cells).
+Writes sim/out/<case>/run.npz: 10-minute series at every dive site in the domain, sampled at the nearest
+open-water cell to the pin (site_cells); hourly fields (eta, u, v at cell centres, float16) over the last
+FIELD_DAYS; and the mean current over the run after spin-up. A 90-day run takes several hours, so the state is
+checkpointed every simulated day (checkpoint.npz) and a rerun with the same forcing resumes from it.
 """
 
 import json
@@ -27,8 +29,8 @@ import numpy as np
 from numba import njit, prange
 from scipy.interpolate import CubicSpline
 
-from domain import case_dir
-from grid import cell_of
+from domain import SPINUP_H, case_dir
+from grid import cell_of, lonlat_of
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(ROOT)
@@ -47,6 +49,8 @@ SPONGE_MIN_DEPTH = 20.0
 SAMPLE_EVERY_S = 600
 SITE_MIN_DEPTH_M = 3.0  # a site samples the nearest cell at least this deep, within SITE_SEARCH_CELLS
 SITE_SEARCH_CELLS = 3
+FIELD_DAYS = 7  # hourly fields kept for the last this many days (the full 90 would be about 3 GB)
+TAB_DT_S = 600.0  # the edge levels are tabulated every 10 minutes and interpolated linearly between
 
 
 @njit(parallel=True, fastmath=True, cache=True)
@@ -63,7 +67,7 @@ def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, east_w):
                     continue
                 H = max(hc + eta[c], H_DRY)
                 sgn = -1.0 if j == 0 else 1.0
-                ext = eta_w + east_w[c] * (eta_e - eta_w)
+                ext = eta_w[i] + east_w[c] * (eta_e[i] - eta_w[i])
                 un[i, j] = sgn * math.sqrt(G / H) * (eta[c] - ext)
                 continue
             hl = h[i, j - 1]
@@ -154,7 +158,7 @@ def continuity(eta, u, v, h, sponge, dt, dx, eta_w, eta_e, east_w, relax):
         for j in range(nx):
             w = sponge[i, j] * relax
             if w > 0:
-                eta[i, j] += w * (eta_w + east_w[i, j] * (eta_e - eta_w) - eta[i, j])
+                eta[i, j] += w * (eta_w[i] + east_w[i, j] * (eta_e[i] - eta_w[i]) - eta[i, j])
 
 
 @njit(inline="always")
@@ -192,7 +196,7 @@ def run_steps(eta, u, v, h, n2, sponge, east_w, un, vn, t0, nsteps, dt, dx, f, n
     t = t0
     for _ in range(nsteps):
         k = (t - tab_t0) / tab_dt
-        k0 = min(max(int(k), 0), len(tab_w) - 2)
+        k0 = min(max(int(k), 0), tab_w.shape[0] - 2)
         a = min(max(k - k0, 0.0), 1.0)
         e_w = tab_w[k0] * (1 - a) + tab_w[k0 + 1] * a
         e_e = tab_e[k0] * (1 - a) + tab_e[k0 + 1] * a
@@ -263,19 +267,20 @@ def main(hours=None):
     fh = forcing["hours"]
     total_h = len(fh) - 1 if hours is None else hours
     th = np.arange(len(fh)) * 3600.0
-    tab_t = np.arange(0, th[-1] + 1, 60.0)
-    tab_w = CubicSpline(th, [x["eta_w"] for x in fh])(tab_t)
-    tab_e = CubicSpline(th, [x["eta_e"] for x in fh])(tab_t)
+    tab_t = np.arange(0, th[-1] + 1, TAB_DT_S)
+    # Each edge's level: a cubic spline in time at each forcing latitude, then linear in latitude to every row.
+    row_lat = np.array([lonlat_of(i, 0)[1] for i in range(ny)])
+    lats = np.array(forcing["lats"])
+
+    def table(key):
+        at_lats = CubicSpline(th, np.array([x[key] for x in fh]), axis=0)(tab_t)  # (times, lats)
+        return np.ascontiguousarray(np.array([np.interp(row_lat, lats, row) for row in at_lats]))  # (times, rows)
+
+    tab_w = table("eta_w")
+    tab_e = table("eta_e")
     east_w = np.repeat((np.arange(nx) >= nx // 2).astype(np.float64)[None, :], ny, axis=0)
 
-    eta = np.maximum(np.full((ny, nx), 0.5 * (tab_w[0] + tab_e[0])), -np.maximum(h, 0))
-    eta[h < 0] = 0
-    u = np.zeros((ny, nx + 1))
-    v = np.zeros((ny + 1, nx))
-    un = np.zeros_like(u)
-    vn = np.zeros_like(v)
     sponge = sponge_weights(h)
-
     sites = domain_sites()
     cells = site_cells(h, sites)
     ci = np.array([c[0] for c in cells])
@@ -284,45 +289,83 @@ def main(hours=None):
     steps_per_sample = int(round(SAMPLE_EVERY_S / DT))
     samples_per_hour = int(3600 / SAMPLE_EVERY_S)
     nsamples = total_h * samples_per_hour + 1
-    s_eta = np.zeros((nsamples, len(sites)), np.float32)
-    s_u = np.zeros_like(s_eta)
-    s_v = np.zeros_like(s_eta)
-    f_eta = np.zeros((total_h + 1, ny, nx), np.float16)
-    f_u = np.zeros_like(f_eta)
-    f_v = np.zeros_like(f_eta)
+    field_from = max(total_h - FIELD_DAYS * 24, 0)
+    state = {
+        "s_eta": np.zeros((nsamples, len(sites)), np.float32),
+        "s_u": np.zeros((nsamples, len(sites)), np.float32),
+        "s_v": np.zeros((nsamples, len(sites)), np.float32),
+        "f_eta": np.zeros((total_h - field_from + 1, ny, nx), np.float16),
+        "f_u": np.zeros((total_h - field_from + 1, ny, nx), np.float16),
+        "f_v": np.zeros((total_h - field_from + 1, ny, nx), np.float16),
+        "mean_u": np.zeros((ny, nx)), "mean_v": np.zeros((ny, nx)), "mean_n": np.zeros(1),
+    }
+    eta = np.maximum(np.full((ny, nx), 0.5 * (tab_w[0].mean() + tab_e[0].mean())), -np.maximum(h, 0))
+    eta[h < 0] = 0
+    u = np.zeros((ny, nx + 1))
+    v = np.zeros((ny + 1, nx))
+    t, k_done = 0.0, 0
+
+    ckpt = os.path.join(case_dir(), "checkpoint.npz")
+    if os.path.exists(ckpt):
+        c = np.load(ckpt)
+        if str(c["start"]) == forcing["start"] and int(c["total_h"]) == total_h and c["s_eta"].shape == state["s_eta"].shape:
+            eta, u, v, t, k_done = c["eta"].copy(), c["u"].copy(), c["v"].copy(), float(c["t"]), int(c["k"])
+            for key in state:
+                state[key] = c[key].copy()
+            print(f"resuming at hour {k_done // samples_per_hour}", file=sys.stderr, flush=True)
+    un = np.zeros_like(u)
+    vn = np.zeros_like(v)
 
     def record(k, u, v):
         uc, vc = centred(u, v)
-        s_eta[k] = eta[ci, cj]
-        s_u[k] = uc[ci, cj]
-        s_v[k] = vc[ci, cj]
+        state["s_eta"][k] = eta[ci, cj]
+        state["s_u"][k] = uc[ci, cj]
+        state["s_v"][k] = vc[ci, cj]
         if k % samples_per_hour == 0:
             hk = k // samples_per_hour
-            f_eta[hk] = eta
-            f_u[hk] = uc
-            f_v[hk] = vc
+            if hk >= field_from:
+                state["f_eta"][hk - field_from] = eta
+                state["f_u"][hk - field_from] = uc
+                state["f_v"][hk - field_from] = vc
+            if hk > SPINUP_H:
+                state["mean_u"] += uc
+                state["mean_v"] += vc
+                state["mean_n"] += 1
 
-    t = 0.0
-    record(0, u, v)
+    def checkpoint(k):
+        tmp = ckpt + ".tmp.npz"
+        np.savez(tmp, start=forcing["start"], total_h=total_h, eta=eta, u=u, v=v, t=t, k=k, **state)
+        os.replace(tmp, ckpt)
+
+    if k_done == 0:
+        record(0, u, v)
     wall = time.time()
-    for k in range(1, nsamples):
+    for k in range(k_done + 1, nsamples):
         t, u, v, un, vn = run_steps(eta, u, v, h, n2, sponge, east_w, un, vn, t, steps_per_sample, DT, dx, f, NU,
-                                    0.0, 60.0, tab_w, tab_e)
+                                    0.0, TAB_DT_S, tab_w, tab_e)
         record(k, u, v)
         if not np.isfinite(eta).all():
             raise SystemExit(f"blew up at t = {t / 3600:.2f} h")
         if k % samples_per_hour == 0:
+            hk = k // samples_per_hour
             uc, vc = centred(u, v)
             sp = np.hypot(uc, vc)
-            print(f"hour {k // samples_per_hour:3d}/{total_h}  tide {np.interp(t, tab_t, tab_e):+.2f} m"
+            print(f"hour {hk:4d}/{total_h}  {fh[hk]['time']}  tide {np.interp(t, tab_t, tab_e.mean(axis=1)):+.2f} m"
                   f"  max speed {sp.max():.2f} m/s  ({time.time() - wall:.0f} s)", file=sys.stderr, flush=True)
+            if hk % 24 == 0:
+                checkpoint(k)
 
+    n = max(float(state["mean_n"][0]), 1.0)
     np.savez_compressed(
         os.path.join(case_dir(), "run.npz"),
-        start=forcing["start"], sample_s=SAMPLE_EVERY_S,
+        start=forcing["start"], sample_s=SAMPLE_EVERY_S, field_from=field_from,
         site_ids=np.array([s["id"] for s in sites]), site_cells=np.array(cells),
-        s_eta=s_eta, s_u=s_u, s_v=s_v, f_eta=f_eta, f_u=f_u, f_v=f_v,
+        s_eta=state["s_eta"], s_u=state["s_u"], s_v=state["s_v"],
+        f_eta=state["f_eta"], f_u=state["f_u"], f_v=state["f_v"],
+        mean_u=(state["mean_u"] / n).astype(np.float32), mean_v=(state["mean_v"] / n).astype(np.float32),
     )
+    if os.path.exists(ckpt):
+        os.remove(ckpt)
     print(f"{total_h} hours simulated in {time.time() - wall:.0f} s; {len(sites)} sites sampled")
 
 
