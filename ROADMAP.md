@@ -42,7 +42,7 @@ Reports still sit in `data/store.json`. The ocean feed is still Open-Meteo’s f
 
 3. **Separate overlapping pins.** When several North Malé sites fall on the same screen point below zoom 10, spread those markers so each arrow can be tapped. Done when Banana Reef and its neighbors are separate targets at the default zoom. *Partly done: overlapping pins now group into numbered clusters that zoom in when tapped, and the side list shows every site in view. They are not yet separate targets at the default zoom.*
 
-4. **Finish the phone check.** At a 390 px width, confirm the map is at least half the screen, the now list starts collapsed, and every button and the zoom control is at least 44 px. Fix the ones that are smaller. Done when that pass finds no target under 44 px.
+4. **Finish the phone check.** At a 390 px width, confirm the map is at least half the screen, the now list starts collapsed, and every button and the zoom control is at least 44 px. Fix the ones that are smaller. Done when that pass finds no target under 44 px. *Done: at 390 px the map fills the screen above the collapsed now list; every button, field, pin, cluster, the zoom and layer controls and the site page's source links are at least 44 px. Only attribution links inside a sentence are smaller, which the 44 px rule exempts.*
 
 ### It has to stay up for more than one crew
 
