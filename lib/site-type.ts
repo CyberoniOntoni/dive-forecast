@@ -39,15 +39,15 @@ export const CHANNEL_FUNNEL_KM = 0.8;
 
 /**
  * True for a site whose current runs along the reef rather than into or out of the atoll: an outer-reef site backed
- * by an island or unbroken reef, where water cannot cross the rim. Corner dives at a channel mouth, and walls within
- * CHANNEL_FUNNEL_KM of a pass in the same atoll, stay across the rim: the channel's draw takes over there.
- * A hand-set type decides, like any type.
+ * by an island or unbroken reef, where water cannot cross the rim. Walls within CHANNEL_FUNNEL_KM of a pass in the
+ * same atoll stay across the rim: the channel's draw takes over there. A corner at a channel mouth is its own type
+ * (`corner`), so a wall that happens to be named "Corner" can still run along the reef.
  */
 export function flowsAlongReef(
   site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
   mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
 ): boolean {
-  if (site.siteType !== "outer-reef" || /\bcorner\b/i.test(site.name)) return false;
+  if (site.siteType !== "outer-reef") return false;
   return !mates.some(
     (mate) =>
       mate.id !== site.id &&

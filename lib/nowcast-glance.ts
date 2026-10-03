@@ -63,8 +63,11 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
   const label = strengthLabel(hour.strength);
   const estimatedHeading = nowcast.bearingSource === "fallback";
   const along = nowcast.alongHeadingDeg ?? null;
-  const curvedOut = along == null && hour.direction === "outgoing" ? (nowcast.outgoingBearingDeg ?? null) : null;
-  const arrowBearing = curvedOut ?? passArrowBearing(along ?? nowcast.inwardBearingDeg, hour.direction);
+  // Along a reef the axis is the reef's; only a channel can bend.
+  const arrowBearing =
+    along == null
+      ? passArrowBearing(nowcast.inwardBearingDeg, hour.direction, nowcast.outgoingBearingDeg)
+      : passArrowBearing(along, hour.direction);
   const way = along == null ? hour.direction : `running ${compassWord(arrowBearing)}`;
   // A wall's flow runs along its reef; a lagoon site's just runs that way.
   const spokenWay = along == null || nowcast.lagoon ? way : `${way} along the reef`;
@@ -121,8 +124,17 @@ export function compassWord(headingDeg: number): string {
   return COMPASS_WORDS[Math.round(wrapped / 45) % 8];
 }
 
-export function passArrowBearing(inwardBearingDeg: number, direction: Direction): number {
-  if (direction === "incoming") return inwardBearingDeg;
+/**
+ * The arrow's heading: incoming along the inward bearing, outgoing straight back, unless a curved channel gives its
+ * own outgoing heading.
+ */
+export function passArrowBearing(
+  inwardBearingDeg: number,
+  direction: Direction,
+  outgoingBearingDeg: number | null = null,
+): number {
+  if (direction === "incoming") return ((inwardBearingDeg % 360) + 360) % 360;
+  if (outgoingBearingDeg != null) return ((outgoingBearingDeg % 360) + 360) % 360;
   // W5: wrap so 270 outgoing is 90, not 450.
   return ((inwardBearingDeg + 180) % 360 + 360) % 360;
 }

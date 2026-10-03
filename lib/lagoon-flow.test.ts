@@ -168,6 +168,7 @@ describe("lagoon glance", () => {
         siteId: "thila",
         atollId: "a",
         inwardBearingDeg: 270,
+        outgoingBearingDeg: null,
         alongHeadingDeg: 90,
         lagoon: true,
         unavailable: false,

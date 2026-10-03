@@ -23,8 +23,8 @@ Every site has a type (`lib/site-type.ts`, `ADDING_SITES.md` §5): rim pass, cha
 
 | Site | Model | What it shows |
 |---|---|---|
-| Pass, channel thila, channel corner, an older outer-reef "Corner", and an outer wall within 0.8 km of a pass in the same atoll (the channel's funnel) | **Across the rim** | Incoming / outgoing, along the inward bearing |
-| Any other outer-reef site: a wall with land or unbroken reef behind it (`flowsAlongReef`) | **Along the reef** | A compass direction ("Running NE"), along the reef |
+| Pass, channel thila, channel corner, and an outer wall within 0.8 km of a pass in the same atoll (the channel's funnel) | **Across the rim** | Incoming / outgoing, along the inward bearing |
+| Any other outer-reef site: a wall with land or unbroken reef behind it (`flowsAlongReef`). The type decides, not the name | **Along the reef** | A compass direction ("Running NE"), along the reef |
 | Lagoon (pin more than 0.8 km inside the outline) | **Lagoon flow** | A compass direction along the site's main flow axis |
 | Strait wall, set by hand: the walls of Vaadhoo Kandu, the strait between North and South Malé | **Through the strait** | East or west ("Running E") |
 

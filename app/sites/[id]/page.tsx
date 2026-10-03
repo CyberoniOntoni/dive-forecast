@@ -63,7 +63,7 @@ export default async function SitePage({
         unavailable={forecast.unavailable}
         stale={forecast.stale}
         inwardBearingDeg={forecast.inwardBearingDeg}
-        outgoingBearingDeg={forecast.outgoingBearingDeg}
+        outgoingBearingDeg={site.outgoingBearingDeg ?? null}
         alongHeadingDeg={forecast.alongHeadingDeg}
         bearingSource={forecast.bearingSource}
         unseeded={site.atollId === UNSEEDED_ATOLL_ID}

@@ -58,6 +58,14 @@ describe("the owner's site classification", () => {
     expect(byId.get("kudadhoo-beyru")?.siteType).toBe("outer-reef");
   });
 
+  it("stores every Corner as a channel corner, except the owner's channel and lagoon ones", () => {
+    // The type alone decides the model, so the data must say what the name used to imply.
+    const exceptions: Record<string, SiteType> = { "cave-corner": "pass", "kings-corner": "lagoon" };
+    for (const site of catalog.sites.filter((item) => /\bcorner\b/i.test(item.name))) {
+      expect(site.siteType, site.id).toBe(exceptions[site.id] ?? "corner");
+    }
+  });
+
   it("spells Embudhoo Thila the owner's way, keeping its id", () => {
     expect(byId.get("embudhu-thila")?.name).toBe("Embudhoo Thila");
   });

@@ -1147,7 +1147,7 @@
       "diveTopM": 10,
       "diveMaxM": 24,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -1663,7 +1663,7 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -1727,7 +1727,7 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -2331,7 +2331,7 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 16,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -2367,7 +2367,7 @@
       "diveTopM": 8,
       "diveMaxM": 22,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -2406,7 +2406,7 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -3219,7 +3219,7 @@
       "lat": 3.191149,
       "lon": 73.043748,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {

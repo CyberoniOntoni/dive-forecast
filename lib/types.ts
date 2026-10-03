@@ -183,8 +183,6 @@ export type SiteForecast = {
   notice: string;
   /** Bearing used for the monsoon nudge and the site arrow. */
   inwardBearingDeg: number | null;
-  /** The outgoing arrow's heading at a curved channel (Site.outgoingBearingDeg). Null when outgoing is opposite incoming. */
-  outgoingBearingDeg: number | null;
   /** Where that bearing came from. Null when there is no bearing. */
   bearingSource: BearingSource | null;
   /** Where the site sits, when classified. */
