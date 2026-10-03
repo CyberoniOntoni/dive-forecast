@@ -35,13 +35,29 @@ function readRims(): Map<string, RimRing> {
   return rims;
 }
 
+/** How far a site set by hand as a channel (pass, channel thila, corner) may sit from the outline and still take its normal. */
+export const CHANNEL_RIM_REACH_KM = 3;
+
 /**
  * Bearing of the rim's inward normal at the pin, degrees clockwise from north.
- * Null when the pin is not within RIM_NEAR_KM of the rim.
+ * Null when the pin is not within `nearKm` of the rim (RIM_NEAR_KM by default). Past RIM_NEAR_KM, the normals are
+ * averaged over the stretch of outline nearest the pin rather than within 1.5 km of it, so a channel pin the coarse
+ * outline puts inside the lagoon still takes the shape of its stretch of rim.
  */
-export function rimInwardBearing(site: Pick<Site, "lat" | "lon">, ring: RimRing): number | null {
+export function rimInwardBearing(
+  site: Pick<Site, "lat" | "lon">,
+  ring: RimRing,
+  nearKm: number = RIM_NEAR_KM,
+): number | null {
   const points = ring.map(([lat, lon]) => toKm(lat, lon, site.lat));
   const pin = toKm(site.lat, site.lon, site.lat);
+  let closest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + 1 < points.length; index += 1) {
+    const foot = footOnSegment(pin, points[index], points[index + 1]);
+    closest = Math.min(closest, Math.hypot(pin[0] - foot[0], pin[1] - foot[1]));
+  }
+  // On the rim the window is measured from the pin, as it always was; farther in, from the nearest stretch.
+  const shift = closest > RIM_NEAR_KM ? closest : 0;
   let sumX = 0;
   let sumY = 0;
   let nearest = Number.POSITIVE_INFINITY;
@@ -55,16 +71,16 @@ export function rimInwardBearing(site: Pick<Site, "lat" | "lon">, ring: RimRing)
     const foot = footOnSegment(pin, from, to);
     const distance = Math.hypot(pin[0] - foot[0], pin[1] - foot[1]);
     nearest = Math.min(nearest, distance);
-    if (distance >= SMOOTH_KM) continue;
+    if (distance - shift >= SMOOTH_KM) continue;
     let normal: [number, number] = [-dy / length, dx / length];
     if (!insideKm([foot[0] + normal[0] * PROBE_KM, foot[1] + normal[1] * PROBE_KM], points)) {
       normal = [-normal[0], -normal[1]];
     }
-    const weight = length * (1 - distance / SMOOTH_KM);
+    const weight = length * (1 - (distance - shift) / SMOOTH_KM);
     sumX += weight * normal[0];
     sumY += weight * normal[1];
   }
-  if (nearest > RIM_NEAR_KM || (sumX === 0 && sumY === 0)) return null;
+  if (nearest > nearKm || (sumX === 0 && sumY === 0)) return null;
   return (((Math.atan2(sumX, sumY) * 180) / Math.PI) % 360 + 360) % 360;
 }
 

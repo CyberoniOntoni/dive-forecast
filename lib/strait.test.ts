@@ -64,9 +64,10 @@ describe("the Vaadhoo Kandu walls", () => {
   const catalog = readCatalog();
   const strait = catalog.sites.filter((site) => site.siteType === "strait-wall").map((site) => site.id).sort();
 
-  it("are the seven walls the owner named, set by hand", () => {
+  it("are the walls the owner named, set by hand", () => {
+    // Coral Garden and Vaadhoo House Reef sit inside their own channels, so they are passes (lib/site-classes.test.ts).
     expect(strait).toEqual(
-      ["coral-garden-3", "hans-hass-place", "lions-head", "old-shark-point", "vaadhoo-caves", "vaadhoo-housereef", "velassaru-caves"].sort(),
+      ["cathedral", "embudhoo-canyon", "hans-hass-place", "lions-head", "old-shark-point", "vaadhoo-caves", "velassaru-caves"].sort(),
     );
     for (const site of catalog.sites.filter((item) => item.siteType === "strait-wall")) {
       expect(site.siteTypeSource).toBe("manual");

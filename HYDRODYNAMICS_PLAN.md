@@ -474,6 +474,15 @@ With the tide weighted over the drift (4 / 2), the ebb ran west 91 % of the time
 
 **Not checked:** the NE monsoon, as for every model (§4.9). The tide-pushes-east rule is the owner's; the sign of the tide term is the place to look if westward floods turn up in reports.
 
+### 4.12 The owner's site classification (2026-10-03)
+
+The corner review and the Vaadhoo Kandu work showed that site names and distances to the outline misclassify many sites. The owner set the kind of each site they know in North Malé, South Malé, Baa, South Ari and Faafu (pinned in `lib/site-classes.test.ts`):
+- **Channel corners:** a new type, `corner`, with the channel model. Prisca Corner, Prisca Head, Meeru, Kani, Kufunadhoo, Kudadhoo and Maaddoo Corner, Balcony, Rannalhi Faru, Ramm Faru, Furana North and South.
+- **Channel dives:** Cave Corner, Maldive Victory, Lankan Caves, Middle Point, Coral Garden (South Malé), Vaadhoo House Reef, Vaagili Caves, Ran Faru, Lhohi Paradise, Sundune, Kandooma Caves and Seven Stingrays. Maaddoo Giri and Embudhoo Thila (renamed from "Embudhu") are mid-channel thilas.
+- **Strait walls:** Embudhoo Canyon and Cathedral are added. Coral Garden and Vaadhoo House Reef are channels.
+- **HP Reef:** a curved channel, in toward 10 o'clock and out toward 5 (`outgoingBearingDeg`).
+- **Confirmed lagoon:** Kings Corner and Kudadhoo Etheru Faru. Both respond unevenly to their channels, which the lagoon model does not represent.
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

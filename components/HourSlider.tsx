@@ -22,6 +22,7 @@ export function HourSlider({
   hours,
   unavailable,
   inwardBearingDeg,
+  outgoingBearingDeg = null,
   alongHeadingDeg = null,
   bearingSource = null,
   unseeded = false,
@@ -35,6 +36,8 @@ export function HourSlider({
   hours: HourForecast[];
   unavailable: boolean;
   inwardBearingDeg: number | null;
+  /** The outgoing arrow's heading at a curved channel; null when outgoing is opposite incoming. */
+  outgoingBearingDeg?: number | null;
   /** Set for a wall whose current runs along the reef: the heading "incoming" means there. Words become compass points. */
   alongHeadingDeg?: number | null;
   /** Where the bearing came from. The fallback heuristic gets an estimate note. */
@@ -76,7 +79,8 @@ export function HourSlider({
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
   const axis = inwardBearingDeg == null ? null : (alongHeadingDeg ?? inwardBearingDeg);
-  const bearing = axis == null ? null : callBearing(hour.direction, axis);
+  const curvedOut = alongHeadingDeg == null && hour.direction === "outgoing" ? outgoingBearingDeg : null;
+  const bearing = axis == null ? null : (curvedOut ?? callBearing(hour.direction, axis));
   const wordFor = (direction: Direction) => wayWord(direction, alongHeadingDeg);
   const tone = alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
   const quiet = arrowOpacity(hour.confidence);

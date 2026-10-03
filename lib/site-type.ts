@@ -6,6 +6,7 @@ export { SITE_TYPES, type SiteType } from "./types";
 export const SITE_TYPE_LABEL: Record<SiteType, string> = {
   pass: "Rim pass",
   "channel-thila": "Channel thila",
+  corner: "Channel corner",
   "outer-reef": "Outer reef",
   lagoon: "Lagoon",
   "strait-wall": "Strait wall",
@@ -13,6 +14,7 @@ export const SITE_TYPE_LABEL: Record<SiteType, string> = {
 
 const PASS_NAME = /\bkandu\b|\bkandoo\b|\bexpress\b/i;
 const THILA_NAME = /\bthila\b|\bgiri\b/i;
+const CORNER_NAME = /\bcorner\b/i;
 
 /**
  * The type a site's position and name suggest. Null when the atoll has no stored outline.
@@ -27,6 +29,8 @@ export function deriveSiteType(site: Pick<Site, "name" | "lat" | "lon">, ring: R
 
   if (PASS_NAME.test(site.name)) return "pass";
   if (THILA_NAME.test(site.name)) return "channel-thila";
+  // A corner at a channel mouth follows the channel; the owner sets corners named otherwise ("Faru") by hand.
+  if (CORNER_NAME.test(site.name)) return "corner";
   return "outer-reef";
 }
 

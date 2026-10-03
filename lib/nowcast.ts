@@ -8,6 +8,8 @@ export type SiteNowcast = {
   atollId: string;
   /** Null when the site has no atoll, so there is no arrow to point. */
   inwardBearingDeg: number | null;
+  /** The outgoing arrow's heading at a curved channel. Absent or null when outgoing is opposite incoming. */
+  outgoingBearingDeg?: number | null;
   /** Where the bearing came from. Absent or null draws no estimate note. */
   bearingSource?: BearingSource | null;
   /** Set for a site forecast along a compass axis (a wall, or a lagoon site): the heading its "incoming" means. */
@@ -73,6 +75,7 @@ async function nowcastOne(
     siteId: site.id,
     atollId: site.atollId,
     inwardBearingDeg: loaded.bearing,
+    outgoingBearingDeg: site.outgoingBearingDeg ?? null,
     bearingSource: loaded.bearingSource,
     alongHeadingDeg: loaded.alongHeadingDeg,
     lagoon: loaded.siteType === "lagoon",
