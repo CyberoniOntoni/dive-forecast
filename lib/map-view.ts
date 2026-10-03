@@ -77,3 +77,11 @@ export function saveSheetOpen(open: boolean, storage: SessionLike | undefined = 
     // Blocked storage: the list starts closed next time.
   }
 }
+
+/** "Show on map" zooms at least this close: pins stop clustering from zoom 11, and a site is easy to pick out at 13. */
+export const SPOTLIGHT_ZOOM = 13;
+
+/** The zoom to show one site at: never zooms out when the map is already closer. */
+export function spotlightZoom(currentZoom: number): number {
+  return Number.isFinite(currentZoom) ? Math.max(currentZoom, SPOTLIGHT_ZOOM) : SPOTLIGHT_ZOOM;
+}
