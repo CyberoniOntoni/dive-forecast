@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inView, siteCountLabel } from "./map-view";
+import { inView, siteCountLabel, SPOTLIGHT_ZOOM, spotlightZoom } from "./map-view";
 
 const vaavu = { south: 3.3, west: 73.3, north: 3.8, east: 73.8 };
 
@@ -18,5 +18,14 @@ describe("siteCountLabel", () => {
     expect(siteCountLabel(1, 1)).toBe("1 site");
     expect(siteCountLabel(7, 38)).toBe("7 of 38 sites in view");
     expect(siteCountLabel(0, 38)).toBe("0 of 38 sites in view");
+  });
+});
+
+describe("spotlightZoom", () => {
+  it("zooms in to show one site, but never out", () => {
+    expect(spotlightZoom(7)).toBe(SPOTLIGHT_ZOOM);
+    expect(spotlightZoom(SPOTLIGHT_ZOOM)).toBe(SPOTLIGHT_ZOOM);
+    expect(spotlightZoom(15)).toBe(15);
+    expect(spotlightZoom(Number.NaN)).toBe(SPOTLIGHT_ZOOM);
   });
 });

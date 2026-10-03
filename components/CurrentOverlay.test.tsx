@@ -1,17 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SiteRow } from "@/components/CurrentOverlay";
-import { SPOTLIGHT_ZOOM, spotlightZoom } from "@/lib/map-view";
 import { nowcastGlance } from "@/lib/nowcast-glance";
-
-describe("spotlightZoom", () => {
-  it("zooms in to show one site, but never out", () => {
-    expect(spotlightZoom(7)).toBe(SPOTLIGHT_ZOOM);
-    expect(spotlightZoom(SPOTLIGHT_ZOOM)).toBe(SPOTLIGHT_ZOOM);
-    expect(spotlightZoom(15)).toBe(15);
-    expect(spotlightZoom(Number.NaN)).toBe(SPOTLIGHT_ZOOM);
-  });
-});
 
 describe("site row", () => {
   const site = { id: "kandooma-thila", name: "Kandooma Thila", atollId: "south-male", lat: 3.9, lon: 73.48, sourceUrl: "x" };
