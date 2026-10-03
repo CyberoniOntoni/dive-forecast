@@ -8,6 +8,7 @@ function glanceFor(name: string, strength: Strength, direction: Direction) {
     siteId: name,
     atollId: "atoll",
     inwardBearingDeg: 90,
+    outgoingBearingDeg: null,
     unavailable: false,
     hour: {
       time: "2026-09-23T10:00",
@@ -75,6 +76,7 @@ describe("passArrowBearing", () => {
       siteId: "West",
       atollId: "atoll",
       inwardBearingDeg: 270,
+      outgoingBearingDeg: null,
       unavailable: false,
       hour: {
         time: "2026-09-23T10:00",
@@ -96,7 +98,7 @@ describe("nowcastGlance heading trust", () => {
     confidence: "medium" as const,
     levelM: 0.1,
   };
-  const base: SiteNowcast = { siteId: "s", atollId: "a", inwardBearingDeg: 90, unavailable: false, hour };
+  const base: SiteNowcast = { siteId: "s", atollId: "a", inwardBearingDeg: 90, outgoingBearingDeg: null, unavailable: false, hour };
 
   it("marks a fallback heading as estimated in the spoken text", () => {
     const glance = nowcastGlance("Pin", { ...base, bearingSource: "fallback" }, true);

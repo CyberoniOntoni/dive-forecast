@@ -99,7 +99,9 @@ describe("flowsAlongReef", () => {
 
   it("takes outer walls, not corners, passes, thilas or lagoon sites", () => {
     expect(flowsAlongReef(wall)).toBe(true);
-    expect(flowsAlongReef({ ...wall, name: "Cocoa Corner" })).toBe(false);
+    // The type decides, not the name: a channel corner follows its channel, a wall named "Corner" runs along.
+    expect(flowsAlongReef({ ...wall, siteType: "corner", name: "Cocoa Corner" })).toBe(false);
+    expect(flowsAlongReef({ ...wall, name: "Cocoa Corner" })).toBe(true);
     expect(flowsAlongReef({ ...wall, siteType: "pass" })).toBe(false);
     expect(flowsAlongReef({ ...wall, siteType: "channel-thila" })).toBe(false);
     expect(flowsAlongReef({ ...wall, siteType: "lagoon" })).toBe(false);
@@ -126,6 +128,7 @@ describe("along-reef glance", () => {
       siteId: "wall",
       atollId: "a",
       inwardBearingDeg: 270,
+      outgoingBearingDeg: null,
       alongHeadingDeg: 0,
       unavailable: false,
       hour: { time: "2026-09-23T10:00", direction, strength, confidence: "low", levelM: 0.1 },

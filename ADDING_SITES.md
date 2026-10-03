@@ -70,10 +70,13 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
 
 ## 5. Site type
 
-Every site has a type: rim pass, channel thila, outer reef, lagoon or strait wall. The type picks the model (`FORECAST_MODEL.md`), so check it:
+Every site has a type: rim pass, channel thila, channel corner, outer reef, lagoon or strait wall. The type picks the model (`FORECAST_MODEL.md`), so check it:
 
 - **Pass, channel thila:** incoming or outgoing across the rim.
-- **Outer reef:** a wall with land or solid reef behind it runs along the reef, shown as a compass direction. Two exceptions keep the across-rim model, because the channel's draw takes over there: a name containing "Corner" (a corner dive at a channel mouth), and a wall within 0.8 km of a pass pin in the same atoll.
+- **Channel corner:** a dive on the side of a channel mouth. It follows the channel: incoming or outgoing. `npm run site-types` derives a "Corner" name on the rim as one; set a corner named otherwise (e.g. a "Faru" at a channel mouth) by hand. The type alone decides the model.
+- **A channel the outline puts inside the lagoon:** set its type by hand (`pass`, `channel-thila` or `corner`, `"siteTypeSource": "manual"`). It then takes the outline's direction from up to 3 km away instead of the centroid guess.
+- **A curved channel:** add `outgoingBearingDeg` when the water leaves in a different direction from the one it enters by, as at HP Reef.
+- **Outer reef:** a wall with land or solid reef behind it runs along the reef, shown as a compass direction. A wall within 0.8 km of a pass pin in the same atoll keeps the across-rim model instead, because the channel's draw takes over there. The name doesn't matter: a wall called "Corner" that really is a wall stays outer reef if set by hand.
 - **Lagoon:** a compass direction from the flow through the atoll's rim and channels. It never shows high confidence.
 - **Strait wall:** a wall of an ocean strait between atolls (Vaadhoo Kandu), running east or west with the monsoon and tide. It is never derived; set it by hand (`"siteType": "strait-wall"`, `"siteTypeSource": "manual"`).
 

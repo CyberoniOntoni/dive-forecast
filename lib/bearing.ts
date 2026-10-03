@@ -1,4 +1,4 @@
-import { rimDistanceKm, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, rimDistanceKm, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
 /**
@@ -14,7 +14,11 @@ export function resolveBearing(
   if (typeof site.inwardBearingDeg === "number" && Number.isFinite(site.inwardBearingDeg)) {
     return { deg: wrapDegrees(site.inwardBearingDeg), source: "override" };
   }
-  const fromRim = rim ? rimInwardBearing(site, rim) : null;
+  // A pin set by hand as a channel may sit where the coarse outline says "lagoon"; it still takes its rim's normal.
+  const channel =
+    site.siteTypeSource === "manual" &&
+    (site.siteType === "pass" || site.siteType === "channel-thila" || site.siteType === "corner");
+  const fromRim = rim ? rimInwardBearing(site, rim, channel ? CHANNEL_RIM_REACH_KM : undefined) : null;
   if (fromRim != null) return { deg: fromRim, source: "rim-derived" };
   return { deg: heuristicBearing(site, mates, outside), source: "fallback" };
 }

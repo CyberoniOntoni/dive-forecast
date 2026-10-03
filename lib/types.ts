@@ -14,7 +14,7 @@ export type { OceanDrift } from "./seasonal";
  * - lagoon: inside the atoll, away from the rim. Current is weaker and less tied to the tide.
  * Wrecks and giris take the type of where they lie.
  */
-export const SITE_TYPES = ["pass", "channel-thila", "outer-reef", "lagoon", "strait-wall"] as const;
+export const SITE_TYPES = ["pass", "channel-thila", "corner", "outer-reef", "lagoon", "strait-wall"] as const;
 export type SiteType = (typeof SITE_TYPES)[number];
 
 /** atollId of a pin that is not in or near a seeded atoll. It has no forecast and draws no arrow. */
@@ -53,6 +53,11 @@ export type Site = {
    * When set it replaces the mate-centroid / outside-point heuristic.
    */
   inwardBearingDeg?: number;
+  /**
+   * Where the water runs when outgoing, if not straight back along inwardBearingDeg: a curved channel (HP Reef runs
+   * in toward 10 o'clock and out toward 5). Only the outgoing arrow uses it; the model keeps the inward axis.
+   */
+  outgoingBearingDeg?: number;
   /** Where the site sits: pass, channel thila, outer reef or lagoon. Absent until classified. */
   siteType?: SiteType;
   /** "manual" when someone who knows the site set it; a derived type never overwrites it. */

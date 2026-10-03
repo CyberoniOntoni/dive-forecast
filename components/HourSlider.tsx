@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
-import { compassWord } from "@/lib/nowcast-glance";
+import { compassWord, passArrowBearing } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
@@ -22,6 +22,7 @@ export function HourSlider({
   hours,
   unavailable,
   inwardBearingDeg,
+  outgoingBearingDeg = null,
   alongHeadingDeg = null,
   bearingSource = null,
   unseeded = false,
@@ -35,6 +36,8 @@ export function HourSlider({
   hours: HourForecast[];
   unavailable: boolean;
   inwardBearingDeg: number | null;
+  /** The outgoing arrow's heading at a curved channel; null when outgoing is opposite incoming. */
+  outgoingBearingDeg?: number | null;
   /** Set for a wall whose current runs along the reef: the heading "incoming" means there. Words become compass points. */
   alongHeadingDeg?: number | null;
   /** Where the bearing came from. The fallback heuristic gets an estimate note. */
@@ -76,7 +79,9 @@ export function HourSlider({
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
   const axis = inwardBearingDeg == null ? null : (alongHeadingDeg ?? inwardBearingDeg);
-  const bearing = axis == null ? null : callBearing(hour.direction, axis);
+  // Along a reef the axis is the reef's; only a channel can bend.
+  const bearing =
+    axis == null ? null : passArrowBearing(axis, hour.direction, alongHeadingDeg == null ? outgoingBearingDeg : null);
   const wordFor = (direction: Direction) => wayWord(direction, alongHeadingDeg);
   const tone = alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
   const quiet = arrowOpacity(hour.confidence);
@@ -250,12 +255,6 @@ function dialViewBox(strength: Strength): string {
   return `${ARROW_WIDTH / 2 - size / 2} ${middle - size / 2} ${size} ${size}`;
 }
 
-/** Incoming follows the atoll inward bearing, or the reef heading along a wall. Outgoing is 180° opposite. Not the ocean vector. */
-function callBearing(direction: Direction, inwardBearingDeg: number): number {
-  const inward = ((inwardBearingDeg % 360) + 360) % 360;
-  return direction === "incoming" ? inward : (inward + 180) % 360;
-}
-
 function directionTone(direction: Direction): string {
   return direction === "incoming" ? "text-incoming" : "text-outgoing";
 }
@@ -268,7 +267,7 @@ function strengthTone(strength: Strength): string {
 /** Incoming or Outgoing across the rim; "Running NE" along a reef, from the reef heading. */
 function wayWord(direction: Direction, alongHeadingDeg: number | null): string {
   if (alongHeadingDeg == null) return direction === "incoming" ? "Incoming" : "Outgoing";
-  return `Running ${compassWord(callBearing(direction, alongHeadingDeg))}`;
+  return `Running ${compassWord(passArrowBearing(alongHeadingDeg, direction))}`;
 }
 
 function arrowOpacity(confidence: Confidence): string {

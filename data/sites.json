@@ -293,7 +293,8 @@
     },
     {
       "id": "hp-reef",
-      "inwardBearingDeg": 271,
+      "inwardBearingDeg": 300,
+      "outgoingBearingDeg": 150,
       "name": "HP Reef",
       "atollId": "north-male",
       "lat": 4.31355,
@@ -798,8 +799,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "prisca-corner",
@@ -811,8 +812,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "cave-corner",
@@ -824,8 +825,8 @@
       "diveTopM": 5,
       "diveMaxM": 28,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "asdhoo-rock",
@@ -889,8 +890,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "colosseum",
@@ -941,8 +942,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "palm-reef",
@@ -993,8 +994,8 @@
       "diveTopM": 17,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "okobe-thila",
@@ -1019,8 +1020,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "ilkka-reef",
@@ -1084,8 +1085,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "furana-thila",
@@ -1110,8 +1111,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "chicken-island-2",
@@ -1146,7 +1147,7 @@
       "diveTopM": 10,
       "diveMaxM": 24,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -1192,8 +1193,8 @@
       "diveTopM": 15,
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "hans-hass-place",
@@ -1558,7 +1559,7 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "strait-wall",
+      "siteType": "pass",
       "siteTypeSource": "manual"
     },
     {
@@ -1571,7 +1572,7 @@
       "diveTopM": 5,
       "diveMaxM": 12,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "strait-wall",
+      "siteType": "pass",
       "siteTypeSource": "manual"
     },
     {
@@ -1584,8 +1585,8 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "cathedral",
@@ -1597,12 +1598,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "strait-wall",
+      "siteTypeSource": "manual"
     },
     {
       "id": "embudhu-thila",
-      "name": "Embudhu Thila",
+      "name": "Embudhoo Thila",
       "atollId": "south-male",
       "lat": 4.087588,
       "lon": 73.534001,
@@ -1611,7 +1612,7 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "dhigu-thila",
@@ -1662,7 +1663,7 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -1675,8 +1676,8 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "lhosfushi-kandu",
@@ -1700,8 +1701,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 15,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "medhu-faru",
@@ -1726,7 +1727,7 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -1802,8 +1803,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "ramm-faru",
@@ -1814,8 +1815,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 15,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "ihi-reef",
@@ -1839,8 +1840,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "rannalhi-faru",
@@ -1852,8 +1853,8 @@
       "diveTopM": 3,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "balcony",
@@ -1865,8 +1866,8 @@
       "diveTopM": 3,
       "diveMaxM": 24,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "vaagili-bodu-thila",
@@ -1891,8 +1892,8 @@
       "diveTopM": 10,
       "diveMaxM": 18,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "rihiveli-wreck",
@@ -2330,7 +2331,7 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 16,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -2366,7 +2367,7 @@
       "diveTopM": 8,
       "diveMaxM": 22,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -2405,7 +2406,7 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {
@@ -3019,8 +3020,8 @@
       "lat": 5.110229,
       "lon": 73.08715,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "eydhafushi",
@@ -3039,8 +3040,8 @@
       "lat": 5.092808,
       "lon": 73.067935,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "nelivaru-thila",
@@ -3065,8 +3066,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "channel-thila",
+      "siteTypeSource": "manual"
     },
     {
       "id": "hulhudhoo",
@@ -3105,8 +3106,8 @@
       "lat": 5.024813,
       "lon": 72.992053,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "corner",
+      "siteTypeSource": "manual"
     },
     {
       "id": "naamuli-wreck",
@@ -3169,8 +3170,8 @@
       "diveTopM": 15,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "kings-corner",
@@ -3218,7 +3219,7 @@
       "lat": 3.191149,
       "lon": 73.043748,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "outer-reef",
+      "siteType": "corner",
       "siteTypeSource": "derived"
     },
     {

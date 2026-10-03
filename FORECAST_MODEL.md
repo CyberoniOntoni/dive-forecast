@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/13`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/14`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -19,12 +19,12 @@ For every point it needs, the app fetches hourly **sea level** and **ocean curre
 
 ## Which model a site gets
 
-Every site has a type (`lib/site-type.ts`, `ADDING_SITES.md` §5): rim pass, channel thila, outer reef, lagoon, or strait wall. The type and position pick one of four models:
+Every site has a type (`lib/site-type.ts`, `ADDING_SITES.md` §5): rim pass, channel thila, channel corner, outer reef, lagoon, or strait wall. The type and position pick one of four models:
 
 | Site | Model | What it shows |
 |---|---|---|
-| Pass, channel thila, outer-reef "Corner", and an outer wall within 0.8 km of a pass in the same atoll (the channel's funnel) | **Across the rim** | Incoming / outgoing, along the inward bearing |
-| Any other outer-reef site: a wall with land or unbroken reef behind it (`flowsAlongReef`) | **Along the reef** | A compass direction ("Running NE"), along the reef |
+| Pass, channel thila, channel corner, and an outer wall within 0.8 km of a pass in the same atoll (the channel's funnel) | **Across the rim** | Incoming / outgoing, along the inward bearing |
+| Any other outer-reef site: a wall with land or unbroken reef behind it (`flowsAlongReef`). The type decides, not the name | **Along the reef** | A compass direction ("Running NE"), along the reef |
 | Lagoon (pin more than 0.8 km inside the outline) | **Lagoon flow** | A compass direction along the site's main flow axis |
 | Strait wall, set by hand: the walls of Vaadhoo Kandu, the strait between North and South Malé | **Through the strait** | East or west ("Running E") |
 
@@ -34,6 +34,12 @@ A site's **inward bearing** comes from, in order:
 - a fallback heuristic.
 
 The fallback heuristic draws a dashed arrow and an estimate note. See `lib/bearing.ts` and `lib/rim.ts`.
+
+**Sites set by hand as channels.** A site typed by hand (`siteTypeSource: "manual"`) as a pass, channel thila or corner takes the outline's normal from up to 3 km away. That covers channel pins the coarse outline places inside the lagoon, such as Cave Corner, Sundune and Maaddoo Giri.
+
+**Curved channels.** A channel that bends can set `outgoingBearingDeg`, so the outgoing arrow points where the water actually leaves. HP Reef runs in toward 10 o'clock and out toward 5. The model itself keeps the inward axis.
+
+**The owner's classification (3 Oct 2026).** The owner set the kind of every site in North Malé, South Malé, Baa, South Ari and Faafu that names and distances got wrong. The list is pinned in `lib/site-classes.test.ts`.
 
 ## Across the rim: channels
 
@@ -108,8 +114,10 @@ Over 99 days of ocean data (1 Jul – 7 Oct 2026):
 `straitHours` in `lib/forecast.ts`. Vaadhoo Kandu is an ocean strait between North and South Malé, not a pass into a lagoon: about 5 km wide and 300–400 m deep between shallow rims, carrying the ocean from east to west or back.
 
 Seven walls are strait walls, set by hand from the owner's knowledge:
-- **South Malé's north rim:** Vaadhoo Caves, Coral Garden, Vaadhoo House Reef, Velassaru Caves.
+- **South Malé's north rim:** Vaadhoo Caves, Velassaru Caves, Embudhoo Canyon, Cathedral.
 - **North Malé's south rim:** Lions Head, Old Shark Point, Hans Hass Place.
+
+Coral Garden and Vaadhoo House Reef sit inside their own channels, so they are passes. Velassaru Caves also feels its neighbouring channel, but it shows the strait.
 
 How the strait runs, per the owner:
 - **The monsoon sets the main direction:** west in the NE monsoon (about Dec–Apr), east in the SW (about May–Nov).
@@ -242,6 +250,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/11` | 1 Oct | Strength bands from the range climatology, "very strong" (§4.9). |
 | `…+lagoon/12` | 1 Oct | Lagoon flow (§4.10). |
 | `…+strait/13` | 1 Oct | Vaadhoo Kandu walls run through the strait (§4.11). |
+| `…/14` | 3 Oct | The owner's site classification: channel corners, channel dives inside the outline, the strait walls revised, curved HP Reef. |
 
 ## Known limits
 
@@ -251,3 +260,4 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 - **Surface current, not current at dive depth.** It includes Stokes drift. There is no wind forcing beyond what the ocean model carries.
 - **Passes are only width × depth.** Opposite flows between neighbouring channels, eddies and reef-flat pumping are not modelled.
 - **Lagoon flow is a 2-D picture.** It has no reefs inside the lagoon, no depth, and the dive sites cluster near one rim in several atolls.
+- **Lagoon sites react the same way in both directions.** Some don't. Kings Corner is pushed deeper by two channels on the flood, and slows and splits on the ebb. Kudadhoo Etheru Faru is pulled toward its channel when outgoing and sheltered when incoming. The model shows neither.
