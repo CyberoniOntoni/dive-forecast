@@ -117,21 +117,28 @@ function PublishedFacts({ site }: { site: Site }) {
   if (!line) return null;
 
   return (
-    <p className="min-w-0 text-sm leading-6 text-foam/90">
-      <span className="sr-only">Published. </span>
-      {line.text}
-      {line.sources.map((source) => (
-        <a
-          key={source.label}
-          href={source.href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="ml-2 whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-        >
-          {source.label}
-        </a>
-      ))}
-    </p>
+    <div className="min-w-0 text-sm leading-6 text-foam/90">
+      <p>
+        <span className="sr-only">Published. </span>
+        {line.text}
+      </p>
+      {/* Its own row, so each source is a 44 px target on a phone. */}
+      {line.sources.length > 0 ? (
+        <p className="flex flex-wrap gap-x-4">
+          {line.sources.map((source) => (
+            <a
+              key={source.label}
+              href={source.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 min-w-11 items-center whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            >
+              {source.label}
+            </a>
+          ))}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
