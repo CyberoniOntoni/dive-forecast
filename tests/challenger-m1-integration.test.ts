@@ -114,15 +114,15 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       }
     });
 
-    it("verifies physical dimensions for all 8 measured channel passes", () => {
+    it("verifies physical dimensions for all 8 published channel sections", () => {
       const passSiteIds = [
-        "kandooma-thila",
-        "rasdhoo-madivaru",
-        "miyaru-kandu",
-        "fotteyo-kandu",
-        "kuredu-express",
         "embudhoo-express",
-        "devana-kandu",
+        "embudhu-thila",
+        "gangehi-kandu",
+        "fushifaru-thila",
+        "fushifaru-corner",
+        "maa-kandu",
+        "maa-kandu-beyru",
         "vaadhoo-caves",
       ];
 
@@ -204,8 +204,9 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
 
   describe("3. Constricted Pass vs Open Lagoon Sites Under Identical Marine Conditions", () => {
     it("amplifies current strength in constricted passes (Devana Kandu, Miyaru Kandu) over open sites during peak tidal flow", async () => {
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
-      const miyaru = sites.find((s) => s.id === "miyaru-kandu")!;
+      // Sizes set here, not read from the catalog: these two Vaavu passes have no published section.
+      const devana = { ...sites.find((s) => s.id === "devana-kandu")!, channelWidthM: 500, channelDepthM: 30 };
+      const miyaru = { ...sites.find((s) => s.id === "miyaru-kandu")!, channelWidthM: 700, channelDepthM: 40 };
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
 
       expect(devana).toBeDefined();

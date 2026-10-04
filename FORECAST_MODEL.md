@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/15`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/16`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -66,7 +66,7 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
    - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A GEBCO cell is not a section either. A missing or non-positive width or depth leaves the factor at 1.
    - Atoll lagoon means (`lagoonMeanDepthM` on South Malé, Vaavu, and Addu) are catalog data. They are not a model input.
    - Atlas channel widths (`atlasWidthM` on 44 sites) are catalog data too. They are the gap between reef-crest and reef-flat polygons on the Allen Coral Atlas geomorphic map, measured across the channel at the pin (`npm run channel-widths`), and reviewed on the Atlas satellite mosaic: 39 `checked`, 5 `low`. They are not a model input. The Atlas bathymetry saturates near 15 m, so it gives no channel depth, and a width without a depth sets no factor.
-   - 31,500 m² is the median of the measured dive-site channels.
+   - 31,500 m² was the median of the channel sections stored before model 16. Six of them (Kandooma, Miyaru, Fotteyo, Kuredu, Devana, Rasdhoo Madivaru) turned out not to be in their cited sources and were removed, and Embudhoo was corrected to its IUCN factsheet. The reference was kept, so the factor is unchanged for any section that remains. The sections now are Vaadhoo (Ocean Science paper) and seven from IUCN Important Shark and Ray Area factsheets: Embudhoo Express and Embudhu Thila, Gangehi (the 500 m inner width, 25 m maximum), Fushifaru Thila and Corner (700 m, the narrow end of 0.7–1 km), Maa Kandu (600 m inner) and Maa Kandu Beyru (900 m mouth). Their depths are the stated channel depth, which is often a maximum.
    - The envelope bands (`RANGE_BANDS_M`) on that effective range are:
 
      | Band | Effective range |
@@ -217,7 +217,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `THROUGHFLOW_SLOPE_PER_MS` (K) | 0.7 m/h per m/s | `forecast.ts` | owner, §4.5 |
 | `ATOLL_HEAD_TAU_HOURS` (τ) | 0.25 h | `forecast.ts` | owner, §4.8 |
 | `RANGE_BANDS_M` | 0.25 / 0.6 / 2.0 m | `forecast.ts` | owner + 99-day climatology, §4.9 |
-| Constriction | ref 31,500 m², exponent 0.35, 1.0–2.5 | `forecast.ts` | measured channels |
+| Constriction | ref 31,500 m², exponent 0.35, 1.0–2.5 | `forecast.ts` | channel sections before model 16 |
 | `SEASONAL_DRIFT_SCALE` | 0.4 | `forecast.ts` | measured drift, §4.7 |
 | `ALONG_REEF_TIDE_GAIN` | 3 | `forecast.ts` | owner, §4.6 |
 | `ALONG_REEF_BANDS_MS` | 0.15 / 0.5 / 1.3 | `forecast.ts` | §4.6, §4.9 |
