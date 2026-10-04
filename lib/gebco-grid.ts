@@ -49,9 +49,15 @@ export function parseDodsGrid(body: Buffer, kind: "int16" | "byte"): DodsGrid {
   return { values: values.data, lat: lat.data, lon: lon.data };
 }
 
-type ArrayRead = { data: Int16Array | Uint8Array | Float64Array; offset: number };
+type ArrayRead<T> = { data: T; offset: number };
 
-function readArray(body: Buffer, kind: "int16" | "byte" | "float64", offset: number): ArrayRead {
+function readArray(body: Buffer, kind: "float64", offset: number): ArrayRead<Float64Array>;
+function readArray(body: Buffer, kind: "int16" | "byte", offset: number): ArrayRead<Int16Array | Uint8Array>;
+function readArray(
+  body: Buffer,
+  kind: "int16" | "byte" | "float64",
+  offset: number,
+): ArrayRead<Int16Array | Uint8Array | Float64Array> {
   const count = readInt32(body, offset);
   const again = readInt32(body, offset + 4);
   if (count !== again || count < 0) throw new Error(`DODS count ${count} does not match ${again}`);
