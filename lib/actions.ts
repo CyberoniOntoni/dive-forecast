@@ -2,7 +2,7 @@
 
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
-import { routeNote } from "./site-type";
+import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
@@ -177,8 +177,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     siteType: loaded.siteType,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    // A lagoon site whose atoll has no outline or ring yet runs on channel hours, but it is still inside the lagoon.
-    siteNote: routeNote(loaded.siteType === "lagoon" ? "lagoon" : loaded.forecastRoute),
+    siteNote: siteNoteFor(loaded.siteType, loaded.forecastRoute),
     fetchedAt: loaded.fetchedAt,
   };
 }

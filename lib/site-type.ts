@@ -121,6 +121,14 @@ export function siteRoute(
   return { route: "channel", axisDeg: null };
 }
 
+/**
+ * The note for a site, from the route its hours took. A lagoon site whose atoll has no outline or ring yet runs on
+ * channel hours, but it is still inside the lagoon, so it keeps the lagoon note.
+ */
+export function siteNoteFor(siteType: SiteType | null, route: ForecastRoute): string | null {
+  return siteType === "lagoon" ? LAGOON_NOTE : routeNote(route);
+}
+
 /** How far to trust the forecast on a route, or null for a channel. */
 export function routeNote(route: ForecastRoute): string | null {
   switch (route) {

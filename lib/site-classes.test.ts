@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 import { resolveBearing } from "./bearing";
 import { nowcastGlance } from "./nowcast-glance";
 import { rimInwardBearing, type RimRing } from "./rim";
-import { alongReefHeading, crossesRim, deriveSiteType, flowsAlongReef, siteRoute, straitHeading } from "./site-type";
+import {
+  ALONG_REEF_NOTE,
+  LAGOON_NOTE,
+  STRAIT_NOTE,
+  alongReefHeading,
+  crossesRim,
+  deriveSiteType,
+  flowsAlongReef,
+  siteNoteFor,
+  siteRoute,
+  straitHeading,
+} from "./site-type";
 import { readCatalog } from "./store";
 import type { Site, SiteType } from "./types";
 
@@ -177,5 +188,15 @@ describe("siteRoute", () => {
   it("keeps the route but no axis without a bearing", () => {
     const strait = catalog.sites.find((site) => site.siteType === "strait-wall")!;
     expect(siteRoute(strait, catalog.sites, null)).toEqual({ route: "strait", axisDeg: null });
+  });
+});
+
+describe("siteNoteFor", () => {
+  it("gives each route its note, and a lagoon site on channel hours the lagoon note", () => {
+    expect(siteNoteFor("strait-wall", "strait")).toBe(STRAIT_NOTE);
+    expect(siteNoteFor("outer-reef", "along-reef")).toBe(ALONG_REEF_NOTE);
+    expect(siteNoteFor("lagoon", "lagoon")).toBe(LAGOON_NOTE);
+    expect(siteNoteFor("lagoon", "channel")).toBe(LAGOON_NOTE);
+    expect(siteNoteFor("pass", "channel")).toBeNull();
   });
 });
