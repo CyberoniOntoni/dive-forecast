@@ -88,6 +88,13 @@ How the picture moved with the forcing and the window:
    along-chain stream (p95 0.13 m/s at walls), and the forecast runs the lagoon incoming 87 % of hours against 63 %.
 7. **Benchmark fixtures:** the 10 scored curated reports at Kandooma Thila and Embudhoo Express on 27 Sep all disagree
    with the simulation. They are scenarios written from the tide, not dives.
+8. **The monsoon drift is already in the levels.** The ocean model's levels carry a mean head of +0.8 cm across the
+   chain, and in the simulation that alone drives 0.14–0.22 m/s east through Vaadhoo Kandu on average, as much as
+   the ocean model's own drift there (0.14 m/s; `drift_calibrate.py` gives about 0.05 m of steady head per m/s of
+   strait current). Adding the drift on top would count it twice. The simulation already runs the west rims in
+   on average (Kuda +0.09, Vaagili +0.15 m/s) and the east rims out (Kandooma −0.08, Embudhoo −0.10, Dhigu −0.19 m/s).
+   What differs is the balance: there the tide (±0.13–0.20 m/s) outweighs that mean about a third of the time,
+   while the forecast lets the monsoon terms hold the east rims outgoing almost throughout.
 
 ![flood](figures/flow-flood.png) ![sites](figures/sites.png)
 

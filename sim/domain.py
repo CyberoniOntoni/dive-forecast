@@ -34,7 +34,8 @@ EDGE_LON = {"west": 73.2083, "east": 73.7917}
 # Forcing cases (forcing.py): "chain" drives the west and east edges with their own ocean-model levels, so the
 # tide's head across the chain of atolls drives water through them; "uniform" gives both edges the east level,
 # leaving only the rise and fall of the tide. SIM_CASE picks one; each case's files go to sim/out/<case>/.
-CASES = ("chain", "uniform")
+# "calib" is a steady head with no tide, for drift_calibrate.py.
+CASES = ("chain", "uniform", "calib")
 
 
 def case():
