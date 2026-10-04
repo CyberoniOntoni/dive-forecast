@@ -1,7 +1,7 @@
 import { parseWall } from "./forecast";
 import { loadSite } from "./load-site";
 import { readCatalog, reportsForSite } from "./store";
-import type { Atoll, BearingSource, HourForecast, Site } from "./types";
+import type { Atoll, BearingSource, ForecastRoute, HourForecast, Site } from "./types";
 
 export type SiteNowcast = {
   siteId: string;
@@ -12,10 +12,10 @@ export type SiteNowcast = {
   outgoingBearingDeg: number | null;
   /** Where the bearing came from. Absent or null draws no estimate note. */
   bearingSource?: BearingSource | null;
-  /** Set for a site forecast along a compass axis (a wall, or a lagoon site): the heading its "incoming" means. */
+  /** Which model made the hours, and so how their direction reads. */
+  forecastRoute: ForecastRoute;
+  /** Set on every route but "channel": the heading its "incoming" means. */
   alongHeadingDeg?: number | null;
-  /** True inside the lagoon, where the flow is not along a reef. */
-  lagoon?: boolean;
   hour: HourForecast | null;
   unavailable: boolean;
   /** True when this hour is the last cached series. */
@@ -77,8 +77,8 @@ async function nowcastOne(
     inwardBearingDeg: loaded.bearing,
     outgoingBearingDeg: site.outgoingBearingDeg ?? null,
     bearingSource: loaded.bearingSource,
+    forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    lagoon: loaded.siteType === "lagoon",
     hour: hasHours ? hour : null,
     unavailable: !hasHours,
     stale: hasHours && loaded.stale,

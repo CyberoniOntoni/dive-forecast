@@ -2,9 +2,10 @@
 
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { compassWord } from "@/lib/nowcast-glance";
+import { compassWord, routeDirectionLegend } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
 import { MALDIVES_TIME, viewerClock, zoneLabel, type SiteTimeZone } from "@/lib/site-time";
+import type { ForecastRoute } from "@/lib/types";
 
 const CHOICE =
   "flex min-h-11 items-center gap-2 rounded-md border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
@@ -25,25 +26,30 @@ function noViewerOnServer(): number | null {
 }
 
 /**
- * Along a reef the two choices are the compass points the reef runs to, stored with the forecast's fixed meaning:
- * "incoming" toward the reef heading, "outgoing" the opposite way.
+ * On every route but "channel" (a wall or lagoon site) the two choices are the compass points the axis runs to, stored with the forecast's fixed meaning:
+ * "incoming" toward the heading, "outgoing" the opposite way.
  *
  * The time is always the dive site's own country's time (`zone`), never the diver's: it starts on the site's current
  * hour, and a diver on another clock sees what that time is for them.
  */
 export function ReportForm({
   siteId,
+  forecastRoute = "channel",
   alongHeadingDeg = null,
   zone = MALDIVES_TIME,
   defaultTime,
 }: {
   siteId: string;
+  forecastRoute?: ForecastRoute;
   alongHeadingDeg?: number | null;
   zone?: SiteTimeZone;
   /** The site's current hour, "YYYY-MM-DDTHH:00", so most reports need no typing. */
   defaultTime?: string;
 }) {
-  const along = alongHeadingDeg == null ? null : [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)];
+  const along =
+    forecastRoute === "channel" || alongHeadingDeg == null
+      ? null
+      : [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)];
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const [time, setTime] = useState(defaultTime ?? "");
@@ -105,7 +111,7 @@ export function ReportForm({
         ) : null}
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
           <legend className="text-sm font-medium text-foam">
-            {along ? "Which way along the reef" : "Incoming or outgoing"}
+            {routeDirectionLegend(forecastRoute, alongHeadingDeg)}
           </legend>
           <div className="grid grid-cols-2 gap-2">
             <label className={`${CHOICE} has-[:checked]:border-incoming has-[:checked]:text-incoming`}>

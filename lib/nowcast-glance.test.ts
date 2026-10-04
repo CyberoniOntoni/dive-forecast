@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { glanceColor, glanceRank, nowcastGlance, passArrowBearing } from "./nowcast-glance";
+import {
+  glanceColor,
+  glanceRank,
+  nowcastGlance,
+  passArrowBearing,
+  routeArrowBearing,
+  routeDirectionLegend,
+  routeWay,
+} from "./nowcast-glance";
 import type { SiteNowcast } from "./nowcast";
 import type { Direction, Strength } from "./types";
 
@@ -9,6 +17,7 @@ function glanceFor(name: string, strength: Strength, direction: Direction) {
     atollId: "atoll",
     inwardBearingDeg: 90,
     outgoingBearingDeg: null,
+    forecastRoute: "channel",
     unavailable: false,
     hour: {
       time: "2026-09-23T10:00",
@@ -77,6 +86,7 @@ describe("passArrowBearing", () => {
       atollId: "atoll",
       inwardBearingDeg: 270,
       outgoingBearingDeg: null,
+      forecastRoute: "channel",
       unavailable: false,
       hour: {
         time: "2026-09-23T10:00",
@@ -98,7 +108,7 @@ describe("nowcastGlance heading trust", () => {
     confidence: "medium" as const,
     levelM: 0.1,
   };
-  const base: SiteNowcast = { siteId: "s", atollId: "a", inwardBearingDeg: 90, outgoingBearingDeg: null, unavailable: false, hour };
+  const base: SiteNowcast = { siteId: "s", atollId: "a", inwardBearingDeg: 90, outgoingBearingDeg: null, forecastRoute: "channel", unavailable: false, hour };
 
   it("marks a fallback heading as estimated in the spoken text", () => {
     const glance = nowcastGlance("Pin", { ...base, bearingSource: "fallback" }, true);
@@ -119,5 +129,31 @@ describe("nowcastGlance heading trust", () => {
     expect(glance.arrowBearing).toBeNull();
     expect(glance.label).toBeNull();
     expect(glance.estimatedHeading).toBe(false);
+  });
+});
+
+describe("route words", () => {
+  it("says incoming or outgoing on a channel, even with a stray heading", () => {
+    expect(routeWay("channel", "incoming", null)).toEqual({ way: "incoming", spoken: "incoming" });
+    expect(routeWay("channel", "outgoing", 90)).toEqual({ way: "outgoing", spoken: "outgoing" });
+    expect(routeDirectionLegend("channel", null)).toBe("Incoming or outgoing");
+  });
+
+  it("calls a strait wall's flow along the reef, as at any wall", () => {
+    expect(routeWay("strait", "incoming", 90)).toEqual({ way: "running E", spoken: "running E along the reef" });
+    expect(routeWay("along-reef", "outgoing", 0)).toEqual({ way: "running S", spoken: "running S along the reef" });
+    expect(routeDirectionLegend("strait", 90)).toBe("Which way along the reef");
+    expect(routeDirectionLegend("along-reef", 0)).toBe("Which way along the reef");
+  });
+
+  it("does not call a lagoon site's flow a reef's", () => {
+    expect(routeWay("lagoon", "incoming", 90)).toEqual({ way: "running E", spoken: "running E" });
+    expect(routeDirectionLegend("lagoon", 90)).toBe("Which way it ran");
+  });
+
+  it("bends only a channel's outgoing arrow", () => {
+    expect(routeArrowBearing("channel", "outgoing", 300, null, 150)).toBe(150);
+    expect(routeArrowBearing("strait", "outgoing", 300, 90, 150)).toBe(270);
+    expect(routeArrowBearing("lagoon", "incoming", 300, 45)).toBe(45);
   });
 });

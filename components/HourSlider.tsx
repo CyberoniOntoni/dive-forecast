@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
-import { compassWord, passArrowBearing } from "@/lib/nowcast-glance";
-import type { BearingSource, Confidence, Direction, HourForecast, Strength } from "@/lib/types";
+import { routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
+import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
   slack: "Slack",
@@ -23,6 +23,7 @@ export function HourSlider({
   unavailable,
   inwardBearingDeg,
   outgoingBearingDeg = null,
+  forecastRoute = "channel",
   alongHeadingDeg = null,
   bearingSource = null,
   unseeded = false,
@@ -38,7 +39,9 @@ export function HourSlider({
   inwardBearingDeg: number | null;
   /** The outgoing arrow's heading at a curved channel; null when outgoing is opposite incoming. */
   outgoingBearingDeg?: number | null;
-  /** Set for a wall whose current runs along the reef: the heading "incoming" means there. Words become compass points. */
+  /** Which model made the hours. Every route but "channel" reads as compass points. */
+  forecastRoute?: ForecastRoute;
+  /** Set on every route but "channel": the heading "incoming" means there. */
   alongHeadingDeg?: number | null;
   /** Where the bearing came from. The fallback heuristic gets an estimate note. */
   bearingSource?: BearingSource | null;
@@ -78,12 +81,12 @@ export function HourSlider({
   const selected = clampHourIndex(index, hours.length);
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
-  const axis = inwardBearingDeg == null ? null : (alongHeadingDeg ?? inwardBearingDeg);
-  // Along a reef the axis is the reef's; only a channel can bend.
   const bearing =
-    axis == null ? null : passArrowBearing(axis, hour.direction, alongHeadingDeg == null ? outgoingBearingDeg : null);
-  const wordFor = (direction: Direction) => wayWord(direction, alongHeadingDeg);
-  const tone = alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
+    inwardBearingDeg == null
+      ? null
+      : routeArrowBearing(forecastRoute, hour.direction, inwardBearingDeg, alongHeadingDeg, outgoingBearingDeg);
+  const wordFor = (direction: Direction) => capitalized(routeWay(forecastRoute, direction, alongHeadingDeg).way);
+  const tone = forecastRoute === "channel" || alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
   const spans = daySpans(hours);
@@ -264,10 +267,9 @@ function strengthTone(strength: Strength): string {
   return strength === "too_strong" ? "text-stop" : "text-foam";
 }
 
-/** Incoming or Outgoing across the rim; "Running NE" along a reef, from the reef heading. */
-function wayWord(direction: Direction, alongHeadingDeg: number | null): string {
-  if (alongHeadingDeg == null) return direction === "incoming" ? "Incoming" : "Outgoing";
-  return `Running ${compassWord(passArrowBearing(alongHeadingDeg, direction))}`;
+/** "Incoming", "Outgoing" or "Running NE". */
+function capitalized(words: string): string {
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function arrowOpacity(confidence: Confidence): string {

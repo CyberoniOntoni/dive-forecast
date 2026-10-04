@@ -197,6 +197,12 @@ export type MarineHour = {
   currentDirectionDeg: number | null;
 };
 
+/**
+ * Which model a site's hours came from, and so how their direction reads: "channel" as incoming or outgoing across
+ * the rim; "along-reef" and "strait" as a compass direction along a wall; "lagoon" as a compass direction inside it.
+ */
+export type ForecastRoute = "channel" | "along-reef" | "strait" | "lagoon";
+
 export type HourForecast = {
   time: string;
   direction: Direction;
@@ -218,7 +224,9 @@ export type SiteForecast = {
   bearingSource: BearingSource | null;
   /** Where the site sits, when classified. */
   siteType: SiteType | null;
-  /** Set for a wall whose current runs along the reef: the compass heading its "incoming" means. Null otherwise. */
+  /** Which model made these hours, and so how their direction reads. */
+  forecastRoute: ForecastRoute;
+  /** Set on every route but "channel": the compass heading its "incoming" means. Null for a channel. */
   alongHeadingDeg: number | null;
   /** A note about how far to trust the forecast at this kind of site. Null when there is none. */
   siteNote: string | null;

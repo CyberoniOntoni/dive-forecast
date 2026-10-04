@@ -170,7 +170,7 @@ describe("lagoon glance", () => {
         inwardBearingDeg: 270,
         outgoingBearingDeg: null,
         alongHeadingDeg: 90,
-        lagoon: true,
+        forecastRoute: "lagoon",
         unavailable: false,
         hour: { time: TIME, direction: "incoming", strength: "mild", confidence: "low", levelM: 0 },
       },

@@ -36,24 +36,24 @@ describe("recentReportRows", () => {
 
   it("lists the newest first, at most ten", () => {
     const reports = Array.from({ length: 12 }, (_, day) => report(`2026-09-${String(day + 10).padStart(2, "0")}T09:00`));
-    const rows = recentReportRows(reports, { nowWall: now, siteOnAxis: false });
+    const rows = recentReportRows(reports, { nowWall: now, route: "channel" });
     expect(rows).toHaveLength(10);
     expect(rows[0].time).toBe("2026-09-21T09:00");
     expect(rows[9].time).toBe("2026-09-12T09:00");
   });
 
   it("gives the Maldives wall time and how long ago", () => {
-    const [row] = recentReportRows([report("2026-09-30T09:00")], { nowWall: now, siteOnAxis: false });
+    const [row] = recentReportRows([report("2026-09-30T09:00")], { nowWall: now, route: "channel" });
     expect(row.when).toBe("Wed 30 Sep 09:00");
     expect(row.ago).toBe("1 day ago");
-    const [recent] = recentReportRows([report("2026-10-01T09:00")], { nowWall: now, siteOnAxis: false });
+    const [recent] = recentReportRows([report("2026-10-01T09:00")], { nowWall: now, route: "channel" });
     expect(recent.ago).toBe("3 hours ago");
   });
 
   it("says incoming or outgoing at a channel, and very strong for the top band", () => {
     const [row] = recentReportRows([report("2026-09-30T09:00", { direction: "outgoing", strength: "too_strong" })], {
       nowWall: now,
-      siteOnAxis: false,
+      route: "channel",
     });
     expect(row.way).toBe("Outgoing");
     expect(row.strength).toBe("very strong");
@@ -78,7 +78,7 @@ describe("recentReportRows", () => {
           },
         }),
       ],
-      { nowWall: now, siteOnAxis: true },
+      { nowWall: now, route: "along-reef" },
     );
     expect(row.way).toBe("Running SW");
     expect(row.forecast).toEqual({ way: "Running NE", strength: "mild", match: "miss" });
@@ -86,7 +86,7 @@ describe("recentReportRows", () => {
   });
 
   it("marks a wall or lagoon report filed before the site had an axis", () => {
-    const [row] = recentReportRows([report("2026-09-30T09:00")], { nowWall: now, siteOnAxis: true });
+    const [row] = recentReportRows([report("2026-09-30T09:00")], { nowWall: now, route: "along-reef" });
     expect(row.way).toBe("Incoming");
     expect(row.beforeAxis).toBe(true);
     expect(row.forecast).toBeNull();
@@ -110,7 +110,7 @@ describe("recentReportRows", () => {
             },
           }),
         ],
-        { nowWall: now, siteOnAxis: false },
+        { nowWall: now, route: "channel" },
       )[0].forecast?.match;
     expect(withForecast("strong", { direction: "incoming", strength: "mild" })).toBe("match");
     expect(withForecast("too_strong", { direction: "incoming", strength: "mild" })).toBe("close");

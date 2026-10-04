@@ -1,4 +1,4 @@
-import { CHANNEL_RIM_REACH_KM, rimDistanceKm, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, rimDistanceKm, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
 /**
@@ -86,14 +86,14 @@ export const ATOLL_MATCH_KM = 5;
  * The seeded atoll a new pin belongs to, or null when it is not in or near one.
  * Matches by distance to the stored outline, so a pin in an unseeded atoll is not handed to a far one.
  * Atolls that share an outline (North and South Ari) are split by the nearer ocean point.
- * With no outlines stored at all, falls back to the nearest ocean point.
+ * Only with no rim file at all does it fall back to the nearest ocean point.
  */
 export function atollForPin(lat: number, lon: number, atolls: Atoll[]): Atoll | null {
   const withRim = atolls.flatMap((atoll) => {
     const ring = rimForAtoll(atoll);
     return ring ? [{ atoll, km: rimDistanceKm({ lat, lon }, ring) }] : [];
   });
-  if (withRim.length === 0) return atolls.length > 0 ? nearestAtoll(lat, lon, atolls) : null;
+  if (!rimFilePresent()) return atolls.length > 0 ? nearestAtoll(lat, lon, atolls) : null;
   const close = withRim.filter((item) => item.km <= ATOLL_MATCH_KM);
   if (close.length === 0) return null;
   const best = Math.min(...close.map((item) => item.km));

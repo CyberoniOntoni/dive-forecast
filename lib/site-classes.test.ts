@@ -143,6 +143,7 @@ describe("a curved channel's outgoing arrow", () => {
         atollId: "north-male",
         inwardBearingDeg: 300,
         outgoingBearingDeg: 150,
+        forecastRoute: "channel",
         unavailable: false,
         hour: { time: "2026-10-03T10:00", direction, strength: "strong", confidence: "low", levelM: 0.1 },
       },

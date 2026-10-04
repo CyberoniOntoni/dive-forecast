@@ -13,26 +13,106 @@ const SMOOTH_KM = 1.5;
 export const RIM_NEAR_KM = 0.8;
 const PROBE_KM = 1;
 
-let loaded: Map<string, RimRing> | null = null;
+/** A stored ring whose middle sits farther than this from its atoll's ocean point is not that atoll's (swapped axes). */
+const RIM_ATOLL_MAX_KM = 150;
+
+/** The parsed rim file. `present` is false only when data/rims.json does not exist. */
+let loaded: { present: boolean; rims: Map<string, RimRing> } | null = null;
 
 /** OSM outline for an atoll, or null when none is stored. Keyed by the way id in rimSourceUrl. */
 export function rimForAtoll(atoll: Atoll | undefined): RimRing | null {
   if (!atoll) return null;
   const wayId = atoll.rimSourceUrl.split("/").pop() ?? "";
-  return readRims().get(wayId) ?? null;
+  const ring = readRims().rims.get(wayId) ?? null;
+  if (ring) {
+    const [lat, lon] = ringMiddle(ring);
+    const km = Math.hypot((lat - atoll.oceanLat) * KM_PER_DEG_LAT, (lon - atoll.oceanLon) * KM_PER_DEG_LON);
+    if (km > RIM_ATOLL_MAX_KM) {
+      throw new Error(`rims.json: way ${wayId} sits ${Math.round(km)} km from ${atoll.id}; are lat and lon swapped?`);
+    }
+  }
+  return ring;
 }
 
-function readRims(): Map<string, RimRing> {
+/** True unless data/rims.json is absent. With no file every pin keeps the heuristic. */
+export function rimFilePresent(): boolean {
+  return readRims().present;
+}
+
+/**
+ * A missing rim file is no rims: every pin keeps the heuristic. Any other read or parse error, or a ring of the
+ * wrong shape, throws and is read again on the next call, so a corrupt file never passes for a missing one.
+ */
+function readRims(): { present: boolean; rims: Map<string, RimRing> } {
   if (loaded) return loaded;
-  const rims = new Map<string, RimRing>();
+  let text: string;
   try {
-    const parsed = JSON.parse(fs.readFileSync(RIMS_PATH, "utf8")) as { rims?: Record<string, RimRing> };
-    for (const [wayId, ring] of Object.entries(parsed.rims ?? {})) rims.set(wayId, ring);
-  } catch {
-    // No rim file: every pin keeps the heuristic.
+    text = fs.readFileSync(RIMS_PATH, "utf8");
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+    loaded = { present: false, rims: new Map() };
+    return loaded;
   }
-  loaded = rims;
+  loaded = { present: true, rims: parseRims(text) };
+  return loaded;
+}
+
+/**
+ * The rings in a rim file's text, keyed by OSM way id. Each must be a closed list of at least four finite
+ * [lat, lon] pairs; anything else (GeoJSON nesting, objects, open rings, out-of-range numbers) throws.
+ */
+export function parseRims(text: string): Map<string, RimRing> {
+  const parsed: unknown = JSON.parse(text);
+  if (!isRecord(parsed)) throw new Error("rims.json: not an object");
+  const body = parsed.rims ?? {};
+  if (!isRecord(body)) throw new Error("rims.json: rims is not an object");
+  const rims = new Map<string, RimRing>();
+  for (const [wayId, ring] of Object.entries(body)) {
+    const problem = ringProblem(ring);
+    if (problem) throw new Error(`rims.json: way ${wayId} ${problem}`);
+    rims.set(wayId, ring as RimRing);
+  }
   return rims;
+}
+
+function ringProblem(ring: unknown): string | null {
+  if (!Array.isArray(ring)) return "is not a list of points";
+  if (ring.length < 4) return "has fewer than four points";
+  for (const [index, point] of ring.entries()) {
+    if (!isLatLon(point)) return `point ${index} is not a finite [lat, lon] pair`;
+  }
+  const [firstLat, firstLon] = ring[0] as [number, number];
+  const [lastLat, lastLon] = ring[ring.length - 1] as [number, number];
+  if (firstLat !== lastLat || firstLon !== lastLon) return "is not closed";
+  return null;
+}
+
+function isLatLon(point: unknown): boolean {
+  if (!Array.isArray(point) || point.length !== 2) return false;
+  const [lat, lon] = point;
+  if (typeof lat !== "number" || typeof lon !== "number") return false;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isMissing(error: unknown): boolean {
+  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
+/** Mean of the ring's points, closing point left out. */
+function ringMiddle(ring: RimRing): [number, number] {
+  const open = ring.slice(0, -1);
+  let lat = 0;
+  let lon = 0;
+  for (const point of open) {
+    lat += point[0];
+    lon += point[1];
+  }
+  return [lat / open.length, lon / open.length];
 }
 
 /** How far a site set by hand as a channel (pass, channel thila, corner) may sit from the outline and still take its normal. */

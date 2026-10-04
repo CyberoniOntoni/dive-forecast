@@ -22,6 +22,7 @@ import {
   UNSEEDED_ATOLL_ID,
   type Direction,
   type ForecastAtReport,
+  type ForecastRoute,
   type Rating,
   type Report,
   type Site,
@@ -175,13 +176,14 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     inwardBearingDeg: loaded.bearing,
     bearingSource: loaded.bearingSource,
     siteType: loaded.siteType,
+    forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
     siteNote:
       loaded.siteType === "lagoon"
         ? LAGOON_NOTE
         : loaded.siteType === "strait-wall"
           ? STRAIT_NOTE
-          : loaded.alongHeadingDeg != null
+          : loaded.forecastRoute === "along-reef"
             ? ALONG_REEF_NOTE
             : null,
     fetchedAt: loaded.fetchedAt,
@@ -189,14 +191,14 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
 }
 
 /**
- * The site's newest reports, as the site page lists them. `siteOnAxis` is true when the site's forecast reads as a
- * compass direction (a wall or lagoon site), so older in/out reports there are marked.
+ * The site's newest reports, as the site page lists them. On any route but "channel" the site's forecast reads as a
+ * compass direction, so older in/out reports there are marked.
  */
-export async function getRecentReports(siteId: string, siteOnAxis: boolean): Promise<RecentReportRow[]> {
+export async function getRecentReports(siteId: string, route: ForecastRoute): Promise<RecentReportRow[]> {
   requireSiteId(siteId);
   return recentReportRows(reportsForSite(siteId), {
     nowWall: toMaldivesWall(new Date().toISOString()),
-    siteOnAxis,
+    route,
   });
 }
 
@@ -209,6 +211,7 @@ function unavailableForecast(): SiteForecast {
     inwardBearingDeg: null,
     bearingSource: null,
     siteType: null,
+    forecastRoute: "channel",
     alongHeadingDeg: null,
     siteNote: null,
     fetchedAt: null,
