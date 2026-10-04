@@ -35,8 +35,10 @@ strait model. One domain covers 110 sites.
     the gaps between them instead of running round the domain's ends.
   - Only levels are imposed; every current inside comes from the levels, the depths and friction. The ocean model's
     current is not imposed (forcing it at the edges pushes the whole drift against a chain that blocks the section).
-- **Two cases** (`SIM_CASE`): `chain` drives the edges as above; `uniform` gives both edges the east level, leaving
-  only the tide's rise and fall, to separate the two drivers. Only `chain` was run on the live levels.
+- **Cases** (`SIM_CASE`): `chain` drives the edges as above; `uniform` gives both edges the east level, leaving
+  only the tide's rise and fall, to separate the two drivers; `open` is `chain` with the north and south edges open
+  to the ocean model's levels too, so the tidal stream along the chain runs through. `chain` and `open` were run on
+  the live levels.
 - **Comparison** (`npm run sim-compare`, `scripts/sim-compare.ts`): runs `loadSite` for every site with Open-Meteo
   stubbed by the same window's live series, each point the forecast asks for (seaward sample points, the atoll
   ring points) getting its own ocean-model cell, so the forecast's head term sees what it would have seen live. The
@@ -95,6 +97,13 @@ How the picture moved with the forcing and the window:
    on average (Kuda +0.09, Vaagili +0.15 m/s) and the east rims out (Kandooma −0.08, Embudhoo −0.10, Dhigu −0.19 m/s).
    What differs is the balance: there the tide (±0.13–0.20 m/s) outweighs that mean about a third of the time,
    while the forecast lets the monsoon terms hold the east rims outgoing almost throughout.
+9. **The tidal stream along the chain changes nothing at the sites.** The "open" case opens the north and south
+   edges to the ocean-model levels along them (8 points a side), and up to 6 × 10⁶ m³/s now runs through the domain's
+   ends instead of 0.7. Yet every channel group scores the same as with walls (same direction agreement, same lags,
+   same share of hours incoming); walls along the reef move a little more (p95 0.13 → 0.15 m/s, correlation 0.20 →
+   0.26). The stream runs past the atolls in deep water and does not reach the channels. North Malé's north-east
+   corner stays nearly half a tide out (lags +3 to +6 h), so the closed ends were not the cause, and the stream gives
+   no reason to add a term for it to the channel forecast.
 
 ![flood](figures/flow-flood.png) ![sites](figures/sites.png)
 
