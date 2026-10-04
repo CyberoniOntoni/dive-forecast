@@ -124,9 +124,8 @@
       "diveTopM": 16,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/cocoa-thila/",
-      "channelWidthM": 800,
-      "channelDepthM": 40,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -180,9 +179,12 @@
       "diveTopM": 15,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
-      "channelWidthM": 600,
-      "channelDepthM": 40,
-      "channelSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
+      "channelLeads": [
+        {
+          "channel": "eastern-rasdhoo-isra",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "outer-reef",
       "siteTypeSource": "manual"
     },
@@ -210,9 +212,12 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
-      "channelWidthM": 700,
-      "channelDepthM": 40,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "channelLeads": [
+        {
+          "channel": "miyaru-kandu-diveplanit",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -227,9 +232,6 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu",
-      "channelWidthM": 1200,
-      "channelDepthM": 55,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -308,6 +310,8 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html",
+      "atlasWidthM": 840,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "manual"
     },
@@ -335,9 +339,6 @@
       "sourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
-      "channelWidthM": 900,
-      "channelDepthM": 35,
-      "channelSourceUrl": "https://www.padi.com/dive-site/maldives/kuredu-express/",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -365,9 +366,12 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 31,
       "depthSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
-      "channelWidthM": 1500,
-      "channelDepthM": 45,
-      "channelSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
+      "channelWidthM": 450,
+      "channelDepthM": 30,
+      "channelDepthKind": "range",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/emboodhoo-kandu-isra/",
+      "atlasWidthM": 1200,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -433,9 +437,6 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
-      "channelWidthM": 500,
-      "channelDepthM": 30,
-      "channelSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -451,6 +452,7 @@
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/vaadhoo-caves/",
       "channelWidthM": 5000,
       "channelDepthM": 400,
+      "channelDepthKind": "max",
       "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
@@ -505,6 +507,8 @@
       "lat": 3.648208,
       "lon": 73.503146,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 670,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -518,6 +522,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "medhu-kandu-padi",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -531,6 +541,8 @@
       "diveTopM": 20,
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1170,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -544,6 +556,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -557,6 +571,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 460,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -570,6 +586,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1060,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -583,6 +601,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 370,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -694,6 +714,14 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 860,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "helengeli-south-pub173",
+          "basis": "position"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -717,6 +745,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 660,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -782,6 +812,8 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1760,
+      "atlasWidthConfidence": "low",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -805,6 +837,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 810,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -818,6 +852,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1260,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -831,6 +867,8 @@
       "diveTopM": 5,
       "diveMaxM": 28,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 620,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -896,6 +934,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1030,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1026,6 +1066,16 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "bodukalhi-sea-seek",
+          "basis": "position"
+        },
+        {
+          "channel": "bodukalhi-pub173-sounding",
+          "basis": "position"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1091,6 +1141,16 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "bodukalhi-sea-seek",
+          "basis": "position"
+        },
+        {
+          "channel": "bodukalhi-pub173-furana-bank",
+          "basis": "position"
+        }
+      ],
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1104,6 +1164,20 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "bodukalhi-sea-seek",
+          "basis": "position"
+        },
+        {
+          "channel": "bodukalhi-port-mv",
+          "basis": "position"
+        },
+        {
+          "channel": "bodukalhi-pub173-furana-bank",
+          "basis": "position"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1117,6 +1191,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 920,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1199,6 +1275,22 @@
       "diveTopM": 15,
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1440,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "gaadhoo-koa-sea-seek",
+          "basis": "position"
+        },
+        {
+          "channel": "gaadhoo-koa-bridge-2011",
+          "basis": "position"
+        },
+        {
+          "channel": "gaadhoo-koa-hameed",
+          "basis": "position"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1212,6 +1304,12 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1225,6 +1323,12 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1238,6 +1342,12 @@
       "diveTopM": 3,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1338,6 +1448,12 @@
       "diveTopM": 8,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "bodu-hithi-kandu-isra",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1552,6 +1668,12 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1565,6 +1687,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 260,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1591,6 +1715,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1604,6 +1734,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vaadhoo-kandu",
+          "basis": "position"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1617,6 +1753,12 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 450,
+      "channelDepthM": 30,
+      "channelDepthKind": "range",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/emboodhoo-kandu-isra/",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "manual"
     },
@@ -1630,6 +1772,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 970,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1669,6 +1813,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 970,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -1682,6 +1828,8 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 770,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1695,6 +1843,14 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 220,
+      "atlasWidthConfidence": "low",
+      "channelLeads": [
+        {
+          "channel": "lhosfushi-kandu-isra",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -1707,6 +1863,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 15,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 560,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1733,6 +1891,18 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 770,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "guraidhoo-corner-padi",
+          "basis": "depth-only"
+        },
+        {
+          "channel": "guraidhoo-kandu-isra",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -1759,6 +1929,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "south-male-sw-pub173",
+          "basis": "position"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1809,6 +1985,14 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "south-male-sw-pub173",
+          "basis": "position"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1846,6 +2030,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 730,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1885,6 +2071,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1120,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1898,6 +2086,8 @@
       "diveTopM": 10,
       "diveMaxM": 18,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 550,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1943,6 +2133,16 @@
       "lat": 4.219006,
       "lon": 72.733178,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 500,
+      "channelDepthM": 25,
+      "channelDepthKind": "max",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/gangehi-falhu-kandu-isra/",
+      "channelLeads": [
+        {
+          "channel": "gangehi-kandu-duikersgids",
+          "basis": "conflict"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -2068,6 +2268,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1540,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2373,6 +2575,8 @@
       "diveTopM": 8,
       "diveMaxM": 22,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1300,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -2399,6 +2603,12 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 700,
+      "channelDepthM": 30,
+      "channelDepthKind": "typical",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/fushifaru-kandu-isra/",
+      "atlasWidthM": 840,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2412,6 +2622,10 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 700,
+      "channelDepthM": 30,
+      "channelDepthKind": "typical",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/fushifaru-kandu-isra/",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -2451,6 +2665,8 @@
       "diveTopM": 6,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1380,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2838,6 +3054,8 @@
       "lat": 5.454485,
       "lon": 73.038798,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1100,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3026,6 +3244,8 @@
       "lat": 5.110229,
       "lon": 73.08715,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 820,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -3046,6 +3266,8 @@
       "lat": 5.092808,
       "lon": 73.067935,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -3215,6 +3437,8 @@
       "diveTopM": 10,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 2020,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -3238,6 +3462,8 @@
       "diveTopM": 5,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 490,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3316,6 +3542,8 @@
       "diveTopM": 15,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 560,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3355,6 +3583,12 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "channel": "vanhuravalhi-kandu-diveplanit",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3381,6 +3615,14 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1230,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "vevaru-muli-pub173",
+          "basis": "position"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3471,6 +3713,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 990,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3484,6 +3728,14 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1100,
+      "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "channel": "tuvaru-pub173",
+          "basis": "depth-only"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3579,6 +3831,12 @@
       "diveTopM": 5,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 600,
+      "channelDepthM": 30,
+      "channelDepthKind": "max",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/maa-kandu-isra/",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3592,6 +3850,10 @@
       "diveTopM": 7,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelWidthM": 900,
+      "channelDepthM": 30,
+      "channelDepthKind": "max",
+      "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/maa-kandu-isra/",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3673,18 +3935,166 @@
   ],
   "channels": [
     {
+      "id": "vaadhoo-kandu",
       "name": "Vaadhoo Kandu",
-      "channelWidthM": 5000,
-      "channelDepthM": 400,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "widthM": 5000,
+      "depthM": 400,
+      "depthKind": "max",
+      "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
       "citedSource": "Luthfee 1995"
     },
     {
+      "id": "hani-kandu",
       "name": "Hani Kandu",
-      "channelWidthM": 3000,
-      "channelDepthM": 160,
-      "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "widthM": 3000,
+      "depthM": 160,
+      "depthKind": "max",
+      "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
       "citedSource": "Luthfee 1995"
+    },
+    {
+      "id": "bodukalhi-sea-seek",
+      "name": "Bodukalhi (Kanduoiygiri Passage)",
+      "widthM": 1482,
+      "depthM": 40,
+      "depthKind": "typical",
+      "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+    },
+    {
+      "id": "bodukalhi-port-mv",
+      "name": "Bodukalhi (Malé commercial harbour approach)",
+      "widthM": 2315,
+      "depthM": 50,
+      "depthKind": "max",
+      "sourceUrl": "https://port.mv/business/ports_and_terminals/mch/"
+    },
+    {
+      "id": "bodukalhi-pub173-sounding",
+      "name": "Bodukalhi, 0.6 mile S of Lankanfushifinolu",
+      "depthM": 54,
+      "depthKind": "sounding",
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "bodukalhi-pub173-furana-bank",
+      "name": "Bank N of Furanafushi in Bodukalhi",
+      "depthM": 29,
+      "depthKind": "max",
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "gaadhoo-koa-sea-seek",
+      "name": "Gaadhoo Koa (Male Passage)",
+      "widthM": 741,
+      "depthM": 35,
+      "depthKind": "typical",
+      "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+    },
+    {
+      "id": "gaadhoo-koa-bridge-2011",
+      "name": "Gaadhoo Koa, Malé–Hulhulé bridge line",
+      "widthM": 1000,
+      "depthM": 60,
+      "depthKind": "max",
+      "sourceUrl": "https://www.slideshare.net/slideshow/maldives-male-hulhule-bridge-feasibility-report-august-2011-final/40751000"
+    },
+    {
+      "id": "gaadhoo-koa-hameed",
+      "name": "Gaadhoo Koa, Malé–Hulhulé bridge line",
+      "widthM": 1200,
+      "depthM": 37,
+      "depthKind": "typical",
+      "sourceUrl": "https://www.hassanhameed.com/engineering/male-hulhule-bridge/"
+    },
+    {
+      "id": "helengeli-south-pub173",
+      "name": "Opening S of Helengili",
+      "depthM": 40,
+      "depthKind": "least",
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "south-male-sw-pub173",
+      "name": "Channel at the SW end of South Malé Atoll",
+      "widthM": 926,
+      "depthM": 37,
+      "depthKind": "least",
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "vevaru-muli-pub173",
+      "name": "Opening between Vevaru and Muli",
+      "widthM": 1111,
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "tuvaru-pub173",
+      "name": "Opening close S of Tuvaru",
+      "depthM": 55,
+      "depthKind": "typical",
+      "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+    },
+    {
+      "id": "guraidhoo-kandu-isra",
+      "name": "Guraidhoo Kandu",
+      "depthM": 40,
+      "depthKind": "range",
+      "sourceUrl": "https://sharkrayareas.org/portfolio-item/guraidhoo-kandu-isra/"
+    },
+    {
+      "id": "lhosfushi-kandu-isra",
+      "name": "Lhosfushi Kandu",
+      "depthM": 30,
+      "depthKind": "max",
+      "sourceUrl": "https://sharkrayareas.org/portfolio-item/guraidhoo-kandu-isra/"
+    },
+    {
+      "id": "guraidhoo-corner-padi",
+      "name": "Guraidhoo Corner",
+      "depthM": 30,
+      "depthKind": "typical",
+      "sourceUrl": "https://www.padi.com/dive-site/maldives/guraidhoo-corner/"
+    },
+    {
+      "id": "bodu-hithi-kandu-isra",
+      "name": "Bodu Hithi Kandu",
+      "depthM": 30,
+      "depthKind": "max",
+      "sourceUrl": "https://sharkrayareas.org/portfolio-item/bodu-hithi-kandu-isra/"
+    },
+    {
+      "id": "eastern-rasdhoo-isra",
+      "name": "Eastern Rasdhoo channels",
+      "depthM": 30,
+      "depthKind": "typical",
+      "sourceUrl": "https://sharkrayareas.org/portfolio-item/eastern-rasdhoo-atoll-isra/"
+    },
+    {
+      "id": "medhu-kandu-padi",
+      "name": "Medhu Kandu",
+      "depthM": 30,
+      "depthKind": "typical",
+      "sourceUrl": "https://www.padi.com/dive-site/maldives/medhu-kandu/"
+    },
+    {
+      "id": "miyaru-kandu-diveplanit",
+      "name": "Miyaru Kandu",
+      "depthM": 30,
+      "depthKind": "max",
+      "sourceUrl": "https://www.diveplanit.com/dive-site/miyaru-kandu/"
+    },
+    {
+      "id": "vanhuravalhi-kandu-diveplanit",
+      "name": "Vanhuravalhi Kandu",
+      "depthM": 30,
+      "depthKind": "max",
+      "sourceUrl": "https://www.diveplanit.com/dive-site/vanhuravalhi-kandu/"
+    },
+    {
+      "id": "gangehi-kandu-duikersgids",
+      "name": "Gangehi Kandu",
+      "widthM": 200,
+      "sourceUrl": "https://www.duikersgids.nl/en/dive-spots/gangehi-kandu"
     }
   ],
   "innerSea": {

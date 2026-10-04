@@ -9,6 +9,7 @@ import {
   CONSTRICTION_EXPONENT,
   CONSTRICTION_MIN,
   CONSTRICTION_MAX,
+  sectionInput,
 } from "../lib/forecast";
 import { getMaldivesMonsoonDrift } from "../lib/seasonal";
 import { STRENGTHS, type MarineHour, type Report, type Strength, type Site } from "../lib/types";
@@ -640,16 +641,18 @@ let presentCount = 0;
 let allCatalogSitesPass = true;
 
 for (const site of catalogSites) {
-  const hasDimensions = site.channelWidthM != null && site.channelDepthM != null;
+  // The live gate: a section is sized only when its depth is a mean or typical floor.
+  const section = sectionInput(site);
+  const hasDimensions = section.channelWidthM != null && section.channelDepthM != null;
   if (hasDimensions) {
     presentCount++;
-    const factor = constrictionFactor(site.channelWidthM, site.channelDepthM);
+    const factor = constrictionFactor(section.channelWidthM, section.channelDepthM);
     if (factor < 1.0 || factor > 2.5) {
       allCatalogSitesPass = false;
     }
   } else {
     missingCount++;
-    const factor = constrictionFactor(site.channelWidthM, site.channelDepthM);
+    const factor = constrictionFactor(section.channelWidthM, section.channelDepthM);
     if (factor !== 1.0) {
       allCatalogSitesPass = false;
     }
@@ -659,8 +662,7 @@ for (const site of catalogSites) {
   const siteFc = forecastHours({
     hours: tideSeries72,
     inwardBearingDeg: 90,
-    channelWidthM: site.channelWidthM,
-    channelDepthM: site.channelDepthM,
+    ...section,
   });
 
   if (siteFc.length === 0 || siteFc.some((h) => !STRENGTHS.includes(h.strength) || !["incoming", "outgoing"].includes(h.direction))) {
@@ -669,7 +671,7 @@ for (const site of catalogSites) {
 }
 
 assert(
-  presentCount >= 6 && missingCount >= 10,
+  presentCount >= 2 && missingCount >= 10,
   `4.4.1 Catalog contains both constricted sites (${presentCount}) and unconstricted sites (${missingCount})`
 );
 assert(

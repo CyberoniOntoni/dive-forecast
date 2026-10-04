@@ -12,7 +12,7 @@ import { atollNamesById } from "@/lib/site-labels";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
 import { currentWallHour, timeZoneForSite } from "@/lib/site-time";
 import { readCatalog } from "@/lib/store";
-import { UNSEEDED_ATOLL_ID, type HourForecast, type Site } from "@/lib/types";
+import { UNSEEDED_ATOLL_ID, type DepthKind, type HourForecast, type Site } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -147,7 +147,7 @@ function publishedLine(site: Site): { text: string; sources: SourceLink[] } | nu
   const max = positiveMetres(site.diveMaxM);
   const width = positiveMetres(site.channelWidthM);
   const channelDepth = positiveMetres(site.channelDepthM);
-  const phrases = [depthPhrase(top, max), channelPhrase(width, channelDepth)].filter(
+  const phrases = [depthPhrase(top, max), channelPhrase(width, channelDepth, site.channelDepthKind)].filter(
     (phrase): phrase is string => phrase != null,
   );
   if (phrases.length === 0) return null;
@@ -173,12 +173,19 @@ function depthPhrase(top: number | null, max: number | null): string | null {
   return `${formatMetres(only)} m`;
 }
 
-function channelPhrase(width: number | null, depth: number | null): string | null {
+function channelPhrase(width: number | null, depth: number | null, kind: DepthKind | undefined): string | null {
   const parts: string[] = [];
   if (width != null) parts.push(`${formatMetres(width)} m wide`);
-  if (depth != null) parts.push(`${formatMetres(depth)} m deep`);
+  if (depth != null) parts.push(channelDepthWords(formatMetres(depth), kind));
   if (parts.length === 0) return null;
   return `channel ${parts.join(", ")}`;
+}
+
+/** The source's own kind of depth, so a maximum never reads as the channel's depth. */
+function channelDepthWords(metres: string, kind: DepthKind | undefined): string {
+  if (kind === "max" || kind === "range") return `up to ${metres} m deep`;
+  if (kind === "least") return `at least ${metres} m deep`;
+  return `${metres} m deep`;
 }
 
 function publishedSources(hasDiveDepth: boolean, hasChannel: boolean, site: Site): SourceLink[] {

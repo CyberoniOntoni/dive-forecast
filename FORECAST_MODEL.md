@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/15`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/16`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -63,9 +63,11 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
 
 1. **The day's envelope.** It comes from the residual range over the 25 hours around the hour, plus the range a tide would need to give the extra slope that through-flow and head add (`extra slope × 12.42 / π`). This is multiplied by the channel's constriction factor:
    - The factor is `(31,500 m² / (width × depth))^0.35`, held between 1.0 and 2.5.
-   - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A GEBCO cell is not a section either. A missing or non-positive width or depth leaves the factor at 1.
+   - A channel uses a published section width and depth only, and only when the depth is hydraulic. Every section stores what its depth is (`channelDepthKind`: `mean`, `typical`, `max`, `least`, `range`, `sounding`), and `sectionInput` passes width and depth to the factor only for `mean` or `typical`. A stated maximum, a least depth over a sill, or the deep end of a range is not the section depth. A GEBCO cell is not a section either. A missing or non-positive width or depth leaves the factor at 1.
    - Atoll lagoon means (`lagoonMeanDepthM` on South Malé, Vaavu, and Addu) are catalog data. They are not a model input.
-   - 31,500 m² is the median of the measured dive-site channels.
+   - Atlas channel widths (`atlasWidthM` on 44 sites) are catalog data too. They are the gap between reef-crest and reef-flat polygons on the Allen Coral Atlas geomorphic map, measured across the channel at the pin (`npm run channel-widths`), and reviewed on the Atlas satellite mosaic: 39 `checked`, 5 `low`. They are not a model input. The Atlas bathymetry saturates near 15 m, so it gives no channel depth, and a width without a depth sets no factor.
+   - Channel records (`channels` in `data/sites.json`) hold each source's statement about a named channel once: width, depth, depth kind and source. A site's `channelLeads` point at records that bear on it but are not its section, each with a reason: matched to the site by position only (`position`), a depth with no width (`depth-only`), or disagreeing with the site's stored section (`conflict`). 23 sites point at 22 records. The factor ignores them. The main sources are the Malé harbour sailing directions, NGA Sailing Directions Pub. 173 (an archived edition with surveys from 1917 to 1987), IUCN shark and ray area factsheets, and dive-site pages.
+   - 31,500 m² was the median of the channel sections stored before model 16. Six of them (Kandooma, Miyaru, Fotteyo, Kuredu, Devana, Rasdhoo Madivaru) turned out not to be in their cited sources and were removed, and Embudhoo was corrected to its IUCN factsheet. The reference was kept. The sections now are Vaadhoo (Ocean Science paper, about 400 m maximum) and seven from IUCN Important Shark and Ray Area factsheets: Embudhoo Express and Embudhu Thila (450 m, 5–30 m range), Gangehi (500 m inner width, 25 m maximum), Fushifaru Thila and Corner (700 m, the narrow end of 0.7–1 km, 30 m floor), Maa Kandu (600 m inner) and Maa Kandu Beyru (900 m mouth), both 30 m maximum. Only the two Fushifaru sites have a typical depth, so they are the only sections the factor sizes.
    - The envelope bands (`RANGE_BANDS_M`) on that effective range are:
 
      | Band | Effective range |
@@ -216,7 +218,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `THROUGHFLOW_SLOPE_PER_MS` (K) | 0.7 m/h per m/s | `forecast.ts` | owner, §4.5 |
 | `ATOLL_HEAD_TAU_HOURS` (τ) | 0.25 h | `forecast.ts` | owner, §4.8 |
 | `RANGE_BANDS_M` | 0.25 / 0.6 / 2.0 m | `forecast.ts` | owner + 99-day climatology, §4.9 |
-| Constriction | ref 31,500 m², exponent 0.35, 1.0–2.5 | `forecast.ts` | measured channels |
+| Constriction | ref 31,500 m², exponent 0.35, 1.0–2.5 | `forecast.ts` | channel sections before model 16 |
 | `SEASONAL_DRIFT_SCALE` | 0.4 | `forecast.ts` | measured drift, §4.7 |
 | `ALONG_REEF_TIDE_GAIN` | 3 | `forecast.ts` | owner, §4.6 |
 | `ALONG_REEF_BANDS_MS` | 0.15 / 0.5 / 1.3 | `forecast.ts` | §4.6, §4.9 |

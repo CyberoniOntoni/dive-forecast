@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
+import { sectionInput } from "../lib/forecast";
 import { rimForAtoll } from "../lib/rim";
 import { marineCacheDir, marineHoursFromApi, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
@@ -195,8 +196,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       hours,
       inwardBearingDeg: bearing,
       reports: siteReports,
-      channelWidthM: site.channelWidthM,
-      channelDepthM: site.channelDepthM,
+      ...sectionInput(site),
       alongHeadingDeg,
     });
 

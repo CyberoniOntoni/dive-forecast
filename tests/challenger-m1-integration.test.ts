@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   constrictionFactor,
   forecastHours,
+  sectionInput,
   CONSTRICTION_MIN,
   CONSTRICTION_MAX,
 } from "../lib/forecast";
@@ -19,6 +20,15 @@ const catalogRaw = JSON.parse(fs.readFileSync(SITES_PATH, "utf8")) as Catalog;
 const atolls = catalogRaw.atolls;
 const sites = catalogRaw.sites;
 const atollMap = new Map<string, Atoll>(atolls.map((a) => [a.id, a]));
+
+/** A made-up 300 m x 20 m pass on Devana Kandu's position. No catalog site has this section. */
+const narrowPass: Site = {
+  ...sites.find((s) => s.id === "devana-kandu")!,
+  id: "synthetic-narrow-pass",
+  channelWidthM: 300,
+  channelDepthM: 20,
+  channelDepthKind: "typical",
+};
 
 /** Copies each site's committed benchmark fixture into the test cache directory, keyed by its seaward point. */
 function seedCacheFromFixtures(siteIds: readonly string[]): void {
@@ -114,15 +124,15 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       }
     });
 
-    it("verifies physical dimensions for all 8 measured channel passes", () => {
+    it("verifies physical dimensions for all 8 published channel sections", () => {
       const passSiteIds = [
-        "kandooma-thila",
-        "rasdhoo-madivaru",
-        "miyaru-kandu",
-        "fotteyo-kandu",
-        "kuredu-express",
         "embudhoo-express",
-        "devana-kandu",
+        "embudhu-thila",
+        "gangehi-kandu",
+        "fushifaru-thila",
+        "fushifaru-corner",
+        "maa-kandu",
+        "maa-kandu-beyru",
         "vaadhoo-caves",
       ];
 
@@ -203,18 +213,22 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
   });
 
   describe("3. Constricted Pass vs Open Lagoon Sites Under Identical Marine Conditions", () => {
-    it("amplifies current strength in constricted passes (Devana Kandu, Miyaru Kandu) over open sites during peak tidal flow", async () => {
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
-      const miyaru = sites.find((s) => s.id === "miyaru-kandu")!;
+    it("amplifies current strength in a constricted pass over open sites during peak tidal flow", async () => {
+      // A made-up wide pass on Miyaru Kandu's position, beside the narrow one. No catalog site has these sections.
+      const widePass = {
+        ...sites.find((s) => s.id === "miyaru-kandu")!,
+        id: "synthetic-wide-pass",
+        channelWidthM: 1000,
+        channelDepthM: 40,
+        channelDepthKind: "typical" as const,
+      };
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
 
-      expect(devana).toBeDefined();
-      expect(miyaru).toBeDefined();
       expect(openLagoon).toBeDefined();
-      expect(devana.atollId).toBe(openLagoon.atollId); // Both in Vaavu Atoll!
-      expect(miyaru.atollId).toBe(openLagoon.atollId); // All in Vaavu Atoll!
+      expect(narrowPass.atollId).toBe(openLagoon.atollId); // Both in Vaavu Atoll!
+      expect(widePass.atollId).toBe(openLagoon.atollId); // All in Vaavu Atoll!
 
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
@@ -223,8 +237,8 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
-      const miyaruLoad = await loadSite(miyaru, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
+      const wideLoad = await loadSite(widePass, sites, atoll, []);
       const openLoad = await loadSite(openLagoon, sites, atoll, []);
 
       spy.mockRestore();
@@ -234,26 +248,25 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       // Each hour has its own band, so compare the strongest hour of the series at each site.
       const peakOf = (load: SiteLoad) =>
         load.hours.reduce((best, h) => (STRENGTH_ORDER[h.strength] > STRENGTH_ORDER[best.strength] ? h : best));
-      const peakDevana = peakOf(devanaLoad);
-      const peakMiyaru = peakOf(miyaruLoad);
+      const peakNarrow = peakOf(narrowLoad);
+      const peakWide = peakOf(wideLoad);
       const peakOpen = peakOf(openLoad);
 
       // Open lagoon peak flow is 'mild'
       expect(peakOpen.strength).toBe("mild");
 
-      // Devana Kandu (500 m x 30 m) is the narrowest pass and is amplified above the open site.
-      expect(["strong", "too_strong"]).toContain(peakDevana.strength);
-      expect(STRENGTH_ORDER[peakDevana.strength]).toBeGreaterThan(STRENGTH_ORDER[peakOpen.strength]);
+      // 300 m x 20 m is well under the reference area and is amplified above the open site.
+      expect(["strong", "too_strong"]).toContain(peakNarrow.strength);
+      expect(STRENGTH_ORDER[peakNarrow.strength]).toBeGreaterThan(STRENGTH_ORDER[peakOpen.strength]);
 
-      // Miyaru Kandu (700 m x 40 m) is close to a typical pass: never weaker than the open site, never stronger than Devana.
-      expect(STRENGTH_ORDER[peakMiyaru.strength]).toBeGreaterThanOrEqual(STRENGTH_ORDER[peakOpen.strength]);
-      expect(STRENGTH_ORDER[peakMiyaru.strength]).toBeLessThanOrEqual(STRENGTH_ORDER[peakDevana.strength]);
+      // 1000 m x 40 m is over the reference area: never weaker than the open site, never stronger than the narrow pass.
+      expect(STRENGTH_ORDER[peakWide.strength]).toBeGreaterThanOrEqual(STRENGTH_ORDER[peakOpen.strength]);
+      expect(STRENGTH_ORDER[peakWide.strength]).toBeLessThanOrEqual(STRENGTH_ORDER[peakNarrow.strength]);
     });
 
     it("strictly preserves slack hours at tidal crests between constricted pass and open lagoon", async () => {
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const slackMarine = calm(createNormalTideWithSlackCrests());
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
@@ -263,22 +276,21 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
       const openLoad = await loadSite(openLagoon, sites, atoll, []);
       spy.mockRestore();
 
       // Slack hours in open lagoon must be slack hours in constricted pass
       const openSlackTimes = openLoad.hours.filter((h) => h.strength === "slack").map((h) => h.time);
-      const devanaSlackTimes = devanaLoad.hours.filter((h) => h.strength === "slack").map((h) => h.time);
+      const narrowSlackTimes = narrowLoad.hours.filter((h) => h.strength === "slack").map((h) => h.time);
 
       expect(openSlackTimes.length).toBeGreaterThan(0);
-      expect(devanaSlackTimes).toEqual(openSlackTimes);
+      expect(narrowSlackTimes).toEqual(openSlackTimes);
     });
 
     it("monotonicity check: constricted pass strength is greater than or equal to open site at EVERY hour", async () => {
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
@@ -287,13 +299,13 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
       const openLoad = await loadSite(openLagoon, sites, atoll, []);
       spy.mockRestore();
 
-      expect(devanaLoad.hours.length).toBe(openLoad.hours.length);
-      for (let i = 0; i < devanaLoad.hours.length; i++) {
-        const dHour = devanaLoad.hours[i];
+      expect(narrowLoad.hours.length).toBe(openLoad.hours.length);
+      for (let i = 0; i < narrowLoad.hours.length; i++) {
+        const dHour = narrowLoad.hours[i];
         const oHour = openLoad.hours[i];
         expect(dHour.time).toBe(oHour.time);
         expect(STRENGTH_ORDER[dHour.strength]).toBeGreaterThanOrEqual(STRENGTH_ORDER[oHour.strength]);
@@ -301,9 +313,8 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
     });
 
     it("directional invariance: constricted pass has identical tidal direction as open site", async () => {
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
@@ -312,12 +323,12 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
       const openLoad = await loadSite(openLagoon, sites, atoll, []);
       spy.mockRestore();
 
-      for (let i = 0; i < devanaLoad.hours.length; i++) {
-        expect(devanaLoad.hours[i].direction).toBe(openLoad.hours[i].direction);
+      for (let i = 0; i < narrowLoad.hours.length; i++) {
+        expect(narrowLoad.hours[i].direction).toBe(openLoad.hours[i].direction);
       }
     });
   });
@@ -327,8 +338,7 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       // Walls whose current runs along the reef, and strait walls, take their own paths, which have no constriction.
       const unconstrictedSites = sites.filter(
         (s) =>
-          s.channelWidthM === undefined &&
-          s.channelDepthM === undefined &&
+          sectionInput(s).channelWidthM === undefined &&
           !flowsAlongReef(s, sites) &&
           s.siteType !== "strait-wall",
       );
@@ -433,9 +443,8 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         currentDirectionDeg: 0,
       }));
 
-      const devana = sites.find((s) => s.id === "devana-kandu")!;
       const banana = sites.find((s) => s.id === "banana-reef")!;
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
@@ -444,14 +453,14 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
       const bananaLoad = await loadSite(banana, sites, atoll, []);
       spy.mockRestore();
 
-      expect(devanaLoad.hours.length).toBeGreaterThan(0);
+      expect(narrowLoad.hours.length).toBeGreaterThan(0);
       expect(bananaLoad.hours.length).toBeGreaterThan(0);
 
-      expect(devanaLoad.hours.every((h) => h.strength === "slack")).toBe(true);
+      expect(narrowLoad.hours.every((h) => h.strength === "slack")).toBe(true);
       expect(bananaLoad.hours.every((h) => h.strength === "slack")).toBe(true);
     });
 

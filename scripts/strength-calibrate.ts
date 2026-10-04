@@ -1,6 +1,6 @@
 import { ringLevelFromSeries, ringPoints } from "../lib/atoll-ring";
 import { resolveBearing } from "../lib/bearing";
-import { ALONG_REEF_BANDS_MS, alongReefHours, forecastHours, RANGE_BANDS_M } from "../lib/forecast";
+import { ALONG_REEF_BANDS_MS, alongReefHours, forecastHours, RANGE_BANDS_M, sectionInput } from "../lib/forecast";
 import { seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
@@ -139,8 +139,7 @@ async function main(): Promise<void> {
           hours: piece,
           inwardBearingDeg: channel.bearing,
           ringLevel: channel.ring,
-          channelWidthM: channel.site.channelWidthM,
-          channelDepthM: channel.site.channelDepthM,
+          ...sectionInput(channel.site),
         }),
       );
       const peakByDay = new Map<string, boolean>();
@@ -152,7 +151,7 @@ async function main(): Promise<void> {
       days += peakByDay.size;
       const siteVery = [...peakByDay.values()].filter(Boolean).length;
       veryDays += siteVery;
-      bySite.push({ name: channel.site.name, days: siteVery, narrowed: channel.site.channelWidthM != null });
+      bySite.push({ name: channel.site.name, days: siteVery, narrowed: sectionInput(channel.site).channelWidthM != null });
     }
     const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
     const b = candidate.bands;
