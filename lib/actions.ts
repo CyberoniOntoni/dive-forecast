@@ -2,7 +2,7 @@
 
 import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
-import { ALONG_REEF_NOTE, LAGOON_NOTE, STRAIT_NOTE } from "./site-type";
+import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
@@ -137,10 +137,9 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
   }
 }
 
-/** Never blocks a report: a site whose heading cannot be resolved saves none. */
 /**
- * The compass heading "incoming" meant for this site when the report was filed. A wall's comes from its bearing; a
- * lagoon site's is the main axis of its lagoon flow, so it comes from the forecast. Never blocks a report.
+ * The compass heading "incoming" meant for this site when the report was filed. A wall's or strait's comes from its
+ * bearing; a lagoon site's is the main axis of its lagoon flow, so it comes from the forecast. Never blocks a report.
  */
 async function reportAlongHeading(site: Site): Promise<number | null> {
   try {
@@ -178,14 +177,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     siteType: loaded.siteType,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    siteNote:
-      loaded.siteType === "lagoon"
-        ? LAGOON_NOTE
-        : loaded.siteType === "strait-wall"
-          ? STRAIT_NOTE
-          : loaded.forecastRoute === "along-reef"
-            ? ALONG_REEF_NOTE
-            : null,
+    siteNote: siteNoteFor(loaded.siteType, loaded.forecastRoute),
     fetchedAt: loaded.fetchedAt,
   };
 }

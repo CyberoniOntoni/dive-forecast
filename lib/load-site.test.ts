@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadSite, reportTideForSite } from "./load-site";
+import { alongHeadingFor, loadSite, reportTideForSite } from "./load-site";
 import * as Marine from "./marine";
 import type { Atoll, MarineHour, Site } from "./types";
 
@@ -85,6 +85,23 @@ describe("loadSite", () => {
       expect(result.unavailable).toBe(true);
       expect(result.forecastRoute, siteType).toBe(route);
     }
+  });
+
+  it("keeps a strait wall's axis when the marine fetch fails, as when it loads", async () => {
+    const strait: Site = { ...openSite, siteType: "strait-wall" };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValueOnce({ ok: false, unavailable: true });
+    const failed = await loadSite(strait, [strait], atoll, []);
+    vi.mocked(Marine.siteMarineHours).mockResolvedValueOnce({
+      ok: true,
+      hours: syntheticHours,
+      fetchedAt: 1,
+      stale: false,
+    });
+    const ok = await loadSite(strait, [strait], atoll, []);
+    expect(ok.forecastRoute).toBe("strait");
+    expect(failed.alongHeadingDeg).not.toBeNull();
+    expect(failed.alongHeadingDeg).toBe(ok.alongHeadingDeg);
+    expect(failed.alongHeadingDeg).toBe(alongHeadingFor(strait, [strait], atoll));
   });
 
   it("loads unconstricted site with baseline forecast when channel dimensions are missing", async () => {

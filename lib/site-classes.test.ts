@@ -2,7 +2,18 @@ import { describe, expect, it } from "vitest";
 import { resolveBearing } from "./bearing";
 import { nowcastGlance } from "./nowcast-glance";
 import { rimInwardBearing, type RimRing } from "./rim";
-import { crossesRim, deriveSiteType, flowsAlongReef } from "./site-type";
+import {
+  ALONG_REEF_NOTE,
+  LAGOON_NOTE,
+  STRAIT_NOTE,
+  alongReefHeading,
+  crossesRim,
+  deriveSiteType,
+  flowsAlongReef,
+  siteNoteFor,
+  siteRoute,
+  straitHeading,
+} from "./site-type";
 import { readCatalog } from "./store";
 import type { Site, SiteType } from "./types";
 
@@ -153,5 +164,39 @@ describe("a curved channel's outgoing arrow", () => {
   it("points out along the channel's own outgoing heading, and in along the inward bearing", () => {
     expect(glance("incoming").arrowBearing).toBe(300);
     expect(glance("outgoing").arrowBearing).toBe(150);
+  });
+});
+
+describe("siteRoute", () => {
+  const catalog = readCatalog();
+
+  it("picks one model per catalog site, as the type and the reef say", () => {
+    for (const site of catalog.sites) {
+      const { route, axisDeg } = siteRoute(site, catalog.sites, 100);
+      if (site.siteType === "strait-wall") {
+        expect({ route, axisDeg }, site.id).toEqual({ route: "strait", axisDeg: straitHeading(100) });
+      } else if (site.siteType === "lagoon") {
+        expect({ route, axisDeg }, site.id).toEqual({ route: "lagoon", axisDeg: null });
+      } else if (flowsAlongReef(site, catalog.sites)) {
+        expect({ route, axisDeg }, site.id).toEqual({ route: "along-reef", axisDeg: alongReefHeading(100) });
+      } else {
+        expect({ route, axisDeg }, site.id).toEqual({ route: "channel", axisDeg: null });
+      }
+    }
+  });
+
+  it("keeps the route but no axis without a bearing", () => {
+    const strait = catalog.sites.find((site) => site.siteType === "strait-wall")!;
+    expect(siteRoute(strait, catalog.sites, null)).toEqual({ route: "strait", axisDeg: null });
+  });
+});
+
+describe("siteNoteFor", () => {
+  it("gives each route its note, and a lagoon site on channel hours the lagoon note", () => {
+    expect(siteNoteFor("strait-wall", "strait")).toBe(STRAIT_NOTE);
+    expect(siteNoteFor("outer-reef", "along-reef")).toBe(ALONG_REEF_NOTE);
+    expect(siteNoteFor("lagoon", "lagoon")).toBe(LAGOON_NOTE);
+    expect(siteNoteFor("lagoon", "channel")).toBe(LAGOON_NOTE);
+    expect(siteNoteFor("pass", "channel")).toBeNull();
   });
 });

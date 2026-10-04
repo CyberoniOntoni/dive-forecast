@@ -1,5 +1,5 @@
 import { RIM_NEAR_KM, pointInRing, rimEdgeKm, type RimRing } from "./rim";
-import type { Site, SiteType } from "./types";
+import type { ForecastRoute, Site, SiteType } from "./types";
 
 export { SITE_TYPES, type SiteType } from "./types";
 
@@ -100,3 +100,45 @@ export const ALONG_REEF_NOTE =
 /** Inside the lagoon the flow comes from the water exchanged through the rim and channels: approximate. */
 export const LAGOON_NOTE =
   "Inside the lagoon: the flow comes from the water moving in and out through the rim and channels. It spreads inward on the flood and back out on the ebb, and the monsoon drift crosses the lagoon. Approximate; thilas near a channel can still run strong.";
+
+/**
+ * Which model a site takes, and the compass axis its "incoming" means where the inward bearing gives one: the strait
+ * axis at a strait wall, the reef heading at a wall whose current runs along the reef. A lagoon site's axis comes from
+ * its flow, not its bearing, and a channel has none. With no bearing the route stands and the axis is null.
+ */
+export function siteRoute(
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
+  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[],
+  bearingDeg: number | null,
+): { route: ForecastRoute; axisDeg: number | null } {
+  if (site.siteType === "strait-wall") {
+    return { route: "strait", axisDeg: bearingDeg == null ? null : straitHeading(bearingDeg) };
+  }
+  if (site.siteType === "lagoon") return { route: "lagoon", axisDeg: null };
+  if (bearingDeg != null && flowsAlongReef(site, mates)) {
+    return { route: "along-reef", axisDeg: alongReefHeading(bearingDeg) };
+  }
+  return { route: "channel", axisDeg: null };
+}
+
+/**
+ * The note for a site, from the route its hours took. A lagoon site whose atoll has no outline or ring yet runs on
+ * channel hours, but it is still inside the lagoon, so it keeps the lagoon note.
+ */
+export function siteNoteFor(siteType: SiteType | null, route: ForecastRoute): string | null {
+  return siteType === "lagoon" ? LAGOON_NOTE : routeNote(route);
+}
+
+/** How far to trust the forecast on a route, or null for a channel. */
+export function routeNote(route: ForecastRoute): string | null {
+  switch (route) {
+    case "strait":
+      return STRAIT_NOTE;
+    case "along-reef":
+      return ALONG_REEF_NOTE;
+    case "lagoon":
+      return LAGOON_NOTE;
+    case "channel":
+      return null;
+  }
+}
