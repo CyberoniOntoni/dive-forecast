@@ -13,7 +13,9 @@ Only the levels are imposed. Forcing the ocean model's current at the edges woul
 a chain of atolls that blocks most of the cross-section. The drift (25-hour vector mean of the east edge's
 current) is written for reference, not used by the solver.
 
-With SIM_CASE=uniform the west edge gets the east edge's levels too (domain.py).
+With SIM_CASE=uniform the west edge gets the east edge's levels too (domain.py). With SIM_CASE=open the north and
+south edges are open as well, forced from the ocean-model cells along them (eta_s, eta_n per lon), so the tidal
+stream along the chain runs through instead of stopping at walls.
 
 Writes sim/out/<case>/forcing.json: {start, lats, hours: [{time, eta_w: [per lat], eta_e: [per lat], u, v}]}
 with time in Maldives wall clock, levels in m, drift u (east) and v (north) in m/s.
@@ -32,6 +34,13 @@ def edge_lats():
     """Ocean-model cell centres from just south of the domain to just north of it."""
     k0 = math.floor(DOMAIN["south"] / CELL_DEG - 0.5)
     k1 = math.ceil(DOMAIN["north"] / CELL_DEG - 0.5)
+    return [round((k + 0.5) * CELL_DEG, 4) for k in range(k0, k1 + 1)]
+
+
+def edge_lons():
+    """Ocean-model cell centres across the domain, from the west edge's column to the east edge's."""
+    k0 = round(EDGE_LON["west"] / CELL_DEG - 0.5)
+    k1 = round(EDGE_LON["east"] / CELL_DEG - 0.5)
     return [round((k + 0.5) * CELL_DEG, 4) for k in range(k0, k1 + 1)]
 
 
@@ -63,13 +72,26 @@ def build():
     times = east[0][0]
     assert all(s[0] == times for s in west + east), "edge points must share hours"
     eta_e = np.array([s[1] for s in east]).T  # (hours, lats)
-    eta_w = np.array([s[1] for s in west]).T if case() == "chain" else eta_e
+    eta_w = eta_e if case() == "uniform" else np.array([s[1] for s in west]).T
     u = np.mean([drift(s[2]) for s in east], axis=0)
     v = np.mean([drift(s[3]) for s in east], axis=0)
     out = {"start": times[0], "case": case(), "lats": lats, "edge_lon": EDGE_LON,
            "hours": [{"time": t, "eta_w": [round(float(x), 4) for x in w], "eta_e": [round(float(x), 4) for x in e],
                       "u": round(float(a), 4), "v": round(float(b), 4)}
                      for t, w, e, a, b in zip(times, eta_w, eta_e, u, v)]}
+    if case() == "open":
+        lons = edge_lons()
+        south = [load(DOMAIN["south"], lon) for lon in lons]
+        north = [load(DOMAIN["north"], lon) for lon in lons]
+        assert all(s[0] == times for s in south + north), "edge points must share hours"
+        eta_s = np.array([s[1] for s in south]).T
+        eta_n = np.array([s[1] for s in north]).T
+        out["lons"] = lons
+        for hour, s_row, n_row in zip(out["hours"], eta_s, eta_n):
+            hour["eta_s"] = [round(float(x), 4) for x in s_row]
+            hour["eta_n"] = [round(float(x), 4) for x in n_row]
+        print(f"north - south {np.min(eta_n.mean(1) - eta_s.mean(1)):+.3f}..{np.max(eta_n.mean(1) - eta_s.mean(1)):+.3f} m"
+              f" across {len(lons)} points a side")
     json.dump(out, open(f"{case_dir()}/forcing.json", "w"))
     head = eta_w - eta_e
     mean_head = head.mean(axis=1)

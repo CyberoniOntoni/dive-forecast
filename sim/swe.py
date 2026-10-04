@@ -6,9 +6,10 @@
 Staggered C-grid on the 200 m cells of grid.py; forward-backward explicit time stepping; first-order upwind
 advection; Manning bottom friction, implicit; upwind total depth in the mass fluxes, so reef flats dry and
 flood without going negative (Stelling & Duinmeijer 2003). Land (islands) is a wall, and so are the north and
-south edges (domain.py). The west and east edges are open: a Flather (radiation) condition, plus a sponge a
-few km wide that holds the level to forcing.py's, the inner sea's on the west and the ocean's on the east, each
-varying along its edge as the ocean model's does (clamped in the outer three columns, relaxed inside them). The deep inner sea and open ocean carry a level
+south edges (domain.py) except in the "open" case. The west and east edges are open (the north and south ones too in
+the "open" case): a Flather (radiation) condition, plus a sponge a few km wide that holds the level to forcing.py's,
+the inner sea's on the west and the ocean's on the east, each varying along its edge as the ocean model's does
+(clamped in the outer three cells, relaxed inside them). The deep inner sea and open ocean carry a level
 across the 10-20 km between the edge and the reefs with almost no loss, so the head drops where it should: across
 the atolls and the gaps between them.
 Nothing else is imposed: every current inside comes from those two levels, the depths and friction. The sea floor is capped at 400 m (grid.py) to keep the time step near 1.5 s.
@@ -54,7 +55,7 @@ TAB_DT_S = 600.0  # the edge levels are tabulated every 10 minutes and interpola
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, east_w):
+def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, eta_s, eta_n, open_ns):
     ny, nx = eta.shape
     for i0 in prange(ny):
         i = np.int64(i0)
@@ -67,7 +68,7 @@ def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, east_w):
                     continue
                 H = max(hc + eta[c], H_DRY)
                 sgn = -1.0 if j == 0 else 1.0
-                ext = eta_w[i] + east_w[c] * (eta_e[i] - eta_w[i])
+                ext = eta_w[i] if j == 0 else eta_e[i]
                 un[i, j] = sgn * math.sqrt(G / H) * (eta[c] - ext)
                 continue
             hl = h[i, j - 1]
@@ -103,7 +104,15 @@ def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, east_w):
         i = np.int64(i0)
         for j in range(nx):
             if i == 0 or i == ny:
-                vn[i, j] = 0.0
+                c = (0 if i == 0 else ny - 1), j
+                hc = h[c]
+                if not open_ns or hc < 0:
+                    vn[i, j] = 0.0
+                    continue
+                H = max(hc + eta[c], H_DRY)
+                sgn = -1.0 if i == 0 else 1.0
+                ext = eta_s[j] if i == 0 else eta_n[j]
+                vn[i, j] = sgn * math.sqrt(G / H) * (eta[c] - ext)
                 continue
             hs = h[i - 1, j]
             hn = h[i, j]
@@ -137,7 +146,7 @@ def momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, eta_w, eta_e, east_w):
 
 
 @njit(parallel=True, fastmath=True, cache=True)
-def continuity(eta, u, v, h, sponge, dt, dx, eta_w, eta_e, east_w, relax):
+def continuity(eta, u, v, h, sponge, dt, dx, eta_w, eta_e, eta_s, eta_n, edge, relax):
     ny, nx = eta.shape
     for i0 in prange(ny):
         i = np.int64(i0)
@@ -158,7 +167,9 @@ def continuity(eta, u, v, h, sponge, dt, dx, eta_w, eta_e, east_w, relax):
         for j in range(nx):
             w = sponge[i, j] * relax
             if w > 0:
-                eta[i, j] += w * (eta_w[i] + east_w[i, j] * (eta_e[i] - eta_w[i]) - eta[i, j])
+                k = edge[i, j]
+                target = eta_w[i] if k == 0 else (eta_e[i] if k == 1 else (eta_s[j] if k == 2 else eta_n[j]))
+                eta[i, j] += w * (target - eta[i, j])
 
 
 @njit(inline="always")
@@ -192,7 +203,8 @@ def flux_y(eta, v, h, i, j):
 
 
 @njit(cache=True)
-def run_steps(eta, u, v, h, n2, sponge, east_w, un, vn, t0, nsteps, dt, dx, f, nu, tab_t0, tab_dt, tab_w, tab_e):
+def run_steps(eta, u, v, h, n2, sponge, edge, open_ns, un, vn, t0, nsteps, dt, dx, f, nu, tab_t0, tab_dt,
+              tab_w, tab_e, tab_s, tab_n):
     t = t0
     for _ in range(nsteps):
         k = (t - tab_t0) / tab_dt
@@ -200,23 +212,29 @@ def run_steps(eta, u, v, h, n2, sponge, east_w, un, vn, t0, nsteps, dt, dx, f, n
         a = min(max(k - k0, 0.0), 1.0)
         e_w = tab_w[k0] * (1 - a) + tab_w[k0 + 1] * a
         e_e = tab_e[k0] * (1 - a) + tab_e[k0 + 1] * a
-        momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, e_w, e_e, east_w)
+        e_s = tab_s[k0] * (1 - a) + tab_s[k0 + 1] * a
+        e_n = tab_n[k0] * (1 - a) + tab_n[k0 + 1] * a
+        momentum(eta, u, v, h, n2, un, vn, dt, dx, f, nu, e_w, e_e, e_s, e_n, open_ns)
         u, un = un, u
         v, vn = vn, v
-        continuity(eta, u, v, h, sponge, dt, dx, e_w, e_e, east_w, dt / SPONGE_TAU_S)
+        continuity(eta, u, v, h, sponge, dt, dx, e_w, e_e, e_s, e_n, edge, dt / SPONGE_TAU_S)
         t += dt
     return t, u, v, un, vn
 
 
-def sponge_weights(h):
+def sponge_weights(h, open_ns):
+    """Relaxation weight of each cell toward its nearest open edge's level, and which edge that is (0 west, 1 east,
+    2 south, 3 north)."""
     ny, nx = h.shape
-    i = np.arange(ny)[:, None]
-    j = np.arange(nx)[None, :]
-    d = np.minimum(j, nx - 1 - j) + 0 * i
-    # The outer CLAMP_CELLS columns hold the ocean's level outright (relax = 1 per step); inside them the pull
+    i = np.arange(ny)[:, None] + 0 * np.arange(nx)[None, :]
+    j = 0 * np.arange(ny)[:, None] + np.arange(nx)[None, :]
+    dists = [j, nx - 1 - j] + ([i, ny - 1 - i] if open_ns else [])
+    edge = np.argmin(np.stack(dists), axis=0).astype(np.int64)
+    d = np.min(np.stack(dists), axis=0)
+    # The outer CLAMP_CELLS cells hold the ocean's level outright (relax = 1 per step); inside them the pull
     # fades over the sponge.
     w = np.where(d < CLAMP_CELLS, SPONGE_TAU_S / DT, np.clip(1 - (d - CLAMP_CELLS) / SPONGE_CELLS, 0, 1) ** 2)
-    return np.where(h > SPONGE_MIN_DEPTH, w, 0.0)
+    return np.where(h > SPONGE_MIN_DEPTH, w, 0.0), edge
 
 
 def domain_sites():
@@ -278,9 +296,22 @@ def main(hours=None):
 
     tab_w = table("eta_w")
     tab_e = table("eta_e")
-    east_w = np.repeat((np.arange(nx) >= nx // 2).astype(np.float64)[None, :], ny, axis=0)
+    # North and south edges: open in the "open" case, forced from the ocean-model cells along them (in longitude).
+    open_ns = "eta_s" in fh[0]
+    if open_ns:
+        col_lon = np.array([lonlat_of(0, j)[0] for j in range(nx)])
+        lons = np.array(forcing["lons"])
 
-    sponge = sponge_weights(h)
+        def table_ns(key):
+            at_lons = CubicSpline(th, np.array([x[key] for x in fh]), axis=0)(tab_t)
+            return np.ascontiguousarray(np.array([np.interp(col_lon, lons, row) for row in at_lons]))
+
+        tab_s = table_ns("eta_s")
+        tab_n = table_ns("eta_n")
+    else:
+        tab_s = tab_n = np.zeros((len(tab_t), nx))
+
+    sponge, edge = sponge_weights(h, open_ns)
     sites = domain_sites()
     cells = site_cells(h, sites)
     ci = np.array([c[0] for c in cells])
@@ -341,8 +372,8 @@ def main(hours=None):
         record(0, u, v)
     wall = time.time()
     for k in range(k_done + 1, nsamples):
-        t, u, v, un, vn = run_steps(eta, u, v, h, n2, sponge, east_w, un, vn, t, steps_per_sample, DT, dx, f, NU,
-                                    0.0, TAB_DT_S, tab_w, tab_e)
+        t, u, v, un, vn = run_steps(eta, u, v, h, n2, sponge, edge, open_ns, un, vn, t, steps_per_sample, DT, dx, f,
+                                    NU, 0.0, TAB_DT_S, tab_w, tab_e, tab_s, tab_n)
         record(k, u, v)
         if not np.isfinite(eta).all():
             raise SystemExit(f"blew up at t = {t / 3600:.2f} h")

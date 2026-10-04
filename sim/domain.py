@@ -2,7 +2,7 @@
 
 North Malé and South Malé, Vaadhoo Kandu between them, the gap to Gaafaru north of North Malé and the gap to
 Vaavu south of South Malé. The west edge is in the inner sea, the east edge in the open ocean; both are open.
-The north and south edges are walls drawn through Gaafaru and Vaavu, so the head the ocean model has between
+The north and south edges are walls drawn through Gaafaru and Vaavu (open in the "open" case), so the head the ocean model has between
 the inner sea and the open ocean drops across the atolls and the gaps between them, as it does along the chain,
 instead of short-circuiting round the domain's ends.
 """
@@ -34,8 +34,9 @@ EDGE_LON = {"west": 73.2083, "east": 73.7917}
 # Forcing cases (forcing.py): "chain" drives the west and east edges with their own ocean-model levels, so the
 # tide's head across the chain of atolls drives water through them; "uniform" gives both edges the east level,
 # leaving only the rise and fall of the tide. SIM_CASE picks one; each case's files go to sim/out/<case>/.
-# "calib" is a steady head with no tide, for drift_calibrate.py.
-CASES = ("chain", "uniform", "calib")
+# "open" is "chain" with the north and south edges open too, forced from the ocean-model cells along them, so the
+# tidal stream along the chain runs through the domain. "calib" is a steady head with no tide, for drift_calibrate.py.
+CASES = ("chain", "uniform", "open", "calib")
 
 
 def case():
