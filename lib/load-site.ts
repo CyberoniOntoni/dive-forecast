@@ -16,6 +16,7 @@ import {
 import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
 import { alongReefHeading, crossesRim, flowsAlongReef, straitHeading } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
+import { seawardKmFor } from "./seaward-floor";
 import type { Atoll, BearingSource, HourForecast, MarineHour, Report, RingLevel, Site, SiteType } from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
@@ -102,7 +103,10 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
     const fetched = await Promise.all(
       channels.map(async (channel) => {
         const { deg } = resolveBearing(channel, mates, outside, rim);
-        const marine = await siteMarineHours(channel.lat, channel.lon, deg, outside.lat, outside.lon, options);
+        const marine = await siteMarineHours(channel.lat, channel.lon, deg, outside.lat, outside.lon, {
+          ...options,
+          seawardKm: seawardKmFor(channel.id),
+        });
         return marine.ok ? channelSource(channel, marine.hours, deg, ring.level) : null;
       }),
     );
@@ -185,7 +189,10 @@ async function checkedMarine(
 
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const { deg: bearing, source: bearingSource } = resolveBearing(site, mates, outside, rimForAtoll(atoll));
-  const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon, options);
+  const marine = await siteMarineHours(site.lat, site.lon, bearing, outside.lat, outside.lon, {
+    ...options,
+    seawardKm: seawardKmFor(site.id),
+  });
   if (!marine.ok) return { ok: false, bearing, bearingSource };
 
   return {

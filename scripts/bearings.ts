@@ -1,5 +1,6 @@
 import { resolveBearing } from "../lib/bearing";
 import { seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { readCatalog } from "../lib/store";
 
@@ -17,7 +18,7 @@ function main(): void {
     }
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     const { deg, source } = resolveBearing(site, catalog.sites, outside, rimForAtoll(atoll));
-    const point = seawardPoint(site.lat, site.lon, deg);
+    const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
     const at = `${point.lat.toFixed(4)}, ${point.lon.toFixed(4)}`;
     console.log(site.id.padEnd(28), source.padEnd(12), deg.toFixed(0).padStart(4), "   ", at);
   }

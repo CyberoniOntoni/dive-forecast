@@ -3,6 +3,7 @@ import path from "path";
 import { atollForPin, resolveBearing } from "../lib/bearing";
 import { atollForGuideCode, matchGuideSite, parseDepthRange, siteIdFor } from "../lib/dive-guide";
 import { seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { pointInRing, rimForAtoll } from "../lib/rim";
 import { deriveSiteType, SITE_TYPE_LABEL } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
@@ -97,7 +98,7 @@ function propose(atollCode: string, separate: ReadonlySet<string>): void {
     const atoll = catalog.atolls.find((entry) => entry.id === item.site!.atollId)!;
     const ring = rimForAtoll(atoll);
     const { deg, source } = resolveBearing(item.site, mates, { lat: atoll.oceanLat, lon: atoll.oceanLon }, ring);
-    const sample = seawardPoint(item.site.lat, item.site.lon, deg);
+    const sample = seawardPoint(item.site.lat, item.site.lon, deg, seawardKmFor(item.site.id));
     item.bearing = { deg: Math.round(deg), source, sampleInOcean: ring ? !pointInRing(sample.lat, sample.lon, ring) : null };
   }
 

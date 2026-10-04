@@ -2,6 +2,7 @@ import { ringLevelFromSeries, ringSamples, type AtollRing } from "../lib/atoll-r
 import { resolveBearing } from "../lib/bearing";
 import { CHANNEL_WEIGHT_KM, channelSource, LAGOON_BANDS, lagoonSink, lagoonVelocity, mainAxisDeg, rimSources, type LagoonSink, type LagoonSource } from "../lib/lagoon-flow";
 import { seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { crossesRim } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
@@ -66,7 +67,7 @@ async function loadAtolls(): Promise<Atoll[]> {
       await limited(
         across.map((site) => async () => {
           const { deg } = resolveBearing(site, catalog.sites, outside, rim);
-          const point = seawardPoint(site.lat, site.lon, deg);
+          const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
           const hours = await longSeries(point.lat, point.lon);
           return hours ? { site, bearing: deg, hours } : null;
         }),

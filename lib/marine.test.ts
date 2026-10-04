@@ -88,6 +88,14 @@ describe("seaward current", () => {
     expect(distanceKm(lat, lon, south.lat, south.lon)).toBeCloseTo(3, 2);
   });
 
+  it("can sample further out when the 3 km cell is not open water", () => {
+    const lat = 3.9;
+    const lon = 73.5;
+    const further = seawardPoint(lat, lon, 90, 9);
+    expect(further.lon).toBeLessThan(lon);
+    expect(distanceKm(lat, lon, further.lat, further.lon)).toBeCloseTo(9, 2);
+  });
+
   it("uses seaward sea level when that series exists, and the atoll series when the seaward fetch is missing or stale", async () => {
     const lat = 0.1234;
     const lon = 10.5678;

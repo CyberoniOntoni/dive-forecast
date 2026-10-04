@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/14`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/15`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -10,7 +10,7 @@ For every point it needs, the app fetches hourly **sea level** and **ocean curre
 
 - **Window:** one past day and seven forecast days. The last 12 hours have no 25-hour mean, so the slider shows about six and a half days ahead.
 - **Cache:** `data/marine-cache/`, one file per point, keyed by coordinates. A cached series is served at once. If it is older than 6 hours, a refresh runs in the background. A failed fetch keeps the old series, and the page shows its age. At most 4 requests run at once, and the map never waits for a point it has not fetched yet (`{ wait: false }`).
-- **Where a site samples:** 3 km seaward of the pin, opposite its inward bearing (`seawardPoint`). The 8 km grid cannot see a channel, so the point is in open water outside it.
+- **Where a site samples:** seaward of the pin, opposite its inward bearing (`seawardPoint`). The usual distance is 3 km. GEBCO 2026 (`data/seaward-floor.json`) checks the cell under that point. Open water is an elevation of −50 m or deeper. A shallower cell, including land, steps out to the first open cell at 6, 9, 12, or 15 km. If none of those is open, the sample stays at 3 km. The 15-arc-second grid is not a channel cross-section. Its type-identifier value is stored so a gravity-predicted cell is not later treated as a sounding. Ring points stay at 3 km outside the outline. The 8 km ocean grid cannot see a channel, so the point has to be in open water outside it.
 - **Ring points:** for each atoll, 12 points spaced evenly round its outline (`data/rims.json`, from OpenStreetMap), each 3 km outside it (`lib/atoll-ring.ts`). Their mean level stands for the lagoon level.
 
 **Residual sea level** is the level less its 25-hour mean (`residualLevels`). The mean removes the daily average and the slow non-tidal changes, and leaves the tide. A **slope** is the change in residual over the next hour, in metres per hour. It is a forward difference on purpose: centred differences scored worse on the benchmark.
@@ -63,7 +63,7 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
 
 1. **The day's envelope.** It comes from the residual range over the 25 hours around the hour, plus the range a tide would need to give the extra slope that through-flow and head add (`extra slope × 12.42 / π`). This is multiplied by the channel's constriction factor:
    - The factor is `(31,500 m² / (width × depth))^0.35`, held between 1.0 and 2.5.
-   - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A missing or non-positive width or depth leaves the factor at 1.
+   - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A GEBCO cell is not a section either. A missing or non-positive width or depth leaves the factor at 1.
    - Atoll lagoon means (`lagoonMeanDepthM` on South Malé, Vaavu, and Addu) are catalog data. They are not a model input.
    - 31,500 m² is the median of the measured dive-site channels.
    - The envelope bands (`RANGE_BANDS_M`) on that effective range are:
