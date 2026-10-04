@@ -27,6 +27,10 @@ export type Atoll = {
   oceanLon: number;
   /** Published OSM outline the ocean sample was offset from. */
   rimSourceUrl: string;
+  /** Published lagoon mean depth, metres. Catalog data; not read by constriction, head, or the lagoon flow. */
+  lagoonMeanDepthM?: number;
+  /** Source for the published lagoon mean depth. */
+  lagoonDepthSourceUrl?: string;
 };
 
 export type Site = {

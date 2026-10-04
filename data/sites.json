@@ -19,7 +19,9 @@
       "name": "South Male Atoll",
       "oceanLat": 4.06137,
       "oceanLon": 73.57458,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807056"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807056",
+      "lagoonMeanDepthM": 50,
+      "lagoonDepthSourceUrl": "https://www.sciencedirect.com/science/article/abs/pii/S0025322715000948"
     },
     {
       "id": "north-ari",
@@ -47,7 +49,9 @@
       "name": "Vaavu Atoll",
       "oceanLat": 3.44584,
       "oceanLon": 73.80908,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807115"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807115",
+      "lagoonMeanDepthM": 73,
+      "lagoonDepthSourceUrl": "https://en.wikipedia.org/wiki/Atolls_of_the_Maldives"
     },
     {
       "id": "lhaviyani",
@@ -103,7 +107,9 @@
       "name": "Addu Atoll",
       "oceanLat": -0.6412,
       "oceanLon": 73.3011,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807083"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807083",
+      "lagoonMeanDepthM": 44.8,
+      "lagoonDepthSourceUrl": "https://archive.org/stream/scientificreport1193john/scientificreport1193john_djvu.txt"
     }
   ],
   "sites": [
