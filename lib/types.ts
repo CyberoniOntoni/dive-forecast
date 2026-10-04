@@ -33,6 +33,20 @@ export type Atoll = {
   lagoonDepthSourceUrl?: string;
 };
 
+/**
+ * A published channel size that is not a usable section.
+ * basis "position": the source names a channel the site was matched to by location, not by name.
+ * "depth-only": no width. "conflict": a second source disagrees with the stored section.
+ */
+export type ChannelLead = {
+  widthM?: number;
+  depthM?: number;
+  /** What the source's depth is: a mean, a typical floor, a maximum, a least depth over a sill, or a range's deep end. */
+  depthKind?: "mean" | "typical" | "max" | "least" | "range";
+  basis: "position" | "depth-only" | "conflict";
+  sourceUrl: string;
+};
+
 export type Site = {
   id: string;
   name: string;
@@ -59,6 +73,8 @@ export type Site = {
   atlasWidthM?: number;
   /** "checked": the gap was confirmed on the Atlas satellite mosaic. "low": it crosses the channel at a slant or a broken reef edge. */
   atlasWidthConfidence?: "checked" | "low";
+  /** Published channel sizes too weak for a section. Catalog data: the constriction factor never reads them. */
+  channelLeads?: ChannelLead[];
   /**
    * Measured inward channel axis, degrees clockwise from north: the heading of water entering the lagoon.
    * When set it replaces the mate-centroid / outside-point heuristic.

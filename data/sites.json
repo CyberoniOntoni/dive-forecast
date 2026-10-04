@@ -179,6 +179,14 @@
       "diveTopM": 15,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.liveaboard.com/diving/maldives/rasdhoo-atoll",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "typical",
+          "basis": "depth-only",
+          "sourceUrl": "https://sharkrayareas.org/portfolio-item/eastern-rasdhoo-atoll-isra/"
+        }
+      ],
       "siteType": "outer-reef",
       "siteTypeSource": "manual"
     },
@@ -206,6 +214,14 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "max",
+          "basis": "depth-only",
+          "sourceUrl": "https://www.diveplanit.com/dive-site/miyaru-kandu/"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -508,6 +524,14 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "typical",
+          "basis": "depth-only",
+          "sourceUrl": "https://www.padi.com/dive-site/maldives/medhu-kandu/"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -696,6 +720,14 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 860,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "depthM": 40,
+          "depthKind": "least",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1040,6 +1072,21 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 1482,
+          "depthM": 40,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+        },
+        {
+          "depthM": 54,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1105,6 +1152,21 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 1482,
+          "depthM": 40,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+        },
+        {
+          "depthM": 29,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1118,6 +1180,28 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 1482,
+          "depthM": 40,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+        },
+        {
+          "widthM": 2315,
+          "depthM": 50,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://port.mv/business/ports_and_terminals/mch/"
+        },
+        {
+          "depthM": 29,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1217,6 +1301,29 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1440,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "widthM": 741,
+          "depthM": 35,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://www.sea-seek.com/en/Male-commercial-harbour-Kaafu-"
+        },
+        {
+          "widthM": 1000,
+          "depthM": 60,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://www.slideshare.net/slideshow/maldives-male-hulhule-bridge-feasibility-report-august-2011-final/40751000"
+        },
+        {
+          "widthM": 1200,
+          "depthM": 37,
+          "depthKind": "typical",
+          "basis": "position",
+          "sourceUrl": "https://www.hassanhameed.com/engineering/male-hulhule-bridge/"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1230,6 +1337,15 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1243,6 +1359,15 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1256,6 +1381,15 @@
       "diveTopM": 3,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1356,6 +1490,14 @@
       "diveTopM": 8,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "max",
+          "basis": "depth-only",
+          "sourceUrl": "https://sharkrayareas.org/portfolio-item/bodu-hithi-kandu-isra/"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1570,6 +1712,15 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1611,6 +1762,15 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1624,6 +1784,15 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 5000,
+          "depthM": 400,
+          "depthKind": "max",
+          "basis": "position",
+          "sourceUrl": "https://os.copernicus.org/articles/17/319/2021/"
+        }
+      ],
       "siteType": "strait-wall",
       "siteTypeSource": "manual"
     },
@@ -1728,6 +1897,14 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 220,
       "atlasWidthConfidence": "low",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "max",
+          "basis": "depth-only",
+          "sourceUrl": "https://sharkrayareas.org/portfolio-item/guraidhoo-kandu-isra/"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -1770,6 +1947,20 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 770,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "typical",
+          "basis": "depth-only",
+          "sourceUrl": "https://www.padi.com/dive-site/maldives/guraidhoo-corner/"
+        },
+        {
+          "depthM": 40,
+          "depthKind": "range",
+          "basis": "depth-only",
+          "sourceUrl": "https://sharkrayareas.org/portfolio-item/guraidhoo-kandu-isra/"
+        }
+      ],
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -1796,6 +1987,15 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "widthM": 926,
+          "depthM": 37,
+          "depthKind": "least",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1848,6 +2048,15 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 750,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "widthM": 926,
+          "depthM": 37,
+          "depthKind": "least",
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1991,6 +2200,13 @@
       "channelWidthM": 500,
       "channelDepthM": 25,
       "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/gangehi-falhu-kandu-isra/",
+      "channelLeads": [
+        {
+          "widthM": 200,
+          "basis": "conflict",
+          "sourceUrl": "https://www.duikersgids.nl/en/dive-spots/gangehi-kandu"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3429,6 +3645,14 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "channelLeads": [
+        {
+          "depthM": 30,
+          "depthKind": "max",
+          "basis": "depth-only",
+          "sourceUrl": "https://www.diveplanit.com/dive-site/vanhuravalhi-kandu/"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3457,6 +3681,13 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1230,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "widthM": 1111,
+          "basis": "position",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3564,6 +3795,14 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1100,
       "atlasWidthConfidence": "checked",
+      "channelLeads": [
+        {
+          "depthM": 55,
+          "depthKind": "typical",
+          "basis": "depth-only",
+          "sourceUrl": "https://permanent.access.gpo.gov/websites/pollux/pollux.nss.nima.mil/NAV_PUBS/SD/pub173/173sec05.pdf"
+        }
+      ],
       "siteType": "pass",
       "siteTypeSource": "derived"
     },

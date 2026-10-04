@@ -34,6 +34,18 @@ describe("catalog depths", () => {
     }
   });
 
+  it("gives every channel lead a positive size, a basis and an http source", () => {
+    for (const site of catalog.sites) {
+      for (const lead of site.channelLeads ?? []) {
+        expect(lead.widthM ?? lead.depthM).toBeGreaterThan(0);
+        if (lead.widthM != null) expect(lead.widthM).toBeGreaterThan(0);
+        if (lead.depthM != null) expect(lead.depthM).toBeGreaterThan(0);
+        if (lead.basis === "depth-only") expect(lead.widthM).toBeUndefined();
+        expect(lead.sourceUrl).toMatch(/^https?:\/\//);
+      }
+    }
+  });
+
   it("leaves an unsized channel unconstricted", () => {
     expect(constrictionFactor(undefined, undefined)).toBe(1);
   });
