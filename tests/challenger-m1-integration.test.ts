@@ -203,19 +203,29 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
   });
 
   describe("3. Constricted Pass vs Open Lagoon Sites Under Identical Marine Conditions", () => {
-    it("amplifies current strength in constricted passes (Devana Kandu, Miyaru Kandu) over open sites during peak tidal flow", async () => {
-      // Sizes set here, not read from the catalog: these two Vaavu passes have no published section.
-      const devana = { ...sites.find((s) => s.id === "devana-kandu")!, channelWidthM: 500, channelDepthM: 30 };
-      const miyaru = { ...sites.find((s) => s.id === "miyaru-kandu")!, channelWidthM: 700, channelDepthM: 40 };
+    it("amplifies current strength in a constricted pass over open sites during peak tidal flow", async () => {
+      // Synthetic passes on two Vaavu pass positions. The sizes are made up for the test; no catalog site has them.
+      const narrowPass = {
+        ...sites.find((s) => s.id === "devana-kandu")!,
+        id: "synthetic-narrow-pass",
+        channelWidthM: 300,
+        channelDepthM: 20,
+        channelDepthKind: "typical" as const,
+      };
+      const widePass = {
+        ...sites.find((s) => s.id === "miyaru-kandu")!,
+        id: "synthetic-wide-pass",
+        channelWidthM: 1000,
+        channelDepthM: 40,
+        channelDepthKind: "typical" as const,
+      };
       const openLagoon = sites.find((s) => s.id === "alimatha-house-reef")!;
 
-      expect(devana).toBeDefined();
-      expect(miyaru).toBeDefined();
       expect(openLagoon).toBeDefined();
-      expect(devana.atollId).toBe(openLagoon.atollId); // Both in Vaavu Atoll!
-      expect(miyaru.atollId).toBe(openLagoon.atollId); // All in Vaavu Atoll!
+      expect(narrowPass.atollId).toBe(openLagoon.atollId); // Both in Vaavu Atoll!
+      expect(widePass.atollId).toBe(openLagoon.atollId); // All in Vaavu Atoll!
 
-      const atoll = atollMap.get(devana.atollId)!;
+      const atoll = atollMap.get(narrowPass.atollId)!;
 
       const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
         ok: true,
@@ -224,8 +234,8 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         stale: false,
       });
 
-      const devanaLoad = await loadSite(devana, sites, atoll, []);
-      const miyaruLoad = await loadSite(miyaru, sites, atoll, []);
+      const narrowLoad = await loadSite(narrowPass, sites, atoll, []);
+      const wideLoad = await loadSite(widePass, sites, atoll, []);
       const openLoad = await loadSite(openLagoon, sites, atoll, []);
 
       spy.mockRestore();
@@ -235,20 +245,20 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       // Each hour has its own band, so compare the strongest hour of the series at each site.
       const peakOf = (load: SiteLoad) =>
         load.hours.reduce((best, h) => (STRENGTH_ORDER[h.strength] > STRENGTH_ORDER[best.strength] ? h : best));
-      const peakDevana = peakOf(devanaLoad);
-      const peakMiyaru = peakOf(miyaruLoad);
+      const peakNarrow = peakOf(narrowLoad);
+      const peakWide = peakOf(wideLoad);
       const peakOpen = peakOf(openLoad);
 
       // Open lagoon peak flow is 'mild'
       expect(peakOpen.strength).toBe("mild");
 
-      // Devana Kandu (500 m x 30 m) is the narrowest pass and is amplified above the open site.
-      expect(["strong", "too_strong"]).toContain(peakDevana.strength);
-      expect(STRENGTH_ORDER[peakDevana.strength]).toBeGreaterThan(STRENGTH_ORDER[peakOpen.strength]);
+      // 300 m x 20 m is well under the reference area and is amplified above the open site.
+      expect(["strong", "too_strong"]).toContain(peakNarrow.strength);
+      expect(STRENGTH_ORDER[peakNarrow.strength]).toBeGreaterThan(STRENGTH_ORDER[peakOpen.strength]);
 
-      // Miyaru Kandu (700 m x 40 m) is close to a typical pass: never weaker than the open site, never stronger than Devana.
-      expect(STRENGTH_ORDER[peakMiyaru.strength]).toBeGreaterThanOrEqual(STRENGTH_ORDER[peakOpen.strength]);
-      expect(STRENGTH_ORDER[peakMiyaru.strength]).toBeLessThanOrEqual(STRENGTH_ORDER[peakDevana.strength]);
+      // 1000 m x 40 m is over the reference area: never weaker than the open site, never stronger than the narrow pass.
+      expect(STRENGTH_ORDER[peakWide.strength]).toBeGreaterThanOrEqual(STRENGTH_ORDER[peakOpen.strength]);
+      expect(STRENGTH_ORDER[peakWide.strength]).toBeLessThanOrEqual(STRENGTH_ORDER[peakNarrow.strength]);
     });
 
     it("strictly preserves slack hours at tidal crests between constricted pass and open lagoon", async () => {

@@ -1,11 +1,13 @@
 import {
   STRENGTHS,
+  type DepthKind,
   type Direction,
   type ForecastInput,
   type HourForecast,
   type MarineHour,
   type Report,
   type RingLevel,
+  type Site,
   type Strength,
 } from "./types";
 
@@ -79,6 +81,20 @@ export function reportTemporalWeight(reportTime: string, referenceTimeMs: number
   if (!Number.isFinite(referenceTimeMs)) return 1.0;
   const deltaMs = Math.max(0, referenceTimeMs - reportMs);
   return Math.pow(2, -deltaMs / REPORT_HALF_LIFE_MS);
+}
+
+/** A mean or typical floor is the channel's hydraulic depth. A maximum, a least depth, a range or a sounding is not. */
+export const HYDRAULIC_DEPTH_KINDS: readonly DepthKind[] = ["mean", "typical"];
+
+/**
+ * The section a site hands the constriction factor. Its depth goes in only when it is a hydraulic depth,
+ * so a stated maximum never sizes a channel. Without one the factor is 1.
+ */
+export function sectionInput(
+  site: Pick<Site, "channelWidthM" | "channelDepthM" | "channelDepthKind">,
+): { channelWidthM?: number; channelDepthM?: number } {
+  if (site.channelDepthKind == null || !HYDRAULIC_DEPTH_KINDS.includes(site.channelDepthKind)) return {};
+  return { channelWidthM: site.channelWidthM, channelDepthM: site.channelDepthM };
 }
 
 export function constrictionFactor(channelWidthM?: number, channelDepthM?: number): number {

@@ -41,6 +41,7 @@ describe("loadSite", () => {
     sourceUrl: "https://example.com/kandu",
     channelWidthM: 300,
     channelDepthM: 20,
+    channelDepthKind: "typical",
   };
 
   const syntheticHours: MarineHour[] = Array.from({ length: 72 }, (_, i) => ({
@@ -106,6 +107,18 @@ describe("loadSite", () => {
     // The steepest rising hour of the sine tide (it crosses zero at 00:00) is amplified to 'strong' or 'too_strong'
     const peakHour = result.hours.find((h) => h.time.startsWith("2026-09-24T00:00"));
     expect(["strong", "too_strong"]).toContain(peakHour?.strength);
+  });
+
+  it("does not size the channel from a stated maximum depth", async () => {
+    const fetched = { ok: true as const, hours: syntheticHours, fetchedAt: 1234567890, stale: false };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue(fetched);
+    const typical = await loadSite(constrictedSite, [constrictedSite], atoll, []);
+    const maximum = await loadSite({ ...constrictedSite, channelDepthKind: "max" }, [constrictedSite], atoll, []);
+    const unsized = await loadSite({ ...constrictedSite, channelWidthM: undefined, channelDepthM: undefined }, [constrictedSite], atoll, []);
+    vi.mocked(Marine.siteMarineHours).mockReset();
+
+    expect(maximum.hours.map((hour) => hour.strength)).toEqual(unsized.hours.map((hour) => hour.strength));
+    expect(maximum.hours.map((hour) => hour.strength)).not.toEqual(typical.hours.map((hour) => hour.strength));
   });
 
   it("never gives a lagoon site high confidence, where the same reports make a pass site high", async () => {

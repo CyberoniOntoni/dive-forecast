@@ -34,18 +34,20 @@ export type Atoll = {
 };
 
 /**
- * A published channel size that is not a usable section.
- * basis "position": the source names a channel the site was matched to by location, not by name.
- * "depth-only": no width. "conflict": a second source disagrees with the stored section.
+ * What a published depth is: a mean, a typical floor, a maximum, a least depth over a sill, the deep end of a range,
+ * or a single sounding. Only a mean or a typical floor is the channel's hydraulic depth (HYDRAULIC_DEPTH_KINDS).
  */
-export type ChannelLead = {
-  widthM?: number;
-  depthM?: number;
-  /** What the source's depth is: a mean, a typical floor, a maximum, a least depth over a sill, or a range's deep end. */
-  depthKind?: "mean" | "typical" | "max" | "least" | "range";
-  basis: "position" | "depth-only" | "conflict";
-  sourceUrl: string;
-};
+export type DepthKind = "mean" | "typical" | "max" | "least" | "range" | "sounding";
+
+/**
+ * Why a channel record is not this site's section.
+ * "position": the source names a channel the site was matched to by location, not by name.
+ * "depth-only": the record has no width. "conflict": it disagrees with the site's stored section.
+ */
+export type ChannelLeadBasis = "position" | "depth-only" | "conflict";
+
+/** A site's pointer at a Catalog.channels record. The constriction factor never reads it. */
+export type ChannelLead = { channel: string; basis: ChannelLeadBasis };
 
 export type Site = {
   id: string;
@@ -64,6 +66,8 @@ export type Site = {
   channelWidthM?: number;
   /** Published channel depth, metres. Used for hydrodynamic pass constriction modeling. */
   channelDepthM?: number;
+  /** What channelDepthM is. Only a hydraulic kind enters the constriction factor (sectionInput). */
+  channelDepthKind?: DepthKind;
   /** Source for the published channel width and depth. */
   channelSourceUrl?: string;
   /**
@@ -73,7 +77,7 @@ export type Site = {
   atlasWidthM?: number;
   /** "checked": the gap was confirmed on the Atlas satellite mosaic. "low": it crosses the channel at a slant or a broken reef edge. */
   atlasWidthConfidence?: "checked" | "low";
-  /** Published channel sizes too weak for a section. Catalog data: the constriction factor never reads them. */
+  /** Channel records that bear on this site but are not its section. Catalog data: the factor never reads them. */
   channelLeads?: ChannelLead[];
   /**
    * Measured inward channel axis, degrees clockwise from north: the heading of water entering the lagoon.
@@ -222,11 +226,17 @@ export type SiteForecast = {
   fetchedAt: number | null;
 };
 
-export type ChannelMeasurement = {
+/** One source's statement about one named channel. Several records can describe the same channel. */
+export type ChannelRecord = {
+  id: string;
+  /** The channel as the source names it. */
   name: string;
-  channelWidthM: number;
-  channelDepthM: number;
-  channelSourceUrl?: string;
+  widthM?: number;
+  depthM?: number;
+  /** Set whenever depthM is. */
+  depthKind?: DepthKind;
+  sourceUrl: string;
+  /** The work the source itself cites, when it is a secondary source. */
   citedSource?: string;
 };
 
@@ -240,7 +250,7 @@ export type InnerSeaBathymetry = {
 export type Catalog = {
   atolls: Atoll[];
   sites: Site[];
-  channels?: ChannelMeasurement[];
+  channels?: ChannelRecord[];
   innerSea?: InnerSeaBathymetry;
 };
 

@@ -11,6 +11,7 @@ import {
   residualLevels,
   residualRangeAt,
   residualSlopeWindow,
+  sectionInput,
   throughflowAt,
 } from "./forecast";
 import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
@@ -70,8 +71,7 @@ function forecastedLoad(
     inwardBearingDeg: bearing,
     reports,
     ringLevel,
-    channelWidthM: site.channelWidthM,
-    channelDepthM: site.channelDepthM,
+    ...sectionInput(site),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
