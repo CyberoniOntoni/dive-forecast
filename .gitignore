@@ -52,3 +52,7 @@ next-env.d.ts
 
 # raw downloads (Allen Coral Atlas and similar), too large to commit
 /data/sources/aca/
+
+# shallow-water simulation (sim/): downloaded tiles and run output
+/sim/cache/
+/sim/out/
