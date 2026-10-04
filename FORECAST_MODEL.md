@@ -63,7 +63,8 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
 
 1. **The day's envelope.** It comes from the residual range over the 25 hours around the hour, plus the range a tide would need to give the extra slope that through-flow and head add (`extra slope × 12.42 / π`). This is multiplied by the channel's constriction factor:
    - The factor is `(31,500 m² / (width × depth))^0.35`, held between 1.0 and 2.5.
-   - It applies only to channels with a published width and depth.
+   - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A missing or non-positive width or depth leaves the factor at 1.
+   - Atoll lagoon means (`lagoonMeanDepthM` on South Malé, Vaavu, and Addu) are catalog data. They are not a model input.
    - 31,500 m² is the median of the measured dive-site channels.
    - The envelope bands (`RANGE_BANDS_M`) on that effective range are:
 
