@@ -3,6 +3,7 @@ import path from "path";
 import { resolveBearing } from "../lib/bearing";
 import { seaLevelSlopeAt, throughflowAt, THROUGHFLOW_SLOPE_PER_MS } from "../lib/forecast";
 import { marineCacheDir, seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { readCatalog } from "../lib/store";
 import type { MarineHour } from "../lib/types";
@@ -40,7 +41,7 @@ function main(): void {
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     if (!atoll) continue;
     const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
-    const point = seawardPoint(site.lat, site.lon, deg);
+    const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
     const hours = cachedHours(point.lat, point.lon);
     if (!hours) {
       missing += 1;

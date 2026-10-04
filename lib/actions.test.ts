@@ -5,6 +5,7 @@ import { addReport, addReportAction, addSite, rateSite } from "./actions";
 import { inwardBearingDeg } from "./bearing";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import { marineCacheDir, seawardPoint } from "./marine";
+import { seawardKmFor } from "./seaward-floor";
 import { rimForAtoll } from "./rim";
 import { readCatalog, setStorePath } from "./store";
 import { UNSEEDED_ATOLL_ID } from "./types";
@@ -103,7 +104,7 @@ function seedMarineCache(siteId: string): void {
   const site = catalog.sites.find((item) => item.id === siteId)!;
   const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
   const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
-  const point = seawardPoint(site.lat, site.lon, bearing);
+  const point = seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
   const fixtureName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`;
   const fixture = JSON.parse(
     fs.readFileSync(path.join(DATA_DIR, "benchmark-marine-cache", fixtureName), "utf8"),

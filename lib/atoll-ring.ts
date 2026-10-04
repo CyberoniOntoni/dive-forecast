@@ -48,6 +48,7 @@ export function ringSamples(ring: RimRing): RingSample[] {
     const normal = rimInwardBearing(on, ring);
     if (normal == null) continue;
     // At an exact corner the normal can come out reversed; the sample point must be outside the atoll.
+    // Ring points stay 3 km out. The GEBCO step-out is per catalog site, whose 3 km cell can sit on the reef.
     const out = seawardPoint(on.lat, on.lon, normal);
     const reversed = pointInRing(out.lat, out.lon, ring);
     const inwardDeg = reversed ? (normal + 180) % 360 : normal;

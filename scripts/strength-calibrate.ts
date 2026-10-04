@@ -2,6 +2,7 @@ import { ringLevelFromSeries, ringPoints } from "../lib/atoll-ring";
 import { resolveBearing } from "../lib/bearing";
 import { ALONG_REEF_BANDS_MS, alongReefHours, forecastHours, RANGE_BANDS_M } from "../lib/forecast";
 import { seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { alongReefHeading, crossesRim, flowsAlongReef } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
@@ -46,7 +47,7 @@ async function loadWalls(): Promise<Wall[]> {
       if (!atoll) return null;
       const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
       const { deg } = resolveBearing(site, catalog.sites, outside, rimForAtoll(atoll));
-      const point = seawardPoint(site.lat, site.lon, deg);
+      const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
       const hours = await longSeries(point.lat, point.lon);
       return hours ? { site, heading: alongReefHeading(deg), hours } : null;
     }),
@@ -99,7 +100,7 @@ async function loadChannels(): Promise<Channel[]> {
     const loaded = await limited(
       sites.map((site) => async () => {
         const { deg } = resolveBearing(site, catalog.sites, outside, rim);
-        const point = seawardPoint(site.lat, site.lon, deg);
+        const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
         const hours = await longSeries(point.lat, point.lon);
         return hours ? { site, bearing: deg, hours, ring } : null;
       }),

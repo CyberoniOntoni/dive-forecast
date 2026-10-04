@@ -1,6 +1,7 @@
 import { resolveBearing } from "../lib/bearing";
 import { STRAIT_BANDS_MS, STRAIT_DRIFT_GAIN, STRAIT_TIDE_GAIN, straitFlow } from "../lib/forecast";
 import { seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { straitHeading } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
@@ -52,7 +53,7 @@ async function loadWalls(): Promise<Wall[]> {
       const atoll = catalog.atolls.find((item) => item.id === site.atollId);
       if (!atoll) return null;
       const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
-      const point = seawardPoint(site.lat, site.lon, deg);
+      const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
       const hours = await longSeries(point.lat, point.lon);
       return hours ? { site, axis: straitHeading(deg), hours } : null;
     }),

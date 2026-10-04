@@ -52,3 +52,6 @@ next-env.d.ts
 
 # raw downloads (Allen Coral Atlas and similar), too large to commit
 /data/sources/aca/
+/data/sources/aca-bathy/
+/data/sources/baa/
+/data/sources/gebco/

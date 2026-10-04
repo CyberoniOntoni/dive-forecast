@@ -2,6 +2,7 @@ import { ringLevelFromSeries, ringPoints } from "../lib/atoll-ring";
 import { resolveBearing } from "../lib/bearing";
 import { forecastHours, residualLevels, throughflowAt } from "../lib/forecast";
 import { fetchMarine, siteMarineHours } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { crossesRim } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
@@ -126,7 +127,9 @@ async function loadChannels(): Promise<{ channels: Channel[]; atolls: number }> 
     for (const site of catalog.sites) {
       if (site.atollId !== atoll.id || !crossesRim(site, catalog.sites)) continue;
       const { deg } = resolveBearing(site, catalog.sites, outside, ring);
-      const marine = await siteMarineHours(site.lat, site.lon, deg, outside.lat, outside.lon);
+      const marine = await siteMarineHours(site.lat, site.lon, deg, outside.lat, outside.lon, {
+        seawardKm: seawardKmFor(site.id),
+      });
       if (!marine.ok) continue;
       const residual = residualLevels(marine.hours);
       const head = marine.hours.map((hour, index) => {

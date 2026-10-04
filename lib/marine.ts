@@ -38,7 +38,9 @@ type HourlyColumns = {
 };
 
 /**
- * Open-Meteo at the 3 km seaward point, for both sea level and current.
+ * Open-Meteo at the seaward point, for both sea level and current.
+ * The point is 3 km out unless options.seawardKm steps it further. That step comes from the GEBCO
+ * check: a 3 km cell on the reef or on land moves out until the cell is open ocean.
  * A failed or stale seaward fetch uses the fallback point instead.
  * When both fail or their hours are stale, the last cached series is used and marked stale.
  */
@@ -50,7 +52,7 @@ export async function siteMarineHours(
   fallbackLon: number,
   options: FetchOptions = {},
 ): Promise<MarineFetch> {
-  const point = seawardPoint(lat, lon, inwardBearingDeg);
+  const point = seawardPoint(lat, lon, inwardBearingDeg, options.seawardKm);
   const seaward = await fetchMarine(point.lat, point.lon, options);
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
@@ -64,22 +66,28 @@ function freshMarine(fetched: { hours: MarineHour[]; fetchedAt: number }): Marin
   return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: false };
 }
 
-/** About 3 km seaward of the site, opposite its inward bearing. */
+/** Seaward of the site, opposite its inward bearing. The distance is 3 km unless a GEBCO check stepped it out. */
 export function seawardPoint(
   lat: number,
   lon: number,
   inwardBearingDeg: number,
+  distanceKm = SEAWARD_KM,
 ): { lat: number; lon: number } {
   // Opposite the inward bearing. The extra +360 keeps a negative bearing inside 0-360.
   const outwardBearing = ((inwardBearingDeg + 180) % 360 + 360) % 360;
-  return destinationKm(lat, lon, outwardBearing, SEAWARD_KM);
+  const km = distanceKm > 0 ? distanceKm : SEAWARD_KM;
+  return destinationKm(lat, lon, outwardBearing, km);
 }
 
 /**
  * wait: false queues the first fetch for a point with no cache and returns at once as unavailable. The map uses
  * it, so a batch of new sites fills in over the next loads instead of holding the page.
  */
-export type FetchOptions = { wait?: boolean };
+export type FetchOptions = {
+  wait?: boolean;
+  /** Seaward distance in km. Absent means 3. The GEBCO table sets it when the 3 km cell is not open ocean. */
+  seawardKm?: number;
+};
 
 /**
  * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a refresh runs in the

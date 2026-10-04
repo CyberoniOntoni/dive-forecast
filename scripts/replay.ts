@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
 import { rimForAtoll } from "../lib/rim";
 import { marineCacheDir, marineHoursFromApi, seawardPoint } from "../lib/marine";
+import { seawardKmFor } from "../lib/seaward-floor";
 import { replayReports, type BenchmarkMetrics } from "../lib/replay";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
 import { listMergedSites, readCatalog, readStore } from "../lib/store";
@@ -181,7 +182,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
       { lat: atoll.oceanLat, lon: atoll.oceanLon },
       rimForAtoll(atoll),
     );
-    const seaward = seawardPoint(site.lat, site.lon, bearing);
+    const seaward = seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
     const alongHeadingDeg = flowsAlongReef(site, catalog.sites) ? alongReefHeading(bearing) : undefined;
     const benchmarkOnly = options.mode === "benchmark";
     const hours =
