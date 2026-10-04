@@ -1,5 +1,5 @@
 import type { SiteNowcast } from "./nowcast";
-import type { Confidence, Direction, Strength } from "./types";
+import type { Confidence, Direction, ForecastRoute, Strength } from "./types";
 
 export function strengthLabel(strength: Strength): string {
   // Stored as too_strong; shown as "very strong", since whether it can be dived depends on the diver.
@@ -62,15 +62,16 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
   const hour = nowcast.hour;
   const label = strengthLabel(hour.strength);
   const estimatedHeading = nowcast.bearingSource === "fallback";
+  const route = nowcast.forecastRoute;
   const along = nowcast.alongHeadingDeg ?? null;
-  // Along a reef the axis is the reef's; only a channel can bend.
-  const arrowBearing =
-    along == null
-      ? passArrowBearing(nowcast.inwardBearingDeg, hour.direction, nowcast.outgoingBearingDeg)
-      : passArrowBearing(along, hour.direction);
-  const way = along == null ? hour.direction : `running ${compassWord(arrowBearing)}`;
-  // A wall's flow runs along its reef; a lagoon site's just runs that way.
-  const spokenWay = along == null || nowcast.lagoon ? way : `${way} along the reef`;
+  const arrowBearing = routeArrowBearing(
+    route,
+    hour.direction,
+    nowcast.inwardBearingDeg,
+    along,
+    nowcast.outgoingBearingDeg,
+  );
+  const { way, spoken: spokenWay } = routeWay(route, hour.direction, along);
   const base = showStrength
     ? `${name}, ${spokenWay}, ${label}, ${hour.confidence}`
     : `${name}, ${spokenWay}, ${hour.confidence}`;
@@ -85,9 +86,47 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
     strength: hour.strength,
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
-    color: along == null ? glanceColor(hour.direction, hour.strength) : alongColor(hour.strength),
+    color: onCompass(route, along) ? alongColor(hour.strength) : glanceColor(hour.direction, hour.strength),
     fetchedAt: nowcast.fetchedAt ?? null,
   };
+}
+
+/** True when the route reads as a compass direction and has the heading to read it by. */
+export function onCompass(route: ForecastRoute, alongHeadingDeg: number | null): alongHeadingDeg is number {
+  return route !== "channel" && alongHeadingDeg != null;
+}
+
+/**
+ * The words for which way the water runs on a route. A channel says "incoming" or "outgoing". Every other route
+ * says "running NE" from its heading; at a wall (along-reef or strait) the spoken form adds "along the reef", and
+ * a lagoon site's flow just runs that way.
+ */
+export function routeWay(
+  route: ForecastRoute,
+  direction: Direction,
+  alongHeadingDeg: number | null,
+): { way: string; spoken: string } {
+  if (!onCompass(route, alongHeadingDeg)) return { way: direction, spoken: direction };
+  const way = `running ${compassWord(passArrowBearing(alongHeadingDeg, direction))}`;
+  return { way, spoken: route === "lagoon" ? way : `${way} along the reef` };
+}
+
+/** The arrow's heading on a route: a channel's follows its inward bearing and may bend outgoing; others their axis. */
+export function routeArrowBearing(
+  route: ForecastRoute,
+  direction: Direction,
+  inwardBearingDeg: number,
+  alongHeadingDeg: number | null,
+  outgoingBearingDeg: number | null = null,
+): number {
+  if (onCompass(route, alongHeadingDeg)) return passArrowBearing(alongHeadingDeg, direction);
+  return passArrowBearing(inwardBearingDeg, direction, outgoingBearingDeg);
+}
+
+/** The report form's question about direction on a route. */
+export function routeDirectionLegend(route: ForecastRoute, alongHeadingDeg: number | null): string {
+  if (!onCompass(route, alongHeadingDeg)) return "Incoming or outgoing";
+  return route === "lagoon" ? "Which way it ran" : "Which way along the reef";
 }
 
 /** Smaller is earlier. Very strong, strong, mild, slack, then no forecast. One band shares a rank. */

@@ -38,8 +38,8 @@ export default async function SitePage({
   if (!site) notFound();
 
   const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id)]);
-  // Wall and lagoon reports read as compass directions, so the list needs to know which kind of site this is.
-  const recent = await getRecentReports(site.id, forecast.alongHeadingDeg != null);
+  // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
+  const recent = await getRecentReports(site.id, forecast.forecastRoute);
   // Reports are entered in the site's own country's time, whatever the diver's clock says.
   const zone = timeZoneForSite(site);
   const maldivesWall = toMaldivesWall(new Date().toISOString());
@@ -64,6 +64,7 @@ export default async function SitePage({
         stale={forecast.stale}
         inwardBearingDeg={forecast.inwardBearingDeg}
         outgoingBearingDeg={site.outgoingBearingDeg ?? null}
+        forecastRoute={forecast.forecastRoute}
         alongHeadingDeg={forecast.alongHeadingDeg}
         bearingSource={forecast.bearingSource}
         unseeded={site.atollId === UNSEEDED_ATOLL_ID}
@@ -79,6 +80,7 @@ export default async function SitePage({
         <ReportForm
           key={`report-${site.id}`}
           siteId={site.id}
+          forecastRoute={forecast.forecastRoute}
           alongHeadingDeg={forecast.alongHeadingDeg}
           zone={zone}
           defaultTime={currentWallHour(zone)}

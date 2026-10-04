@@ -18,7 +18,17 @@ import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, ty
 import { alongReefHeading, crossesRim, flowsAlongReef, straitHeading } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import { seawardKmFor } from "./seaward-floor";
-import type { Atoll, BearingSource, HourForecast, MarineHour, Report, RingLevel, Site, SiteType } from "./types";
+import type {
+  Atoll,
+  BearingSource,
+  ForecastRoute,
+  HourForecast,
+  MarineHour,
+  Report,
+  RingLevel,
+  Site,
+  SiteType,
+} from "./types";
 
 const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
@@ -27,10 +37,11 @@ export type SiteLoad = {
   bearingSource: BearingSource | null;
   /** Where the site sits, when classified. A lagoon site never shows high confidence. */
   siteType: SiteType | null;
+  /** Which model made the hours. A lagoon site whose atoll has no outline or ring falls back to "channel". */
+  forecastRoute: ForecastRoute;
   /**
-   * Set for a site forecast along a compass axis: a wall whose current runs along the reef, or a lagoon site (the
-   * main axis of its lagoon flow). The heading its "incoming" means. Null for a site whose current crosses the rim,
-   * where incoming follows the inward bearing.
+   * Set on every route but "channel": the reef heading at a wall, the strait axis, or the main axis of a lagoon
+   * site's flow. The heading its "incoming" means. Null for a channel, where incoming follows the inward bearing.
    */
   alongHeadingDeg: number | null;
   hours: HourForecast[];
@@ -39,13 +50,33 @@ export type SiteLoad = {
   fetchedAt: number | null;
 };
 
+/**
+ * The route a site takes before any hours are made: a strait wall and a lagoon site by their type (their heading
+ * may still be unknown), a wall whose current runs along the reef by its reef heading, any other site as a channel.
+ */
+function routeForSite(siteType: SiteType | null, alongHeadingDeg: number | null): ForecastRoute {
+  if (siteType === "strait-wall") return "strait";
+  if (siteType === "lagoon") return "lagoon";
+  return alongHeadingDeg == null ? "channel" : "along-reef";
+}
+
 function unavailableLoad(
   bearing: number | null,
   bearingSource: BearingSource | null,
   siteType: SiteType | null,
   alongHeadingDeg: number | null,
 ): SiteLoad {
-  return { bearing, bearingSource, siteType, alongHeadingDeg, hours: [], unavailable: true, stale: false, fetchedAt: null };
+  return {
+    bearing,
+    bearingSource,
+    siteType,
+    forecastRoute: routeForSite(siteType, alongHeadingDeg),
+    alongHeadingDeg,
+    hours: [],
+    unavailable: true,
+    stale: false,
+    fetchedAt: null,
+  };
 }
 
 function forecastedLoad(
@@ -62,7 +93,8 @@ function forecastedLoad(
   const siteType = site.siteType ?? null;
   if (alongHeadingDeg != null) {
     const hours = alongReefHours({ hours: marineHours, alongHeadingDeg });
-    return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
+    const forecastRoute = "along-reef";
+    return { bearing, bearingSource, siteType, forecastRoute, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
   }
   // The model follows the ocean tide through the passes. Inside the lagoon it is never that sure.
   const allowHigh = replayAllowsHigh() && siteType !== "lagoon";
@@ -74,7 +106,8 @@ function forecastedLoad(
     ...sectionInput(site),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
-  return { bearing, bearingSource, siteType, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
+  const forecastRoute = "channel";
+  return { bearing, bearingSource, siteType, forecastRoute, alongHeadingDeg, hours, unavailable: false, stale, fetchedAt };
 }
 
 const LAGOON_MEMO_MS = 10 * 60 * 1000;
@@ -232,6 +265,7 @@ export async function loadSite(
       bearing: marine.bearing,
       bearingSource: marine.bearingSource,
       siteType: "strait-wall",
+      forecastRoute: "strait",
       alongHeadingDeg: axis,
       hours: straitHours({ hours: marine.hours, axisDeg: axis }),
       unavailable: false,
@@ -246,6 +280,7 @@ export async function loadSite(
         bearing: marine.bearing,
         bearingSource: marine.bearingSource,
         siteType: "lagoon",
+        forecastRoute: "lagoon",
         alongHeadingDeg: lagoon.axisDeg,
         hours: lagoon.hours,
         unavailable: false,

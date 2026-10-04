@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { inwardBearingDeg, resolveBearing } from "./bearing";
-import { pointInRing, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
+import { parseRims, pointInRing, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Catalog, Site } from "./types";
 
 // A 0.2 degree square centered on the origin, closed.
@@ -65,6 +65,41 @@ describe("resolveBearing with a rim", () => {
     const alone = inwardBearingDeg(site, [site], outside, SQUARE);
     const crowded = inwardBearingDeg(site, [site, pin(0.05, 0.05, { id: "a" }), pin(-0.05, 0.05, { id: "b" })], outside, SQUARE);
     expect(crowded).toBeCloseTo(alone, 9);
+  });
+});
+
+describe("parseRims", () => {
+  const ring = (points: unknown) => JSON.stringify({ rims: { "1": points } });
+
+  it("keeps closed rings of [lat, lon] pairs", () => {
+    expect(parseRims(ring(SQUARE)).get("1")).toEqual(SQUARE);
+    expect(parseRims(JSON.stringify({})).size).toBe(0);
+  });
+
+  it("throws on invalid JSON instead of passing for a missing file", () => {
+    expect(() => parseRims("{ rims: ")).toThrow();
+  });
+
+  it("throws on a ring of the wrong shape", () => {
+    // GeoJSON polygon coordinates nest one level deeper.
+    expect(() => parseRims(ring([SQUARE]))).toThrow(/way 1/);
+    expect(() => parseRims(ring({ type: "Polygon", coordinates: [SQUARE] }))).toThrow(/way 1/);
+    expect(() => parseRims(ring(SQUARE.slice(0, -1)))).toThrow(/not closed/);
+    expect(() => parseRims(ring([[0, 0], [0, 1], [0, 0]]))).toThrow(/fewer than four/);
+    expect(() => parseRims(ring([[0, 0], [0, "1"], [1, 1], [0, 0]]))).toThrow(/point 1/);
+    expect(() => parseRims(ring([[0, 0], [0, 200], [1, 1], [0, 0]]))).toThrow(/point 1/);
+    expect(() => parseRims(JSON.stringify({ rims: [] }))).toThrow(/not an object/);
+  });
+});
+
+describe("rimForAtoll", () => {
+  it("throws for a ring far from its atoll, as swapped coordinates would be", () => {
+    const atoll = { id: "far", rimSourceUrl: "https://www.openstreetmap.org/way/671807029", oceanLat: 73.5, oceanLon: 5.2 };
+    expect(() => rimForAtoll(atoll as never)).toThrow(/swapped/);
+  });
+
+  it("finds the stored rim file", () => {
+    expect(rimFilePresent()).toBe(true);
   });
 });
 

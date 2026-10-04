@@ -74,6 +74,19 @@ describe("loadSite", () => {
     expect(result.hours).toEqual([]);
   });
 
+  it("keeps a strait wall's and a lagoon site's route when the marine fetch fails", async () => {
+    for (const [siteType, route] of [
+      ["strait-wall", "strait"],
+      ["lagoon", "lagoon"],
+      [undefined, "channel"],
+    ] as const) {
+      vi.mocked(Marine.siteMarineHours).mockResolvedValueOnce({ ok: false, unavailable: true });
+      const result = await loadSite({ ...openSite, siteType }, [openSite], atoll, []);
+      expect(result.unavailable).toBe(true);
+      expect(result.forecastRoute, siteType).toBe(route);
+    }
+  });
+
   it("loads unconstricted site with baseline forecast when channel dimensions are missing", async () => {
     vi.mocked(Marine.siteMarineHours).mockResolvedValueOnce({
       ok: true,

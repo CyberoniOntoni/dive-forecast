@@ -12,6 +12,7 @@ describe("site row", () => {
       atollId: site.atollId,
       inwardBearingDeg: 285,
       outgoingBearingDeg: null,
+      forecastRoute: "channel",
       unavailable: false,
       hour: { time: "2026-10-03T10:00", direction: "incoming", strength: "strong", confidence: "low", levelM: 0.1 },
     },

@@ -1,6 +1,6 @@
 import { parseWall } from "./forecast";
 import { compassWord, strengthLabel } from "./nowcast-glance";
-import type { Direction, Report, Strength } from "./types";
+import type { Direction, ForecastRoute, Report, Strength } from "./types";
 
 export const RECENT_REPORTS = 10;
 
@@ -25,18 +25,19 @@ export type RecentReportRow = {
   strength: string;
   /** What the forecast said at that hour, or null when the report saved none. */
   forecast: { way: string; strength: string; match: ReportMatch } | null;
-  /** A wall or lagoon report filed before the site was read along a compass axis: its in/out cannot be turned. */
+  /** A report on a compass route filed before the site was read along that axis: its in/out cannot be turned. */
   beforeAxis: boolean;
 };
 
 /**
- * The newest reports first, at most `limit`, as rows for the site page. `siteOnAxis` is true for a wall or lagoon
- * site, whose reports read as compass directions from the heading each one saved.
+ * The newest reports first, at most `limit`, as rows for the site page. On any route but "channel" (a wall or
+ * lagoon site) reports read as compass directions from the heading each one saved.
  */
 export function recentReportRows(
   reports: readonly Report[],
-  options: { nowWall: string; siteOnAxis: boolean; limit?: number },
+  options: { nowWall: string; route: ForecastRoute; limit?: number },
 ): RecentReportRow[] {
+  const siteOnAxis = options.route !== "channel";
   const nowMs = parseWall(options.nowWall);
   return [...reports]
     .filter((report) => !Number.isNaN(parseWall(report.time)))
@@ -55,7 +56,7 @@ export function recentReportRows(
         forecast: shown
           ? { way: wayOf(shown.direction), strength: strengthLabel(shown.strength), match: matchOf(report, shown) }
           : null,
-        beforeAxis: options.siteOnAxis && heading == null,
+        beforeAxis: siteOnAxis && heading == null,
       };
     });
 }
