@@ -21,7 +21,8 @@
     "atoll-head-calibrate": "vite-node scripts/atoll-head-calibrate.ts",
     "strength-calibrate": "vite-node scripts/strength-calibrate.ts",
     "lagoon-calibrate": "vite-node scripts/lagoon-calibrate.ts",
-    "strait-calibrate": "vite-node scripts/strait-calibrate.ts"
+    "strait-calibrate": "vite-node scripts/strait-calibrate.ts",
+    "sim-compare": "vite-node scripts/sim-compare.ts"
   },
   "dependencies": {
     "leaflet": "^1.9.4",

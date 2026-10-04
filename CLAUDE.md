@@ -26,6 +26,8 @@ Data/maintenance scripts (all `vite-node scripts/*.ts`): `verify` (score saved p
 
 Calibration scripts (print tables; they set no constants themselves): `throughflow-calibrate` (K), `along-reef-calibrate` (walls), `atoll-head-calibrate` (τ; point `MARINE_CACHE_DIR` at a fresh dir so all series share one model run), `strength-calibrate` (channel and wall bands) and `lagoon-calibrate` (lagoon). The last two fetch 99-day series into an OS-temp cache via `scripts/long-series.ts`, never into `data/marine-cache`. See `FORECAST_MODEL.md` § Constants.
 
+Research prototype, not wired into the forecast: `sim/` is a 2-D shallow-water simulation of North and South Malé (Python + numba; see `sim/README.md`), compared with the forecast by `npm run sim-compare`.
+
 Tests run with networking disabled and a throwaway `MARINE_CACHE_DIR` (see `vitest.setup.ts`); any test needing Open-Meteo data must stub `fetch` or write fixture hours itself.
 
 ## Architecture
