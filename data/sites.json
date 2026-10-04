@@ -127,6 +127,8 @@
       "channelWidthM": 800,
       "channelDepthM": 40,
       "channelSourceUrl": "https://os.copernicus.org/articles/17/319/2021/",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -308,6 +310,8 @@
       "sourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html?wdaction=lib.WDPageSpot.showGPShistory",
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Male_Atoll/North_Male_Atoll/HP_Reef/index.html",
+      "atlasWidthM": 840,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "manual"
     },
@@ -368,6 +372,8 @@
       "channelWidthM": 1500,
       "channelDepthM": 45,
       "channelSourceUrl": "https://wannadive.net/spot/Asia/Maldives/Male_Atoll/South_Male_Atoll/Embudu_Channel/index.html",
+      "atlasWidthM": 1200,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -505,6 +511,8 @@
       "lat": 3.648208,
       "lon": 73.503146,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 670,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -531,6 +539,8 @@
       "diveTopM": 20,
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1170,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -544,6 +554,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -557,6 +569,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 460,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -570,6 +584,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1060,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -583,6 +599,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 370,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -694,6 +712,8 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 860,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -717,6 +737,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 660,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -782,6 +804,8 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1760,
+      "atlasWidthConfidence": "low",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -805,6 +829,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 810,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -818,6 +844,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1260,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -831,6 +859,8 @@
       "diveTopM": 5,
       "diveMaxM": 28,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 620,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -896,6 +926,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1030,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1117,6 +1149,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 920,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -1199,6 +1233,8 @@
       "diveTopM": 15,
       "diveMaxM": 35,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1440,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1565,6 +1601,8 @@
       "diveTopM": 5,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 260,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1617,6 +1655,8 @@
       "diveTopM": 12,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "manual"
     },
@@ -1630,6 +1670,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 970,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1669,6 +1711,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 970,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -1682,6 +1726,8 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 770,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1695,6 +1741,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 220,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -1707,6 +1755,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 15,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 560,
+      "atlasWidthConfidence": "low",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1733,6 +1783,8 @@
       "diveTopM": 3,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 770,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -1809,6 +1861,8 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1846,6 +1900,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 730,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -1885,6 +1941,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1120,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -1898,6 +1956,8 @@
       "diveTopM": 10,
       "diveMaxM": 18,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 550,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -2068,6 +2128,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1540,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2373,6 +2435,8 @@
       "diveTopM": 8,
       "diveMaxM": 22,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1300,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -2399,6 +2463,8 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 840,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2451,6 +2517,8 @@
       "diveTopM": 6,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1380,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -2838,6 +2906,8 @@
       "lat": 5.454485,
       "lon": 73.038798,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1100,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3026,6 +3096,8 @@
       "lat": 5.110229,
       "lon": 73.08715,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 820,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -3046,6 +3118,8 @@
       "lat": 5.092808,
       "lon": 73.067935,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 750,
+      "atlasWidthConfidence": "checked",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -3215,6 +3289,8 @@
       "diveTopM": 10,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 2020,
+      "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
       "siteTypeSource": "derived"
     },
@@ -3238,6 +3314,8 @@
       "diveTopM": 5,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 490,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3316,6 +3394,8 @@
       "diveTopM": 15,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 560,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3381,6 +3461,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1230,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3471,6 +3553,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 990,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3484,6 +3568,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 1100,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -3579,6 +3665,8 @@
       "diveTopM": 5,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
+      "atlasWidthM": 720,
+      "atlasWidthConfidence": "checked",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },

@@ -53,6 +53,13 @@ export type Site = {
   /** Source for the published channel width and depth. */
   channelSourceUrl?: string;
   /**
+   * Channel width measured on the Allen Coral Atlas geomorphic map (`npm run channel-widths`), metres.
+   * Not a published section: the constriction factor never reads it.
+   */
+  atlasWidthM?: number;
+  /** "checked": the gap was confirmed on the Atlas satellite mosaic. "low": it crosses the channel at a slant or a broken reef edge. */
+  atlasWidthConfidence?: "checked" | "low";
+  /**
    * Measured inward channel axis, degrees clockwise from north: the heading of water entering the lagoon.
    * When set it replaces the mate-centroid / outside-point heuristic.
    */

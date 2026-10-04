@@ -24,6 +24,16 @@ describe("catalog depths", () => {
     }
   });
 
+  it("keeps every Atlas width between 100 m and 2.5 km with a confidence", () => {
+    const measured = catalog.sites.filter((site) => site.atlasWidthM != null);
+    expect(measured.length).toBeGreaterThan(0);
+    for (const site of measured) {
+      expect(site.atlasWidthM).toBeGreaterThanOrEqual(100);
+      expect(site.atlasWidthM).toBeLessThanOrEqual(2500);
+      expect(["checked", "low"]).toContain(site.atlasWidthConfidence);
+    }
+  });
+
   it("leaves an unsized channel unconstricted", () => {
     expect(constrictionFactor(undefined, undefined)).toBe(1);
   });

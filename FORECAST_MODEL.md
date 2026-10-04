@@ -65,6 +65,7 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
    - The factor is `(31,500 m² / (width × depth))^0.35`, held between 1.0 and 2.5.
    - A channel uses a published section width and depth only. A charted least depth is not that section depth, so it is not stored as `channelDepthM`. A GEBCO cell is not a section either. A missing or non-positive width or depth leaves the factor at 1.
    - Atoll lagoon means (`lagoonMeanDepthM` on South Malé, Vaavu, and Addu) are catalog data. They are not a model input.
+   - Atlas channel widths (`atlasWidthM` on 44 sites) are catalog data too. They are the gap between reef-crest and reef-flat polygons on the Allen Coral Atlas geomorphic map, measured across the channel at the pin (`npm run channel-widths`), and reviewed on the Atlas satellite mosaic: 39 `checked`, 5 `low`. They are not a model input. The Atlas bathymetry saturates near 15 m, so it gives no channel depth, and a width without a depth sets no factor.
    - 31,500 m² is the median of the measured dive-site channels.
    - The envelope bands (`RANGE_BANDS_M`) on that effective range are:
 

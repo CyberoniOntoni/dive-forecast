@@ -22,7 +22,7 @@ npm run replay               # benchmark replay of past reports; writes data/rep
 
 CI (`.github/workflows/ci.yml`, Node 22) runs `npm test`, `npm run lint`, `npm run build`, `npm run replay` — run all four before pushing.
 
-Data/maintenance scripts (all `vite-node scripts/*.ts`): `verify` (score saved predictions vs. diver reports, grouped by model version), `benchmark`, `bearings -- <site-id>`, `site-types [-- --write]`, `atlas-overlays [-- reefZones|bottomTypes|reefOutline]`, `extract-dive-guide`, `import-dive-guide`.
+Data/maintenance scripts (all `vite-node scripts/*.ts`): `verify` (score saved predictions vs. diver reports, grouped by model version), `benchmark`, `bearings -- <site-id>`, `site-types [-- --write]`, `channel-widths` (candidate Atlas channel widths, printed for review), `atlas-overlays [-- reefZones|bottomTypes|reefOutline]`, `extract-dive-guide`, `import-dive-guide`.
 
 Calibration scripts (print tables; they set no constants themselves): `throughflow-calibrate` (K), `along-reef-calibrate` (walls), `atoll-head-calibrate` (τ; point `MARINE_CACHE_DIR` at a fresh dir so all series share one model run), `strength-calibrate` (channel and wall bands) and `lagoon-calibrate` (lagoon). The last two fetch 99-day series into an OS-temp cache via `scripts/long-series.ts`, never into `data/marine-cache`. See `FORECAST_MODEL.md` § Constants.
 

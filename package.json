@@ -13,6 +13,7 @@
     "verify": "vite-node scripts/verify-reports.ts",
     "bearings": "vite-node scripts/bearings.ts",
     "sample-floors": "vite-node scripts/sample-floors.ts",
+    "channel-widths": "vite-node scripts/channel-widths.ts",
     "extract-dive-guide": "vite-node scripts/extract-dive-guide.ts",
     "site-types": "vite-node scripts/site-types.ts",
     "import-dive-guide": "vite-node scripts/import-dive-guide.ts",
