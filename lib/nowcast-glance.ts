@@ -92,7 +92,7 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
 }
 
 /** True when the route reads as a compass direction and has the heading to read it by. */
-function onCompass(route: ForecastRoute, alongHeadingDeg: number | null): alongHeadingDeg is number {
+export function onCompass(route: ForecastRoute, alongHeadingDeg: number | null): alongHeadingDeg is number {
   return route !== "channel" && alongHeadingDeg != null;
 }
 

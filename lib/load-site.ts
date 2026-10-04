@@ -50,18 +50,27 @@ export type SiteLoad = {
   fetchedAt: number | null;
 };
 
+/**
+ * The route a site takes before any hours are made: a strait wall and a lagoon site by their type (their heading
+ * may still be unknown), a wall whose current runs along the reef by its reef heading, any other site as a channel.
+ */
+function routeForSite(siteType: SiteType | null, alongHeadingDeg: number | null): ForecastRoute {
+  if (siteType === "strait-wall") return "strait";
+  if (siteType === "lagoon") return "lagoon";
+  return alongHeadingDeg == null ? "channel" : "along-reef";
+}
+
 function unavailableLoad(
   bearing: number | null,
   bearingSource: BearingSource | null,
   siteType: SiteType | null,
   alongHeadingDeg: number | null,
 ): SiteLoad {
-  const forecastRoute = alongHeadingDeg == null ? "channel" : "along-reef";
   return {
     bearing,
     bearingSource,
     siteType,
-    forecastRoute,
+    forecastRoute: routeForSite(siteType, alongHeadingDeg),
     alongHeadingDeg,
     hours: [],
     unavailable: true,

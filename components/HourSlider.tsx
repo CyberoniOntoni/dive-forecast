@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
-import { routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
+import { onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
@@ -23,7 +23,7 @@ export function HourSlider({
   unavailable,
   inwardBearingDeg,
   outgoingBearingDeg = null,
-  forecastRoute = "channel",
+  forecastRoute,
   alongHeadingDeg = null,
   bearingSource = null,
   unseeded = false,
@@ -40,7 +40,7 @@ export function HourSlider({
   /** The outgoing arrow's heading at a curved channel; null when outgoing is opposite incoming. */
   outgoingBearingDeg?: number | null;
   /** Which model made the hours. Every route but "channel" reads as compass points. */
-  forecastRoute?: ForecastRoute;
+  forecastRoute: ForecastRoute;
   /** Set on every route but "channel": the heading "incoming" means there. */
   alongHeadingDeg?: number | null;
   /** Where the bearing came from. The fallback heuristic gets an estimate note. */
@@ -86,7 +86,7 @@ export function HourSlider({
       ? null
       : routeArrowBearing(forecastRoute, hour.direction, inwardBearingDeg, alongHeadingDeg, outgoingBearingDeg);
   const wordFor = (direction: Direction) => capitalized(routeWay(forecastRoute, direction, alongHeadingDeg).way);
-  const tone = forecastRoute === "channel" || alongHeadingDeg == null ? directionTone(hour.direction) : "text-foam";
+  const tone = onCompass(forecastRoute, alongHeadingDeg) ? "text-foam" : directionTone(hour.direction);
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
   const spans = daySpans(hours);

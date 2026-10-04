@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { compassWord, routeDirectionLegend } from "@/lib/nowcast-glance";
+import { compassWord, onCompass, routeDirectionLegend } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
 import { MALDIVES_TIME, viewerClock, zoneLabel, type SiteTimeZone } from "@/lib/site-time";
 import type { ForecastRoute } from "@/lib/types";
@@ -34,22 +34,21 @@ function noViewerOnServer(): number | null {
  */
 export function ReportForm({
   siteId,
-  forecastRoute = "channel",
+  forecastRoute,
   alongHeadingDeg = null,
   zone = MALDIVES_TIME,
   defaultTime,
 }: {
   siteId: string;
-  forecastRoute?: ForecastRoute;
+  forecastRoute: ForecastRoute;
   alongHeadingDeg?: number | null;
   zone?: SiteTimeZone;
   /** The site's current hour, "YYYY-MM-DDTHH:00", so most reports need no typing. */
   defaultTime?: string;
 }) {
-  const along =
-    forecastRoute === "channel" || alongHeadingDeg == null
-      ? null
-      : [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)];
+  const along = onCompass(forecastRoute, alongHeadingDeg)
+    ? [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)]
+    : null;
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const [time, setTime] = useState(defaultTime ?? "");
