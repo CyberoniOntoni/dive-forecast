@@ -4,6 +4,9 @@ export const OPENING_MIN_M = 100;
 /** Crest shorter than this does not split two openings. It is a sliver, not a wall. */
 export const SHOULDER_MIN_M = 100;
 
+/** A crest point closer than this to a gap end is that shoulder. */
+export const SHOULDER_MATCH_M = 150;
+
 /** A longer bare arc is open coast, not one channel. */
 export const OPENING_MAX_M = 3000;
 
@@ -90,7 +93,8 @@ function mergeWalls(arcs: readonly CrestArc[], perimeterM: number): Interval[] {
 
 /** A crest mouth in the width window is counted even when reef flat still bridges it. */
 export function isCountedMouth(mouth: { widthM: number; reefFlatBridges: boolean }): boolean {
-  return mouth.widthM >= OPENING_MIN_M && mouth.widthM <= OPENING_MAX_M;
+  const inWindow = mouth.widthM >= OPENING_MIN_M && mouth.widthM <= OPENING_MAX_M;
+  return mouth.reefFlatBridges ? inWindow : inWindow;
 }
 
 function normalize(distanceM: number, perimeterM: number): number {

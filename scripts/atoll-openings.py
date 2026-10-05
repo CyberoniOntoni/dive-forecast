@@ -88,27 +88,6 @@ def load_reef(path: Path) -> list[dict]:
     return polygons
 
 
-def grid_index(polygons: list[dict]) -> dict[tuple[int, int], list[int]]:
-    index: dict[tuple[int, int], list[int]] = {}
-    for number, polygon in enumerate(polygons):
-        min_lon, min_lat, max_lon, max_lat = polygon["bbox"]
-        for x in range(int(min_lon / 0.02), int(max_lon / 0.02) + 1):
-            for y in range(int(min_lat / 0.02), int(max_lat / 0.02) + 1):
-                index.setdefault((x, y), []).append(number)
-    return index
-
-
-def on_reef(lon: float, lat: float, polygons: list[dict], index: dict) -> bool:
-    for number in index.get((int(lon / 0.02), int(lat / 0.02)), []):
-        polygon = polygons[number]
-        min_lon, min_lat, max_lon, max_lat = polygon["bbox"]
-        if lon < min_lon or lon > max_lon or lat < min_lat or lat > max_lat:
-            continue
-        if point_in_polygon(lon, lat, polygon["outer"], polygon["holes"]):
-            return True
-    return False
-
-
 def densify(ring: list, step_m: float) -> tuple[list[dict], float]:
     points: list[dict] = []
     along = 0.0
@@ -233,18 +212,6 @@ def nearest_rim(lon: float, lat: float, rim_points: list[dict], rim_index: dict)
                     best = point
                     best_m = distance
     return best
-
-
-def cover(along: list[float], perimeter: float) -> tuple[float, float]:
-    pts = sorted(set(along))
-    if len(pts) == 1:
-        return pts[0], pts[0] + 1
-    gaps = [(pts[index + 1] - pts[index], index) for index in range(len(pts) - 1)]
-    gaps.append((pts[0] + perimeter - pts[-1], -1))
-    _, after = max(gaps)
-    if after == -1:
-        return pts[0], pts[-1]
-    return pts[after + 1], pts[after] + perimeter
 
 
 def km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:

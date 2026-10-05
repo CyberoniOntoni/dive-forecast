@@ -1,7 +1,13 @@
 import { spawnSync } from "child_process";
 import fs from "fs";
 import path from "path";
-import { openingsFromCrestArcs } from "../lib/openings";
+import {
+  isCountedMouth,
+  OPENING_MAX_M,
+  OPENING_MIN_M,
+  openingsFromCrestArcs,
+  SHOULDER_MATCH_M,
+} from "../lib/openings";
 import { readCatalog } from "../lib/store";
 import type { SiteType } from "../lib/types";
 
@@ -14,6 +20,8 @@ const BRIDGE_PY = path.join(process.cwd(), "scripts", "reef-flat-bridge.py");
 const OUT = path.join(process.cwd(), "data", "openings.json");
 const MATCH_KM = 0.8;
 const NORTH_MALE_MIN = 35;
+const KM_LAT = 110.57;
+const KM_LON = 111.32;
 const CHANNEL_TYPES = new Set<SiteType>(["pass", "channel-thila", "corner"]);
 
 type Crest = { startM: number; endM: number; points: [number, number][] };
@@ -26,6 +34,7 @@ function main(): void {
 
   const catalog = readCatalog();
   const candidates: Candidate[] = [];
+  const openCoast: OpenCoast[] = [];
   for (const way of measured.ways) {
     const gaps = openingsFromCrestArcs(
       way.crests.map((crest) => ({ startM: crest.startM, endM: crest.endM })),
@@ -33,24 +42,40 @@ function main(): void {
     );
     for (const gap of gaps) {
       const mouth = mouthBetween(way.crests, gap.startM, gap.endM, way.perimeterM);
-      if (!mouth || mouth.widthM < 100 || mouth.widthM > 3000) continue;
+      if (!mouth) continue;
+      const lat = round5(mouth.lat);
+      const lon = round5(mouth.lon);
+      const alongM = Math.round(gap.alongM);
+      if (gap.kind === "open-coast" || mouth.widthM > OPENING_MAX_M) {
+        openCoast.push({
+          atollIds: way.atollIds,
+          wayId: way.wayId,
+          lat,
+          lon,
+          widthM: Math.round(mouth.widthM),
+          alongM,
+        });
+        continue;
+      }
+      if (mouth.widthM < OPENING_MIN_M) continue;
       candidates.push({
         atollIds: way.atollIds,
         wayId: way.wayId,
-        lat: round5(mouth.lat),
-        lon: round5(mouth.lon),
-        widthM: Math.round(mouth.widthM),
-        alongM: Math.round(gap.alongM),
-        a: [mouth.aLon, mouth.aLat],
-        b: [mouth.bLon, mouth.bLat],
+        lat,
+        lon,
+        widthM: mouth.widthM,
+        alongM,
+        a: mouth.a,
+        b: mouth.b,
       });
     }
   }
-  const blocked = reefFlatBridges(candidates);
+  const bridgeFlags = reefFlatBridges(candidates);
   const openings = [];
   const matched = new Set<string>();
   for (let index = 0; index < candidates.length; index += 1) {
     const mouth = candidates[index];
+    if (!isCountedMouth({ widthM: mouth.widthM, reefFlatBridges: bridgeFlags[index] })) continue;
     const sites = catalog.sites
       .filter(
         (site) =>
@@ -66,9 +91,9 @@ function main(): void {
       wayId: mouth.wayId,
       lat: mouth.lat,
       lon: mouth.lon,
-      widthM: mouth.widthM,
+      widthM: Math.round(mouth.widthM),
       alongM: mouth.alongM,
-      reefFlatBridges: blocked[index],
+      reefFlatBridges: bridgeFlags[index],
       sites,
     });
   }
@@ -84,15 +109,15 @@ function main(): void {
     .map((site) => site.id);
   const body = {
     source: "Allen Coral Atlas reef crest, walked around each atoll by bearing from the rim centre",
-    minM: 100,
-    maxM: 3000,
+    minM: OPENING_MIN_M,
+    maxM: OPENING_MAX_M,
     note: "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section.",
     openings,
-    openCoast: [],
+    openCoast,
     unseen,
   };
   fs.writeFileSync(OUT, JSON.stringify(body, null, 2) + "\n");
-  const bridged = blocked.filter(Boolean).length;
+  const bridged = bridgeFlags.filter(Boolean).length;
   console.log(
     `${openings.length} openings (${northMale} on North Malé), ${bridged} bridged by reef flat and kept, ${unseen.length} channel sites not in an opening.`,
   );
@@ -108,6 +133,15 @@ type Candidate = {
   alongM: number;
   a: [number, number];
   b: [number, number];
+};
+
+type OpenCoast = {
+  atollIds: string[];
+  wayId: string;
+  lat: number;
+  lon: number;
+  widthM: number;
+  alongM: number;
 };
 
 function reefFlatBridges(mouths: readonly Candidate[]): boolean[] {
@@ -128,47 +162,43 @@ function mouthBetween(
   startM: number,
   endM: number,
   perimeterM: number,
-): { widthM: number; lat: number; lon: number; aLon: number; aLat: number; bLon: number; bLat: number } | null {
+): { widthM: number; lat: number; lon: number; a: [number, number]; b: [number, number] } | null {
   const left = crests.filter((crest) => touches(crest, startM, perimeterM));
   const right = crests.filter((crest) => touches(crest, endM, perimeterM));
   let best = Number.POSITIVE_INFINITY;
   let lat = 0;
   let lon = 0;
-  let aLon = 0;
-  let aLat = 0;
-  let bLon = 0;
-  let bLat = 0;
-  for (const a of left) {
-    for (const b of right) {
-      for (const [alon, alat] of a.points) {
-        for (const [blon, blat] of b.points) {
+  let a: [number, number] = [0, 0];
+  let b: [number, number] = [0, 0];
+  for (const leftCrest of left) {
+    for (const rightCrest of right) {
+      for (const [alon, alat] of leftCrest.points) {
+        for (const [blon, blat] of rightCrest.points) {
           const distance = km(alat, alon, blat, blon) * 1000;
           if (distance < best) {
             best = distance;
             lat = (alat + blat) / 2;
             lon = (alon + blon) / 2;
-            aLon = alon;
-            aLat = alat;
-            bLon = blon;
-            bLat = blat;
+            a = [alon, alat];
+            b = [blon, blat];
           }
         }
       }
     }
   }
   if (!Number.isFinite(best)) return null;
-  return { widthM: best, lat, lon, aLon, aLat, bLon, bLat };
+  return { widthM: best, lat, lon, a, b };
 }
 
 function touches(crest: Crest, atM: number, perimeterM: number): boolean {
   const start = crest.endM < crest.startM ? crest.startM - perimeterM : crest.startM;
   const end = crest.endM < crest.startM ? crest.endM : crest.endM;
-  return Math.min(Math.abs(end - atM), Math.abs(start - atM), Math.abs(end - perimeterM - atM)) < 150;
+  return Math.min(Math.abs(end - atM), Math.abs(start - atM), Math.abs(end - perimeterM - atM)) < SHOULDER_MATCH_M;
 }
 
 function km(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const mid = ((lat1 + lat2) / 2) * (Math.PI / 180);
-  return Math.hypot((lat2 - lat1) * 110.57, (lon2 - lon1) * 111.32 * Math.cos(mid));
+  return Math.hypot((lat2 - lat1) * KM_LAT, (lon2 - lon1) * KM_LON * Math.cos(mid));
 }
 
 function round5(value: number): number {

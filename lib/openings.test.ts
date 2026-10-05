@@ -51,6 +51,9 @@ describe("reef-crest openings", () => {
 
   it("keeps a mouth that reef flat bridges", () => {
     expect(isCountedMouth({ widthM: 400, reefFlatBridges: true })).toBe(true);
+    expect(isCountedMouth({ widthM: 400, reefFlatBridges: false })).toBe(true);
+    expect(isCountedMouth({ widthM: 50, reefFlatBridges: true })).toBe(false);
+    expect(isCountedMouth({ widthM: 4000, reefFlatBridges: true })).toBe(false);
   });
 
   it("drops a rim that has crest on only one side of a short bare arc", () => {
