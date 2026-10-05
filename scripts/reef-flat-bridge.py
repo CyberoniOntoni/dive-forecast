@@ -1,12 +1,15 @@
 """Mark a crest-to-crest mouth as bridged when reef flat still crosses it."""
 
-import importlib.util
 import json
+import sqlite3
 import sys
 from pathlib import Path
 
 from shapely.geometry import Point, Polygon
 from shapely.strtree import STRtree
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import geopackage_wkb
 
 ROOT = Path(__file__).resolve().parents[1]
 GPKG = ROOT / "data" / "sources" / "aca" / "Geomorphic-Map" / "geomorphic.gpkg"
@@ -21,17 +24,12 @@ def main() -> None:
 
 
 def load_flat() -> list[Polygon]:
-    spec = importlib.util.spec_from_file_location("atoll_openings", Path(__file__).with_name("atoll-openings.py"))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    import sqlite3
-
     conn = sqlite3.connect(GPKG)
     placeholders = ",".join("?" for _ in FLAT)
     query = f'SELECT geom FROM "Central Indian Ocean" WHERE class IN ({placeholders})'
     polygons = []
     for (blob,) in conn.execute(query, FLAT):
-        for outer, holes, _bbox in module.parse_polygons(blob):
+        for outer, holes, _bbox in geopackage_wkb.parse_polygons(blob):
             if len(outer) < 4:
                 continue
             try:

@@ -27,8 +27,8 @@ export type CrestGap = {
 /**
  * Breaks between reef-crest coverage on a closed rim.
  * Arcs may wrap (endM < startM). Arcs, and gaps between them, shorter than SHOULDER_MIN_M are joined.
- * A gap needs crest on both sides. The bare rest of a rim that has crest on only one stretch is open coast
- * when it is longer than OPENING_MAX_M, and is dropped when it is not a bounded mouth.
+ * Crest on only one stretch still leaves the bare rest of the rim. That rest is open coast when it is
+ * longer than OPENING_MAX_M.
  */
 export function openingsFromCrestArcs(arcs: readonly CrestArc[], perimeterM: number): CrestGap[] {
   if (perimeterM <= 0) return [];
@@ -44,7 +44,6 @@ export function openingsFromCrestArcs(arcs: readonly CrestArc[], perimeterM: num
     const wrapped = next.start < wall.end;
     const alongM = wrapped ? next.start + perimeterM - wall.end : next.start - wall.end;
     if (alongM < OPENING_MIN_M) continue;
-    if (walls.length === 1 && alongM > perimeterM - SHOULDER_MIN_M) continue;
     gaps.push({
       kind: alongM > OPENING_MAX_M ? "open-coast" : "opening",
       startM: wall.end,
@@ -91,10 +90,9 @@ function mergeWalls(arcs: readonly CrestArc[], perimeterM: number): Interval[] {
   return merged;
 }
 
-/** A crest mouth in the width window is counted even when reef flat still bridges it. */
-export function isCountedMouth(mouth: { widthM: number; reefFlatBridges: boolean }): boolean {
-  const inWindow = mouth.widthM >= OPENING_MIN_M && mouth.widthM <= OPENING_MAX_M;
-  return mouth.reefFlatBridges ? inWindow : inWindow;
+/** True when the straight width is inside the planform window. */
+export function isCountedMouth(mouth: { widthM: number }): boolean {
+  return mouth.widthM >= OPENING_MIN_M && mouth.widthM <= OPENING_MAX_M;
 }
 
 function normalize(distanceM: number, perimeterM: number): number {

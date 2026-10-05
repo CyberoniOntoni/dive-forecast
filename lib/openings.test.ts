@@ -49,15 +49,15 @@ describe("reef-crest openings", () => {
     expect(gaps.find((gap) => gap.alongM === 4000)?.kind).toBe("open-coast");
   });
 
-  it("keeps a mouth that reef flat bridges", () => {
-    expect(isCountedMouth({ widthM: 400, reefFlatBridges: true })).toBe(true);
-    expect(isCountedMouth({ widthM: 400, reefFlatBridges: false })).toBe(true);
-    expect(isCountedMouth({ widthM: 50, reefFlatBridges: true })).toBe(false);
-    expect(isCountedMouth({ widthM: 4000, reefFlatBridges: true })).toBe(false);
+  it("counts a 400 m width and rejects 50 m and 4000 m", () => {
+    expect(isCountedMouth({ widthM: 400 })).toBe(true);
+    expect(isCountedMouth({ widthM: 50 })).toBe(false);
+    expect(isCountedMouth({ widthM: 4000 })).toBe(false);
   });
 
-  it("drops a rim that has crest on only one side of a short bare arc", () => {
+  it("marks the 12 km bare rest of one crest as open coast", () => {
     const gaps = openingsFromCrestArcs([{ startM: 0, endM: 8000 }], perimeter);
+    expect(gaps.find((gap) => gap.kind === "open-coast")).toMatchObject({ alongM: 12000 });
     expect(gaps.some((gap) => gap.kind === "opening")).toBe(false);
   });
 });

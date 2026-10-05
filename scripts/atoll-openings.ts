@@ -65,8 +65,8 @@ function main(): void {
         lon,
         widthM: mouth.widthM,
         alongM,
-        a: mouth.a,
-        b: mouth.b,
+        leftShoulder: mouth.leftShoulder,
+        rightShoulder: mouth.rightShoulder,
       });
     }
   }
@@ -75,7 +75,7 @@ function main(): void {
   const matched = new Set<string>();
   for (let index = 0; index < candidates.length; index += 1) {
     const mouth = candidates[index];
-    if (!isCountedMouth({ widthM: mouth.widthM, reefFlatBridges: bridgeFlags[index] })) continue;
+    if (!isCountedMouth({ widthM: mouth.widthM })) continue;
     const sites = catalog.sites
       .filter(
         (site) =>
@@ -124,30 +124,26 @@ function main(): void {
   console.log(`Wrote ${path.relative(process.cwd(), OUT)}.`);
 }
 
-type Candidate = {
+type MeasuredMouth = {
   atollIds: string[];
   wayId: string;
   lat: number;
   lon: number;
   widthM: number;
   alongM: number;
-  a: [number, number];
-  b: [number, number];
 };
 
-type OpenCoast = {
-  atollIds: string[];
-  wayId: string;
-  lat: number;
-  lon: number;
-  widthM: number;
-  alongM: number;
+type Candidate = MeasuredMouth & {
+  leftShoulder: [number, number];
+  rightShoulder: [number, number];
 };
+
+type OpenCoast = MeasuredMouth;
 
 function reefFlatBridges(mouths: readonly Candidate[]): boolean[] {
   if (mouths.length === 0) return [];
   const result = spawnSync("python", [BRIDGE_PY], {
-    input: JSON.stringify(mouths.map((mouth) => ({ a: mouth.a, b: mouth.b }))),
+    input: JSON.stringify(mouths.map((mouth) => ({ a: mouth.leftShoulder, b: mouth.rightShoulder }))),
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
   });
@@ -162,14 +158,14 @@ function mouthBetween(
   startM: number,
   endM: number,
   perimeterM: number,
-): { widthM: number; lat: number; lon: number; a: [number, number]; b: [number, number] } | null {
+): { widthM: number; lat: number; lon: number; leftShoulder: [number, number]; rightShoulder: [number, number] } | null {
   const left = crests.filter((crest) => touches(crest, startM, perimeterM));
   const right = crests.filter((crest) => touches(crest, endM, perimeterM));
   let best = Number.POSITIVE_INFINITY;
   let lat = 0;
   let lon = 0;
-  let a: [number, number] = [0, 0];
-  let b: [number, number] = [0, 0];
+  let leftShoulder: [number, number] = [0, 0];
+  let rightShoulder: [number, number] = [0, 0];
   for (const leftCrest of left) {
     for (const rightCrest of right) {
       for (const [alon, alat] of leftCrest.points) {
@@ -179,15 +175,15 @@ function mouthBetween(
             best = distance;
             lat = (alat + blat) / 2;
             lon = (alon + blon) / 2;
-            a = [alon, alat];
-            b = [blon, blat];
+            leftShoulder = [alon, alat];
+            rightShoulder = [blon, blat];
           }
         }
       }
     }
   }
   if (!Number.isFinite(best)) return null;
-  return { widthM: best, lat, lon, a, b };
+  return { widthM: best, lat, lon, leftShoulder, rightShoulder };
 }
 
 function touches(crest: Crest, atM: number, perimeterM: number): boolean {
