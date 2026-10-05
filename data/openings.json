@@ -1,0 +1,4527 @@
+{
+  "source": "Allen Coral Atlas reef crest, walked around each atoll by bearing from the rim centre",
+  "minM": 100,
+  "maxM": 3000,
+  "note": "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section.",
+  "openings": [
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.60342,
+      "lon": 73.2279,
+      "widthM": 429,
+      "alongM": 287,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.59787,
+      "lon": 73.22693,
+      "widthM": 719,
+      "alongM": 459,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.59435,
+      "lon": 73.22074,
+      "widthM": 294,
+      "alongM": 340,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.58074,
+      "lon": 73.23965,
+      "widthM": 328,
+      "alongM": 219,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.58296,
+      "lon": 73.22042,
+      "widthM": 431,
+      "alongM": 322,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.61067,
+      "lon": 73.14546,
+      "widthM": 316,
+      "alongM": 798,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.61357,
+      "lon": 73.1382,
+      "widthM": 532,
+      "alongM": 4478,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.61443,
+      "lon": 73.11994,
+      "widthM": 621,
+      "alongM": 1260,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.61777,
+      "lon": 73.11076,
+      "widthM": 2435,
+      "alongM": 1406,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.62907,
+      "lon": 73.09398,
+      "widthM": 137,
+      "alongM": 184,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.63149,
+      "lon": 73.10047,
+      "widthM": 736,
+      "alongM": 268,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.63549,
+      "lon": 73.10735,
+      "widthM": 1023,
+      "alongM": 633,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.65002,
+      "lon": 73.10649,
+      "widthM": 656,
+      "alongM": 817,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.65878,
+      "lon": 73.10995,
+      "widthM": 268,
+      "alongM": 426,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.67913,
+      "lon": 73.1217,
+      "widthM": 216,
+      "alongM": 201,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.68878,
+      "lon": 73.18236,
+      "widthM": 2844,
+      "alongM": 2500,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.67985,
+      "lon": 73.19567,
+      "widthM": 388,
+      "alongM": 497,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.66608,
+      "lon": 73.19419,
+      "widthM": 945,
+      "alongM": 893,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "addu"
+      ],
+      "wayId": "671807083",
+      "lat": -0.64144,
+      "lon": 73.22374,
+      "widthM": 407,
+      "alongM": 320,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.43907,
+      "lon": 73.6153,
+      "widthM": 766,
+      "alongM": 267,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.44705,
+      "lon": 73.59877,
+      "widthM": 622,
+      "alongM": 273,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.45387,
+      "lon": 73.5863,
+      "widthM": 793,
+      "alongM": 771,
+      "reefFlatBridges": false,
+      "sites": [
+        "fathima-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.46326,
+      "lon": 73.57074,
+      "widthM": 805,
+      "alongM": 769,
+      "reefFlatBridges": false,
+      "sites": [
+        "guraidhoo-corner-2"
+      ]
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.47029,
+      "lon": 73.56409,
+      "widthM": 1023,
+      "alongM": 1189,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.47743,
+      "lon": 73.55365,
+      "widthM": 1433,
+      "alongM": 1785,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.48633,
+      "lon": 73.53995,
+      "widthM": 681,
+      "alongM": 912,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.48922,
+      "lon": 73.53474,
+      "widthM": 132,
+      "alongM": 211,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.49468,
+      "lon": 73.52468,
+      "widthM": 1259,
+      "alongM": 1916,
+      "reefFlatBridges": false,
+      "sites": [
+        "fushifaru-thila",
+        "fushifaru-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.49928,
+      "lon": 73.51709,
+      "widthM": 518,
+      "alongM": 791,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.51078,
+      "lon": 73.5097,
+      "widthM": 857,
+      "alongM": 554,
+      "reefFlatBridges": false,
+      "sites": [
+        "kanuhuraa-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.52179,
+      "lon": 73.50878,
+      "widthM": 1162,
+      "alongM": 697,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.53847,
+      "lon": 73.50613,
+      "widthM": 552,
+      "alongM": 786,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.53614,
+      "lon": 73.44628,
+      "widthM": 2129,
+      "alongM": 2183,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.48806,
+      "lon": 73.40341,
+      "widthM": 2819,
+      "alongM": 3245,
+      "reefFlatBridges": false,
+      "sites": [
+        "gaaerifaru-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.47269,
+      "lon": 73.38192,
+      "widthM": 2881,
+      "alongM": 2999,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.45969,
+      "lon": 73.36963,
+      "widthM": 722,
+      "alongM": 707,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.44972,
+      "lon": 73.36864,
+      "widthM": 840,
+      "alongM": 915,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.43236,
+      "lon": 73.3573,
+      "widthM": 2313,
+      "alongM": 2204,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.36784,
+      "lon": 73.34852,
+      "widthM": 1793,
+      "alongM": 538,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.37458,
+      "lon": 73.38252,
+      "widthM": 1219,
+      "alongM": 649,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.37082,
+      "lon": 73.40224,
+      "widthM": 1684,
+      "alongM": 2013,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.36505,
+      "lon": 73.41241,
+      "widthM": 644,
+      "alongM": 664,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.36458,
+      "lon": 73.4163,
+      "widthM": 117,
+      "alongM": 151,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.36133,
+      "lon": 73.41616,
+      "widthM": 429,
+      "alongM": 243,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.35883,
+      "lon": 73.41875,
+      "widthM": 408,
+      "alongM": 201,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.35773,
+      "lon": 73.42108,
+      "widthM": 278,
+      "alongM": 219,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.35618,
+      "lon": 73.42793,
+      "widthM": 336,
+      "alongM": 566,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.31473,
+      "lon": 73.47851,
+      "widthM": 1558,
+      "alongM": 951,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.30648,
+      "lon": 73.48511,
+      "widthM": 660,
+      "alongM": 164,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.29454,
+      "lon": 73.49616,
+      "widthM": 2264,
+      "alongM": 1226,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.24818,
+      "lon": 73.51792,
+      "widthM": 1800,
+      "alongM": 1016,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.24659,
+      "lon": 73.53697,
+      "widthM": 1137,
+      "alongM": 885,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.26893,
+      "lon": 73.59434,
+      "widthM": 340,
+      "alongM": 294,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.28829,
+      "lon": 73.64249,
+      "widthM": 482,
+      "alongM": 231,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.32703,
+      "lon": 73.64647,
+      "widthM": 1076,
+      "alongM": 727,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.34053,
+      "lon": 73.65152,
+      "widthM": 678,
+      "alongM": 600,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.34558,
+      "lon": 73.65947,
+      "widthM": 392,
+      "alongM": 273,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.36402,
+      "lon": 73.65772,
+      "widthM": 1312,
+      "alongM": 861,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.37269,
+      "lon": 73.65792,
+      "widthM": 270,
+      "alongM": 153,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.40135,
+      "lon": 73.65152,
+      "widthM": 839,
+      "alongM": 619,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.42019,
+      "lon": 73.64223,
+      "widthM": 275,
+      "alongM": 420,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.42812,
+      "lon": 73.63616,
+      "widthM": 689,
+      "alongM": 323,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "lhaviyani"
+      ],
+      "wayId": "671807029",
+      "lat": 5.43407,
+      "lon": 73.6268,
+      "widthM": 1389,
+      "alongM": 337,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.22047,
+      "lon": 73.19327,
+      "widthM": 1126,
+      "alongM": 775,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.21647,
+      "lon": 73.12702,
+      "widthM": 236,
+      "alongM": 226,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.25088,
+      "lon": 73.17726,
+      "widthM": 2995,
+      "alongM": 1653,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.26637,
+      "lon": 73.15846,
+      "widthM": 904,
+      "alongM": 275,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.28663,
+      "lon": 73.10681,
+      "widthM": 293,
+      "alongM": 252,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.32348,
+      "lon": 73.09326,
+      "widthM": 811,
+      "alongM": 602,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.35627,
+      "lon": 73.06744,
+      "widthM": 1361,
+      "alongM": 1069,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.27637,
+      "lon": 73.01513,
+      "widthM": 780,
+      "alongM": 1241,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.28007,
+      "lon": 72.88847,
+      "widthM": 2382,
+      "alongM": 1399,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.25328,
+      "lon": 72.85627,
+      "widthM": 2423,
+      "alongM": 2235,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.21715,
+      "lon": 72.8626,
+      "widthM": 1739,
+      "alongM": 994,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.20412,
+      "lon": 72.84737,
+      "widthM": 169,
+      "alongM": 202,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.08833,
+      "lon": 72.81647,
+      "widthM": 306,
+      "alongM": 243,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.01961,
+      "lon": 72.83419,
+      "widthM": 524,
+      "alongM": 346,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.00705,
+      "lon": 72.92905,
+      "widthM": 2326,
+      "alongM": 1516,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.01175,
+      "lon": 72.9476,
+      "widthM": 696,
+      "alongM": 912,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.01199,
+      "lon": 72.95515,
+      "widthM": 240,
+      "alongM": 184,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.07499,
+      "lon": 73.04828,
+      "widthM": 695,
+      "alongM": 845,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.10001,
+      "lon": 73.06699,
+      "widthM": 1343,
+      "alongM": 1445,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.11123,
+      "lon": 73.07092,
+      "widthM": 1140,
+      "alongM": 1515,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.1135,
+      "lon": 73.09255,
+      "widthM": 1454,
+      "alongM": 1780,
+      "reefFlatBridges": false,
+      "sites": [
+        "kufunadhoo-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.12799,
+      "lon": 73.10548,
+      "widthM": 1770,
+      "alongM": 2350,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "baa"
+      ],
+      "wayId": "671807030",
+      "lat": 5.13576,
+      "lon": 73.11429,
+      "widthM": 829,
+      "alongM": 561,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.46923,
+      "lon": 73.71092,
+      "widthM": 612,
+      "alongM": 308,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.47489,
+      "lon": 73.69534,
+      "widthM": 1232,
+      "alongM": 254,
+      "reefFlatBridges": false,
+      "sites": [
+        "cave-corner",
+        "meeru-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.48006,
+      "lon": 73.69725,
+      "widthM": 920,
+      "alongM": 597,
+      "reefFlatBridges": false,
+      "sites": [
+        "prisca-head",
+        "meeru-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.48978,
+      "lon": 73.6862,
+      "widthM": 1813,
+      "alongM": 1343,
+      "reefFlatBridges": false,
+      "sites": [
+        "prisca-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.50157,
+      "lon": 73.67412,
+      "widthM": 188,
+      "alongM": 155,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.52351,
+      "lon": 73.6588,
+      "widthM": 675,
+      "alongM": 618,
+      "reefFlatBridges": false,
+      "sites": [
+        "kuda-kandu-2"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.54763,
+      "lon": 73.61952,
+      "widthM": 1043,
+      "alongM": 663,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.59778,
+      "lon": 73.58437,
+      "widthM": 341,
+      "alongM": 320,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.61844,
+      "lon": 73.57775,
+      "widthM": 557,
+      "alongM": 531,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.6718,
+      "lon": 73.53676,
+      "widthM": 572,
+      "alongM": 379,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.67849,
+      "lon": 73.53014,
+      "widthM": 1288,
+      "alongM": 223,
+      "reefFlatBridges": true,
+      "sites": [
+        "vah-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.68182,
+      "lon": 73.51431,
+      "widthM": 2806,
+      "alongM": 2060,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.69686,
+      "lon": 73.46236,
+      "widthM": 2245,
+      "alongM": 1558,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.62715,
+      "lon": 73.42791,
+      "widthM": 2479,
+      "alongM": 2240,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.60917,
+      "lon": 73.41333,
+      "widthM": 871,
+      "alongM": 606,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.61496,
+      "lon": 73.40226,
+      "widthM": 1478,
+      "alongM": 170,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.52212,
+      "lon": 73.37208,
+      "widthM": 1971,
+      "alongM": 2027,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.50829,
+      "lon": 73.36307,
+      "widthM": 219,
+      "alongM": 242,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.50382,
+      "lon": 73.36328,
+      "widthM": 327,
+      "alongM": 318,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.45818,
+      "lon": 73.36972,
+      "widthM": 197,
+      "alongM": 210,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.44628,
+      "lon": 73.37621,
+      "widthM": 2469,
+      "alongM": 2802,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.43307,
+      "lon": 73.38295,
+      "widthM": 346,
+      "alongM": 356,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.4242,
+      "lon": 73.35795,
+      "widthM": 622,
+      "alongM": 650,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.18208,
+      "lon": 73.41951,
+      "widthM": 935,
+      "alongM": 543,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.18087,
+      "lon": 73.43444,
+      "widthM": 929,
+      "alongM": 783,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.17984,
+      "lon": 73.45043,
+      "widthM": 1157,
+      "alongM": 670,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.21835,
+      "lon": 73.54727,
+      "widthM": 1148,
+      "alongM": 251,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.23082,
+      "lon": 73.55015,
+      "widthM": 483,
+      "alongM": 304,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.28427,
+      "lon": 73.55839,
+      "widthM": 218,
+      "alongM": 272,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.30479,
+      "lon": 73.5757,
+      "widthM": 267,
+      "alongM": 223,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.31113,
+      "lon": 73.58031,
+      "widthM": 823,
+      "alongM": 916,
+      "reefFlatBridges": false,
+      "sites": [
+        "hp-reef"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.31632,
+      "lon": 73.58837,
+      "widthM": 597,
+      "alongM": 636,
+      "reefFlatBridges": false,
+      "sites": [
+        "middle-point"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.34663,
+      "lon": 73.61474,
+      "widthM": 513,
+      "alongM": 781,
+      "reefFlatBridges": false,
+      "sites": [
+        "kani-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.35845,
+      "lon": 73.62565,
+      "widthM": 540,
+      "alongM": 409,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.3608,
+      "lon": 73.63513,
+      "widthM": 1210,
+      "alongM": 1308,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.36896,
+      "lon": 73.65087,
+      "widthM": 281,
+      "alongM": 238,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-male"
+      ],
+      "wayId": "671807044",
+      "lat": 4.37484,
+      "lon": 73.6586,
+      "widthM": 823,
+      "alongM": 162,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.87278,
+      "lon": 73.00509,
+      "widthM": 1399,
+      "alongM": 925,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.88643,
+      "lon": 72.93464,
+      "widthM": 224,
+      "alongM": 370,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.88661,
+      "lon": 72.92937,
+      "widthM": 201,
+      "alongM": 334,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.88614,
+      "lon": 72.92458,
+      "widthM": 665,
+      "alongM": 1184,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.88529,
+      "lon": 72.90774,
+      "widthM": 1583,
+      "alongM": 2297,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.88268,
+      "lon": 72.89384,
+      "widthM": 514,
+      "alongM": 695,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.83336,
+      "lon": 72.85407,
+      "widthM": 309,
+      "alongM": 264,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.82155,
+      "lon": 72.86392,
+      "widthM": 947,
+      "alongM": 725,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.81603,
+      "lon": 72.87446,
+      "widthM": 534,
+      "alongM": 385,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.82121,
+      "lon": 72.92977,
+      "widthM": 738,
+      "alongM": 1210,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.82528,
+      "lon": 72.94219,
+      "widthM": 1285,
+      "alongM": 2106,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.83316,
+      "lon": 72.96063,
+      "widthM": 2133,
+      "alongM": 2375,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.84163,
+      "lon": 72.97853,
+      "widthM": 1518,
+      "alongM": 1070,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "goidhoo"
+      ],
+      "wayId": "671807124",
+      "lat": 4.85382,
+      "lon": 72.99092,
+      "widthM": 1858,
+      "alongM": 1610,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.61973,
+      "lon": 73.04523,
+      "widthM": 2657,
+      "alongM": 3279,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.76777,
+      "lon": 73.01401,
+      "widthM": 825,
+      "alongM": 460,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.61687,
+      "lon": 72.9388,
+      "widthM": 1915,
+      "alongM": 2627,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.62723,
+      "lon": 72.92872,
+      "widthM": 1359,
+      "alongM": 3130,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.69229,
+      "lon": 72.83756,
+      "widthM": 632,
+      "alongM": 470,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.61555,
+      "lon": 72.84091,
+      "widthM": 2799,
+      "alongM": 2061,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.60538,
+      "lon": 72.82599,
+      "widthM": 1088,
+      "alongM": 1040,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.54629,
+      "lon": 72.79615,
+      "widthM": 2748,
+      "alongM": 1593,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.52877,
+      "lon": 72.78822,
+      "widthM": 272,
+      "alongM": 222,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.40903,
+      "lon": 72.86761,
+      "widthM": 2778,
+      "alongM": 352,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.44705,
+      "lon": 72.93997,
+      "widthM": 584,
+      "alongM": 577,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.46596,
+      "lon": 72.96739,
+      "widthM": 2848,
+      "alongM": 1932,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.43685,
+      "lon": 73.02558,
+      "widthM": 2907,
+      "alongM": 688,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.44853,
+      "lon": 73.0366,
+      "widthM": 505,
+      "alongM": 182,
+      "reefFlatBridges": true,
+      "sites": [
+        "fainu-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "raa"
+      ],
+      "wayId": "671807031",
+      "lat": 5.59662,
+      "lon": 73.04471,
+      "widthM": 2395,
+      "alongM": 3127,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.78463,
+      "lon": 73.43227,
+      "widthM": 1659,
+      "alongM": 2932,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.78499,
+      "lon": 73.42279,
+      "widthM": 311,
+      "alongM": 283,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.7829,
+      "lon": 73.41021,
+      "widthM": 1747,
+      "alongM": 1855,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.76639,
+      "lon": 73.38951,
+      "widthM": 2866,
+      "alongM": 2395,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.72797,
+      "lon": 73.47801,
+      "widthM": 520,
+      "alongM": 274,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "gaafaru"
+      ],
+      "wayId": "671807125",
+      "lat": 4.73574,
+      "lon": 73.50139,
+      "widthM": 989,
+      "alongM": 842,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.92757,
+      "lon": 72.95367,
+      "widthM": 1267,
+      "alongM": 2494,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.94282,
+      "lon": 72.94942,
+      "widthM": 2152,
+      "alongM": 3979,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.99854,
+      "lon": 72.95373,
+      "widthM": 1736,
+      "alongM": 2667,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.01477,
+      "lon": 72.94412,
+      "widthM": 2356,
+      "alongM": 1725,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.10276,
+      "lon": 72.94345,
+      "widthM": 565,
+      "alongM": 539,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.11233,
+      "lon": 72.93963,
+      "widthM": 1600,
+      "alongM": 957,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.07777,
+      "lon": 72.89595,
+      "widthM": 2771,
+      "alongM": 2656,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.03478,
+      "lon": 72.82655,
+      "widthM": 1676,
+      "alongM": 539,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.09782,
+      "lon": 72.73023,
+      "widthM": 2844,
+      "alongM": 451,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.10539,
+      "lon": 72.71712,
+      "widthM": 279,
+      "alongM": 230,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 4.05443,
+      "lon": 72.71777,
+      "widthM": 180,
+      "alongM": 181,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.88595,
+      "lon": 72.71725,
+      "widthM": 1536,
+      "alongM": 273,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.87547,
+      "lon": 72.73463,
+      "widthM": 2968,
+      "alongM": 5361,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.8655,
+      "lon": 72.75727,
+      "widthM": 2760,
+      "alongM": 2025,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.81562,
+      "lon": 72.70609,
+      "widthM": 250,
+      "alongM": 421,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.80133,
+      "lon": 72.70778,
+      "widthM": 2418,
+      "alongM": 3099,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.78557,
+      "lon": 72.70447,
+      "widthM": 1068,
+      "alongM": 538,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.78505,
+      "lon": 72.71427,
+      "widthM": 2703,
+      "alongM": 1198,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.70335,
+      "lon": 72.70259,
+      "widthM": 156,
+      "alongM": 176,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.69365,
+      "lon": 72.70701,
+      "widthM": 298,
+      "alongM": 470,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.68848,
+      "lon": 72.70719,
+      "widthM": 560,
+      "alongM": 153,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.61599,
+      "lon": 72.71085,
+      "widthM": 198,
+      "alongM": 195,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.60734,
+      "lon": 72.71501,
+      "widthM": 709,
+      "alongM": 454,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.50078,
+      "lon": 72.73234,
+      "widthM": 512,
+      "alongM": 292,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.49018,
+      "lon": 72.76208,
+      "widthM": 227,
+      "alongM": 162,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.48686,
+      "lon": 72.77769,
+      "widthM": 308,
+      "alongM": 207,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.47356,
+      "lon": 72.80297,
+      "widthM": 2155,
+      "alongM": 1307,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.47572,
+      "lon": 72.8569,
+      "widthM": 2854,
+      "alongM": 1834,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.48335,
+      "lon": 72.87623,
+      "widthM": 509,
+      "alongM": 592,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.48614,
+      "lon": 72.8869,
+      "widthM": 406,
+      "alongM": 233,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.49404,
+      "lon": 72.89489,
+      "widthM": 554,
+      "alongM": 361,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.61702,
+      "lon": 72.956,
+      "widthM": 1163,
+      "alongM": 378,
+      "reefFlatBridges": true,
+      "sites": [
+        "viligilivaru-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.66508,
+      "lon": 72.97143,
+      "widthM": 726,
+      "alongM": 645,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.75083,
+      "lon": 72.9673,
+      "widthM": 1749,
+      "alongM": 1699,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.85865,
+      "lon": 72.91405,
+      "widthM": 176,
+      "alongM": 255,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.85335,
+      "lon": 72.95856,
+      "widthM": 630,
+      "alongM": 1302,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "north-ari",
+        "south-ari"
+      ],
+      "wayId": "671807122",
+      "lat": 3.88021,
+      "lon": 72.88766,
+      "widthM": 1599,
+      "alongM": 260,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.2884,
+      "lon": 73.00972,
+      "widthM": 1016,
+      "alongM": 1160,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.29691,
+      "lon": 73.01221,
+      "widthM": 327,
+      "alongM": 327,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.33049,
+      "lon": 72.97094,
+      "widthM": 528,
+      "alongM": 403,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.32685,
+      "lon": 72.95856,
+      "widthM": 589,
+      "alongM": 548,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.28198,
+      "lon": 72.93819,
+      "widthM": 625,
+      "alongM": 503,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.27079,
+      "lon": 72.95203,
+      "widthM": 2889,
+      "alongM": 2991,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.26141,
+      "lon": 72.97055,
+      "widthM": 796,
+      "alongM": 1580,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.25936,
+      "lon": 72.97527,
+      "widthM": 212,
+      "alongM": 450,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.26325,
+      "lon": 72.98928,
+      "widthM": 887,
+      "alongM": 1821,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.26448,
+      "lon": 72.99629,
+      "widthM": 609,
+      "alongM": 609,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.26819,
+      "lon": 73.00114,
+      "widthM": 200,
+      "alongM": 364,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.27239,
+      "lon": 73.0031,
+      "widthM": 347,
+      "alongM": 571,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "rasdhoo"
+      ],
+      "wayId": "671807123",
+      "lat": 4.27901,
+      "lon": 73.00698,
+      "widthM": 330,
+      "alongM": 386,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.50278,
+      "lon": 73.53712,
+      "widthM": 143,
+      "alongM": 1445,
+      "reefFlatBridges": true,
+      "sites": [
+        "hulhidhoo-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.50963,
+      "lon": 73.53198,
+      "widthM": 808,
+      "alongM": 6140,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.65542,
+      "lon": 73.48697,
+      "widthM": 2260,
+      "alongM": 454,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.59326,
+      "lon": 73.50117,
+      "widthM": 278,
+      "alongM": 171,
+      "reefFlatBridges": true,
+      "sites": [
+        "miyaru-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.63454,
+      "lon": 73.36768,
+      "widthM": 2933,
+      "alongM": 1948,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.57826,
+      "lon": 73.33181,
+      "widthM": 2787,
+      "alongM": 1011,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.50296,
+      "lon": 73.32921,
+      "widthM": 1726,
+      "alongM": 474,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.46759,
+      "lon": 73.34567,
+      "widthM": 699,
+      "alongM": 621,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.45438,
+      "lon": 73.37967,
+      "widthM": 1463,
+      "alongM": 1697,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.44722,
+      "lon": 73.39501,
+      "widthM": 2659,
+      "alongM": 1107,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.42267,
+      "lon": 73.41277,
+      "widthM": 2877,
+      "alongM": 360,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.30876,
+      "lon": 73.47997,
+      "widthM": 2176,
+      "alongM": 2020,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.32145,
+      "lon": 73.50975,
+      "widthM": 550,
+      "alongM": 268,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.33203,
+      "lon": 73.51752,
+      "widthM": 398,
+      "alongM": 490,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.34524,
+      "lon": 73.53533,
+      "widthM": 313,
+      "alongM": 341,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.34759,
+      "lon": 73.5462,
+      "widthM": 275,
+      "alongM": 311,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.35761,
+      "lon": 73.61579,
+      "widthM": 794,
+      "alongM": 756,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.35844,
+      "lon": 73.63639,
+      "widthM": 421,
+      "alongM": 275,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.36455,
+      "lon": 73.66857,
+      "widthM": 380,
+      "alongM": 496,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.38966,
+      "lon": 73.75425,
+      "widthM": 229,
+      "alongM": 171,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.39294,
+      "lon": 73.7557,
+      "widthM": 253,
+      "alongM": 179,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.40718,
+      "lon": 73.75896,
+      "widthM": 417,
+      "alongM": 410,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.41367,
+      "lon": 73.75934,
+      "widthM": 253,
+      "alongM": 206,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "vaavu"
+      ],
+      "wayId": "671807115",
+      "lat": 3.44079,
+      "lon": 73.76844,
+      "widthM": 790,
+      "alongM": 591,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.83672,
+      "lon": 73.02805,
+      "widthM": 681,
+      "alongM": 844,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.85386,
+      "lon": 73.0278,
+      "widthM": 1034,
+      "alongM": 1159,
+      "reefFlatBridges": false,
+      "sites": [
+        "hulhu-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.86881,
+      "lon": 73.02778,
+      "widthM": 675,
+      "alongM": 701,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.87784,
+      "lon": 73.0271,
+      "widthM": 737,
+      "alongM": 871,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.89338,
+      "lon": 73.02832,
+      "widthM": 358,
+      "alongM": 286,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.91461,
+      "lon": 73.02753,
+      "widthM": 1833,
+      "alongM": 1236,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.95034,
+      "lon": 73.02722,
+      "widthM": 339,
+      "alongM": 208,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.96707,
+      "lon": 73.02272,
+      "widthM": 2958,
+      "alongM": 1727,
+      "reefFlatBridges": false,
+      "sites": [
+        "velavaru-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.92804,
+      "lon": 72.96146,
+      "widthM": 1118,
+      "alongM": 363,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.93641,
+      "lon": 72.96025,
+      "widthM": 230,
+      "alongM": 176,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.94998,
+      "lon": 72.95364,
+      "widthM": 2876,
+      "alongM": 1688,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.96756,
+      "lon": 72.86875,
+      "widthM": 2440,
+      "alongM": 1709,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.92004,
+      "lon": 72.85146,
+      "widthM": 2562,
+      "alongM": 1292,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.86906,
+      "lon": 72.84279,
+      "widthM": 2405,
+      "alongM": 1475,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.85262,
+      "lon": 72.84387,
+      "widthM": 741,
+      "alongM": 990,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.8321,
+      "lon": 72.83291,
+      "widthM": 2339,
+      "alongM": 2858,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.81748,
+      "lon": 72.82597,
+      "widthM": 519,
+      "alongM": 796,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.81168,
+      "lon": 72.82516,
+      "widthM": 211,
+      "alongM": 228,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.80582,
+      "lon": 72.82431,
+      "widthM": 206,
+      "alongM": 240,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.74399,
+      "lon": 72.83269,
+      "widthM": 149,
+      "alongM": 154,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.69551,
+      "lon": 72.84695,
+      "widthM": 241,
+      "alongM": 169,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.66341,
+      "lon": 72.882,
+      "widthM": 299,
+      "alongM": 339,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.67141,
+      "lon": 72.91437,
+      "widthM": 2674,
+      "alongM": 1976,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.70011,
+      "lon": 72.97534,
+      "widthM": 1787,
+      "alongM": 1658,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.7287,
+      "lon": 73.00795,
+      "widthM": 614,
+      "alongM": 607,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.73876,
+      "lon": 73.01772,
+      "widthM": 173,
+      "alongM": 158,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.75253,
+      "lon": 73.02234,
+      "widthM": 426,
+      "alongM": 567,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.76953,
+      "lon": 73.02528,
+      "widthM": 1537,
+      "alongM": 1549,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.78469,
+      "lon": 73.02605,
+      "widthM": 257,
+      "alongM": 386,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.79857,
+      "lon": 73.02744,
+      "widthM": 626,
+      "alongM": 632,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.80571,
+      "lon": 73.02758,
+      "widthM": 243,
+      "alongM": 467,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.81435,
+      "lon": 73.02793,
+      "widthM": 949,
+      "alongM": 1185,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "dhaalu"
+      ],
+      "wayId": "671807127",
+      "lat": 2.82543,
+      "lon": 73.02724,
+      "widthM": 928,
+      "alongM": 1144,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.20117,
+      "lon": 73.03869,
+      "widthM": 2138,
+      "alongM": 1833,
+      "reefFlatBridges": false,
+      "sites": [
+        "filitheyo-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.27351,
+      "lon": 72.98284,
+      "widthM": 2531,
+      "alongM": 1290,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.26955,
+      "lon": 72.96685,
+      "widthM": 537,
+      "alongM": 393,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.25507,
+      "lon": 72.93945,
+      "widthM": 2298,
+      "alongM": 2666,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.26652,
+      "lon": 72.92445,
+      "widthM": 2045,
+      "alongM": 1622,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.27541,
+      "lon": 72.90343,
+      "widthM": 2841,
+      "alongM": 3002,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.28756,
+      "lon": 72.81856,
+      "widthM": 2354,
+      "alongM": 1844,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.27115,
+      "lon": 72.80807,
+      "widthM": 291,
+      "alongM": 224,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.26246,
+      "lon": 72.8076,
+      "widthM": 343,
+      "alongM": 341,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.23757,
+      "lon": 72.81753,
+      "widthM": 1372,
+      "alongM": 1065,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.22511,
+      "lon": 72.81622,
+      "widthM": 157,
+      "alongM": 150,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.21675,
+      "lon": 72.81625,
+      "widthM": 1277,
+      "alongM": 1319,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.20243,
+      "lon": 72.81885,
+      "widthM": 720,
+      "alongM": 763,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.15405,
+      "lon": 72.8555,
+      "widthM": 177,
+      "alongM": 180,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.14017,
+      "lon": 72.85964,
+      "widthM": 678,
+      "alongM": 1610,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.11473,
+      "lon": 72.856,
+      "widthM": 2763,
+      "alongM": 1045,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.08028,
+      "lon": 72.84007,
+      "widthM": 239,
+      "alongM": 197,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.07152,
+      "lon": 72.85409,
+      "widthM": 344,
+      "alongM": 396,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.05232,
+      "lon": 72.87612,
+      "widthM": 208,
+      "alongM": 333,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.07617,
+      "lon": 72.9629,
+      "widthM": 1123,
+      "alongM": 1130,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.07972,
+      "lon": 72.97291,
+      "widthM": 1133,
+      "alongM": 828,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.08169,
+      "lon": 72.98547,
+      "widthM": 1046,
+      "alongM": 876,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.086,
+      "lon": 72.9958,
+      "widthM": 221,
+      "alongM": 181,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.09553,
+      "lon": 73.00606,
+      "widthM": 1404,
+      "alongM": 1173,
+      "reefFlatBridges": false,
+      "sites": [
+        "biledhoo-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.10709,
+      "lon": 73.01724,
+      "widthM": 359,
+      "alongM": 455,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.12654,
+      "lon": 73.02668,
+      "widthM": 536,
+      "alongM": 447,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.13698,
+      "lon": 73.02998,
+      "widthM": 621,
+      "alongM": 516,
+      "reefFlatBridges": false,
+      "sites": [
+        "barracuda-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "faafu"
+      ],
+      "wayId": "671807126",
+      "lat": 3.14882,
+      "lon": 73.03467,
+      "widthM": 1733,
+      "alongM": 1410,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.92442,
+      "lon": 73.58698,
+      "widthM": 388,
+      "alongM": 548,
+      "reefFlatBridges": true,
+      "sites": [
+        "muli-kandu-hakura-express"
+      ]
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.93325,
+      "lon": 73.58653,
+      "widthM": 1192,
+      "alongM": 1258,
+      "reefFlatBridges": false,
+      "sites": [
+        "muli-kandu-hakura-express"
+      ]
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.95034,
+      "lon": 73.60468,
+      "widthM": 848,
+      "alongM": 492,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.95849,
+      "lon": 73.61011,
+      "widthM": 217,
+      "alongM": 419,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.98167,
+      "lon": 73.62008,
+      "widthM": 662,
+      "alongM": 371,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.00655,
+      "lon": 73.62675,
+      "widthM": 375,
+      "alongM": 218,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.04581,
+      "lon": 73.62772,
+      "widthM": 938,
+      "alongM": 435,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.08407,
+      "lon": 73.65139,
+      "widthM": 647,
+      "alongM": 164,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.0982,
+      "lon": 73.65348,
+      "widthM": 322,
+      "alongM": 166,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.09683,
+      "lon": 73.63439,
+      "widthM": 2491,
+      "alongM": 860,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.10404,
+      "lon": 73.59111,
+      "widthM": 1938,
+      "alongM": 915,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.10642,
+      "lon": 73.57802,
+      "widthM": 443,
+      "alongM": 246,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.11307,
+      "lon": 73.57124,
+      "widthM": 311,
+      "alongM": 197,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.11679,
+      "lon": 73.56263,
+      "widthM": 713,
+      "alongM": 476,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.12075,
+      "lon": 73.55682,
+      "widthM": 419,
+      "alongM": 256,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.12706,
+      "lon": 73.54624,
+      "widthM": 1883,
+      "alongM": 1133,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.13539,
+      "lon": 73.5342,
+      "widthM": 277,
+      "alongM": 288,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.13957,
+      "lon": 73.52567,
+      "widthM": 1292,
+      "alongM": 787,
+      "reefFlatBridges": true,
+      "sites": [
+        "vanhuravalhi-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.15562,
+      "lon": 73.50606,
+      "widthM": 1984,
+      "alongM": 1244,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.16362,
+      "lon": 73.49337,
+      "widthM": 377,
+      "alongM": 309,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.17411,
+      "lon": 73.47718,
+      "widthM": 1029,
+      "alongM": 657,
+      "reefFlatBridges": true,
+      "sites": [
+        "mulaku-kandu"
+      ]
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.08165,
+      "lon": 73.38066,
+      "widthM": 924,
+      "alongM": 508,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.07612,
+      "lon": 73.37657,
+      "widthM": 1098,
+      "alongM": 471,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.05373,
+      "lon": 73.37888,
+      "widthM": 1481,
+      "alongM": 195,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.04392,
+      "lon": 73.37931,
+      "widthM": 616,
+      "alongM": 409,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.0264,
+      "lon": 73.37895,
+      "widthM": 1557,
+      "alongM": 650,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 3.01468,
+      "lon": 73.37918,
+      "widthM": 948,
+      "alongM": 723,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.99263,
+      "lon": 73.38073,
+      "widthM": 605,
+      "alongM": 818,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.97848,
+      "lon": 73.38268,
+      "widthM": 2510,
+      "alongM": 1407,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.96392,
+      "lon": 73.38816,
+      "widthM": 700,
+      "alongM": 780,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.95337,
+      "lon": 73.3836,
+      "widthM": 1543,
+      "alongM": 2976,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.93823,
+      "lon": 73.37549,
+      "widthM": 1717,
+      "alongM": 3229,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.92536,
+      "lon": 73.37482,
+      "widthM": 955,
+      "alongM": 1858,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.91279,
+      "lon": 73.37758,
+      "widthM": 1421,
+      "alongM": 3037,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.90147,
+      "lon": 73.38156,
+      "widthM": 478,
+      "alongM": 1076,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.89046,
+      "lon": 73.38484,
+      "widthM": 1586,
+      "alongM": 3547,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.74734,
+      "lon": 73.39299,
+      "widthM": 254,
+      "alongM": 226,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.75318,
+      "lon": 73.41675,
+      "widthM": 299,
+      "alongM": 183,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.82614,
+      "lon": 73.47071,
+      "widthM": 134,
+      "alongM": 213,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.83052,
+      "lon": 73.47817,
+      "widthM": 279,
+      "alongM": 541,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.83594,
+      "lon": 73.48693,
+      "widthM": 144,
+      "alongM": 269,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.8444,
+      "lon": 73.49501,
+      "widthM": 1918,
+      "alongM": 3373,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.85233,
+      "lon": 73.51002,
+      "widthM": 235,
+      "alongM": 292,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.84863,
+      "lon": 73.53072,
+      "widthM": 405,
+      "alongM": 491,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.85963,
+      "lon": 73.56984,
+      "widthM": 276,
+      "alongM": 273,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.87504,
+      "lon": 73.57898,
+      "widthM": 438,
+      "alongM": 425,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "meemu"
+      ],
+      "wayId": "671807090",
+      "lat": 2.88379,
+      "lon": 73.58168,
+      "widthM": 171,
+      "alongM": 195,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.0452,
+      "lon": 73.54224,
+      "widthM": 179,
+      "alongM": 194,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.08751,
+      "lon": 73.53375,
+      "widthM": 807,
+      "alongM": 771,
+      "reefFlatBridges": false,
+      "sites": [
+        "embudhoo-express",
+        "embudhu-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.12098,
+      "lon": 73.52279,
+      "widthM": 678,
+      "alongM": 607,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.12293,
+      "lon": 73.48614,
+      "widthM": 429,
+      "alongM": 552,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.12378,
+      "lon": 73.47702,
+      "widthM": 479,
+      "alongM": 216,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.12625,
+      "lon": 73.46764,
+      "widthM": 440,
+      "alongM": 415,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.12441,
+      "lon": 73.45039,
+      "widthM": 2524,
+      "alongM": 2620,
+      "reefFlatBridges": false,
+      "sites": [
+        "coral-garden-3"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.08289,
+      "lon": 73.39775,
+      "widthM": 2120,
+      "alongM": 558,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 4.06831,
+      "lon": 73.3865,
+      "widthM": 2259,
+      "alongM": 1914,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.89072,
+      "lon": 73.36388,
+      "widthM": 2815,
+      "alongM": 2238,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.89224,
+      "lon": 73.4686,
+      "widthM": 1123,
+      "alongM": 392,
+      "reefFlatBridges": false,
+      "sites": [
+        "lhosfushi-kandu",
+        "guraidhoo-corner"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.90143,
+      "lon": 73.47305,
+      "widthM": 905,
+      "alongM": 385,
+      "reefFlatBridges": false,
+      "sites": [
+        "kandooma-caves"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.90837,
+      "lon": 73.47716,
+      "widthM": 815,
+      "alongM": 991,
+      "reefFlatBridges": false,
+      "sites": [
+        "kandooma-thila",
+        "cocoa-corner",
+        "kandooma-caves"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.94333,
+      "lon": 73.49135,
+      "widthM": 508,
+      "alongM": 978,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.94414,
+      "lon": 73.49589,
+      "widthM": 449,
+      "alongM": 529,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.95703,
+      "lon": 73.50052,
+      "widthM": 1659,
+      "alongM": 2445,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.96541,
+      "lon": 73.50319,
+      "widthM": 297,
+      "alongM": 536,
+      "reefFlatBridges": true,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.96757,
+      "lon": 73.5064,
+      "widthM": 188,
+      "alongM": 451,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.97426,
+      "lon": 73.50218,
+      "widthM": 658,
+      "alongM": 878,
+      "reefFlatBridges": false,
+      "sites": []
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.98138,
+      "lon": 73.50932,
+      "widthM": 1046,
+      "alongM": 2268,
+      "reefFlatBridges": false,
+      "sites": [
+        "dhigu-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.98751,
+      "lon": 73.51064,
+      "widthM": 245,
+      "alongM": 362,
+      "reefFlatBridges": true,
+      "sites": [
+        "dhigu-thila"
+      ]
+    },
+    {
+      "atollIds": [
+        "south-male"
+      ],
+      "wayId": "671807056",
+      "lat": 3.99052,
+      "lon": 73.51626,
+      "widthM": 1288,
+      "alongM": 2373,
+      "reefFlatBridges": true,
+      "sites": []
+    }
+  ],
+  "openCoast": [],
+  "unseen": [
+    "fotteyo-kandu",
+    "broken-rock",
+    "kuredu-express",
+    "devana-kandu",
+    "fufalhi-kandu",
+    "dhiggiri-kandu",
+    "medhu-kandu",
+    "felidhoo-kandu",
+    "keyodhoo-kandu",
+    "kuda-kandu",
+    "rakeedhoo-kandu",
+    "helengeli-thila",
+    "kagi-kandu",
+    "miyaru-thila",
+    "lankan-caves",
+    "furana-north",
+    "furana-thila",
+    "furana-south",
+    "club-med-corner",
+    "maldive-victory",
+    "bodu-hithi-thila",
+    "madi-thila",
+    "ziyaarai-thila",
+    "kuda-thila",
+    "vaadhoo-housereef",
+    "sundune",
+    "lhohi-faru-thila",
+    "lhohi-paradise",
+    "ramm-faru",
+    "ran-faru",
+    "rannalhi-faru",
+    "balcony",
+    "vaagili-bodu-thila",
+    "vaagili-caves",
+    "ukulhas-thila",
+    "gangehi-kandu",
+    "beyru-thila",
+    "dhigu-thila-2",
+    "kari-beyru-thila",
+    "bodu-thila",
+    "felivaru-kandu",
+    "vilamendhoo-thila",
+    "dhigurah-thila",
+    "dhangethi-thila",
+    "thinfushi-ethere-thila",
+    "bodufinolhu-thila",
+    "huruelhi-kandu",
+    "maaddoo-corner",
+    "maaddoo-giri",
+    "miriandhoo-thila",
+    "kudadhoo-corner",
+    "seven-stingrays",
+    "dolphin-corner",
+    "fushi-kandu",
+    "medhu-faru-kandu",
+    "kurali-kandu",
+    "nenge-kandu",
+    "thuvarudhekunu-kandu",
+    "maa-kandu",
+    "maa-kandu-beyru"
+  ]
+}

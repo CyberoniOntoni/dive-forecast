@@ -154,6 +154,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 - **Openings:**
   - The porous rim: the 12 ring points on the outline plus the midpoints between them, each standing for its share of the perimeter. Each opening's flow `q` is the channel model's `S_net` there, along the outline's inward normal.
   - Each across-rim dive site in the atoll, with its own `S_net` and a weight of `CHANNEL_WEIGHT_KM = 2` km.
+  - `data/openings.json`, when present, is a catalog of mouths walked around the reef crest of each atoll, including mouths with no dive site. The outline is only used to assign crest to an atoll. The width is the straight distance between crest shoulders. A mouth that reef flat still bridges is marked and kept. The lagoon model does not read the file. A mouth has no depth and is not a channel section.
 - **The current at a site** is each opening's exchange spreading from it (running in) or drawing toward it (running out), as a 2-D source:
 
       u = Σ q · w · (site − opening) / (2π |site − opening|²)  +  sink
