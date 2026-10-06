@@ -5,6 +5,7 @@ import { rimForAtoll } from "./rim";
 import { atollRing, atollRingLevel } from "./atoll-ring";
 import {
   alongReefHours,
+  alongReportDirection,
   straitHours,
   forecastHours,
   headWindowAt,
@@ -77,7 +78,8 @@ const sinkMemo = new Map<string, LagoonSink>();
 /**
  * The openings of an atoll's lagoon: its porous rim from the ring points, and each channel dive site (pass, channel
  * thila, corner) with its own net flow. Empty when the atoll has no ring level yet. Kept ten minutes per atoll and
- * shared by every lagoon site asking at once.
+ * shared by every lagoon site asking at once, unless a ring point or channel was still waiting on its first fetch:
+ * then the next load builds them again with whatever has arrived.
  */
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   const kept = lagoonMemo.get(atoll.id);
@@ -87,6 +89,7 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
   const load = (async () => {
     const ring = await atollRing(atoll, options);
     if (ring.level.length === 0) return [];
+    let pending = (ring.pending ?? 0) > 0;
     const rim = rimForAtoll(atoll);
     const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
     const channels = mates.filter(
@@ -99,11 +102,13 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
           ...options,
           seawardKm: seawardKmFor(channel.id),
         });
-        return marine.ok ? channelSource(channel, marine.hours, deg, ring.level) : null;
+        if (marine.ok) return channelSource(channel, marine.hours, deg, ring.level);
+        if (marine.pending) pending = true;
+        return null;
       }),
     );
     const sources = [...rimSources(ring), ...fetched.filter((source): source is LagoonSource => source != null)];
-    lagoonMemo.set(atoll.id, { at: Date.now(), sources });
+    if (!pending) lagoonMemo.set(atoll.id, { at: Date.now(), sources });
     return sources;
   })().finally(() => lagoonLoading.delete(atoll.id));
   lagoonLoading.set(atoll.id, load);
@@ -244,12 +249,24 @@ export async function loadSite(
   const hours = forecastHours({
     hours: marine.hours,
     inwardBearingDeg: marine.bearing,
-    reports,
+    reports: route.route === "lagoon" ? lagoonReportsOnBearing(reports, marine.bearing) : reports,
     ringLevel: await ringLevelFor(route.route, atoll, options),
     ...sectionInput(site),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return loaded("channel", null, hours);
+}
+
+/**
+ * A lagoon site's reports for the channel model it falls back to. A report filed while the lagoon model ran says
+ * "incoming" toward its saved lagoon axis, not along the inward bearing, so it is read against the bearing like a
+ * wall report against a changed heading. A report with no saved axis was filed on the channel model.
+ */
+function lagoonReportsOnBearing(reports: readonly Report[], inwardBearingDeg: number): Report[] {
+  return reports.map((report) => {
+    const direction = alongReportDirection(report, inwardBearingDeg, "lagoon");
+    return direction ? { ...report, direction } : report;
+  });
 }
 
 export type ReportTide = {

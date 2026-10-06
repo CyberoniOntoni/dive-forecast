@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { alongHeadingFor, loadSite, reportTideForSite } from "./load-site";
 import * as Marine from "./marine";
-import type { Atoll, MarineHour, Site } from "./types";
+import type { Atoll, MarineHour, Report, Site } from "./types";
 
 // Mock marine fetch module to ensure fast, deterministic offline execution
 vi.mock("./marine", async () => {
@@ -84,6 +84,34 @@ describe("loadSite", () => {
       const result = await loadSite({ ...openSite, siteType }, [openSite], atoll, []);
       expect(result.unavailable).toBe(true);
       expect(result.forecastRoute, siteType).toBe(route);
+    }
+  });
+
+  it("reads a lagoon site's reports against the inward bearing when it falls back to the channel model", async () => {
+    const lagoon: Site = { ...openSite, siteType: "lagoon" };
+    const fresh = { ok: true as const, hours: syntheticHours, fetchedAt: 1, stale: false };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue(fresh);
+    try {
+      const plain = await loadSite(lagoon, [lagoon], atoll, []);
+      expect(plain.forecastRoute).toBe("channel");
+      const bearing = plain.bearing as number;
+      const at = plain.hours.find((hour) => hour.time >= "2026-09-24T00:00" && hour.direction === "incoming");
+      expect(at).toBeDefined();
+      const report = (alongHeadingDeg: number): Report => ({
+        id: "r",
+        siteId: lagoon.id,
+        time: at!.time,
+        direction: "incoming",
+        strength: "mild",
+        alongHeadingDeg,
+      });
+      const directionAt = (load: { hours: { time: string; direction: string }[] }) =>
+        load.hours.find((hour) => hour.time === at!.time)?.direction;
+      // "Incoming" toward a saved axis pointing out of the atoll is water leaving it.
+      expect(directionAt(await loadSite(lagoon, [lagoon], atoll, [report((bearing + 180) % 360)]))).toBe("outgoing");
+      expect(directionAt(await loadSite(lagoon, [lagoon], atoll, [report(bearing)]))).toBe("incoming");
+    } finally {
+      vi.mocked(Marine.siteMarineHours).mockReset();
     }
   });
 

@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/16`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/17`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -9,7 +9,7 @@ Nothing here is fitted to real dive observations yet. The constants were set fro
 For every point it needs, the app fetches hourly **sea level** and **ocean current** from the Open-Meteo marine API (`lib/marine.ts`). The current is Mercator SMOC: ocean model drift, Stokes drift and the FES2014 tide, on a grid of about 8 km.
 
 - **Window:** one past day and seven forecast days. The last 12 hours have no 25-hour mean, so the slider shows about six and a half days ahead.
-- **Cache:** `data/marine-cache/`, one file per point, keyed by coordinates. A cached series is served at once. If it is older than 6 hours, a refresh runs in the background. A failed fetch keeps the old series, and the page shows its age. At most 4 requests run at once, and the map never waits for a point it has not fetched yet (`{ wait: false }`).
+- **Cache:** `data/marine-cache/`, one file per point, keyed by coordinates. A cached series is served at once. If it is older than 6 hours, a refresh runs in the background. A failed fetch keeps the old series, and the page shows its age. At most 4 requests run at once, and the map never waits for a point it has not fetched yet (`{ wait: false }`). Such a site shows as unavailable until its own point arrives; once a fetch for it has really failed, it falls back to the atoll's ocean point as when the page waits. A ring or set of lagoon openings with points still waiting is not kept, so the next load picks them up.
 - **Where a site samples:** seaward of the pin, opposite its inward bearing (`seawardPoint`). The usual distance is 3 km. GEBCO 2026 (`data/seaward-floor.json`) checks the cell under that point. Open water is an elevation of −50 m or deeper. A shallower cell, including land, steps out to the first open cell at 6, 9, 12, or 15 km. If none of those is open, the sample stays at 3 km. The 15-arc-second grid is not a channel cross-section. Its type-identifier value is stored so a gravity-predicted cell is not later treated as a sounding. Ring points stay at 3 km outside the outline. The 8 km ocean grid cannot see a channel, so the point has to be in open water outside it.
 - **Ring points:** for each atoll, 12 points spaced evenly round its outline (`data/rims.json`, from OpenStreetMap), each 3 km outside it (`lib/atoll-ring.ts`). Their mean level stands for the lagoon level.
 
@@ -176,7 +176,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 
   Lagoon hours are 18 % strong, against 44 % for channels, and 2 % of lagoon-days reach very strong.
 - **Confidence** is always low.
-- **Fallback:** an atoll with no outline or ring data keeps the channel model.
+- **Fallback:** an atoll with no outline or ring data keeps the channel model. On the fallback, a report filed on the lagoon axis is read against the inward bearing: kept, or flipped when its axis pointed more than 90° from it.
 
 ## Reports and scoring
 
@@ -192,6 +192,7 @@ At channels, reports teach the forecast (`lib/forecast.ts`):
 - **Speed factor.** Strength is scaled by between 0.5 and 2 if reports run consistently stronger or weaker than the model at their own hours.
 - **Pull.** A report pulls the next 6 hours toward what it saw, fading over those hours, and stops at the next turn. Direction needs 60 % agreement.
 - **Decay.** Every report is weighted by 2^(−age / 90 days). A slack report says how strong but casts no direction vote.
+- **No saved tide.** A report whose tide could not be fetched when it was filed has no slopes. Inside the current series it still pulls and can block high confidence, but it never trains the phase lag or speed factor. Outside the series it is ignored.
 
 **Confidence** (`confidenceFor`):
 

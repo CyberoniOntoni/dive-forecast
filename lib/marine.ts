@@ -27,7 +27,7 @@ const MARINE_ENDPOINTS = [
 
 export type MarineFetch =
   | { ok: true; hours: MarineHour[]; fetchedAt: number; stale: boolean }
-  | { ok: false; unavailable: true };
+  | { ok: false; unavailable: true; pending?: true };
 
 type HourlyColumns = {
   time: unknown[];
@@ -43,6 +43,8 @@ type HourlyColumns = {
  * check: a 3 km cell on the reef or on land moves out until the cell is open ocean.
  * A failed or stale seaward fetch uses the fallback point instead.
  * When both fail or their hours are stale, the last cached series is used and marked stale.
+ * A seaward point still pending its first fetch (wait: false) is unavailable, not failed: the fallback point's tide
+ * and drift would show as the site's own.
  */
 export async function siteMarineHours(
   lat: number,
@@ -54,11 +56,13 @@ export async function siteMarineHours(
 ): Promise<MarineFetch> {
   const point = seawardPoint(lat, lon, inwardBearingDeg, options.seawardKm);
   const seaward = await fetchMarine(point.lat, point.lon, options);
+  if (!seaward.ok && seaward.pending) return seaward;
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
   const cached = readCachedHours(point.lat, point.lon) ?? readCachedHours(fallbackLat, fallbackLon);
-  if (!cached) return { ok: false, unavailable: true };
+  // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
+  if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
 }
 
@@ -80,8 +84,9 @@ export function seawardPoint(
 }
 
 /**
- * wait: false queues the first fetch for a point with no cache and returns at once as unavailable. The map uses
- * it, so a batch of new sites fills in over the next loads instead of holding the page.
+ * wait: false queues the first fetch for a point with no cache and returns at once as unavailable and pending (or
+ * just unavailable when its last fetch failed). The map uses it, so a batch of new sites fills in over the next
+ * loads instead of holding the page.
  */
 export type FetchOptions = {
   wait?: boolean;
@@ -101,8 +106,10 @@ export async function fetchMarine(lat: number, lon: number, options: FetchOption
     return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
   }
   if (options.wait === false) {
+    // A point whose last fetch failed is not waiting on anything: the caller falls back as when it waits.
+    const failed = failedPoints.has(cacheName(lat, lon));
     void refreshMarine(lat, lon).catch(() => null);
-    return { ok: false, unavailable: true };
+    return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };
   }
   const fetched = await refreshMarine(lat, lon);
   if (!fetched) return { ok: false, unavailable: true };
@@ -110,6 +117,8 @@ export async function fetchMarine(lat: number, lon: number, options: FetchOption
 }
 
 const inFlight = new Map<string, Promise<{ hours: MarineHour[]; fetchedAt: number } | null>>();
+/** Points whose last fetch failed, until one succeeds. */
+const failedPoints = new Set<string>();
 
 /**
  * Fetches a point and caches it. Callers asking for the same point while it runs share one request, and at most
@@ -121,7 +130,11 @@ function refreshMarine(lat: number, lon: number): Promise<{ hours: MarineHour[];
   if (running) return running;
   const request = withRequestSlot(() => requestMarine(lat, lon))
     .then((hours) => {
-      if (!hours || hours.length === 0) return null;
+      if (!hours || hours.length === 0) {
+        failedPoints.add(key);
+        return null;
+      }
+      failedPoints.delete(key);
       const fetchedAt = Date.now();
       writeCache(lat, lon, hours, fetchedAt);
       return { hours, fetchedAt };

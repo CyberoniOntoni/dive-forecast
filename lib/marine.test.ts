@@ -496,13 +496,82 @@ describe("stale marine cache", () => {
     const lat = 1.4321;
     const lon = 73.3;
     try {
-      expect(await fetchMarine(lat, lon, { wait: false })).toEqual({ ok: false, unavailable: true });
+      expect(await fetchMarine(lat, lon, { wait: false })).toEqual({ ok: false, unavailable: true, pending: true });
       await vi.waitFor(() => expect(written.length).toBe(1));
       expect(fetches).toBe(1);
     } finally {
       vi.unstubAllGlobals();
       vi.restoreAllMocks();
       forgetMarineCache(lat, lon);
+    }
+  });
+
+  it("without waiting, a site whose seaward point has no cache yet is pending, not the fallback point's series", async () => {
+    const lat = 2.4444;
+    const lon = 73.6666;
+    const bearing = 90;
+    const fallbackLat = 2.95;
+    const fallbackLon = 74.25;
+    const point = seawardPoint(lat, lon, bearing);
+    const fallbackName = `${fallbackLat.toFixed(4)}_${fallbackLon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+    const fallbackHours = [hour(maldivesWall(Date.now()))];
+    vi.spyOn(fs, "readFileSync").mockImplementation((file) => {
+      if (path.basename(String(file)) === fallbackName) return JSON.stringify({ fetchedAt: Date.now(), hours: fallbackHours });
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
+    try {
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toEqual({
+        ok: false,
+        unavailable: true,
+        pending: true,
+      });
+      // Once that first fetch has failed, the point is no longer pending and falls back without waiting too.
+      await vi.waitFor(async () =>
+        expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toMatchObject({
+          ok: true,
+          hours: fallbackHours,
+        }),
+      );
+      // Waiting, a seaward point that really fails still falls back.
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon)).toMatchObject({ ok: true, hours: fallbackHours });
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+
+  it("without waiting, a failed seaward point whose fallback is still on its first fetch is pending", async () => {
+    const lat = 2.5555;
+    const lon = 73.7777;
+    const bearing = 90;
+    const fallbackLat = 2.97;
+    const fallbackLon = 74.27;
+    const point = seawardPoint(lat, lon, bearing);
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
+    try {
+      // Fail the seaward point's first fetch.
+      expect(await fetchMarine(point.lat, point.lon)).toEqual({ ok: false, unavailable: true });
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toEqual({
+        ok: false,
+        unavailable: true,
+        pending: true,
+      });
+    } finally {
+      await vi.waitFor(() => expect(marineRequestsInFlight()).toBe(0));
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
     }
   });
 

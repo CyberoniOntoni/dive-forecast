@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/16";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/17";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -411,9 +411,12 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
     return { ...base, kind: "single-slope", slope: centerSlope };
   }
-  // A failed fetch stores no window and a null slope. It must not train, even inside this series.
+  // A failed fetch stores no window and a null slope. Inside this series its hour is still known, so it pulls the
+  // shown hours and gates confidence like any report; it is marked failed and never trains the phase or speed fit.
+  if (seriesIndex >= 0) {
+    return { ...base, failed: base.failed || report.slopeM === null, kind: "in-series", index: seriesIndex };
+  }
   if (report.slopeM === null) return { ...base, kind: "unusable" };
-  if (seriesIndex >= 0) return { ...base, kind: "in-series", index: seriesIndex };
   if (typeof report.slopeM === "number" && Number.isFinite(report.slopeM)) {
     return { ...base, kind: "single-slope", slope: report.slopeM };
   }
@@ -623,7 +626,7 @@ function fitPhaseOffset(
   flow: readonly (number | null)[],
 ): number {
   // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
-  const voters = classified.filter((item) => item.kind !== "unusable" && !isSlackReport(item));
+  const voters = classified.filter((item) => item.kind !== "unusable" && !item.failed && !isSlackReport(item));
   if (voters.length < 2) return 0;
 
   let bestK = 0;
