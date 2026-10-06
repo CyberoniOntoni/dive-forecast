@@ -89,7 +89,8 @@ const MEMO_MS = 10 * 60 * 1000;
 
 /**
  * An atoll's ring: its samples, each sample's series (null where it has none yet), and the mean level. `pending`
- * counts the samples still waiting on their first fetch (asked not to wait); a ring with any is not kept.
+ * counts the samples still waiting on their first fetch (asked not to wait); a ring with any is not kept. A sample
+ * whose fetch failed is null but not pending.
  */
 export type AtollRing = { samples: RingSample[]; series: (MarineHour[] | null)[]; level: RingLevel[]; pending?: number };
 

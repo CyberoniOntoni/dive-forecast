@@ -528,6 +528,13 @@ describe("stale marine cache", () => {
         unavailable: true,
         pending: true,
       });
+      // Once that first fetch has failed, the point is no longer pending and falls back without waiting too.
+      await vi.waitFor(async () =>
+        expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toMatchObject({
+          ok: true,
+          hours: fallbackHours,
+        }),
+      );
       // Waiting, a seaward point that really fails still falls back.
       expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon)).toMatchObject({ ok: true, hours: fallbackHours });
     } finally {

@@ -110,9 +110,6 @@ describe("loadSite", () => {
       // "Incoming" toward a saved axis pointing out of the atoll is water leaving it.
       expect(directionAt(await loadSite(lagoon, [lagoon], atoll, [report((bearing + 180) % 360)]))).toBe("outgoing");
       expect(directionAt(await loadSite(lagoon, [lagoon], atoll, [report(bearing)]))).toBe("incoming");
-      // An axis square to the bearing says nothing about in or out.
-      const square = await loadSite(lagoon, [lagoon], atoll, [report((bearing + 90) % 360)]);
-      expect(square.hours).toEqual(plain.hours);
     } finally {
       vi.mocked(Marine.siteMarineHours).mockReset();
     }

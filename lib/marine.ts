@@ -83,8 +83,9 @@ export function seawardPoint(
 }
 
 /**
- * wait: false queues the first fetch for a point with no cache and returns at once as unavailable and pending. The
- * map uses it, so a batch of new sites fills in over the next loads instead of holding the page.
+ * wait: false queues the first fetch for a point with no cache and returns at once as unavailable and pending (or
+ * just unavailable when its last fetch failed). The map uses it, so a batch of new sites fills in over the next
+ * loads instead of holding the page.
  */
 export type FetchOptions = {
   wait?: boolean;
@@ -104,8 +105,10 @@ export async function fetchMarine(lat: number, lon: number, options: FetchOption
     return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
   }
   if (options.wait === false) {
+    // A point whose last fetch failed is not waiting on anything: the caller falls back as when it waits.
+    const failed = failedPoints.has(cacheName(lat, lon));
     void refreshMarine(lat, lon).catch(() => null);
-    return { ok: false, unavailable: true, pending: true };
+    return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };
   }
   const fetched = await refreshMarine(lat, lon);
   if (!fetched) return { ok: false, unavailable: true };
@@ -113,6 +116,8 @@ export async function fetchMarine(lat: number, lon: number, options: FetchOption
 }
 
 const inFlight = new Map<string, Promise<{ hours: MarineHour[]; fetchedAt: number } | null>>();
+/** Points whose last fetch failed, until one succeeds. */
+const failedPoints = new Set<string>();
 
 /**
  * Fetches a point and caches it. Callers asking for the same point while it runs share one request, and at most
@@ -124,7 +129,11 @@ function refreshMarine(lat: number, lon: number): Promise<{ hours: MarineHour[];
   if (running) return running;
   const request = withRequestSlot(() => requestMarine(lat, lon))
     .then((hours) => {
-      if (!hours || hours.length === 0) return null;
+      if (!hours || hours.length === 0) {
+        failedPoints.add(key);
+        return null;
+      }
+      failedPoints.delete(key);
       const fetchedAt = Date.now();
       writeCache(lat, lon, hours, fetchedAt);
       return { hours, fetchedAt };
