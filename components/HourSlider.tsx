@@ -211,7 +211,7 @@ export function nextTurn(hours: readonly HourForecast[], from: number): number |
 }
 
 /** "Turns incoming at 23:00", "Turns to run W Wed 7 at 02:00", or no turn left in the series. */
-function turnText(
+export function turnText(
   turn: number | null,
   hours: readonly HourForecast[],
   today: string,
@@ -310,6 +310,8 @@ function WeekStrip({
         onPointerMove={(event) => {
           if (event.buttons !== 0) pick(event);
         }}
+        onPointerUp={releasePointer}
+        onPointerCancel={releasePointer}
       >
         <svg viewBox={`0 0 ${last} 100`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
           {hours.map((hour, index) => {
@@ -371,8 +373,13 @@ function WeekStrip({
   );
 }
 
+/** Browsers drop the capture on pointerup anyway; releasing it here keeps a cancelled touch from holding it. */
+function releasePointer(event: PointerEvent<HTMLDivElement>) {
+  if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+}
+
 /** Very strong is the stop token; otherwise in/out colours, or foam where the way is a compass heading. */
-function stripColor(hour: HourForecast, compass: boolean): string {
+export function stripColor(hour: HourForecast, compass: boolean): string {
   if (hour.strength === "too_strong") return "var(--stop)";
   if (compass) return "var(--foam)";
   return hour.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
