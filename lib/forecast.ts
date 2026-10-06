@@ -412,8 +412,10 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
     return { ...base, kind: "single-slope", slope: centerSlope };
   }
   // A failed fetch stores no window and a null slope. Inside this series its hour is still known, so it pulls the
-  // shown hours and gates confidence like any report; it is marked failed and never trains (phase, speed, agreement).
-  if (seriesIndex >= 0) return { ...base, kind: "in-series", index: seriesIndex };
+  // shown hours and gates confidence like any report; it is marked failed and never trains the phase or speed fit.
+  if (seriesIndex >= 0) {
+    return { ...base, failed: base.failed || report.slopeM === null, kind: "in-series", index: seriesIndex };
+  }
   if (report.slopeM === null) return { ...base, kind: "unusable" };
   if (typeof report.slopeM === "number" && Number.isFinite(report.slopeM)) {
     return { ...base, kind: "single-slope", slope: report.slopeM };
@@ -743,8 +745,7 @@ function confidenceFor(input: {
       return apart <= CONTRADICTION_NEAR_MS || (apart <= SEVEN_DAYS_MS && samePhase(item));
     });
 
-  // A report saved without its tide is no track record: it can block high confidence above, never build it.
-  const similar = input.classified.filter((item) => !item.failed && samePhase(item));
+  const similar = input.classified.filter(samePhase);
   if (similar.length < 2) return "low";
 
   const weightOf = (items: readonly ClassifiedReport[]) => items.reduce((sum, item) => sum + item.temporalWeight, 0);

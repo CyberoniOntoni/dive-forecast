@@ -875,6 +875,25 @@ describe("forecastHours", () => {
     expect(tideWindow(hours, residual, 12).range).toBeNull();
   });
 
+  it("a null slope inside the series is marked failed even when its window has one off-centre slope", () => {
+    const slopeWindowM = Array<number | null>(13).fill(null);
+    slopeWindowM[0] = 0.08;
+    const item = classifyReport(
+      {
+        id: "w14",
+        siteId: "s",
+        time: "2026-09-23T03:00",
+        direction: "outgoing",
+        strength: "mild",
+        slopeM: null,
+        slopeWindowM,
+      },
+      repeatingHours(),
+    );
+    expect(item.kind).toBe("in-series");
+    expect(item.failed).toBe(true);
+  });
+
   it("a window whose only finite slope is at index 0 is not single-slope with that slope", () => {
     const slopeWindowM = Array<number | null>(13).fill(null);
     slopeWindowM[0] = 0.08;

@@ -61,7 +61,8 @@ export async function siteMarineHours(
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
   const cached = readCachedHours(point.lat, point.lon) ?? readCachedHours(fallbackLat, fallbackLon);
-  if (!cached) return { ok: false, unavailable: true };
+  // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
+  if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
 }
 

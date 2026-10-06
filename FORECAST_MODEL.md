@@ -192,7 +192,7 @@ At channels, reports teach the forecast (`lib/forecast.ts`):
 - **Speed factor.** Strength is scaled by between 0.5 and 2 if reports run consistently stronger or weaker than the model at their own hours.
 - **Pull.** A report pulls the next 6 hours toward what it saw, fading over those hours, and stops at the next turn. Direction needs 60 % agreement.
 - **Decay.** Every report is weighted by 2^(−age / 90 days). A slack report says how strong but casts no direction vote.
-- **No saved tide.** A report whose tide could not be fetched when it was filed has no slopes. Inside the current series it still pulls and can block high confidence, but it never trains the phase lag or speed factor and never counts toward agreement. Outside the series it is ignored.
+- **No saved tide.** A report whose tide could not be fetched when it was filed has no slopes. Inside the current series it still pulls and can block high confidence, but it never trains the phase lag or speed factor. Outside the series it is ignored.
 
 **Confidence** (`confidenceFor`):
 

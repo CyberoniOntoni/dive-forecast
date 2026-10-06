@@ -545,6 +545,36 @@ describe("stale marine cache", () => {
     }
   });
 
+  it("without waiting, a failed seaward point whose fallback is still on its first fetch is pending", async () => {
+    const lat = 2.5555;
+    const lon = 73.7777;
+    const bearing = 90;
+    const fallbackLat = 2.97;
+    const fallbackLon = 74.27;
+    const point = seawardPoint(lat, lon, bearing);
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
+    try {
+      // Fail the seaward point's first fetch.
+      expect(await fetchMarine(point.lat, point.lon)).toEqual({ ok: false, unavailable: true });
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toEqual({
+        ok: false,
+        unavailable: true,
+        pending: true,
+      });
+    } finally {
+      await vi.waitFor(() => expect(marineRequestsInFlight()).toBe(0));
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+
   it("stays unavailable when no cache file exists and the network fails", async () => {
     const lat = 2.3333;
     const lon = 73.5555;
