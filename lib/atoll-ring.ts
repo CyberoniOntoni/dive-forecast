@@ -87,8 +87,11 @@ export function ringLevelFromSeries(series: readonly (readonly MarineHour[])[]):
 
 const MEMO_MS = 10 * 60 * 1000;
 
-/** An atoll's ring: its samples, each sample's series (null where it has none yet), and the mean level. */
-export type AtollRing = { samples: RingSample[]; series: (MarineHour[] | null)[]; level: RingLevel[] };
+/**
+ * An atoll's ring: its samples, each sample's series (null where it has none yet), and the mean level. `pending`
+ * counts the samples still waiting on their first fetch (asked not to wait); a ring with any is not kept.
+ */
+export type AtollRing = { samples: RingSample[]; series: (MarineHour[] | null)[]; level: RingLevel[]; pending?: number };
 
 const memo = new Map<string, { at: number; ring: AtollRing }>();
 const loading = new Map<string, Promise<AtollRing>>();
@@ -97,7 +100,8 @@ const EMPTY: AtollRing = { samples: [], series: [], level: [] };
 /**
  * The atoll's ring from the marine cache (fetching points it has not seen, unless told not to wait). Its level is
  * empty when the atoll has no outline or too few points have data. Kept for ten minutes per atoll, so a map load
- * does not reread twelve files for every site; every site asking at once shares one read.
+ * does not reread twelve files for every site; every site asking at once shares one read. A ring with points still
+ * pending their first fetch is not kept, so the next load picks them up instead of a lopsided ring for ten minutes.
  */
 export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promise<AtollRing> {
   const rim = rimForAtoll(atoll);
@@ -112,8 +116,11 @@ export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promi
     .then((fetched) => {
       const series = fetched.map((result) => (result.ok ? result.hours : null));
       const usable = series.filter((hours): hours is MarineHour[] => hours != null);
-      const ring = { samples, series, level: usable.length >= MIN_RING_POINTS ? ringLevelFromSeries(usable) : [] };
-      memo.set(key, { at: Date.now(), ring });
+      const pending = fetched.filter((result) => !result.ok && result.pending).length;
+      const level = usable.length >= MIN_RING_POINTS ? ringLevelFromSeries(usable) : [];
+      const ring: AtollRing = { samples, series, level, pending };
+      if (pending === 0) memo.set(key, { at: Date.now(), ring });
+      else memo.delete(key);
       return ring;
     })
     .finally(() => loading.delete(key));

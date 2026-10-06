@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/16";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/17";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -411,9 +411,10 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
     return { ...base, kind: "single-slope", slope: centerSlope };
   }
-  // A failed fetch stores no window and a null slope. It must not train, even inside this series.
-  if (report.slopeM === null) return { ...base, kind: "unusable" };
+  // A failed fetch stores no window and a null slope. Inside this series its hour is still known, so it pulls the
+  // shown hours and gates confidence like any report; it is marked failed and never trains (phase, speed, agreement).
   if (seriesIndex >= 0) return { ...base, kind: "in-series", index: seriesIndex };
+  if (report.slopeM === null) return { ...base, kind: "unusable" };
   if (typeof report.slopeM === "number" && Number.isFinite(report.slopeM)) {
     return { ...base, kind: "single-slope", slope: report.slopeM };
   }
@@ -623,7 +624,7 @@ function fitPhaseOffset(
   flow: readonly (number | null)[],
 ): number {
   // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
-  const voters = classified.filter((item) => item.kind !== "unusable" && !isSlackReport(item));
+  const voters = classified.filter((item) => item.kind !== "unusable" && !item.failed && !isSlackReport(item));
   if (voters.length < 2) return 0;
 
   let bestK = 0;
@@ -742,7 +743,8 @@ function confidenceFor(input: {
       return apart <= CONTRADICTION_NEAR_MS || (apart <= SEVEN_DAYS_MS && samePhase(item));
     });
 
-  const similar = input.classified.filter(samePhase);
+  // A report saved without its tide is no track record: it can block high confidence above, never build it.
+  const similar = input.classified.filter((item) => !item.failed && samePhase(item));
   if (similar.length < 2) return "low";
 
   const weightOf = (items: readonly ClassifiedReport[]) => items.reduce((sum, item) => sum + item.temporalWeight, 0);

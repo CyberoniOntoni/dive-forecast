@@ -11,7 +11,7 @@ import {
   tideWindow,
   toMaldivesWall,
 } from "./forecast";
-import { STRENGTHS, type MarineHour, type Report, type Strength } from "./types";
+import { STRENGTHS, type HourForecast, type MarineHour, type Report, type Strength } from "./types";
 
 const DAY = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.5, 0.4, 0.3];
 
@@ -541,6 +541,37 @@ describe("forecastHours", () => {
     const open = forecastHours({ hours: repeatingHours(), inwardBearingDeg: 0, reports: [] });
     expect(directionAt(open, "2026-09-24T04:00")).toBe("incoming");
     expect(directionAt(blocked, "2026-09-24T04:00")).toBe("incoming");
+  });
+
+  it("a null slope inside the series still pulls the next hours and blocks high confidence", () => {
+    const hours = repeatingHours();
+    // Four old reports that agree with the model at every rising hour make those hours high.
+    const agreeing: Report[] = [0, 1, 2, 3].map((id) => ({
+      id: `c${id}`,
+      siteId: "s",
+      time: `2026-08-02T0${id}:00`,
+      direction: "incoming" as const,
+      strength: "mild" as const,
+      slopeM: 0.08,
+    }));
+    const confident = forecastHours({ hours, inwardBearingDeg: 0, reports: agreeing });
+    const at = "2026-09-23T02:00";
+    expect(directionAt(confident, at)).toBe("incoming");
+    const confidenceAt = (forecast: HourForecast[]) => forecast.find((hour) => hour.time.startsWith(at))?.confidence;
+    expect(confidenceAt(confident)).toBe("high");
+
+    const opposite: Report = {
+      id: "live",
+      siteId: "s",
+      time: "2026-09-23T01:00",
+      direction: "outgoing",
+      strength: "mild",
+      slopeM: null,
+    };
+    const contradicted = forecastHours({ hours, inwardBearingDeg: 0, reports: [...agreeing, opposite] });
+    expect(confidenceAt(contradicted)).not.toBe("high");
+    const alone = forecastHours({ hours, inwardBearingDeg: 0, reports: [opposite] });
+    expect(directionAt(alone, at)).toBe("outgoing");
   });
 
   it("does not let a missing in-series lag break a tie and move the phase offset", () => {

@@ -27,7 +27,7 @@ const MARINE_ENDPOINTS = [
 
 export type MarineFetch =
   | { ok: true; hours: MarineHour[]; fetchedAt: number; stale: boolean }
-  | { ok: false; unavailable: true };
+  | { ok: false; unavailable: true; pending?: true };
 
 type HourlyColumns = {
   time: unknown[];
@@ -43,6 +43,8 @@ type HourlyColumns = {
  * check: a 3 km cell on the reef or on land moves out until the cell is open ocean.
  * A failed or stale seaward fetch uses the fallback point instead.
  * When both fail or their hours are stale, the last cached series is used and marked stale.
+ * A seaward point still pending its first fetch (wait: false) is unavailable, not failed: the fallback point's tide
+ * and drift would show as the site's own.
  */
 export async function siteMarineHours(
   lat: number,
@@ -54,6 +56,7 @@ export async function siteMarineHours(
 ): Promise<MarineFetch> {
   const point = seawardPoint(lat, lon, inwardBearingDeg, options.seawardKm);
   const seaward = await fetchMarine(point.lat, point.lon, options);
+  if (!seaward.ok && seaward.pending) return seaward;
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
@@ -80,8 +83,8 @@ export function seawardPoint(
 }
 
 /**
- * wait: false queues the first fetch for a point with no cache and returns at once as unavailable. The map uses
- * it, so a batch of new sites fills in over the next loads instead of holding the page.
+ * wait: false queues the first fetch for a point with no cache and returns at once as unavailable and pending. The
+ * map uses it, so a batch of new sites fills in over the next loads instead of holding the page.
  */
 export type FetchOptions = {
   wait?: boolean;
@@ -102,7 +105,7 @@ export async function fetchMarine(lat: number, lon: number, options: FetchOption
   }
   if (options.wait === false) {
     void refreshMarine(lat, lon).catch(() => null);
-    return { ok: false, unavailable: true };
+    return { ok: false, unavailable: true, pending: true };
   }
   const fetched = await refreshMarine(lat, lon);
   if (!fetched) return { ok: false, unavailable: true };
