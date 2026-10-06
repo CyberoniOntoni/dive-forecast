@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
-import { onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
+import { compassWord, confidenceOpacity, onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
@@ -81,15 +81,17 @@ export function HourSlider({
   const selected = clampHourIndex(index, hours.length);
   const hour = hours[selected];
   const today = maldivesWall.slice(0, 10);
+  const nowIndex = clampHourIndex(initialIndex, hours.length);
   const bearing =
     inwardBearingDeg == null
       ? null
       : routeArrowBearing(forecastRoute, hour.direction, inwardBearingDeg, alongHeadingDeg, outgoingBearingDeg);
   const wordFor = (direction: Direction) => capitalized(routeWay(forecastRoute, direction, alongHeadingDeg).way);
-  const tone = onCompass(forecastRoute, alongHeadingDeg) ? "text-foam" : directionTone(hour.direction);
+  const compass = onCompass(forecastRoute, alongHeadingDeg);
+  const tone = compass ? "text-foam" : directionTone(hour.direction);
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
-  const spans = daySpans(hours);
+  const turn = nextTurn(hours, selected);
 
   return (
     <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
@@ -99,6 +101,7 @@ export function HourSlider({
       <div className="flex min-w-0 items-center gap-4">
         {bearing == null ? null : (
           <div className={`relative grid h-28 w-28 shrink-0 place-items-center rounded-full border border-foam/20 bg-ink/50 ${tone}`}>
+            <CompassMarks />
             <svg
               viewBox={dialViewBox(hour.strength)}
               className={`h-20 w-20 ${quiet}`}
@@ -122,16 +125,20 @@ export function HourSlider({
           </div>
         )}
         <div className="min-w-0">
+          <p className="font-mono text-sm tabular-nums text-foam/80">{hourWhen(hour.time, today)}</p>
           <p className={`text-4xl font-semibold tracking-tight break-words sm:text-6xl ${tone}`}>
             {way}
           </p>
-          <p className={`mt-2 text-lg sm:text-xl ${strengthTone(hour.strength)}`}>{STRENGTH_LABEL[hour.strength]}</p>
-          <p className={`text-sm sm:text-base ${confidenceText(hour.confidence)}`}>
-            {hour.confidence} confidence
+          {bearing != null && !compass ? (
+            <p className="text-sm leading-6 text-foam/80">
+              {hour.direction === "incoming" ? "Into the atoll" : "Out of the atoll"}, toward {compassWord(bearing)}
+            </p>
+          ) : null}
+          <p className="mt-1 text-lg sm:text-xl">
+            <span className={strengthTone(hour.strength)}>{STRENGTH_LABEL[hour.strength]}</span>
+            <span className={`text-sm sm:text-base ${confidenceText(hour.confidence)}`}> · {hour.confidence} confidence</span>
           </p>
-          <p className="mt-2 font-mono text-sm tabular-nums text-foam/80">
-            {hourWhen(hour.time, today)}
-          </p>
+          <p className="mt-1 text-sm leading-6 text-foam/80">{turnText(turn, hours, today, wordFor)}</p>
         </div>
       </div>
       {bearing != null && bearingSource === "fallback" ? (
@@ -139,31 +146,10 @@ export function HourSlider({
           The arrow heading is an estimate. This pin has no measured channel bearing.
         </p>
       ) : null}
-      <ResidualLine hours={hours} selected={selected} />
-      {stale || fetchedAt ? (
-        <p className="mt-3 text-xs leading-5 text-foam/80">
-          {stale ? "This series is old." : null}
-          {stale && fetchedAt ? " " : null}
-          {fetchedAt ? (
-            <>
-              Fetched <time dateTime={fetchedAt.iso}>{fetchedCaption(fetchedAt.wall)}</time> Maldives
-            </>
-          ) : null}
-        </p>
-      ) : null}
 
-      <div className="mt-6 px-6">
-        <div className="mb-2 flex text-xs text-foam/80" aria-hidden="true">
-          {spans.map((span) => (
-            <span
-              key={span.date}
-              className="min-w-0 truncate"
-              style={{ flex: dayShare(span, hours.length) }}
-            >
-              {spans.length > 4 ? shortDayName(span.date, today) : dayName(span.date, today)}
-            </span>
-          ))}
-        </div>
+      <div className="mt-6">
+        <WeekLegend up={wordFor("incoming")} down={wordFor("outgoing")} compass={compass} />
+        <WeekStrip hours={hours} selected={selected} nowIndex={nowIndex} compass={compass} today={today} onPick={setIndex} />
         <label className="block min-w-0" htmlFor="forecast-hour">
           <span className="sr-only">Forecast hour</span>
           <input
@@ -182,13 +168,26 @@ export function HourSlider({
             className={`${RANGE_TRACK} ${RANGE_FOCUS} ${tone} ${RANGE_THUMB}`}
           />
         </label>
-        <div className="mt-1 grid grid-cols-3 gap-2 font-mono text-xs tabular-nums text-foam/70">
-          <span className="min-w-0 truncate">{clock(hours[0].time)}</span>
-          <span className="min-w-0 truncate text-center text-foam">
-            {selected + 1} / {hours.length}
-          </span>
-          <span className="min-w-0 truncate text-right">{clock(hours[hours.length - 1].time)}</span>
-        </div>
+      </div>
+      <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p className="text-xs leading-5 text-foam/80">
+          {stale ? "This series is old." : null}
+          {stale && fetchedAt ? " " : null}
+          {fetchedAt ? (
+            <>
+              Fetched <time dateTime={fetchedAt.iso}>{fetchedCaption(fetchedAt.wall)}</time> Maldives
+            </>
+          ) : null}
+        </p>
+        {selected === nowIndex ? null : (
+          <button
+            type="button"
+            onClick={() => setIndex(nowIndex)}
+            className="inline-flex min-h-11 items-center rounded-md border border-foam/25 px-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          >
+            Back to now
+          </button>
+        )}
       </div>
       {siteNote ? <p className="mt-4 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
@@ -201,51 +200,182 @@ export function clampHourIndex(index: number, hourCount: number): number {
   return Math.max(0, Math.min(index, hourCount - 1));
 }
 
-/** Stored residual metres. The line is not a new tide. */
-function ResidualLine({ hours, selected }: { hours: HourForecast[]; selected: number }) {
-  const points = residualPoints(hours);
-  if (points == null) return null;
-  const mark = points[Math.min(selected, points.length - 1)];
-  const drawn = points.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ");
+/** The first hour after `from` whose direction differs, or null when the series never turns after it. */
+export function nextTurn(hours: readonly HourForecast[], from: number): number | null {
+  const start = hours[from];
+  if (start == null) return null;
+  for (let index = from + 1; index < hours.length; index += 1) {
+    if (hours[index].direction !== start.direction) return index;
+  }
+  return null;
+}
+
+/** "Turns incoming at 23:00", "Turns to run W Wed 7 at 02:00", or no turn left in the series. */
+function turnText(
+  turn: number | null,
+  hours: readonly HourForecast[],
+  today: string,
+  wordFor: (direction: Direction) => string,
+): string {
+  if (turn == null) return "No turn in the rest of the forecast.";
+  const at = hours[turn];
+  const word = wordFor(at.direction);
+  const verb = word.startsWith("Running ") ? `to run ${word.slice("Running ".length)}` : word.toLowerCase();
+  return `Turns ${verb} ${turnWhen(at.time, today)}`;
+}
+
+/** Up-to-strength share of the strip's half height. Slack still shows a sliver so its hour reads. */
+export const STRIP_HEIGHT: Record<Strength, number> = { slack: 0.1, mild: 0.38, strong: 0.68, too_strong: 1 };
+
+/** N, E, S and W round the dial, so the arrow reads as a compass heading. */
+function CompassMarks() {
   return (
-    <div className="relative mx-6 mt-5 h-16" aria-hidden="true">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full text-foam">
-        <polyline
-          points={drawn}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </svg>
-      <span
-        className="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-foam bg-ink"
-        style={{ left: `${mark.x}%`, top: `${mark.y}%` }}
-      />
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0 font-mono text-[10px] leading-none text-foam/60">
+      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 font-semibold text-foam">N</span>
+      <span className="absolute top-1/2 right-1.5 -translate-y-1/2">E</span>
+      <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2">S</span>
+      <span className="absolute top-1/2 left-1.5 -translate-y-1/2">W</span>
+    </span>
+  );
+}
+
+function WeekLegend({ up, down, compass }: { up: string; down: string; compass: boolean }) {
+  return (
+    <p className="mb-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foam/80">
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true" className={compass ? "text-foam" : "text-incoming"}>
+          ▲
+        </span>
+        {up}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true" className={compass ? "text-foam" : "text-outgoing"}>
+          ▼
+        </span>
+        {down}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true" className="text-stop">
+          ■
+        </span>
+        Very strong
+      </span>
+      <span>Taller is stronger, fainter is less sure</span>
+    </p>
+  );
+}
+
+/**
+ * Every hour as a bar: up for incoming (or the reef heading), down for outgoing, as tall as it is strong and as solid
+ * as it is sure. It is inset by half the slider thumb, so each bar sits over the thumb's spot for that hour.
+ */
+function WeekStrip({
+  hours,
+  selected,
+  nowIndex,
+  compass,
+  today,
+  onPick,
+}: {
+  hours: readonly HourForecast[];
+  selected: number;
+  nowIndex: number;
+  compass: boolean;
+  today: string;
+  onPick: (index: number) => void;
+}) {
+  const last = Math.max(hours.length - 1, 1);
+  const spans = daySpans(hours);
+  const at = (index: number) => `${(index / last) * 100}%`;
+  const pick = (event: PointerEvent<HTMLDivElement>) => {
+    const box = event.currentTarget.getBoundingClientRect();
+    if (box.width <= 0) return;
+    const share = (event.clientX - box.left) / box.width;
+    onPick(clampHourIndex(Math.round(share * last), hours.length));
+  };
+
+  return (
+    <div className="mx-[22px]" aria-hidden="true">
+      <div className="relative h-5 text-[10px] font-medium text-foam/80">
+        <span className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap" style={{ left: at(nowIndex) }}>
+          Now
+        </span>
+      </div>
+      <div
+        className="relative h-24 cursor-pointer touch-pan-y"
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pick(event);
+        }}
+        onPointerMove={(event) => {
+          if (event.buttons !== 0) pick(event);
+        }}
+      >
+        <svg viewBox={`0 0 ${last} 100`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+          {hours.map((hour, index) => {
+            const height = STRIP_HEIGHT[hour.strength] * 46;
+            const up = hour.direction === "incoming";
+            return (
+              <rect
+                key={hour.time}
+                x={index - 0.42}
+                width={0.84}
+                y={up ? 50 - height : 50}
+                height={height}
+                fill={stripColor(hour, compass)}
+                fillOpacity={confidenceOpacity(hour.confidence)}
+              />
+            );
+          })}
+          {nowIndex > 0 ? <rect x={-0.5} width={nowIndex} y={0} height={100} fill="var(--ink)" fillOpacity={0.55} /> : null}
+          <line x1={-0.5} x2={last + 0.5} y1={50} y2={50} stroke="var(--foam)" strokeOpacity={0.35} vectorEffect="non-scaling-stroke" />
+          {spans.slice(1).map((span) => (
+            <line
+              key={span.date}
+              x1={span.start - 0.5}
+              x2={span.start - 0.5}
+              y1={0}
+              y2={100}
+              stroke="var(--foam)"
+              strokeOpacity={0.2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          <line
+            x1={nowIndex}
+            x2={nowIndex}
+            y1={0}
+            y2={100}
+            stroke="var(--foam)"
+            strokeOpacity={0.7}
+            strokeDasharray="3 3"
+            vectorEffect="non-scaling-stroke"
+          />
+          <line x1={selected} x2={selected} y1={-4} y2={104} stroke="var(--foam)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+        </svg>
+      </div>
+      <div className="relative mt-1 h-4 text-xs text-foam/80">
+        {spans.map((span) =>
+          (span.end - span.start + 1) / hours.length < 0.1 ? null : (
+            <span
+              key={span.date}
+              className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
+              style={{ left: at((span.start + span.end) / 2) }}
+            >
+              {shortDayName(span.date, today)}
+            </span>
+          ),
+        )}
+      </div>
     </div>
   );
 }
 
-function residualPoints(hours: HourForecast[]): { x: number; y: number }[] | null {
-  if (hours.length === 0) return null;
-  let min = Infinity;
-  let max = -Infinity;
-  for (const hour of hours) {
-    if (!Number.isFinite(hour.levelM)) return null;
-    if (hour.levelM < min) min = hour.levelM;
-    if (hour.levelM > max) max = hour.levelM;
-  }
-  const span = max - min;
-  return hours.map((hour, index) => {
-    const across = hours.length === 1 ? 0.5 : index / (hours.length - 1);
-    const rise = span === 0 ? 0.5 : (hour.levelM - min) / span;
-    return {
-      x: 3 + across * 94,
-      y: 14 + (1 - rise) * 72,
-    };
-  });
+/** Very strong is the stop token; otherwise in/out colours, or foam where the way is a compass heading. */
+function stripColor(hour: HourForecast, compass: boolean): string {
+  if (hour.strength === "too_strong") return "var(--stop)";
+  if (compass) return "var(--foam)";
+  return hour.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
 }
 
 /**
@@ -284,8 +414,13 @@ function confidenceText(confidence: Confidence): string {
   return "text-foam";
 }
 
+/** "Today · 6 Oct 20:00", or "Thu · 8 Oct 18:00" past tomorrow, so the day matches the strip's labels. */
 function hourWhen(time: string, today: string): string {
-  return `${dayName(time.slice(0, 10), today)} ${clock(time)}`;
+  const date = time.slice(0, 10);
+  const day = dayName(date, today);
+  const weekday = shortDayName(date, today).split(" ")[0];
+  const named = date === today || date === addUtcDay(today) || !/^\d{4}-/.test(date) ? day : `${weekday} · ${day}`;
+  return `${named} ${clock(time)}`;
 }
 
 function hourValueText(hour: HourForecast, today: string, way: string): string {
@@ -293,12 +428,7 @@ function hourValueText(hour: HourForecast, today: string, way: string): string {
   return `${when}, ${way.toLowerCase()}, ${STRENGTH_LABEL[hour.strength]}, ${hour.confidence} confidence`;
 }
 
-function dayShare(span: { start: number; end: number }, hourCount: number): string {
-  const covered = span.end - span.start + 1;
-  return `0 0 ${(covered / hourCount) * 100}%`;
-}
-
-function daySpans(hours: HourForecast[]): { date: string; start: number; end: number }[] {
+function daySpans(hours: readonly HourForecast[]): { date: string; start: number; end: number }[] {
   const spans: { date: string; start: number; end: number }[] = [];
   for (let index = 0; index < hours.length; index += 1) {
     const date = hours[index].time.slice(0, 10);
@@ -337,6 +467,13 @@ function shortDayName(date: string, today: string): string {
   if (!match) return date;
   const weekday = WEEKDAYS[new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).getUTCDay()];
   return `${weekday} ${Number(match[3])}`;
+}
+
+/** "at 23:00" on the same day, "Wed 7 at 02:00" on another. */
+function turnWhen(time: string, today: string): string {
+  const date = time.slice(0, 10);
+  if (date === today) return `at ${clock(time)}`;
+  return `${shortDayName(date, today)} at ${clock(time)}`;
 }
 
 function fetchedCaption(wall: string): string {
