@@ -42,6 +42,22 @@ describe("catalog depths", () => {
     }
   });
 
+  it("keeps every grid crossing whole: width, mean no deeper than its maximum, and a confidence", () => {
+    const measured = catalog.sites.filter((site) => site.gridDepthMeanM != null);
+    expect(measured.length).toBeGreaterThan(0);
+    for (const site of measured) {
+      expect(site.gridWidthM).toBeGreaterThanOrEqual(100);
+      expect(site.gridDepthMeanM).toBeGreaterThan(0);
+      expect(site.gridDepthMaxM).toBeGreaterThanOrEqual(site.gridDepthMeanM!);
+      expect(["ok", "low"]).toContain(site.gridDepthConfidence);
+    }
+  });
+
+  it("never sizes a channel from a grid depth", () => {
+    const gridOnly = { channelWidthM: undefined, channelDepthM: undefined, channelDepthKind: undefined, gridWidthM: 700, gridDepthMeanM: 25 };
+    expect(sectionInput(gridOnly)).toEqual({});
+  });
+
   it("keeps each channel record once, with a size, a depth kind for any depth and an http source", () => {
     const records = catalog.channels ?? [];
     expect(new Set(records.map((record) => record.id)).size).toBe(records.length);
