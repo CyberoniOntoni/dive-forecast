@@ -29,6 +29,7 @@ Marine-life forecasts, visibility as its own product, and 3D seafloor maps are n
 - The level difference across each atoll, so channels on opposite rims can run opposite ways.
 - Lagoon flow: thilas inside the atoll follow the water moving through the rim and channels.
 - The model, its constants and its limits are written down in `FORECAST_MODEL.md`.
+- Sea state on the site page: calm, moderate, choppy or rough each hour, with the swell and wind chop that reach the site after the atoll's shelter, a strip of the week under the current strip, and a warning on channels when swell runs into a strong outgoing current.
 
 ## Before production
 

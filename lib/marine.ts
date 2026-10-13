@@ -147,7 +147,8 @@ function refreshMarine(lat: number, lon: number): Promise<{ hours: MarineHour[];
 let activeRequests = 0;
 const waitingRequests: (() => void)[] = [];
 
-async function withRequestSlot<T>(task: () => Promise<T>): Promise<T> {
+/** Runs an Open-Meteo request once one of the MAX_REQUESTS slots is free. Shared by every Open-Meteo fetch. */
+export async function withRequestSlot<T>(task: () => Promise<T>): Promise<T> {
   if (activeRequests >= MAX_REQUESTS) await new Promise<void>((resolve) => waitingRequests.push(resolve));
   activeRequests += 1;
   try {
@@ -250,7 +251,7 @@ async function readMarineEndpoint(url: string): Promise<MarineHour[] | null> {
   }
 }
 
-function cacheName(lat: number, lon: number): string {
+export function cacheName(lat: number, lon: number): string {
   return `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
 }
 
@@ -332,7 +333,7 @@ function maldivesWallParts(
   };
 }
 
-function destinationKm(
+export function destinationKm(
   lat: number,
   lon: number,
   bearingDeg: number,

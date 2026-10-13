@@ -179,6 +179,17 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 - **Confidence** is always low.
 - **Fallback:** an atoll with no outline or ring data keeps the channel model. On the fallback, a report filed on the lagoon axis is read against the inward bearing: kept, or flipped when its axis pointed more than 90° from it.
 
+## Sea state
+
+Separate from the current: it never changes the current forecast or `FORECAST_MODEL_VERSION`. Code in `lib/waves.ts`, `lib/wave-exposure.ts` and `lib/sea-state.ts`.
+
+- **Offshore waves.** Open-Meteo's wave model (best match here is Météo-France MFWAM, about 9 km): swell, secondary swell and wind waves, each with height, the direction it comes from and period, for the same hours as the current. It is sampled at eight points round each atoll outline, 12 km past its far edge on each side and snapped to the model grid, and cached like the marine series. For each component and hour the side used is the one that sea comes from.
+- **Why the shelter is ours.** The wave model sees an atoll as one soft barrier. Across North Malé on 13 Oct 2026 it gave 0.98 m in the open sea east, 0.55 m in the middle of the lagoon and 0.53 m in open water west: it barely shelters the lagoon. So offshore waves are taken outside the atoll and the shelter comes from geometry.
+- **Exposure.** For every 5° a ray runs from the site toward where the sea comes from, out to 60 km, across every atoll outline in `data/rims.json`. Crossing an outline is crossing reef and keeps 15 % of the swell height. Crossing it through a reef-crest gap in `data/openings.json` keeps it all, spread out behind the gap as √(2 × gap width ÷ distance), halved for a gap with a reef-flat bridge. Wind waves grow again behind the reef, so their share is at least √(fetch to the first reef ÷ 60 km). An outer reef or strait wall is sheltered by its own reef for seas from the lagoon side. The shares are averaged over ±45° (cos² weights). `npm run wave-exposure [-- <site-id>…]` prints the table.
+- **Bands.** Felt height = √(swell² + secondary swell² + (1.4 × wind waves)²) at the site. Calm under 0.5 m, moderate under 1.0 m, choppy under 1.5 m, rough above. These limits are first guesses to tune from reports.
+- **Swell against the current.** At a channel, an hour is flagged when the current runs out at strong or very strong and a swell of at least 0.8 m reaches the site from within 60° of straight in through the channel: it stands up into steep, breaking waves at the mouth.
+- **Limits.** Only seeded atolls shelter (atolls with no outline, such as Thaa or Laamu, do not). Pins are within a few hundred metres, so a wall just round a corner can read as open. No wind forecast yet, so lagoon chop is scaled from the offshore wind waves, not grown from the wind.
+
 ## Reports and scoring
 
 Divers report direction and strength after a dive (`components/ReportForm.tsx`, `lib/actions.ts`). Each report saves:

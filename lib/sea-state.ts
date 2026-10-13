@@ -1,0 +1,207 @@
+import fs from "fs";
+import path from "path";
+import { allRims, rimForAtoll, type RimRing } from "./rim";
+import { crossesRim } from "./site-type";
+import { exposureAt, offshorePoints, siteExposure, type ExposureKind, type ExposureOpening, type SiteExposure } from "./wave-exposure";
+import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
+import type { FetchOptions } from "./marine";
+import type { Atoll, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Site, SiteWave } from "./types";
+
+export { SEA_BANDS, type SeaBand, type SeaStateHour, type SiteWave } from "./types";
+
+/**
+ * Sea state at a dive site. Offshore waves come from Open-Meteo's wave model on the side of the atoll each sea comes
+ * from; how much reaches the site comes from the atoll geometry (lib/wave-exposure.ts). It never touches the current
+ * forecast or FORECAST_MODEL_VERSION.
+ */
+
+/**
+ * Upper limits of each band on the felt height, metres. First guesses from the plan, to tune from reports.
+ * Rough is everything from 1.5 m up.
+ */
+export const SEA_BAND_LIMITS_M: Record<Exclude<SeaBand, "rough">, number> = { calm: 0.5, moderate: 1.0, choppy: 1.5 };
+/** Short wind waves feel this much bigger than swell of the same height. */
+export const WIND_WAVE_WEIGHT = 1.4;
+/** Swell at least this high, running into a strong outgoing current, stands up at a channel mouth. */
+export const AGAINST_CURRENT_SWELL_M = 0.8;
+/** Swell within this many degrees of straight in through the channel counts as running against the outgoing current. */
+const AGAINST_CURRENT_DEG = 60;
+
+export type SeaState = { hours: SeaStateHour[]; unavailable: boolean; fetchedAt: number | null; stale: boolean };
+
+/** The offshore sample for one side of the atoll: the side's compass bearing from the atoll and its wave hours. */
+export type OffshoreSide = { sideDeg: number; hours: readonly WaveHour[] };
+
+/**
+ * Each hour's sea state at the site. For each wave component, the offshore side used is the one the sea comes from
+ * (its own direction closest to the side's bearing). Hours missing from every side are left out.
+ */
+export function seaStateHours(input: {
+  sides: readonly OffshoreSide[];
+  exposure: SiteExposure;
+  /** The current forecast's hours, for the swell-against-current check. Only "channel" hours are checked. */
+  current?: readonly HourForecast[];
+  route?: ForecastRoute;
+  /** The channel's inward bearing: swell from the opposite way runs in through it, against an outgoing current. */
+  inwardBearingDeg?: number | null;
+}): SeaStateHour[] {
+  const byTime = input.sides.map((side) => ({ sideDeg: side.sideDeg, at: new Map(side.hours.map((hour) => [hour.time, hour])) }));
+  const times = [...new Set(input.sides.flatMap((side) => side.hours.map((hour) => hour.time)))].sort();
+  const currentAt = new Map((input.current ?? []).map((hour) => [hour.time, hour]));
+  const result: SeaStateHour[] = [];
+  for (const time of times) {
+    const pick = (key: "swell" | "secondarySwell" | "windWave"): WaveComponent | null => upstream(byTime, time, key);
+    const swells = [pick("swell"), pick("secondarySwell")]
+      .filter((wave): wave is WaveComponent => wave != null)
+      .map((wave) => ({ ...wave, heightM: wave.heightM * exposureAt(input.exposure.swell, wave.fromDeg) }));
+    const wind = pick("windWave");
+    if (swells.length === 0 && wind == null) continue;
+    const windWaveM = wind ? wind.heightM * exposureAt(input.exposure.wind, wind.fromDeg) : 0;
+    const swellSquares = swells.reduce((sum, wave) => sum + wave.heightM ** 2, 0);
+    const feltM = Math.sqrt(swellSquares + (WIND_WAVE_WEIGHT * windWaveM) ** 2);
+    const biggest = swells.reduce<SiteWave | null>((best, wave) => (best == null || wave.heightM > best.heightM ? wave : best), null);
+    result.push({
+      time,
+      band: seaBand(feltM),
+      feltM: round2(feltM),
+      swell: biggest && biggest.heightM >= 0.05 ? { ...biggest, heightM: round2(biggest.heightM) } : null,
+      windWaveM: round2(windWaveM),
+      againstCurrent:
+        input.route === "channel" && input.inwardBearingDeg != null
+          ? againstCurrent(swells, currentAt.get(time), input.inwardBearingDeg)
+          : false,
+    });
+  }
+  return result;
+}
+
+export function seaBand(feltM: number): SeaBand {
+  if (feltM < SEA_BAND_LIMITS_M.calm) return "calm";
+  if (feltM < SEA_BAND_LIMITS_M.moderate) return "moderate";
+  if (feltM < SEA_BAND_LIMITS_M.choppy) return "choppy";
+  return "rough";
+}
+
+/** Swell coming from outside, in through the channel, while the channel runs strongly out. */
+function againstCurrent(swells: readonly SiteWave[], hour: HourForecast | undefined, inwardBearingDeg: number): boolean {
+  if (!hour || hour.direction !== "outgoing") return false;
+  if (hour.strength !== "strong" && hour.strength !== "too_strong") return false;
+  const seaward = (inwardBearingDeg + 180) % 360;
+  return swells.some((wave) => wave.heightM >= AGAINST_CURRENT_SWELL_M && angleBetween(wave.fromDeg, seaward) <= AGAINST_CURRENT_DEG);
+}
+
+function upstream(
+  sides: readonly { sideDeg: number; at: Map<string, WaveHour> }[],
+  time: string,
+  key: "swell" | "secondarySwell" | "windWave",
+): WaveComponent | null {
+  let best: { wave: WaveComponent; off: number } | null = null;
+  for (const side of sides) {
+    const wave = side.at.get(time)?.[key];
+    if (!wave) continue;
+    const off = angleBetween(wave.fromDeg, side.sideDeg);
+    if (best == null || off < best.off) best = { wave, off };
+  }
+  return best?.wave ?? null;
+}
+
+function angleBetween(a: number, b: number): number {
+  const difference = Math.abs((((a - b) % 360) + 360) % 360);
+  return difference > 180 ? 360 - difference : difference;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+const OPENINGS_PATH = path.join(process.cwd(), "data", "openings.json");
+let openingsMemo: ExposureOpening[] | null = null;
+
+/** Reef-crest gaps from data/openings.json. Missing or unreadable means none: every crossing is reef. */
+function readOpenings(): ExposureOpening[] {
+  if (openingsMemo) return openingsMemo;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(OPENINGS_PATH, "utf8")) as { openings?: unknown };
+    const list = Array.isArray(parsed.openings) ? parsed.openings : [];
+    openingsMemo = list.flatMap((item) => {
+      const opening = item as Partial<ExposureOpening>;
+      return typeof opening.lat === "number" && typeof opening.lon === "number" && typeof opening.widthM === "number"
+        ? [{ lat: opening.lat, lon: opening.lon, widthM: opening.widthM, reefFlatBridges: opening.reefFlatBridges === true }]
+        : [];
+    });
+  } catch {
+    openingsMemo = [];
+  }
+  return openingsMemo;
+}
+
+/** How the site's own rim shelters it. Channel sites cross the rim; outer reef and strait walls sit on it. */
+export function exposureKind(site: Site, mates: readonly Site[]): ExposureKind {
+  if (crossesRim(site, mates)) return "channel";
+  if (site.siteType === "outer-reef" || site.siteType === "strait-wall") return "wall";
+  if (site.siteType === "lagoon") return "lagoon";
+  return "channel";
+}
+
+const exposureMemo = new Map<string, SiteExposure>();
+
+export function exposureForSite(site: Site, mates: readonly Site[], inwardBearingDeg: number | null): SiteExposure {
+  const kind = exposureKind(site, mates);
+  const key = `${site.id}|${site.lat}|${site.lon}|${kind}|${inwardBearingDeg}`;
+  const kept = exposureMemo.get(key);
+  if (kept) return kept;
+  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg }, [...allRims().values()], readOpenings());
+  exposureMemo.set(key, exposure);
+  return exposure;
+}
+
+/**
+ * The atoll's eight offshore samples. Ok sides only; a side still on its first fetch (wait: false) marks pending.
+ * fetchedAt is the oldest side's, so the page never claims fresher data than it used.
+ */
+async function offshoreSides(
+  ring: RimRing,
+  options: FetchOptions,
+): Promise<{ sides: OffshoreSide[]; fetchedAt: number | null; stale: boolean }> {
+  const fetched = await Promise.all(
+    offshorePoints(ring).map(async (point) => ({ point, waves: await fetchWaves(point.lat, point.lon, options) })),
+  );
+  const sides: OffshoreSide[] = [];
+  let fetchedAt: number | null = null;
+  let stale = false;
+  for (const { point, waves } of fetched) {
+    if (!waves.ok) continue;
+    sides.push({ sideDeg: point.sideDeg, hours: waves.hours });
+    fetchedAt = fetchedAt == null ? waves.fetchedAt : Math.min(fetchedAt, waves.fetchedAt);
+    stale ||= waves.stale;
+  }
+  return { sides, fetchedAt, stale };
+}
+
+/**
+ * The site's sea state for the forecast's hours: null for a site with no atoll outline, unavailable before any
+ * offshore side has data. `current` is the site's current forecast, for the swell-against-current check on channels.
+ */
+export async function loadSeaState(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll | undefined,
+  current: { hours: readonly HourForecast[]; forecastRoute: ForecastRoute; inwardBearingDeg: number | null },
+  options: FetchOptions = {},
+): Promise<SeaState | null> {
+  const ring = rimForAtoll(atoll);
+  if (!ring) return null;
+  const offshore = await offshoreSides(ring, options);
+  if (offshore.sides.length === 0) return { hours: [], unavailable: true, fetchedAt: null, stale: false };
+  const exposure = exposureForSite(site, mates, current.inwardBearingDeg);
+  const shown = new Set(current.hours.map((hour) => hour.time));
+  const hours = seaStateHours({
+    sides: offshore.sides,
+    exposure,
+    current: current.hours,
+    // A lagoon site that fell back to channel hours has no channel mouth of its own.
+    route: exposureKind(site, mates) === "channel" ? current.forecastRoute : undefined,
+    inwardBearingDeg: current.inwardBearingDeg,
+  }).filter((hour) => shown.size === 0 || shown.has(hour.time));
+  return { hours, unavailable: hours.length === 0, fetchedAt: offshore.fetchedAt, stale: offshore.stale };
+}

@@ -4,7 +4,8 @@ import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
-import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
+import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
+import { loadSeaState } from "./sea-state";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
@@ -25,6 +26,7 @@ import {
   type ForecastRoute,
   type Rating,
   type Report,
+  type SeaStateHour,
   type Site,
   type SiteForecast,
   type Strength,
@@ -168,6 +170,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
 
   const loaded = await loadStoredSite(site);
   return {
+    seaState: await seaStateFor(site, loaded),
     hours: loaded.hours,
     unavailable: loaded.unavailable,
     stale: loaded.stale,
@@ -207,7 +210,25 @@ function unavailableForecast(): SiteForecast {
     alongHeadingDeg: null,
     siteNote: null,
     fetchedAt: null,
+    seaState: null,
   };
+}
+
+/** The site's sea state for its forecast hours. Never blocks the forecast: a failure shows as unavailable. */
+async function seaStateFor(site: Site, loaded: SiteLoad): Promise<SeaStateHour[] | null> {
+  if (loaded.unavailable) return null;
+  try {
+    const catalog = readCatalog();
+    const atoll = catalog.atolls.find((item) => item.id === site.atollId);
+    const sea = await loadSeaState(site, catalog.sites, atoll, {
+      hours: loaded.hours,
+      forecastRoute: loaded.forecastRoute,
+      inwardBearingDeg: loaded.bearing,
+    });
+    return sea ? sea.hours : null;
+  } catch {
+    return [];
+  }
 }
 
 async function loadStoredSite(site: Site) {

@@ -3,7 +3,7 @@
 import { useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { compassWord, confidenceOpacity, onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
-import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, Strength } from "@/lib/types";
+import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Strength } from "@/lib/types";
 
 const STRENGTH_LABEL: Record<Strength, string> = {
   slack: "Slack",
@@ -33,6 +33,7 @@ export function HourSlider({
   stale = false,
   maldivesWall,
   initialIndex,
+  seaState = null,
 }: {
   hours: HourForecast[];
   unavailable: boolean;
@@ -55,6 +56,8 @@ export function HourSlider({
   stale?: boolean;
   maldivesWall: string;
   initialIndex: number;
+  /** Sea state by hour. Empty when it is unavailable; null when the site has none. */
+  seaState?: SeaStateHour[] | null;
 }) {
   const [index, setIndex] = useState(initialIndex);
 
@@ -92,6 +95,8 @@ export function HourSlider({
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
   const turn = nextTurn(hours, selected);
+  const seaByTime = new Map((seaState ?? []).map((sea) => [sea.time, sea]));
+  const sea = seaByTime.get(hour.time) ?? null;
 
   return (
     <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
@@ -141,6 +146,7 @@ export function HourSlider({
           <p className="mt-1 text-sm leading-6 text-foam/80">{turnText(turn, hours, today, wordFor)}</p>
         </div>
       </div>
+      {seaState == null ? null : <SeaLine sea={sea} />}
       {bearing != null && bearingSource === "fallback" ? (
         <p className="mt-3 text-xs leading-5 text-foam/80">
           The arrow heading is an estimate. This pin has no measured channel bearing.
@@ -150,6 +156,7 @@ export function HourSlider({
       <div className="mt-6">
         <WeekLegend up={wordFor("incoming")} down={wordFor("outgoing")} compass={compass} />
         <WeekStrip hours={hours} selected={selected} nowIndex={nowIndex} compass={compass} today={today} onPick={setIndex} />
+        {seaByTime.size > 0 ? <SeaStrip hours={hours} seaByTime={seaByTime} selected={selected} nowIndex={nowIndex} /> : null}
         <label className="block min-w-0" htmlFor="forecast-hour">
           <span className="sr-only">Forecast hour</span>
           <input
@@ -192,6 +199,98 @@ export function HourSlider({
       {siteNote ? <p className="mt-4 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
     </section>
+  );
+}
+
+export const SEA_LABEL: Record<SeaBand, string> = {
+  calm: "Calm",
+  moderate: "Moderate",
+  choppy: "Choppy",
+  rough: "Rough",
+};
+
+/** Strip colour per sea band: calm and moderate stay foam, choppy takes the outgoing amber, rough the stop red. */
+export const SEA_COLOR: Record<SeaBand, { fill: string; opacity: number }> = {
+  calm: { fill: "var(--foam)", opacity: 0.18 },
+  moderate: { fill: "var(--foam)", opacity: 0.5 },
+  choppy: { fill: "var(--outgoing)", opacity: 0.9 },
+  rough: { fill: "var(--stop)", opacity: 1 },
+};
+
+/** "Sea: choppy · 1.2 m swell from SW, 11 s · 0.4 m wind chop", and the swell-against-current warning. */
+function SeaLine({ sea }: { sea: SeaStateHour | null }) {
+  if (sea == null) {
+    return <p className="mt-3 text-sm leading-6 text-foam/80">Sea state is unavailable for this hour.</p>;
+  }
+  return (
+    <div className="mt-3 text-sm leading-6">
+      <p className="text-foam/90">
+        <span className="font-medium text-foam">Sea: </span>
+        <span className={sea.band === "rough" ? "font-semibold text-stop" : sea.band === "choppy" ? "font-semibold text-outgoing" : "text-foam"}>
+          {SEA_LABEL[sea.band].toLowerCase()}
+        </span>
+        <span className="text-foam/80"> · {seaDetail(sea)}</span>
+      </p>
+      {sea.againstCurrent ? (
+        <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
+      ) : null}
+    </div>
+  );
+}
+
+/** "1.2 m swell from SW, 11 s · 0.4 m wind chop", leaving out what is too small to feel. */
+export function seaDetail(sea: SeaStateHour): string {
+  const parts: string[] = [];
+  if (sea.swell) {
+    const period = sea.swell.periodS == null ? "" : `, ${Math.round(sea.swell.periodS)} s`;
+    parts.push(`${metres(sea.swell.heightM)} swell from ${compassWord(sea.swell.fromDeg)}${period}`);
+  }
+  if (sea.windWaveM >= 0.1) parts.push(`${metres(sea.windWaveM)} wind chop`);
+  return parts.length > 0 ? parts.join(" · ") : "no swell or wind chop to speak of";
+}
+
+function metres(value: number): string {
+  return `${(Math.round(value * 10) / 10).toFixed(1)} m`;
+}
+
+/** One cell per forecast hour, coloured by sea band, under the week strip so a calm window can be picked by eye. */
+function SeaStrip({
+  hours,
+  seaByTime,
+  selected,
+  nowIndex,
+}: {
+  hours: readonly HourForecast[];
+  seaByTime: ReadonlyMap<string, SeaStateHour>;
+  selected: number;
+  nowIndex: number;
+}) {
+  const last = Math.max(hours.length - 1, 1);
+  return (
+    <div className="mx-[22px] mt-2" aria-hidden="true">
+      <svg viewBox={`0 0 ${last} 10`} preserveAspectRatio="none" className="block h-3 w-full overflow-visible">
+        {hours.map((hour, index) => {
+          const sea = seaByTime.get(hour.time);
+          if (!sea) return null;
+          const color = SEA_COLOR[sea.band];
+          return <rect key={hour.time} x={index - 0.5} width={1} y={0} height={10} fill={color.fill} fillOpacity={color.opacity} />;
+        })}
+        {nowIndex > 0 ? <rect x={-0.5} width={nowIndex} y={0} height={10} fill="var(--ink)" fillOpacity={0.55} /> : null}
+        <line x1={selected} x2={selected} y1={-2} y2={12} stroke="var(--foam)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-foam/80">
+        <span>Sea:</span>
+        {(Object.keys(SEA_LABEL) as SeaBand[]).map((band) => (
+          <span key={band} className="inline-flex items-center gap-1">
+            <span
+              className="inline-block h-2 w-3"
+              style={{ backgroundColor: SEA_COLOR[band].fill, opacity: SEA_COLOR[band].opacity }}
+            />
+            {SEA_LABEL[band].toLowerCase()}
+          </span>
+        ))}
+      </p>
+    </div>
   );
 }
 

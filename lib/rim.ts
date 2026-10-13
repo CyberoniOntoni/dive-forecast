@@ -34,6 +34,11 @@ export function rimForAtoll(atoll: Atoll | undefined): RimRing | null {
   return ring;
 }
 
+/** Every stored outline, keyed by OSM way id. Empty when data/rims.json is absent. */
+export function allRims(): ReadonlyMap<string, RimRing> {
+  return readRims().rims;
+}
+
 /** True unless data/rims.json is absent. With no file every pin keeps the heuristic. */
 export function rimFilePresent(): boolean {
   return readRims().present;
