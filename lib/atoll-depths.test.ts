@@ -53,9 +53,13 @@ describe("catalog depths", () => {
     }
   });
 
-  it("never sizes a channel from a grid depth", () => {
-    const gridOnly = { channelWidthM: undefined, channelDepthM: undefined, channelDepthKind: undefined, gridWidthM: 700, gridDepthMeanM: 25 };
-    expect(sectionInput(gridOnly)).toEqual({});
+  it("sizes a channel from an ok grid crossing only when it has no published hydraulic section", () => {
+    const grid = { gridWidthM: 700, gridDepthMeanM: 25, gridDepthConfidence: "ok" as const };
+    expect(sectionInput(grid)).toEqual({ channelWidthM: 700, channelDepthM: 25 });
+    expect(sectionInput({ ...grid, gridDepthConfidence: "low" })).toEqual({});
+    const published = { channelWidthM: 500, channelDepthM: 30, channelDepthKind: "typical" as const };
+    expect(sectionInput({ ...grid, ...published })).toEqual({ channelWidthM: 500, channelDepthM: 30 });
+    expect(sectionInput({ ...grid, ...published, channelDepthKind: "max" })).toEqual({ channelWidthM: 700, channelDepthM: 25 });
   });
 
   it("keeps each channel record once, with a size, a depth kind for any depth and an http source", () => {

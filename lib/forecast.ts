@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/17";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/18";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -87,14 +87,21 @@ export function reportTemporalWeight(reportTime: string, referenceTimeMs: number
 export const HYDRAULIC_DEPTH_KINDS: readonly DepthKind[] = ["mean", "typical"];
 
 /**
- * The section a site hands the constriction factor. Its depth goes in only when it is a hydraulic depth,
- * so a stated maximum never sizes a channel. Without one the factor is 1.
+ * The section a site hands the constriction factor. A published section goes in only when its depth is hydraulic,
+ * so a stated maximum never sizes a channel. Without one, an "ok" crossing of the Rasheed (2021) bathymetry grid
+ * sizes it: its gap width and mean depth. A "low" crossing never does. Without either the factor is 1.
  */
 export function sectionInput(
-  site: Pick<Site, "channelWidthM" | "channelDepthM" | "channelDepthKind">,
+  site: Pick<
+    Site,
+    "channelWidthM" | "channelDepthM" | "channelDepthKind" | "gridWidthM" | "gridDepthMeanM" | "gridDepthConfidence"
+  >,
 ): { channelWidthM?: number; channelDepthM?: number } {
-  if (site.channelDepthKind == null || !HYDRAULIC_DEPTH_KINDS.includes(site.channelDepthKind)) return {};
-  return { channelWidthM: site.channelWidthM, channelDepthM: site.channelDepthM };
+  if (site.channelDepthKind != null && HYDRAULIC_DEPTH_KINDS.includes(site.channelDepthKind)) {
+    return { channelWidthM: site.channelWidthM, channelDepthM: site.channelDepthM };
+  }
+  if (site.gridDepthConfidence === "ok") return { channelWidthM: site.gridWidthM, channelDepthM: site.gridDepthMeanM };
+  return {};
 }
 
 export function constrictionFactor(channelWidthM?: number, channelDepthM?: number): number {
