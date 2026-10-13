@@ -127,7 +127,11 @@
       "atlasWidthM": 720,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 600,
+      "gridDepthMeanM": 15,
+      "gridDepthMaxM": 19,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "banana-reef",
@@ -219,7 +223,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1000,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 13,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "fotteyo-kandu",
@@ -233,7 +241,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://itouchblue1.wixsite.com/itouchbluekeyodhoo/service-page/fotteyo-kandu",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 290,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 11,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "alimatha-house-reef",
@@ -260,7 +272,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.padi.com/dive-site/maldives/broken-rock/",
       "siteType": "channel-thila",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 4140,
+      "gridDepthMeanM": 49,
+      "gridDepthMaxM": 67,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "himandhoo-thila",
@@ -313,7 +329,11 @@
       "atlasWidthM": 840,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 710,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 12,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kuda-faru",
@@ -373,7 +393,11 @@
       "atlasWidthM": 1200,
       "atlasWidthConfidence": "low",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 780,
+      "gridDepthMeanM": 21,
+      "gridDepthMaxM": 33,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "nassimo-thila",
@@ -438,7 +462,11 @@
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.meridis.de/en/diving-gb/cocogiri/dive-spots_dhonveli-gb",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 140,
+      "gridDepthMeanM": 9,
+      "gridDepthMaxM": 11,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "vaadhoo-caves",
@@ -510,7 +538,11 @@
       "atlasWidthM": 670,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 580,
+      "gridDepthMeanM": 12,
+      "gridDepthMaxM": 13,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "medhu-kandu",
@@ -529,7 +561,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 470,
+      "gridDepthMeanM": 11,
+      "gridDepthMaxM": 14,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "hulhidhoo-kandu",
@@ -544,7 +580,11 @@
       "atlasWidthM": 1170,
       "atlasWidthConfidence": "low",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 330,
+      "gridDepthMeanM": 8,
+      "gridDepthMaxM": 9,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "felidhoo-kandu",
@@ -559,7 +599,11 @@
       "atlasWidthM": 720,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 160,
+      "gridDepthMeanM": 9,
+      "gridDepthMaxM": 10,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "keyodhoo-kandu",
@@ -574,7 +618,11 @@
       "atlasWidthM": 460,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 280,
+      "gridDepthMeanM": 8,
+      "gridDepthMaxM": 9,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kuda-kandu",
@@ -589,7 +637,11 @@
       "atlasWidthM": 1060,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 160,
+      "gridDepthMeanM": 9,
+      "gridDepthMaxM": 10,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "rakeedhoo-kandu",
@@ -604,7 +656,11 @@
       "atlasWidthM": 370,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 230,
+      "gridDepthMeanM": 8,
+      "gridDepthMaxM": 9,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "anbaraa",
@@ -689,7 +745,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 330,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 14,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "rassag-place",
@@ -723,7 +783,11 @@
         }
       ],
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 630,
+      "gridDepthMeanM": 26,
+      "gridDepthMaxM": 35,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "guruwa-faru",
@@ -748,7 +812,11 @@
       "atlasWidthM": 660,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 720,
+      "gridDepthMeanM": 23,
+      "gridDepthMaxM": 34,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "fairytale-reef",
@@ -815,7 +883,11 @@
       "atlasWidthM": 1760,
       "atlasWidthConfidence": "low",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1620,
+      "gridDepthMeanM": 15,
+      "gridDepthMaxM": 33,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "long-reef",
@@ -840,7 +912,11 @@
       "atlasWidthM": 810,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 760,
+      "gridDepthMeanM": 29,
+      "gridDepthMaxM": 39,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "prisca-corner",
@@ -855,7 +931,11 @@
       "atlasWidthM": 1260,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 1200,
+      "gridDepthMeanM": 17,
+      "gridDepthMaxM": 22,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "cave-corner",
@@ -870,7 +950,11 @@
       "atlasWidthM": 620,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 600,
+      "gridDepthMeanM": 17,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "asdhoo-rock",
@@ -937,7 +1021,11 @@
       "atlasWidthM": 1030,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 140,
+      "gridDepthMeanM": 6,
+      "gridDepthMaxM": 6,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "colosseum",
@@ -989,7 +1077,11 @@
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 2320,
+      "gridDepthMeanM": 29,
+      "gridDepthMaxM": 64,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "palm-reef",
@@ -1041,7 +1133,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 760,
+      "gridDepthMeanM": 20,
+      "gridDepthMaxM": 34,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "okobe-thila",
@@ -1077,7 +1173,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 2520,
+      "gridDepthMeanM": 35,
+      "gridDepthMaxM": 49,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "ilkka-reef",
@@ -1194,7 +1294,11 @@
       "atlasWidthM": 920,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 700,
+      "gridDepthMeanM": 29,
+      "gridDepthMaxM": 46,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "chicken-island-2",
@@ -1292,7 +1396,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 830,
+      "gridDepthMeanM": 31,
+      "gridDepthMaxM": 44,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "hans-hass-place",
@@ -1349,7 +1457,11 @@
         }
       ],
       "siteType": "strait-wall",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 1870,
+      "gridDepthMeanM": 24,
+      "gridDepthMaxM": 35,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "bandos",
@@ -1455,7 +1567,11 @@
         }
       ],
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 3050,
+      "gridDepthMeanM": 14,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "hembadhoo-wreck",
@@ -1491,7 +1607,11 @@
       "lon": 73.368913,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 3050,
+      "gridDepthMeanM": 16,
+      "gridDepthMaxM": 18,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "madivaru",
@@ -1578,7 +1698,11 @@
       "diveMaxM": 9,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 3250,
+      "gridDepthMeanM": 20,
+      "gridDepthMaxM": 27,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kuda-thila",
@@ -1591,7 +1715,11 @@
       "diveMaxM": 28,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 3080,
+      "gridDepthMeanM": 15,
+      "gridDepthMaxM": 19,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "eri-faru",
@@ -1690,7 +1818,11 @@
       "atlasWidthM": 260,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 230,
+      "gridDepthMeanM": 8,
+      "gridDepthMaxM": 9,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "coral-garden-3",
@@ -1703,7 +1835,11 @@
       "diveMaxM": 12,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 1480,
+      "gridDepthMeanM": 17,
+      "gridDepthMaxM": 21,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "embudhoo-canyon",
@@ -1760,7 +1896,11 @@
       "atlasWidthM": 750,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 620,
+      "gridDepthMeanM": 18,
+      "gridDepthMaxM": 25,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "dhigu-thila",
@@ -1775,7 +1915,11 @@
       "atlasWidthM": 970,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 900,
+      "gridDepthMeanM": 12,
+      "gridDepthMaxM": 15,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "miyaru-falhu",
@@ -1816,7 +1960,11 @@
       "atlasWidthM": 970,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 770,
+      "gridDepthMeanM": 16,
+      "gridDepthMaxM": 22,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "kandooma-caves",
@@ -1831,7 +1979,11 @@
       "atlasWidthM": 770,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 640,
+      "gridDepthMeanM": 14,
+      "gridDepthMaxM": 18,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "lhosfushi-kandu",
@@ -1852,7 +2004,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 130,
+      "gridDepthMeanM": 9,
+      "gridDepthMaxM": 10,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "sundune",
@@ -1866,7 +2022,11 @@
       "atlasWidthM": 560,
       "atlasWidthConfidence": "low",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 320,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 13,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "medhu-faru",
@@ -1904,7 +2064,11 @@
         }
       ],
       "siteType": "corner",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 400,
+      "gridDepthMeanM": 34,
+      "gridDepthMaxM": 96,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "ranikan",
@@ -1936,7 +2100,11 @@
         }
       ],
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 3350,
+      "gridDepthMeanM": 15,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kudarah",
@@ -1994,7 +2162,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 720,
+      "gridDepthMeanM": 12,
+      "gridDepthMaxM": 13,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "ramm-faru",
@@ -2033,7 +2205,11 @@
       "atlasWidthM": 730,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 620,
+      "gridDepthMeanM": 11,
+      "gridDepthMaxM": 12,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "rannalhi-faru",
@@ -2046,7 +2222,11 @@
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 620,
+      "gridDepthMeanM": 28,
+      "gridDepthMaxM": 60,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "balcony",
@@ -2059,7 +2239,11 @@
       "diveMaxM": 24,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 1420,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 14,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "vaagili-bodu-thila",
@@ -2074,7 +2258,11 @@
       "atlasWidthM": 1120,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 990,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 11,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "vaagili-caves",
@@ -2089,7 +2277,11 @@
       "atlasWidthM": 550,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 480,
+      "gridDepthMeanM": 13,
+      "gridDepthMaxM": 16,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "rihiveli-wreck",
@@ -2271,7 +2463,11 @@
       "atlasWidthM": 1540,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1560,
+      "gridDepthMeanM": 17,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "kandholhudhoo-thila",
@@ -2495,7 +2691,11 @@
       "lon": 73.403319,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 2310,
+      "gridDepthMeanM": 16,
+      "gridDepthMaxM": 21,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "shipyard",
@@ -2540,7 +2740,11 @@
       "diveMaxM": 16,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "corner",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 2300,
+      "gridDepthMeanM": 18,
+      "gridDepthMaxM": 54,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "maagiri",
@@ -2578,7 +2782,11 @@
       "atlasWidthM": 1300,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1450,
+      "gridDepthMeanM": 12,
+      "gridDepthMaxM": 17,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "fushifaru-kandu",
@@ -2610,7 +2818,11 @@
       "atlasWidthM": 840,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 910,
+      "gridDepthMeanM": 13,
+      "gridDepthMaxM": 18,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "fushifaru-corner",
@@ -2627,7 +2839,11 @@
       "channelDepthKind": "typical",
       "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/fushifaru-kandu-isra/",
       "siteType": "corner",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1970,
+      "gridDepthMeanM": 17,
+      "gridDepthMaxM": 33,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "fushifaru-giri",
@@ -2668,7 +2884,11 @@
       "atlasWidthM": 1380,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1360,
+      "gridDepthMeanM": 18,
+      "gridDepthMaxM": 22,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "dhigurah-thila",
@@ -2777,7 +2997,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1550,
+      "gridDepthMeanM": 21,
+      "gridDepthMaxM": 36,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "madivaru-manta-reef",
@@ -3057,7 +3281,11 @@
       "atlasWidthM": 1100,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1100,
+      "gridDepthMeanM": 19,
+      "gridDepthMaxM": 24,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "fenfushi-giri",
@@ -3247,7 +3475,11 @@
       "atlasWidthM": 820,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 830,
+      "gridDepthMeanM": 32,
+      "gridDepthMaxM": 44,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "eydhafushi",
@@ -3269,7 +3501,11 @@
       "atlasWidthM": 750,
       "atlasWidthConfidence": "checked",
       "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 750,
+      "gridDepthMeanM": 20,
+      "gridDepthMaxM": 22,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "nelivaru-thila",
@@ -3399,7 +3635,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "gridWidthM": 790,
+      "gridDepthMeanM": 10,
+      "gridDepthMaxM": 12,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kings-corner",
@@ -3440,7 +3680,11 @@
       "atlasWidthM": 2020,
       "atlasWidthConfidence": "checked",
       "siteType": "channel-thila",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1980,
+      "gridDepthMeanM": 18,
+      "gridDepthMaxM": 25,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "dolphin-corner",
@@ -3465,7 +3709,11 @@
       "atlasWidthM": 490,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 450,
+      "gridDepthMeanM": 7,
+      "gridDepthMaxM": 9,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "biledhoo-kandu",
@@ -3545,7 +3793,11 @@
       "atlasWidthM": 560,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 470,
+      "gridDepthMeanM": 11,
+      "gridDepthMaxM": 15,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "mulaku-kandu",
@@ -3571,7 +3823,11 @@
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 270,
+      "gridDepthMeanM": 6,
+      "gridDepthMaxM": 7,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "vanhuravalhi-kandu",
@@ -3590,7 +3846,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 140,
+      "gridDepthMeanM": 6,
+      "gridDepthMaxM": 6,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "veyvah-beyru",
@@ -3624,7 +3884,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 1060,
+      "gridDepthMeanM": 21,
+      "gridDepthMaxM": 36,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "muli-beyru",
@@ -3716,7 +3980,11 @@
       "atlasWidthM": 990,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 670,
+      "gridDepthMeanM": 13,
+      "gridDepthMaxM": 17,
+      "gridDepthConfidence": "ok"
     },
     {
       "id": "thuvarudhekunu-kandu",
@@ -3737,7 +4005,11 @@
         }
       ],
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 630,
+      "gridDepthMeanM": 16,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "rayvilla-wreck",
@@ -3838,7 +4110,11 @@
       "atlasWidthM": 720,
       "atlasWidthConfidence": "checked",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 340,
+      "gridDepthMeanM": 12,
+      "gridDepthMaxM": 23,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "maa-kandu-beyru",
@@ -3855,7 +4131,11 @@
       "channelDepthKind": "max",
       "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/maa-kandu-isra/",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "gridWidthM": 230,
+      "gridDepthMeanM": 8,
+      "gridDepthMaxM": 10,
+      "gridDepthConfidence": "low"
     },
     {
       "id": "shark-point",

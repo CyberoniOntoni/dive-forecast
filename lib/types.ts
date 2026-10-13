@@ -77,6 +77,15 @@ export type Site = {
   atlasWidthM?: number;
   /** "checked": the gap was confirmed on the Atlas satellite mosaic. "low": it crosses the channel at a slant or a broken reef edge. */
   atlasWidthConfidence?: "checked" | "low";
+  /**
+   * Channel crossing on the Rasheed et al. (2021) Maldives bathymetry grid (`npm run channel-depths`):
+   * gap width, mean and deepest depth across it, metres. Not a published section: the constriction factor never reads them.
+   */
+  gridWidthM?: number;
+  gridDepthMeanM?: number;
+  gridDepthMaxM?: number;
+  /** "low": the floor sits at the grid's satellite depth limit, or the crossing found the wrong gap. */
+  gridDepthConfidence?: "ok" | "low";
   /** Channel records that bear on this site but are not its section. Catalog data: the factor never reads them. */
   channelLeads?: ChannelLead[];
   /**

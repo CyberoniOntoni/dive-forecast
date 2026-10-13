@@ -42,6 +42,26 @@ describe("catalog depths", () => {
     }
   });
 
+  it("keeps every grid crossing whole: width, mean no deeper than its maximum, and a confidence", () => {
+    const measured = catalog.sites.filter((site) => site.gridDepthMeanM != null);
+    expect(measured.length).toBeGreaterThan(0);
+    for (const site of measured) {
+      expect(site.gridWidthM).toBeGreaterThanOrEqual(100);
+      expect(site.gridDepthMeanM).toBeGreaterThan(0);
+      expect(site.gridDepthMaxM).toBeGreaterThanOrEqual(site.gridDepthMeanM!);
+      expect(["ok", "low"]).toContain(site.gridDepthConfidence);
+    }
+  });
+
+  it("sizes a channel from an ok grid crossing only when it has no published hydraulic section", () => {
+    const grid = { gridWidthM: 700, gridDepthMeanM: 25, gridDepthConfidence: "ok" as const };
+    expect(sectionInput(grid)).toEqual({ channelWidthM: 700, channelDepthM: 25 });
+    expect(sectionInput({ ...grid, gridDepthConfidence: "low" })).toEqual({});
+    const published = { channelWidthM: 500, channelDepthM: 30, channelDepthKind: "typical" as const };
+    expect(sectionInput({ ...grid, ...published })).toEqual({ channelWidthM: 500, channelDepthM: 30 });
+    expect(sectionInput({ ...grid, ...published, channelDepthKind: "max" })).toEqual({ channelWidthM: 700, channelDepthM: 25 });
+  });
+
   it("keeps each channel record once, with a size, a depth kind for any depth and an http source", () => {
     const records = catalog.channels ?? [];
     expect(new Set(records.map((record) => record.id)).size).toBe(records.length);
