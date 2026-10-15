@@ -57,3 +57,12 @@ describe("offshorePoints", () => {
     expect(east.lon).toBeGreaterThan(73.65);
   });
 });
+
+describe("siteExposure for a channel pin off the outline", () => {
+  it("does not read its own rim as solid reef", () => {
+    // A pass pin set by hand 1.1 km inside the east rim, with no gap matched in the openings.
+    const pin = siteExposure({ lat: 4.0, lon: 73.59, kind: "channel", inwardBearingDeg: 270 }, [SQUARE], []);
+    // Before the fix every ray in the fan hit the own rim at 1.1 km and kept 15 %.
+    expect(exposureAt(pin.swell, 90)).toBeGreaterThan(0.8);
+  });
+});

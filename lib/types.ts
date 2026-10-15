@@ -262,6 +262,8 @@ export type SiteForecast = {
   fetchedAt: number | null;
   /** Sea state for the forecast hours. Empty when it is unavailable; null when the site has none (no atoll outline). */
   seaState: SeaStateHour[] | null;
+  /** True when the sea state comes from an old cached wave series. */
+  seaStale: boolean;
 };
 
 /** One source's statement about one named channel. Several records can describe the same channel. */

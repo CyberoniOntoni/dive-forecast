@@ -296,7 +296,7 @@ function velocityToMs(value: number | null, unit: string | undefined): number | 
 }
 
 /** Naive times are Maldives wall time. Stale when the newest hour is more than 12 hours before now. */
-export function marineSeriesStale(hours: readonly MarineHour[], now = Date.now()): boolean {
+export function marineSeriesStale(hours: readonly { time: string }[], now = Date.now()): boolean {
   let newest = Number.NEGATIVE_INFINITY;
   for (const hour of hours) {
     const ms = marineHourUtcMs(hour.time);

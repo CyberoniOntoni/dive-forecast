@@ -49,8 +49,24 @@ describe("fetchWaves", () => {
   });
 
   it("is pending, not failed, on a first fetch it does not wait for", async () => {
-    globalThis.fetch = (() => new Promise(() => {})) as typeof fetch;
+    let release: (response: Response) => void = () => {};
+    globalThis.fetch = (() => new Promise<Response>((resolve) => (release = resolve))) as typeof fetch;
     const result = await fetchWaves(4.5, 73.5, { wait: false });
     expect(result).toEqual({ ok: false, unavailable: true, pending: true });
+    // Let the background fetch finish, so it does not hold a request slot for the rest of the file.
+    release(new Response("{}", { status: 500 }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+
+  it("does not wait again on a point whose last fetch failed", async () => {
+    const stub = vi.fn(async () => new Response("{}", { status: 500 }));
+    globalThis.fetch = stub as unknown as typeof fetch;
+    expect(await fetchWaves(3.5, 73.0)).toEqual({ ok: false, unavailable: true });
+    let release: (response: Response) => void = () => {};
+    globalThis.fetch = (() => new Promise<Response>((resolve) => (release = resolve))) as typeof fetch;
+    // Waiting here would hang the test: the failed point returns at once and retries in the background.
+    expect(await fetchWaves(3.5, 73.0)).toEqual({ ok: false, unavailable: true });
+    release(new Response("{}", { status: 500 }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
   });
 });

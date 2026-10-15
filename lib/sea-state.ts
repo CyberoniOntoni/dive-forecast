@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { allRims, rimForAtoll, type RimRing } from "./rim";
+import { allRims, rimForAtoll } from "./rim";
 import { crossesRim } from "./site-type";
-import { exposureAt, offshorePoints, siteExposure, type ExposureKind, type ExposureOpening, type SiteExposure } from "./wave-exposure";
+import { angleBetween, exposureAt, offshorePoints, siteExposure, type ExposureKind, type ExposureOpening, type SiteExposure } from "./wave-exposure";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
 import type { FetchOptions } from "./marine";
 import type { Atoll, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Site, SiteWave } from "./types";
@@ -90,6 +90,12 @@ function againstCurrent(swells: readonly SiteWave[], hour: HourForecast | undefi
   return swells.some((wave) => wave.heightM >= AGAINST_CURRENT_SWELL_M && angleBetween(wave.fromDeg, seaward) <= AGAINST_CURRENT_DEG);
 }
 
+/**
+ * A side counts for a sea only within this angle of where the sea comes from: the side facing it or a neighbour
+ * (sides are 45° apart). Past that the sample is in the atoll's lee, already damped by the wave model.
+ */
+const UPSTREAM_MAX_DEG = 67.5;
+
 function upstream(
   sides: readonly { sideDeg: number; at: Map<string, WaveHour> }[],
   time: string,
@@ -100,14 +106,10 @@ function upstream(
     const wave = side.at.get(time)?.[key];
     if (!wave) continue;
     const off = angleBetween(wave.fromDeg, side.sideDeg);
+    if (off > UPSTREAM_MAX_DEG) continue;
     if (best == null || off < best.off) best = { wave, off };
   }
   return best?.wave ?? null;
-}
-
-function angleBetween(a: number, b: number): number {
-  const difference = Math.abs((((a - b) % 360) + 360) % 360);
-  return difference > 180 ? 360 - difference : difference;
 }
 
 function round2(value: number): number {
@@ -155,14 +157,16 @@ export function exposureForSite(site: Site, mates: readonly Site[], inwardBearin
   return exposure;
 }
 
+/** An atoll's offshore samples: ok sides only. fetchedAt is the oldest side's, so the page never claims fresher data. */
+export type Offshore = { sides: OffshoreSide[]; fetchedAt: number | null; stale: boolean };
+
 /**
- * The atoll's eight offshore samples. Ok sides only; a side still on its first fetch (wait: false) marks pending.
- * fetchedAt is the oldest side's, so the page never claims fresher data than it used.
+ * The eight offshore samples round the site's atoll, or null when the atoll has no outline. They do not depend on the
+ * current forecast, so a page can fetch them alongside it.
  */
-async function offshoreSides(
-  ring: RimRing,
-  options: FetchOptions,
-): Promise<{ sides: OffshoreSide[]; fetchedAt: number | null; stale: boolean }> {
+export async function loadOffshore(atoll: Atoll | undefined, options: FetchOptions = {}): Promise<Offshore | null> {
+  const ring = rimForAtoll(atoll);
+  if (!ring) return null;
   const fetched = await Promise.all(
     offshorePoints(ring).map(async (point) => ({ point, waves: await fetchWaves(point.lat, point.lon, options) })),
   );
@@ -179,19 +183,15 @@ async function offshoreSides(
 }
 
 /**
- * The site's sea state for the forecast's hours: null for a site with no atoll outline, unavailable before any
- * offshore side has data. `current` is the site's current forecast, for the swell-against-current check on channels.
+ * The site's sea state for the forecast's hours, from its atoll's offshore samples. Unavailable before any side has
+ * data. `current` is the site's current forecast, for the swell-against-current check on channels.
  */
-export async function loadSeaState(
+export function siteSeaState(
   site: Site,
   mates: readonly Site[],
-  atoll: Atoll | undefined,
+  offshore: Offshore,
   current: { hours: readonly HourForecast[]; forecastRoute: ForecastRoute; inwardBearingDeg: number | null },
-  options: FetchOptions = {},
-): Promise<SeaState | null> {
-  const ring = rimForAtoll(atoll);
-  if (!ring) return null;
-  const offshore = await offshoreSides(ring, options);
+): SeaState {
   if (offshore.sides.length === 0) return { hours: [], unavailable: true, fetchedAt: null, stale: false };
   const exposure = exposureForSite(site, mates, current.inwardBearingDeg);
   const shown = new Set(current.hours.map((hour) => hour.time));

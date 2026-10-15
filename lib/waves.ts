@@ -27,16 +27,19 @@ export type WaveFetch =
 
 /**
  * Wave hours for one point, cached like fetchMarine: a cached series returns at once and refreshes in the background
- * past six hours; a point with no cache waits for its first fetch unless the caller passes wait: false.
+ * past six hours; a point with no cache waits for its first fetch unless the caller passes wait: false or that
+ * point's last fetch failed.
  * A failed refresh keeps the cached series and marks it stale once its newest hour is twelve hours old.
  */
 export async function fetchWaves(lat: number, lon: number, options: FetchOptions = {}): Promise<WaveFetch> {
   const cached = readCachedWaves(lat, lon);
   if (cached) {
     if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) void refreshWaves(lat, lon).catch(() => null);
-    return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: wavesStale(cached.hours) };
+    return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: marineSeriesStale(cached.hours) };
   }
-  if (options.wait === false) {
+  // A point whose last fetch failed is not waited on again: the page would sit through the timeout on every view
+  // while the wave host is down. It retries in the background instead.
+  if (options.wait === false || failedPoints.has(waveCacheName(lat, lon))) {
     const failed = failedPoints.has(waveCacheName(lat, lon));
     void refreshWaves(lat, lon).catch(() => null);
     return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };
@@ -128,10 +131,6 @@ export function waveHoursFromApi(body: unknown): WaveHour[] | null {
     secondarySwell: component("secondary_swell_wave", index),
     windWave: component("wind_wave", index),
   }));
-}
-
-function wavesStale(hours: readonly WaveHour[]): boolean {
-  return marineSeriesStale(hours.map((hour) => ({ time: hour.time, seaLevelM: null, currentVelocityMs: null, currentDirectionDeg: null })));
 }
 
 function waveCacheName(lat: number, lon: number): string {

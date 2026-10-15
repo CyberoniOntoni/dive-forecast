@@ -73,3 +73,11 @@ describe("seaStateHours", () => {
     expect(seaStateHours({ ...base, inwardBearingDeg: 90, current: [hour(time, "outgoing", "strong")] })[0].againstCurrent).toBe(false);
   });
 });
+
+describe("seaStateHours upstream side", () => {
+  it("does not take a sea from a side in the atoll's lee", () => {
+    // Only the west side loaded while an east swell runs: its damped sample is not used for the east swell.
+    const sides: OffshoreSide[] = [{ sideDeg: 270, hours: [wave("2026-10-13T08:00", 0.5, 90)] }];
+    expect(seaStateHours({ sides, exposure: FULL })).toEqual([]);
+  });
+});

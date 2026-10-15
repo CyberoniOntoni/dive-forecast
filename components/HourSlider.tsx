@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type PointerEvent } from "react";
+import { useMemo, useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { compassWord, confidenceOpacity, onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Strength } from "@/lib/types";
@@ -34,6 +34,7 @@ export function HourSlider({
   maldivesWall,
   initialIndex,
   seaState = null,
+  seaStale = false,
 }: {
   hours: HourForecast[];
   unavailable: boolean;
@@ -58,8 +59,12 @@ export function HourSlider({
   initialIndex: number;
   /** Sea state by hour. Empty when it is unavailable; null when the site has none. */
   seaState?: SeaStateHour[] | null;
+  /** True when the sea state comes from an old cached wave series. */
+  seaStale?: boolean;
 }) {
   const [index, setIndex] = useState(initialIndex);
+  // Built once per series, not on every slider move.
+  const seaByTime = useMemo(() => new Map((seaState ?? []).map((sea) => [sea.time, sea])), [seaState]);
 
   if (unavailable || hours.length === 0) {
     return (
@@ -95,7 +100,6 @@ export function HourSlider({
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
   const turn = nextTurn(hours, selected);
-  const seaByTime = new Map((seaState ?? []).map((sea) => [sea.time, sea]));
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
@@ -146,7 +150,7 @@ export function HourSlider({
           <p className="mt-1 text-sm leading-6 text-foam/80">{turnText(turn, hours, today, wordFor)}</p>
         </div>
       </div>
-      {seaState == null ? null : <SeaLine sea={sea} />}
+      {seaState == null ? null : <SeaLine sea={sea} stale={seaStale} />}
       {bearing != null && bearingSource === "fallback" ? (
         <p className="mt-3 text-xs leading-5 text-foam/80">
           The arrow heading is an estimate. This pin has no measured channel bearing.
@@ -218,7 +222,7 @@ export const SEA_COLOR: Record<SeaBand, { fill: string; opacity: number }> = {
 };
 
 /** "Sea: choppy · 1.2 m swell from SW, 11 s · 0.4 m wind chop", and the swell-against-current warning. */
-function SeaLine({ sea }: { sea: SeaStateHour | null }) {
+function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
   if (sea == null) {
     return <p className="mt-3 text-sm leading-6 text-foam/80">Sea state is unavailable for this hour.</p>;
   }
@@ -230,6 +234,7 @@ function SeaLine({ sea }: { sea: SeaStateHour | null }) {
           {SEA_LABEL[sea.band].toLowerCase()}
         </span>
         <span className="text-foam/80"> · {seaDetail(sea)}</span>
+        {stale ? <span className="text-foam/80"> (old wave data)</span> : null}
       </p>
       {sea.againstCurrent ? (
         <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
