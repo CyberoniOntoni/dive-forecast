@@ -108,3 +108,35 @@ describe("seaStateHours with an upwind side that has no such wave", () => {
     expect(sea.swell?.heightM).toBe(1);
   });
 });
+
+describe("seaStateHours with an unknown component", () => {
+  const time = "2026-10-13T08:00";
+
+  it("keeps an hour that is already rough from what is known", () => {
+    // East swell 1.6 m from its own side. A secondary swell from the north is only on the south side, in its lee, and
+    // no northern side loaded: it is unknown, but it can only add to an hour that is already rough.
+    const east: WaveHour = { ...wave(time, 1.6, 90), secondarySwell: null };
+    const south: WaveHour = { ...wave(time, 0.4, 180), secondarySwell: { heightM: 0.5, fromDeg: 0, periodS: 9 } };
+    const sides: OffshoreSide[] = [
+      { sideDeg: 90, hours: [east] },
+      { sideDeg: 180, hours: [south] },
+    ];
+    const [sea] = seaStateHours({ sides, exposure: FULL });
+    expect(sea.band).toBe("rough");
+    expect(sea.swell?.heightM).toBe(1.6);
+  });
+
+  it("leaves the hour out when only a later lee copy lacks an upwind hour", () => {
+    // Secondary swell in two lee copies. The first (from the east, on the west side) has an upwind east side that
+    // loaded without it; the second (from the north, on the south side) has no northern side at all.
+    const east: WaveHour = { ...wave(time, 0.4, 90), secondarySwell: null };
+    const west: WaveHour = { ...wave(time, 0.3, 90), secondarySwell: { heightM: 0.3, fromDeg: 90, periodS: 8 } };
+    const south: WaveHour = { ...wave(time, 0.3, 90), secondarySwell: { heightM: 0.6, fromDeg: 0, periodS: 9 } };
+    const sides: OffshoreSide[] = [
+      { sideDeg: 90, hours: [east] },
+      { sideDeg: 270, hours: [west] },
+      { sideDeg: 180, hours: [south] },
+    ];
+    expect(seaStateHours({ sides, exposure: FULL })).toEqual([]);
+  });
+});

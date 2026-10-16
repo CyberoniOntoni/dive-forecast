@@ -11,7 +11,7 @@ const SQUARE: RimRing = [
   [3.9, 73.4],
 ];
 const OWN: ExposureRing = { wayId: "own", ring: SQUARE };
-const EAST_GAP = { lat: 4.0, lon: 73.6, widthM: 1000, wayId: "own", atollIds: ["square"] };
+const EAST_GAP = { lat: 4.0, lon: 73.6, widthM: 1000, wayId: "own" };
 // A neighbour atoll whose west rim runs 2.2 km east of SQUARE's east rim: a strait between them.
 const NEIGHBOUR: ExposureRing = {
   wayId: "neighbour",
@@ -45,7 +45,7 @@ describe("siteExposure", () => {
   it("does not let one atoll's gap open another atoll's reef", () => {
     const middle = { lat: 4.0, lon: 73.55, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: "own" };
     const closed = siteExposure(middle, [OWN], []);
-    const foreignGap = siteExposure(middle, [OWN], [{ ...EAST_GAP, wayId: "neighbour", atollIds: ["other"] }]);
+    const foreignGap = siteExposure(middle, [OWN], [{ ...EAST_GAP, wayId: "neighbour" }]);
     expect(exposureAt(foreignGap.swell, 90)).toBeCloseTo(exposureAt(closed.swell, 90), 3);
   });
 

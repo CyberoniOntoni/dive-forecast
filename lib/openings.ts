@@ -1,6 +1,5 @@
 import fs from "fs";
 import path from "path";
-import type { ExposureOpening } from "./wave-exposure";
 
 /** A shorter break between crest is a map crack, not a channel. */
 export const OPENING_MIN_M = 100;
@@ -104,15 +103,25 @@ function normalize(distanceM: number, perimeterM: number): number {
   return mod < 0 ? mod + perimeterM : mod;
 }
 
+/** A reef-crest gap in one atoll's outline (data/openings.json), keyed to that outline by its OSM way id. */
+export type ReefOpening = {
+  lat: number;
+  lon: number;
+  widthM: number;
+  wayId: string;
+  atollIds: string[];
+  reefFlatBridges?: boolean;
+};
+
 const OPENINGS_PATH = path.join(process.cwd(), "data", "openings.json");
-let loadedOpenings: ExposureOpening[] | null = null;
+let loadedOpenings: ReefOpening[] | null = null;
 
 /**
  * The reef-crest mouths in data/openings.json, as the sea state's shelter reads them. A missing file means no mouths:
  * every rim crossing is reef. Any other read or parse error, or a mouth of the wrong shape, throws and is read again
  * on the next call, as readRims does, so a corrupt file never passes for an atoll with no gaps.
  */
-export function readOpenings(): ExposureOpening[] {
+export function readOpenings(): ReefOpening[] {
   if (loadedOpenings) return loadedOpenings;
   let text: string;
   try {
@@ -127,7 +136,7 @@ export function readOpenings(): ExposureOpening[] {
 }
 
 /** The mouths in an openings file's text. Each needs a finite position, a positive width, its outline's way id and atolls. */
-export function parseOpenings(text: string): ExposureOpening[] {
+export function parseOpenings(text: string): ReefOpening[] {
   const parsed: unknown = JSON.parse(text);
   if (!isRecord(parsed)) throw new Error("openings.json: not an object");
   if (!Array.isArray(parsed.openings)) throw new Error("openings.json: openings is not a list");

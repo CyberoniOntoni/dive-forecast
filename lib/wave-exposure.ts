@@ -1,4 +1,5 @@
 import { destinationKm } from "./marine";
+import type { ReefOpening } from "./openings";
 import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, type RimRing } from "./rim";
 
 /**
@@ -30,15 +31,8 @@ const BRIDGED_GAP = 0.5;
 const SPREAD_DEG = 45;
 export const STEP_DEG = 5;
 const DIRECTIONS = 360 / STEP_DEG;
-/** A reef-crest gap in one atoll's outline (data/openings.json), keyed to that outline by its OSM way id. */
-export type ExposureOpening = {
-  lat: number;
-  lon: number;
-  widthM: number;
-  wayId: string;
-  atollIds: string[];
-  reefFlatBridges?: boolean;
-};
+/** What the ray tracer reads of a reef-crest mouth: the atolls it belongs to are only checked by the loader. */
+export type GapOpening = Omit<ReefOpening, "atollIds">;
 
 /** An atoll outline and its OSM way id, so a crossing knows whose reef it is. */
 export type ExposureRing = { wayId: string; ring: RimRing };
@@ -73,7 +67,7 @@ type Segment = { from: Vec; to: Vec; wayId: string };
 export function siteExposure(
   site: ExposureSite,
   rings: readonly ExposureRing[],
-  openings: readonly ExposureOpening[],
+  openings: readonly GapOpening[],
 ): SiteExposure {
   const reachLat = RAY_KM / KM_PER_DEG_LAT + 0.1;
   const project = (lat: number, lon: number): Vec => [
@@ -119,7 +113,7 @@ function traceRay(
   towardDeg: number,
   site: ExposureSite,
   segments: readonly Segment[],
-  gaps: readonly { at: Vec; opening: ExposureOpening }[],
+  gaps: readonly { at: Vec; opening: GapOpening }[],
   ownSkipKm: number,
 ): { swell: number; wind: number } {
   if (site.kind === "wall" && site.inwardBearingDeg != null && angleBetween(towardDeg, site.inwardBearingDeg) < 90) {

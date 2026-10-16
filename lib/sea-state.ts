@@ -33,8 +33,8 @@ export type OffshoreSide = { sideDeg: number; hours: readonly WaveHour[] };
 
 /**
  * Each hour's sea state at the site. For each wave component, the offshore side used is the one the sea comes from
- * (its own direction closest to the side's bearing). Hours missing from every side are left out, and so are hours
- * where a component is only on sides in the atoll's lee.
+ * (its own direction closest to the side's bearing). Hours missing from every side are left out. When a component's
+ * upwind sample is missing, the hour is still shown if what is known is already rough, and left out otherwise.
  */
 export function seaStateHours(input: {
   sides: readonly OffshoreSide[];
@@ -50,22 +50,21 @@ export function seaStateHours(input: {
   const currentAt = new Map((input.current ?? []).map((hour) => [hour.time, hour]));
   const result: SeaStateHour[] = [];
   for (const time of times) {
-    const picks = COMPONENTS.map((key) => upstream(byTime, time, key));
-    // A component some side has, but only from the atoll's lee: its upwind sample is missing. Leave the hour out
-    // rather than draw a band from what is left.
-    if (picks.some((pick) => pick === "lee-only")) continue;
-    const pick = (key: Component): WaveComponent | null => {
-      const picked = picks[COMPONENTS.indexOf(key)];
-      return picked === "lee-only" ? null : picked;
-    };
-    const swells = [pick("swell"), pick("secondarySwell")]
-      .filter((wave): wave is WaveComponent => wave != null)
+    const swellPick = upstream(byTime, time, "swell");
+    const secondaryPick = upstream(byTime, time, "secondarySwell");
+    const windPick = upstream(byTime, time, "windWave");
+    const picks = [swellPick, secondaryPick, windPick];
+    const swells = [swellPick, secondaryPick]
+      .flatMap((pick) => (pick.kind === "value" ? [pick.wave] : []))
       .map((wave) => ({ ...wave, heightM: wave.heightM * exposureAt(input.exposure.swell, wave.fromDeg) }));
-    const wind = pick("windWave");
-    if (swells.length === 0 && wind == null) continue;
+    const wind = windPick.kind === "value" ? windPick.wave : null;
+    if (swells.length === 0 && wind == null && !picks.some((pick) => pick.kind === "unknown")) continue;
     const windWaveM = wind ? wind.heightM * exposureAt(input.exposure.wind, wind.fromDeg) : 0;
     const swellSquares = swells.reduce((sum, wave) => sum + wave.heightM ** 2, 0);
     const feltM = Math.sqrt(swellSquares + (WIND_WAVE_WEIGHT * windWaveM) ** 2);
+    // A sea of unknown height can only add to the felt height. Already rough stays rough; anything less could be
+    // any band, so the hour is left out rather than drawn from what is known.
+    if (picks.some((pick) => pick.kind === "unknown") && seaBand(feltM) !== "rough") continue;
     const biggest = swells.reduce<SiteWave | null>((best, wave) => (best == null || wave.heightM > best.heightM ? wave : best), null);
     result.push({
       time,
@@ -104,35 +103,33 @@ function againstCurrent(swells: readonly SiteWave[], hour: HourForecast | undefi
 const UPSTREAM_MAX_DEG = 67.5;
 
 type Component = "swell" | "secondarySwell" | "windWave";
-const COMPONENTS: readonly Component[] = ["swell", "secondarySwell", "windWave"];
+
+/** One component at one hour: its upwind value, absent (upwind says there is none), or unknown (upwind sample missing). */
+type Pick = { kind: "value"; wave: WaveComponent } | { kind: "absent" } | { kind: "unknown" };
 
 /**
- * The component from the side it comes from, or null when no side has it that hour. "lee-only" when some side has
- * it but no side within UPSTREAM_MAX_DEG of its direction has that hour at all: the upwind sample failed or is
- * missing, so the only copies are lee samples the wave model has already damped. An upwind side that has the hour
- * but no such component is the model saying there is none upwind, which is a real answer.
+ * The component from the side it comes from. Absent when no side within UPSTREAM_MAX_DEG of any copy has it: an
+ * upwind side that has the hour but no such component is the model saying there is none, a real answer. Unknown
+ * when some copy is only on lee sides and no side within UPSTREAM_MAX_DEG of its direction has that hour at all: the
+ * upwind sample failed or is missing, so the only copies are lee samples the wave model has already damped.
  */
-function upstream(
-  sides: readonly { sideDeg: number; at: Map<string, WaveHour> }[],
-  time: string,
-  key: Component,
-): WaveComponent | null | "lee-only" {
+function upstream(sides: readonly { sideDeg: number; at: Map<string, WaveHour> }[], time: string, key: Component): Pick {
   let best: { wave: WaveComponent; off: number } | null = null;
-  let lee: WaveComponent | null = null;
+  const lee: WaveComponent[] = [];
   for (const side of sides) {
     const wave = side.at.get(time)?.[key];
     if (!wave) continue;
     const off = angleBetween(wave.fromDeg, side.sideDeg);
     if (off > UPSTREAM_MAX_DEG) {
-      lee ??= wave;
+      lee.push(wave);
       continue;
     }
     if (best == null || off < best.off) best = { wave, off };
   }
-  if (best) return best.wave;
-  if (!lee) return null;
-  const upwindHasHour = sides.some((side) => side.at.has(time) && angleBetween(lee.fromDeg, side.sideDeg) <= UPSTREAM_MAX_DEG);
-  return upwindHasHour ? null : "lee-only";
+  if (best) return { kind: "value", wave: best.wave };
+  const upwindMissing = (wave: WaveComponent) =>
+    !sides.some((side) => side.at.has(time) && angleBetween(wave.fromDeg, side.sideDeg) <= UPSTREAM_MAX_DEG);
+  return lee.some(upwindMissing) ? { kind: "unknown" } : { kind: "absent" };
 }
 
 function round2(value: number): number {
