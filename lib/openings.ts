@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 /** A shorter break between crest is a map crack, not a channel. */
 export const OPENING_MIN_M = 100;
 
@@ -98,4 +101,74 @@ export function isCountedMouth(mouth: { widthM: number }): boolean {
 function normalize(distanceM: number, perimeterM: number): number {
   const mod = distanceM % perimeterM;
   return mod < 0 ? mod + perimeterM : mod;
+}
+
+/** A reef-crest gap in one atoll's outline (data/openings.json), keyed to that outline by its OSM way id. */
+export type ReefOpening = {
+  lat: number;
+  lon: number;
+  widthM: number;
+  wayId: string;
+  atollIds: string[];
+  reefFlatBridges?: boolean;
+};
+
+const OPENINGS_PATH = path.join(process.cwd(), "data", "openings.json");
+let loadedOpenings: ReefOpening[] | null = null;
+
+/**
+ * The reef-crest mouths in data/openings.json, as the sea state's shelter reads them. A missing file means no mouths:
+ * every rim crossing is reef. Any other read or parse error, or a mouth of the wrong shape, throws and is read again
+ * on the next call, as readRims does, so a corrupt file never passes for an atoll with no gaps.
+ */
+export function readOpenings(): ReefOpening[] {
+  if (loadedOpenings) return loadedOpenings;
+  let text: string;
+  try {
+    text = fs.readFileSync(OPENINGS_PATH, "utf8");
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+    loadedOpenings = [];
+    return loadedOpenings;
+  }
+  loadedOpenings = parseOpenings(text);
+  return loadedOpenings;
+}
+
+/** The mouths in an openings file's text. Each needs a finite position, a positive width, its outline's way id and atolls. */
+export function parseOpenings(text: string): ReefOpening[] {
+  const parsed: unknown = JSON.parse(text);
+  if (!isRecord(parsed)) throw new Error("openings.json: not an object");
+  if (!Array.isArray(parsed.openings)) throw new Error("openings.json: openings is not a list");
+  return parsed.openings.map((item: unknown, index: number) => {
+    const problem = openingProblem(item);
+    if (problem) throw new Error(`openings.json: opening ${index} ${problem}`);
+    const opening = item as Record<string, unknown>;
+    return {
+      lat: opening.lat as number,
+      lon: opening.lon as number,
+      widthM: opening.widthM as number,
+      wayId: opening.wayId as string,
+      atollIds: [...(opening.atollIds as string[])],
+      reefFlatBridges: opening.reefFlatBridges === true,
+    };
+  });
+}
+
+function openingProblem(item: unknown): string | null {
+  if (!isRecord(item)) return "is not an object";
+  const { lat, lon, widthM, wayId, atollIds, reefFlatBridges } = item;
+  if (typeof lat !== "number" || !Number.isFinite(lat) || Math.abs(lat) > 90) return "has no valid lat";
+  if (typeof lon !== "number" || !Number.isFinite(lon) || Math.abs(lon) > 180) return "has no valid lon";
+  if (typeof widthM !== "number" || !Number.isFinite(widthM) || widthM <= 0) return "has no positive widthM";
+  if (typeof wayId !== "string" || wayId.length === 0) return "has no wayId";
+  if (!Array.isArray(atollIds) || atollIds.length === 0 || !atollIds.every((id) => typeof id === "string" && id.length > 0)) {
+    return "has no atollIds";
+  }
+  if (reefFlatBridges !== undefined && typeof reefFlatBridges !== "boolean") return "has a reefFlatBridges that is not true or false";
+  return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

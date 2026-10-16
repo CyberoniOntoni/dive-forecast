@@ -73,6 +73,8 @@ export default async function SitePage({
         fetchedAt={fetchedStamp(forecast.fetchedAt)}
         maldivesWall={maldivesWall}
         initialIndex={startingIndex(forecast.hours, maldivesWall)}
+        seaState={forecast.seaState}
+        seaStale={forecast.seaStale}
       />
       <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">

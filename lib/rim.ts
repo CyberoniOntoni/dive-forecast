@@ -5,8 +5,8 @@ import type { Atoll, Site } from "./types";
 export type RimRing = readonly (readonly [number, number])[];
 
 const RIMS_PATH = path.join(process.cwd(), "data", "rims.json");
-const KM_PER_DEG_LAT = 110.57;
-const KM_PER_DEG_LON = 111.32;
+export const KM_PER_DEG_LAT = 110.57;
+export const KM_PER_DEG_LON = 111.32;
 /** Normals from rim segments this close to the pin are averaged. */
 const SMOOTH_KM = 1.5;
 /** A pin farther than this from the rim is not on the rim. Its rim normal says nothing about its channel. */
@@ -22,7 +22,7 @@ let loaded: { present: boolean; rims: Map<string, RimRing> } | null = null;
 /** OSM outline for an atoll, or null when none is stored. Keyed by the way id in rimSourceUrl. */
 export function rimForAtoll(atoll: Atoll | undefined): RimRing | null {
   if (!atoll) return null;
-  const wayId = atoll.rimSourceUrl.split("/").pop() ?? "";
+  const wayId = rimWayId(atoll);
   const ring = readRims().rims.get(wayId) ?? null;
   if (ring) {
     const [lat, lon] = ringMiddle(ring);
@@ -32,6 +32,16 @@ export function rimForAtoll(atoll: Atoll | undefined): RimRing | null {
     }
   }
   return ring;
+}
+
+/** The OSM way id of the atoll's outline: the key of its ring in data/rims.json and of its mouths in data/openings.json. */
+export function rimWayId(atoll: Atoll): string {
+  return atoll.rimSourceUrl.split("/").pop() ?? "";
+}
+
+/** Every stored outline, keyed by OSM way id. Empty when data/rims.json is absent. */
+export function allRims(): ReadonlyMap<string, RimRing> {
+  return readRims().rims;
 }
 
 /** True unless data/rims.json is absent. With no file every pin keeps the heuristic. */

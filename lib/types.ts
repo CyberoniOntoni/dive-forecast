@@ -221,6 +221,25 @@ export type HourForecast = {
   levelM: number;
 };
 
+export const SEA_BANDS = ["calm", "moderate", "choppy", "rough"] as const;
+/** How rough the surface is at a site (lib/sea-state.ts). */
+export type SeaBand = (typeof SEA_BANDS)[number];
+
+/** A wave component as it arrives at the site: height in metres, the direction it comes from, period in seconds. */
+export type SiteWave = { heightM: number; fromDeg: number; periodS: number | null };
+
+export type SeaStateHour = {
+  time: string;
+  band: SeaBand;
+  /** Felt height, metres: swell and wind waves combined, wind waves weighted up. */
+  feltM: number;
+  /** The bigger swell reaching the site, or null when none does. */
+  swell: SiteWave | null;
+  windWaveM: number;
+  /** A channel hour where swell runs into a strong outgoing current. */
+  againstCurrent: boolean;
+};
+
 export type SiteForecast = {
   hours: HourForecast[];
   unavailable: boolean;
@@ -241,6 +260,10 @@ export type SiteForecast = {
   siteNote: string | null;
   /** Unix ms when the marine series was cached. Null when no cache exists. */
   fetchedAt: number | null;
+  /** Sea state for the forecast hours. Empty when it is unavailable; null when the site has none (no atoll outline). */
+  seaState: SeaStateHour[] | null;
+  /** True when the sea state comes from an old cached wave series. */
+  seaStale: boolean;
 };
 
 /** One source's statement about one named channel. Several records can describe the same channel. */

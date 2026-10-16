@@ -4,7 +4,8 @@ import { atollForPin } from "./bearing";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
-import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide } from "./load-site";
+import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
+import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
@@ -20,11 +21,13 @@ import {
 import {
   STRENGTHS,
   UNSEEDED_ATOLL_ID,
+  type Atoll,
   type Direction,
   type ForecastAtReport,
   type ForecastRoute,
   type Rating,
   type Report,
+  type SeaStateHour,
   type Site,
   type SiteForecast,
   type Strength,
@@ -166,8 +169,17 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
   const site = findSite(siteId);
   if (!site) return unavailableForecast();
 
-  const loaded = await loadStoredSite(site);
+  const catalog = readCatalog();
+  const atoll = catalog.atolls.find((item) => item.id === site.atollId);
+  // The offshore waves do not depend on the current, so they load alongside it rather than after it.
+  const [loaded, offshore] = await Promise.all([
+    loadSite(site, catalog.sites, atoll, reportsForSite(site.id)),
+    loadOffshore(atoll).catch(() => undefined),
+  ]);
+  const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);
   return {
+    seaState: sea.hours,
+    seaStale: sea.stale,
     hours: loaded.hours,
     unavailable: loaded.unavailable,
     stale: loaded.stale,
@@ -207,13 +219,34 @@ function unavailableForecast(): SiteForecast {
     alongHeadingDeg: null,
     siteNote: null,
     fetchedAt: null,
+    seaState: null,
+    seaStale: false,
   };
 }
 
-async function loadStoredSite(site: Site) {
-  const catalog = readCatalog();
-  const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-  return loadSite(site, catalog.sites, atoll, reportsForSite(site.id));
+/**
+ * The site's sea state for its forecast hours: null hours when the site has no atoll outline or no forecast, empty
+ * when the waves failed to load. Never fails the forecast.
+ */
+function seaStateFor(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll | undefined,
+  loaded: SiteLoad,
+  offshore: Offshore | null | undefined,
+): { hours: SeaStateHour[] | null; stale: boolean } {
+  if (loaded.unavailable || offshore === null) return { hours: null, stale: false };
+  if (offshore === undefined) return { hours: [], stale: false };
+  try {
+    const sea = siteSeaState(site, mates, atoll, offshore, {
+      hours: loaded.hours,
+      forecastRoute: loaded.forecastRoute,
+      inwardBearingDeg: loaded.bearing,
+    });
+    return { hours: sea.hours, stale: sea.stale };
+  } catch {
+    return { hours: [], stale: false };
+  }
 }
 
 function newUserSite(name: string, lat: number, lon: number, atollId: string): Site {
