@@ -1,5 +1,5 @@
 import { destinationKm } from "./marine";
-import type { RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, type RimRing } from "./rim";
 
 /**
  * How much of the open-ocean sea reaches a site, by the direction it comes from. The wave model (about 9 km) treats a
@@ -20,15 +20,6 @@ export const RAY_KM = 60;
 export const FULL_FETCH_KM = 60;
 /** Fetch behind a wall's own reef for wind from the lagoon side. */
 const OWN_LEE_FETCH_KM = 0.5;
-/** A rim site's own outline crossing is skipped within this distance: pins sit on the reef, not exactly on the line. */
-const OWN_RIM_KM = 0.8;
-/**
- * A rim site farther than that from the coarse outline (a channel pin set by hand can sit up to 3 km off it) skips
- * its own rim out to its distance from the outline plus this margin, so its own pass never reads as solid reef.
- */
-const OWN_RIM_MARGIN_KM = 0.3;
-/** No farther than this, so a pin far from any outline does not skip another atoll's rim. */
-const OWN_RIM_MAX_KM = 3;
 /** A gap's spread: a site this many gap-widths behind it keeps the full swell; past that it falls with sqrt(distance). */
 const GAP_SPREAD_WIDTHS = 2;
 /** A crossing this close to a gap's middle beyond half its width still counts as through the gap. */
@@ -39,10 +30,18 @@ const BRIDGED_GAP = 0.5;
 const SPREAD_DEG = 45;
 export const STEP_DEG = 5;
 const DIRECTIONS = 360 / STEP_DEG;
-const KM_PER_DEG_LAT = 110.57;
-const KM_PER_DEG_LON = 111.32;
+/** A reef-crest gap in one atoll's outline (data/openings.json), keyed to that outline by its OSM way id. */
+export type ExposureOpening = {
+  lat: number;
+  lon: number;
+  widthM: number;
+  wayId: string;
+  atollIds: string[];
+  reefFlatBridges?: boolean;
+};
 
-export type ExposureOpening = { lat: number; lon: number; widthM: number; reefFlatBridges?: boolean };
+/** An atoll outline and its OSM way id, so a crossing knows whose reef it is. */
+export type ExposureRing = { wayId: string; ring: RimRing };
 
 /**
  * Where the site sits relative to the rim. "wall": on the outer reef, its own reef shelters it from the lagoon side.
@@ -50,16 +49,30 @@ export type ExposureOpening = { lat: number; lon: number; widthM: number; reefFl
  */
 export type ExposureKind = "wall" | "channel" | "lagoon";
 
-export type ExposureSite = { lat: number; lon: number; kind: ExposureKind; inwardBearingDeg: number | null };
+/** ownWayId: the outline of the site's own atoll, the only one whose rim the site may sit on. */
+export type ExposureSite = {
+  lat: number;
+  lon: number;
+  kind: ExposureKind;
+  inwardBearingDeg: number | null;
+  ownWayId: string | null;
+};
 
 /** Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from north). */
 export type SiteExposure = { swell: number[]; wind: number[] };
 
 type Vec = [number, number];
+type Segment = { from: Vec; to: Vec; wayId: string };
 
+/**
+ * A rim site sits on its own reef, but the pin is never exactly on the coarse outline: a pin set by hand as a channel
+ * can sit up to CHANNEL_RIM_REACH_KM off it. So crossings of the site's own outline are skipped out to its distance
+ * from that outline plus RIM_NEAR_KM (the slack any rim pin has), never past CHANNEL_RIM_REACH_KM. Every other
+ * atoll's reef always counts, however close: a strait wall or pass is often nearer the neighbour's outline than its own.
+ */
 export function siteExposure(
   site: ExposureSite,
-  rings: readonly RimRing[],
+  rings: readonly ExposureRing[],
   openings: readonly ExposureOpening[],
 ): SiteExposure {
   const reachLat = RAY_KM / KM_PER_DEG_LAT + 0.1;
@@ -67,22 +80,26 @@ export function siteExposure(
     (lon - site.lon) * KM_PER_DEG_LON * Math.cos((site.lat * Math.PI) / 180),
     (lat - site.lat) * KM_PER_DEG_LAT,
   ];
-  const segments: [Vec, Vec][] = [];
-  for (const ring of rings) {
+  const segments: Segment[] = [];
+  let ownSkipKm = 0;
+  for (const { wayId, ring } of rings) {
     if (!ring.some(([lat, lon]) => Math.abs(lat - site.lat) < reachLat && Math.abs(lon - site.lon) < reachLat)) continue;
+    if (wayId === site.ownWayId && site.kind !== "lagoon") {
+      ownSkipKm = Math.min(CHANNEL_RIM_REACH_KM, rimEdgeKm(site, ring) + RIM_NEAR_KM);
+    }
     const points = ring.map(([lat, lon]) => project(lat, lon));
-    for (let index = 0; index + 1 < points.length; index += 1) segments.push([points[index], points[index + 1]]);
+    for (let index = 0; index + 1 < points.length; index += 1) {
+      segments.push({ from: points[index], to: points[index + 1], wayId });
+    }
   }
   const gaps = openings
     .map((opening) => ({ at: project(opening.lat, opening.lon), opening }))
     .filter(({ at }) => Math.hypot(at[0], at[1]) < RAY_KM + 2);
 
-  const skipKm =
-    site.kind === "lagoon" ? 0 : Math.min(OWN_RIM_MAX_KM, Math.max(OWN_RIM_KM, nearestKm(segments) + OWN_RIM_MARGIN_KM));
   const raySwell: number[] = [];
   const rayWind: number[] = [];
   for (let index = 0; index < DIRECTIONS; index += 1) {
-    const ray = traceRay(index * STEP_DEG, site, segments, gaps, skipKm);
+    const ray = traceRay(index * STEP_DEG, site, segments, gaps, ownSkipKm);
     raySwell.push(ray.swell);
     rayWind.push(ray.wind);
   }
@@ -101,9 +118,9 @@ export function exposureAt(table: readonly number[], fromDeg: number): number {
 function traceRay(
   towardDeg: number,
   site: ExposureSite,
-  segments: readonly [Vec, Vec][],
+  segments: readonly Segment[],
   gaps: readonly { at: Vec; opening: ExposureOpening }[],
-  skipKm: number,
+  ownSkipKm: number,
 ): { swell: number; wind: number } {
   if (site.kind === "wall" && site.inwardBearingDeg != null && angleBetween(towardDeg, site.inwardBearingDeg) < 90) {
     // The lagoon side of a wall: the wall's own reef and island are between the sea and the dive.
@@ -112,15 +129,23 @@ function traceRay(
   const radians = (towardDeg * Math.PI) / 180;
   const direction: Vec = [Math.sin(radians), Math.cos(radians)];
   const hits = segments
-    .map(([from, to]) => crossingKm(direction, from, to))
-    .filter((km): km is number => km != null && km > skipKm && km <= RAY_KM)
-    .sort((a, b) => a - b);
+    .flatMap((segment) => {
+      const km = crossingKm(direction, segment.from, segment.to);
+      if (km == null || km > RAY_KM) return [];
+      if (segment.wayId === site.ownWayId && km <= ownSkipKm) return [];
+      return [{ km, wayId: segment.wayId }];
+    })
+    .sort((a, b) => a.km - b.km);
   if (hits.length === 0) return { swell: 1, wind: 1 };
 
   let swell = 1;
-  for (const km of hits) {
+  for (const { km, wayId } of hits) {
     const point: Vec = [direction[0] * km, direction[1] * km];
-    const gap = gaps.find(({ at, opening }) => Math.hypot(at[0] - point[0], at[1] - point[1]) <= opening.widthM / 2000 + GAP_SLACK_KM);
+    // Only a mouth in the outline this crossing is on: a neighbouring atoll's gap nearby is not a way through this reef.
+    const gap = gaps.find(
+      ({ at, opening }) =>
+        opening.wayId === wayId && Math.hypot(at[0] - point[0], at[1] - point[1]) <= opening.widthM / 2000 + GAP_SLACK_KM,
+    );
     if (!gap) {
       swell *= REEF_TRANSMISSION;
       continue;
@@ -128,24 +153,12 @@ function traceRay(
     const widthKm = gap.opening.widthM / 1000;
     swell *= (gap.opening.reefFlatBridges ? BRIDGED_GAP : 1) * Math.min(1, Math.sqrt((GAP_SPREAD_WIDTHS * widthKm) / km));
   }
-  return { swell, wind: Math.max(swell, fetchShare(hits[0])) };
+  return { swell, wind: Math.max(swell, fetchShare(hits[0].km)) };
 }
 
 /** Wind-wave height share grown over this fetch: fetch-limited growth goes as its square root. */
 export function fetchShare(fetchKm: number): number {
   return Math.min(1, Math.sqrt(Math.max(0, fetchKm) / FULL_FETCH_KM));
-}
-
-/** Km from the origin (the site) to the nearest outline segment. Infinity with none. */
-function nearestKm(segments: readonly [Vec, Vec][]): number {
-  let nearest = Number.POSITIVE_INFINITY;
-  for (const [from, to] of segments) {
-    const edge: Vec = [to[0] - from[0], to[1] - from[1]];
-    const lengthSq = edge[0] ** 2 + edge[1] ** 2;
-    const along = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(from[0] * edge[0] + from[1] * edge[1]) / lengthSq));
-    nearest = Math.min(nearest, Math.hypot(from[0] + along * edge[0], from[1] + along * edge[1]));
-  }
-  return nearest;
 }
 
 /** Km along the unit ray from the origin to where it crosses the segment, or null when it misses. */

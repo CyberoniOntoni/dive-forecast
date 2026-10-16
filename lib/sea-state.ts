@@ -1,8 +1,7 @@
-import fs from "fs";
-import path from "path";
-import { allRims, rimForAtoll } from "./rim";
+import { readOpenings } from "./openings";
+import { allRims, rimForAtoll, rimWayId } from "./rim";
 import { crossesRim } from "./site-type";
-import { angleBetween, exposureAt, offshorePoints, siteExposure, type ExposureKind, type ExposureOpening, type SiteExposure } from "./wave-exposure";
+import { angleBetween, exposureAt, offshorePoints, siteExposure, type ExposureKind, type SiteExposure } from "./wave-exposure";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
 import type { FetchOptions } from "./marine";
 import type { Atoll, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Site, SiteWave } from "./types";
@@ -34,7 +33,8 @@ export type OffshoreSide = { sideDeg: number; hours: readonly WaveHour[] };
 
 /**
  * Each hour's sea state at the site. For each wave component, the offshore side used is the one the sea comes from
- * (its own direction closest to the side's bearing). Hours missing from every side are left out.
+ * (its own direction closest to the side's bearing). Hours missing from every side are left out, and so are hours
+ * where a component is only on sides in the atoll's lee.
  */
 export function seaStateHours(input: {
   sides: readonly OffshoreSide[];
@@ -50,7 +50,14 @@ export function seaStateHours(input: {
   const currentAt = new Map((input.current ?? []).map((hour) => [hour.time, hour]));
   const result: SeaStateHour[] = [];
   for (const time of times) {
-    const pick = (key: "swell" | "secondarySwell" | "windWave"): WaveComponent | null => upstream(byTime, time, key);
+    const picks = COMPONENTS.map((key) => upstream(byTime, time, key));
+    // A component some side has, but only from the atoll's lee: its upwind sample is missing. Leave the hour out
+    // rather than draw a band from what is left.
+    if (picks.some((pick) => pick === "lee-only")) continue;
+    const pick = (key: Component): WaveComponent | null => {
+      const picked = picks[COMPONENTS.indexOf(key)];
+      return picked === "lee-only" ? null : picked;
+    };
     const swells = [pick("swell"), pick("secondarySwell")]
       .filter((wave): wave is WaveComponent => wave != null)
       .map((wave) => ({ ...wave, heightM: wave.heightM * exposureAt(input.exposure.swell, wave.fromDeg) }));
@@ -96,45 +103,40 @@ function againstCurrent(swells: readonly SiteWave[], hour: HourForecast | undefi
  */
 const UPSTREAM_MAX_DEG = 67.5;
 
+type Component = "swell" | "secondarySwell" | "windWave";
+const COMPONENTS: readonly Component[] = ["swell", "secondarySwell", "windWave"];
+
+/**
+ * The component from the side it comes from, or null when no side has it that hour. "lee-only" when some side has
+ * it but no side within UPSTREAM_MAX_DEG of its direction has that hour at all: the upwind sample failed or is
+ * missing, so the only copies are lee samples the wave model has already damped. An upwind side that has the hour
+ * but no such component is the model saying there is none upwind, which is a real answer.
+ */
 function upstream(
   sides: readonly { sideDeg: number; at: Map<string, WaveHour> }[],
   time: string,
-  key: "swell" | "secondarySwell" | "windWave",
-): WaveComponent | null {
+  key: Component,
+): WaveComponent | null | "lee-only" {
   let best: { wave: WaveComponent; off: number } | null = null;
+  let lee: WaveComponent | null = null;
   for (const side of sides) {
     const wave = side.at.get(time)?.[key];
     if (!wave) continue;
     const off = angleBetween(wave.fromDeg, side.sideDeg);
-    if (off > UPSTREAM_MAX_DEG) continue;
+    if (off > UPSTREAM_MAX_DEG) {
+      lee ??= wave;
+      continue;
+    }
     if (best == null || off < best.off) best = { wave, off };
   }
-  return best?.wave ?? null;
+  if (best) return best.wave;
+  if (!lee) return null;
+  const upwindHasHour = sides.some((side) => side.at.has(time) && angleBetween(lee.fromDeg, side.sideDeg) <= UPSTREAM_MAX_DEG);
+  return upwindHasHour ? null : "lee-only";
 }
 
 function round2(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-const OPENINGS_PATH = path.join(process.cwd(), "data", "openings.json");
-let openingsMemo: ExposureOpening[] | null = null;
-
-/** Reef-crest gaps from data/openings.json. Missing or unreadable means none: every crossing is reef. */
-function readOpenings(): ExposureOpening[] {
-  if (openingsMemo) return openingsMemo;
-  try {
-    const parsed = JSON.parse(fs.readFileSync(OPENINGS_PATH, "utf8")) as { openings?: unknown };
-    const list = Array.isArray(parsed.openings) ? parsed.openings : [];
-    openingsMemo = list.flatMap((item) => {
-      const opening = item as Partial<ExposureOpening>;
-      return typeof opening.lat === "number" && typeof opening.lon === "number" && typeof opening.widthM === "number"
-        ? [{ lat: opening.lat, lon: opening.lon, widthM: opening.widthM, reefFlatBridges: opening.reefFlatBridges === true }]
-        : [];
-    });
-  } catch {
-    openingsMemo = [];
-  }
-  return openingsMemo;
 }
 
 /** How the site's own rim shelters it. Channel sites cross the rim; outer reef and strait walls sit on it. */
@@ -147,12 +149,21 @@ export function exposureKind(site: Site, mates: readonly Site[]): ExposureKind {
 
 const exposureMemo = new Map<string, SiteExposure>();
 
-export function exposureForSite(site: Site, mates: readonly Site[], inwardBearingDeg: number | null): SiteExposure {
+export function exposureForSite(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll | undefined,
+  inwardBearingDeg: number | null,
+): SiteExposure {
   const kind = exposureKind(site, mates);
-  const key = `${site.id}|${site.lat}|${site.lon}|${kind}|${inwardBearingDeg}`;
+  const ownWayId = atoll ? rimWayId(atoll) : null;
+  const key = `${site.id}|${site.lat}|${site.lon}|${kind}|${inwardBearingDeg}|${ownWayId}`;
   const kept = exposureMemo.get(key);
   if (kept) return kept;
-  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg }, [...allRims().values()], readOpenings());
+  // Read first: a corrupt openings file throws here and nothing is memoised.
+  const openings = readOpenings();
+  const rings = [...allRims()].map(([wayId, ring]) => ({ wayId, ring }));
+  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, rings, openings);
   exposureMemo.set(key, exposure);
   return exposure;
 }
@@ -189,11 +200,12 @@ export async function loadOffshore(atoll: Atoll | undefined, options: FetchOptio
 export function siteSeaState(
   site: Site,
   mates: readonly Site[],
+  atoll: Atoll | undefined,
   offshore: Offshore,
   current: { hours: readonly HourForecast[]; forecastRoute: ForecastRoute; inwardBearingDeg: number | null },
 ): SeaState {
   if (offshore.sides.length === 0) return { hours: [], unavailable: true, fetchedAt: null, stale: false };
-  const exposure = exposureForSite(site, mates, current.inwardBearingDeg);
+  const exposure = exposureForSite(site, mates, atoll, current.inwardBearingDeg);
   const shown = new Set(current.hours.map((hour) => hour.time));
   const hours = seaStateHours({
     sides: offshore.sides,

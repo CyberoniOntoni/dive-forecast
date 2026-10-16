@@ -21,6 +21,7 @@ import {
 import {
   STRENGTHS,
   UNSEEDED_ATOLL_ID,
+  type Atoll,
   type Direction,
   type ForecastAtReport,
   type ForecastRoute,
@@ -175,7 +176,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     loadSite(site, catalog.sites, atoll, reportsForSite(site.id)),
     loadOffshore(atoll).catch(() => undefined),
   ]);
-  const sea = seaStateFor(site, catalog.sites, loaded, offshore);
+  const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);
   return {
     seaState: sea.hours,
     seaStale: sea.stale,
@@ -230,13 +231,14 @@ function unavailableForecast(): SiteForecast {
 function seaStateFor(
   site: Site,
   mates: readonly Site[],
+  atoll: Atoll | undefined,
   loaded: SiteLoad,
   offshore: Offshore | null | undefined,
 ): { hours: SeaStateHour[] | null; stale: boolean } {
   if (loaded.unavailable || offshore === null) return { hours: null, stale: false };
   if (offshore === undefined) return { hours: [], stale: false };
   try {
-    const sea = siteSeaState(site, mates, offshore, {
+    const sea = siteSeaState(site, mates, atoll, offshore, {
       hours: loaded.hours,
       forecastRoute: loaded.forecastRoute,
       inwardBearingDeg: loaded.bearing,

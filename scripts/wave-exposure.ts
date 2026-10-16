@@ -23,7 +23,7 @@ function main(): void {
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     if (!atoll) continue;
     const bearing = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll)).deg;
-    const exposure = exposureForSite(site, catalog.sites, bearing);
+    const exposure = exposureForSite(site, catalog.sites, atoll, bearing);
     const row = (table: number[]) => SIDES.map((deg) => exposureAt(table, deg).toFixed(2).padStart(5)).join("");
     console.log(
       site.name.slice(0, 31).padEnd(32),

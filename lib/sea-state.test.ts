@@ -81,3 +81,30 @@ describe("seaStateHours upstream side", () => {
     expect(seaStateHours({ sides, exposure: FULL })).toEqual([]);
   });
 });
+
+describe("seaStateHours with the swell side missing", () => {
+  it("leaves the hour out rather than band it from the wind chop alone", () => {
+    // The east side failed while a 1.6 m swell runs from the east. The west side has that swell only from its lee,
+    // and a wind wave from the west that is inside the upstream cut.
+    const time = "2026-10-13T08:00";
+    const sides: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.5, 90, 0.2, 270)] }];
+    expect(seaStateHours({ sides, exposure: FULL })).toEqual([]);
+  });
+
+  it("still bands an hour whose every component comes from upwind", () => {
+    const time = "2026-10-13T08:00";
+    const sides: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.5, 270, 0.2, 270)] }];
+    expect(seaStateHours({ sides, exposure: FULL })).toHaveLength(1);
+  });
+});
+
+describe("seaStateHours with an upwind side that has no such wave", () => {
+  it("takes the upwind side's word that there is none, rather than leaving the hour out", () => {
+    const time = "2026-10-13T08:00";
+    // The east side loaded and has no secondary swell; the west side has one from the east, in its lee.
+    const east: WaveHour = { ...wave(time, 1.0, 90), secondarySwell: null };
+    const west: WaveHour = { ...wave(time, 0.4, 90), secondarySwell: { heightM: 0.3, fromDeg: 90, periodS: 8 } };
+    const [sea] = seaStateHours({ sides: [{ sideDeg: 90, hours: [east] }, { sideDeg: 270, hours: [west] }], exposure: FULL });
+    expect(sea.swell?.heightM).toBe(1);
+  });
+});
