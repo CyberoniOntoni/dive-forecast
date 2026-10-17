@@ -235,7 +235,10 @@ export type SeaStateHour = {
   feltM: number;
   /** The bigger swell reaching the site, or null when none does. */
   swell: SiteWave | null;
+  /** Wind chop at the site: the wave model's wind sea through the reef, or what the local wind raises, if bigger. */
   windWaveM: number;
+  /** The 10 m wind over the atoll that hour. */
+  wind: { speedMs: number; fromDeg: number } | null;
   /** A channel hour where swell runs into a strong outgoing current. */
   againstCurrent: boolean;
 };

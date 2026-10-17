@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RimRing } from "./rim";
-import { exposureAt, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, type ExposureRing } from "./wave-exposure";
+import { exposureAt, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, STEP_DEG, type ExposureRing } from "./wave-exposure";
 
 // A square atoll about 22 km across, centred on 4.0 N 73.5 E, with one 1 km gap in the middle of its east side.
 const SQUARE: RimRing = [
@@ -55,6 +55,15 @@ describe("siteExposure", () => {
     expect(exposureAt(site.wind, 270)).toBeGreaterThan(0.5);
     expect(exposureAt(site.wind, 90)).toBeLessThan(exposureAt(site.wind, 270));
     expect(exposureAt(site.swell, 270)).toBeLessThan(0.2);
+    // The lagoon's open water upwind, for local chop: about 21 km to the west rim, about 1 km to the east one.
+    expect(site.fetchKm[270 / STEP_DEG]).toBeCloseTo(21.1, 0);
+    expect(site.fetchKm[90 / STEP_DEG]).toBeCloseTo(1.1, 0);
+  });
+
+  it("gives no local fetch where the ray runs out to sea, and the wall's own reef on its lagoon side", () => {
+    const wall = siteExposure({ lat: 4.05, lon: 73.6, kind: "wall", inwardBearingDeg: 270, ownWayId: "own" }, [OWN], []);
+    expect(wall.fetchKm[90 / STEP_DEG]).toBeNull();
+    expect(wall.fetchKm[270 / STEP_DEG]).toBe(0.5);
   });
 
   it("does not read a channel pin's own rim as solid reef", () => {
