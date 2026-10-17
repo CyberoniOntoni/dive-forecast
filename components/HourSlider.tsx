@@ -234,7 +234,7 @@ function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
           {SEA_LABEL[sea.band].toLowerCase()}
         </span>
         <span className="text-foam/80"> · {seaDetail(sea)}</span>
-        {stale ? <span className="text-foam/80"> (old wave data)</span> : null}
+        {stale ? <span className="text-foam/80"> (old wave or wind data)</span> : null}
       </p>
       {sea.againstCurrent ? (
         <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
@@ -243,7 +243,9 @@ function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
   );
 }
 
-/** "1.2 m swell from SW, 11 s · 0.4 m wind chop", leaving out what is too small to feel. */
+const KNOTS_PER_MS = 3600 / 1852;
+
+/** "1.2 m swell from SW, 11 s · 0.4 m wind chop · wind 14 kt from W", leaving out waves too small to feel. */
 export function seaDetail(sea: SeaStateHour): string {
   const parts: string[] = [];
   if (sea.swell) {
@@ -251,7 +253,10 @@ export function seaDetail(sea: SeaStateHour): string {
     parts.push(`${metres(sea.swell.heightM)} swell from ${compassWord(sea.swell.fromDeg)}${period}`);
   }
   if (sea.windWaveM >= 0.1) parts.push(`${metres(sea.windWaveM)} wind chop`);
-  return parts.length > 0 ? parts.join(" · ") : "no swell or wind chop to speak of";
+  const waves = parts.length > 0 ? parts.join(" · ") : "no swell or wind chop to speak of";
+  if (sea.wind == null) return waves;
+  const knots = Math.round(sea.wind.speedMs * KNOTS_PER_MS);
+  return `${waves} · ${knots < 2 ? "almost no wind" : `wind ${knots} kt from ${compassWord(sea.wind.fromDeg)}`}`;
 }
 
 function metres(value: number): string {

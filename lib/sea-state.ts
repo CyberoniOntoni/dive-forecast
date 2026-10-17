@@ -1,8 +1,19 @@
 import { readOpenings } from "./openings";
 import { allRims, rimForAtoll, rimWayId } from "./rim";
 import { crossesRim } from "./site-type";
-import { angleBetween, exposureAt, offshorePoints, siteExposure, type ExposureKind, type SiteExposure } from "./wave-exposure";
+import {
+  angleBetween,
+  exposureAt,
+  offshorePoints,
+  ringCentre,
+  siteExposure,
+  snapToWaveGrid,
+  STEP_DEG,
+  type ExposureKind,
+  type SiteExposure,
+} from "./wave-exposure";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
+import { fetchWind, type WindHour } from "./wind";
 import type { FetchOptions } from "./marine";
 import type { Atoll, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Site, SiteWave } from "./types";
 
@@ -23,6 +34,14 @@ export const SEA_BAND_LIMITS_M: Record<Exclude<SeaBand, "rough">, number> = { ca
 export const WIND_WAVE_WEIGHT = 1.4;
 /** Swell at least this high, running into a strong outgoing current, stands up at a channel mouth. */
 export const AGAINST_CURRENT_SWELL_M = 0.8;
+/**
+ * Fetch-limited wind-sea growth (Shore Protection Manual, deep water): height = CHOP_GROWTH × wind speed × sqrt(fetch / g),
+ * never above the fully developed sea for that wind. 10 m/s over 20 km of lagoon gives about 0.7 m. A first guess, to
+ * tune from reports.
+ */
+export const CHOP_GROWTH = 0.0016;
+const FULLY_DEVELOPED = 0.2433;
+const GRAVITY = 9.81;
 /** Swell within this many degrees of straight in through the channel counts as running against the outgoing current. */
 const AGAINST_CURRENT_DEG = 60;
 
@@ -33,12 +52,19 @@ export type OffshoreSide = { sideDeg: number; hours: readonly WaveHour[] };
 
 /**
  * Each hour's sea state at the site. For each wave component, the offshore side used is the one the sea comes from
- * (its own direction closest to the side's bearing). Hours missing from every side are left out. When a component's
- * upwind sample is missing, the hour is still shown if what is known is already rough, and left out otherwise.
+ * (its own direction closest to the side's bearing). Wind chop is the bigger of the wave model's wind sea let through
+ * the reef and what the atoll's wind raises over the open water upwind of the site. Hours missing from every side are
+ * left out. When a component's upwind sample or the hour's wind is missing, the hour is still shown if what is known
+ * is already rough, and left out otherwise.
  */
 export function seaStateHours(input: {
   sides: readonly OffshoreSide[];
   exposure: SiteExposure;
+  /**
+   * 10 m wind over the atoll. Raises chop over the open water upwind of the site (exposure.fetchKm), which the wave
+   * model is too coarse to see. An hour missing here makes that chop unknown.
+   */
+  wind: readonly WindHour[];
   /** The current forecast's hours, for the swell-against-current check. Only "channel" hours are checked. */
   current?: readonly HourForecast[];
   route?: ForecastRoute;
@@ -47,24 +73,29 @@ export function seaStateHours(input: {
 }): SeaStateHour[] {
   const byTime = input.sides.map((side) => ({ sideDeg: side.sideDeg, at: new Map(side.hours.map((hour) => [hour.time, hour])) }));
   const times = [...new Set(input.sides.flatMap((side) => side.hours.map((hour) => hour.time)))].sort();
+  const windAt = new Map(input.wind.map((hour) => [hour.time, hour]));
   const currentAt = new Map((input.current ?? []).map((hour) => [hour.time, hour]));
   const result: SeaStateHour[] = [];
   for (const time of times) {
     const swellPick = upstream(byTime, time, "swell");
     const secondaryPick = upstream(byTime, time, "secondarySwell");
     const windPick = upstream(byTime, time, "windWave");
-    const picks = [swellPick, secondaryPick, windPick];
+    const windHour = windAt.get(time);
+    // No wind that hour: the chop it raises over the lagoon is as unknown as a missing upwind wave sample.
+    const unknown = windHour == null || [swellPick, secondaryPick, windPick].some((pick) => pick.kind === "unknown");
     const swells = [swellPick, secondaryPick]
       .flatMap((pick) => (pick.kind === "value" ? [pick.wave] : []))
       .map((wave) => ({ ...wave, heightM: wave.heightM * exposureAt(input.exposure.swell, wave.fromDeg) }));
     const wind = windPick.kind === "value" ? windPick.wave : null;
-    if (swells.length === 0 && wind == null && !picks.some((pick) => pick.kind === "unknown")) continue;
-    const windWaveM = wind ? wind.heightM * exposureAt(input.exposure.wind, wind.fromDeg) : 0;
+    const windWaveM = Math.max(
+      wind ? wind.heightM * exposureAt(input.exposure.wind, wind.fromDeg) : 0,
+      windHour ? localChopM(input.exposure, windHour) : 0,
+    );
     const swellSquares = swells.reduce((sum, wave) => sum + wave.heightM ** 2, 0);
     const feltM = Math.sqrt(swellSquares + (WIND_WAVE_WEIGHT * windWaveM) ** 2);
     // A sea of unknown height can only add to the felt height. Already rough stays rough; anything less could be
     // any band, so the hour is left out rather than drawn from what is known.
-    if (picks.some((pick) => pick.kind === "unknown") && seaBand(feltM) !== "rough") continue;
+    if (unknown && seaBand(feltM) !== "rough") continue;
     const biggest = swells.reduce<SiteWave | null>((best, wave) => (best == null || wave.heightM > best.heightM ? wave : best), null);
     result.push({
       time,
@@ -72,6 +103,7 @@ export function seaStateHours(input: {
       feltM: round2(feltM),
       swell: biggest && biggest.heightM >= 0.05 ? { ...biggest, heightM: round2(biggest.heightM) } : null,
       windWaveM: round2(windWaveM),
+      wind: windHour ? { speedMs: round2(windHour.speedMs), fromDeg: Math.round(windHour.fromDeg) } : null,
       againstCurrent:
         input.route === "channel" && input.inwardBearingDeg != null
           ? againstCurrent(swells, currentAt.get(time), input.inwardBearingDeg)
@@ -79,6 +111,21 @@ export function seaStateHours(input: {
     });
   }
   return result;
+}
+
+/** Wind sea raised by this wind over this much open water, metres. */
+export function fetchLimitedChopM(speedMs: number, fetchKm: number): number {
+  if (!(speedMs > 0) || !(fetchKm > 0)) return 0;
+  const limited = CHOP_GROWTH * speedMs * Math.sqrt((fetchKm * 1000) / GRAVITY);
+  return Math.min(limited, (FULLY_DEVELOPED * speedMs ** 2) / GRAVITY);
+}
+
+/** Chop the wind raises over the open water upwind of the site, from the ray nearest the wind's direction. */
+function localChopM(exposure: SiteExposure, wind: WindHour): number {
+  const count = exposure.fetchKm.length;
+  const index = ((Math.round(wind.fromDeg / STEP_DEG) % count) + count) % count;
+  const fetchKm = exposure.fetchKm[index];
+  return fetchKm == null ? 0 : fetchLimitedChopM(wind.speedMs, fetchKm);
 }
 
 export function seaBand(feltM: number): SeaBand {
@@ -166,7 +213,7 @@ export function exposureForSite(
 }
 
 /** An atoll's offshore samples: ok sides only. fetchedAt is the oldest side's, so the page never claims fresher data. */
-export type Offshore = { sides: OffshoreSide[]; fetchedAt: number | null; stale: boolean };
+export type Offshore = { sides: OffshoreSide[]; wind: WindHour[] | null; fetchedAt: number | null; stale: boolean };
 
 /**
  * The eight offshore samples round the site's atoll, or null when the atoll has no outline. They do not depend on the
@@ -175,9 +222,11 @@ export type Offshore = { sides: OffshoreSide[]; fetchedAt: number | null; stale:
 export async function loadOffshore(atoll: Atoll | undefined, options: FetchOptions = {}): Promise<Offshore | null> {
   const ring = rimForAtoll(atoll);
   if (!ring) return null;
-  const fetched = await Promise.all(
-    offshorePoints(ring).map(async (point) => ({ point, waves: await fetchWaves(point.lat, point.lon, options) })),
-  );
+  const centre = snapToWaveGrid(ringCentre(ring));
+  const [fetched, windFetch] = await Promise.all([
+    Promise.all(offshorePoints(ring).map(async (point) => ({ point, waves: await fetchWaves(point.lat, point.lon, options) }))),
+    fetchWind(centre.lat, centre.lon, options),
+  ]);
   const sides: OffshoreSide[] = [];
   let fetchedAt: number | null = null;
   let stale = false;
@@ -187,7 +236,11 @@ export async function loadOffshore(atoll: Atoll | undefined, options: FetchOptio
     fetchedAt = fetchedAt == null ? waves.fetchedAt : Math.min(fetchedAt, waves.fetchedAt);
     stale ||= waves.stale;
   }
-  return { sides, fetchedAt, stale };
+  if (sides.length > 0 && windFetch.ok) {
+    fetchedAt = fetchedAt == null ? windFetch.fetchedAt : Math.min(fetchedAt, windFetch.fetchedAt);
+    stale ||= windFetch.stale;
+  }
+  return { sides, wind: windFetch.ok ? windFetch.hours : null, fetchedAt, stale };
 }
 
 /**
@@ -207,6 +260,8 @@ export function siteSeaState(
   const hours = seaStateHours({
     sides: offshore.sides,
     exposure,
+    // No wind series: every hour's local chop is unknown, so only hours already rough are shown.
+    wind: offshore.wind ?? [],
     current: current.hours,
     // A lagoon site that fell back to channel hours has no channel mouth of its own.
     route: exposureKind(site, mates) === "channel" ? current.forecastRoute : undefined,

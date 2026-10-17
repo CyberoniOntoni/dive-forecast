@@ -52,8 +52,12 @@ export type ExposureSite = {
   ownWayId: string | null;
 };
 
-/** Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from north). */
-export type SiteExposure = { swell: number[]; wind: number[] };
+/**
+ * Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from
+ * north). fetchKm is the open water upwind of the site in each direction before the first reef (or the wall's own reef
+ * on its lagoon side), for wind chop raised locally; null where the ray runs out to sea, which the wave model covers.
+ */
+export type SiteExposure = { swell: number[]; wind: number[]; fetchKm: (number | null)[] };
 
 type Vec = [number, number];
 type Segment = { from: Vec; to: Vec; wayId: string };
@@ -92,12 +96,14 @@ export function siteExposure(
 
   const raySwell: number[] = [];
   const rayWind: number[] = [];
+  const fetchKm: (number | null)[] = [];
   for (let index = 0; index < DIRECTIONS; index += 1) {
     const ray = traceRay(index * STEP_DEG, site, segments, gaps, ownSkipKm);
     raySwell.push(ray.swell);
     rayWind.push(ray.wind);
+    fetchKm.push(ray.fetchKm == null ? null : Math.round(ray.fetchKm * 100) / 100);
   }
-  return { swell: spread(raySwell), wind: spread(rayWind) };
+  return { swell: spread(raySwell), wind: spread(rayWind), fetchKm };
 }
 
 /** The table's share for seas from `fromDeg`, between its STEP_DEG entries. */
@@ -115,10 +121,10 @@ function traceRay(
   segments: readonly Segment[],
   gaps: readonly { at: Vec; opening: GapOpening }[],
   ownSkipKm: number,
-): { swell: number; wind: number } {
+): { swell: number; wind: number; fetchKm: number | null } {
   if (site.kind === "wall" && site.inwardBearingDeg != null && angleBetween(towardDeg, site.inwardBearingDeg) < 90) {
     // The lagoon side of a wall: the wall's own reef and island are between the sea and the dive.
-    return { swell: REEF_TRANSMISSION, wind: Math.max(REEF_TRANSMISSION, fetchShare(OWN_LEE_FETCH_KM)) };
+    return { swell: REEF_TRANSMISSION, wind: Math.max(REEF_TRANSMISSION, fetchShare(OWN_LEE_FETCH_KM)), fetchKm: OWN_LEE_FETCH_KM };
   }
   const radians = (towardDeg * Math.PI) / 180;
   const direction: Vec = [Math.sin(radians), Math.cos(radians)];
@@ -130,7 +136,7 @@ function traceRay(
       return [{ km, wayId: segment.wayId }];
     })
     .sort((a, b) => a.km - b.km);
-  if (hits.length === 0) return { swell: 1, wind: 1 };
+  if (hits.length === 0) return { swell: 1, wind: 1, fetchKm: null };
 
   let swell = 1;
   for (const { km, wayId } of hits) {
@@ -147,7 +153,7 @@ function traceRay(
     const widthKm = gap.opening.widthM / 1000;
     swell *= (gap.opening.reefFlatBridges ? BRIDGED_GAP : 1) * Math.min(1, Math.sqrt((GAP_SPREAD_WIDTHS * widthKm) / km));
   }
-  return { swell, wind: Math.max(swell, fetchShare(hits[0].km)) };
+  return { swell, wind: Math.max(swell, fetchShare(hits[0].km)), fetchKm: hits[0].km };
 }
 
 /** Wind-wave height share grown over this fetch: fetch-limited growth goes as its square root. */
@@ -196,11 +202,7 @@ const WAVE_GRID_DEG = 1 / 12;
  * edge on that side and snapped to the wave model's grid.
  */
 export function offshorePoints(ring: RimRing): { sideDeg: number; lat: number; lon: number }[] {
-  const open = ring.slice(0, -1);
-  const centre = {
-    lat: open.reduce((sum, point) => sum + point[0], 0) / open.length,
-    lon: open.reduce((sum, point) => sum + point[1], 0) / open.length,
-  };
+  const centre = ringCentre(ring);
   const project = (lat: number, lon: number): Vec => [
     (lon - centre.lon) * KM_PER_DEG_LON * Math.cos((centre.lat * Math.PI) / 180),
     (lat - centre.lat) * KM_PER_DEG_LAT,
@@ -219,6 +221,20 @@ export function offshorePoints(ring: RimRing): { sideDeg: number; lat: number; l
     sides.push({ sideDeg, lat: snap(at.lat), lon: snap(at.lon) });
   }
   return sides;
+}
+
+/** The mean of an outline's points: the atoll's middle, where its one wind sample is taken. */
+export function ringCentre(ring: RimRing): { lat: number; lon: number } {
+  const open = ring.slice(0, -1);
+  return {
+    lat: open.reduce((sum, point) => sum + point[0], 0) / open.length,
+    lon: open.reduce((sum, point) => sum + point[1], 0) / open.length,
+  };
+}
+
+/** A position snapped to the wave model's grid, so nearby samples share one cache file. */
+export function snapToWaveGrid(point: { lat: number; lon: number }): { lat: number; lon: number } {
+  return { lat: snap(point.lat), lon: snap(point.lon) };
 }
 
 function snap(degrees: number): number {
