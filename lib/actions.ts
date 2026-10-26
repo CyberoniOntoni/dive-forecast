@@ -6,6 +6,8 @@ import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
+import { readShelterGrid, SHELTER_STEP_DEG, shelterBands } from "./shelter-grid";
+import { rimForAtoll, rimWayId } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
@@ -346,4 +348,51 @@ function slugFromName(name: string): string {
   const dashed = letters.replace(/[^a-z0-9]+/g, "-");
   const trimmed = dashed.replace(/^-|-$/g, "");
   return trimmed || "site";
+}
+
+/** One atoll's sheltered-water cells for the map, as lib/shelter-grid.ts lays them out. */
+export type ShelterAtoll = {
+  south: number;
+  west: number;
+  stepDeg: number;
+  runs: [number, number, number][];
+  /** One letter per cell in run order: c calm, m moderate, h choppy, r rough, ? unknown. */
+  bands: string;
+};
+export type ShelterView = { time: string; atolls: ShelterAtoll[]; stale: boolean };
+
+/**
+ * The sea band in every lagoon cell of the atolls in view, for the current Maldives hour. An atoll whose offshore
+ * waves are not loaded yet is left out, and its fetch runs in the background for the next view.
+ */
+export async function getShelter(view: { south: number; west: number; north: number; east: number }): Promise<ShelterView> {
+  const { south, west, north, east } = view ?? {};
+  if (![south, west, north, east].every((value) => typeof value === "number" && Number.isFinite(value))) {
+    throw new Error("Bad view");
+  }
+  const time = `${toMaldivesWall(new Date().toISOString()).slice(0, 13)}:00`;
+  const grid = readShelterGrid();
+  const seen = new Set<string>();
+  const wanted = readCatalog().atolls.filter((atoll) => {
+    const ring = rimForAtoll(atoll);
+    const wayId = rimWayId(atoll);
+    // Two catalog atolls can share one outline; draw it once.
+    if (!ring || !grid.atolls[wayId] || seen.has(wayId)) return false;
+    seen.add(wayId);
+    const lats = ring.map((point) => point[0]);
+    const lons = ring.map((point) => point[1]);
+    return Math.max(...lats) >= south && Math.min(...lats) <= north && Math.max(...lons) >= west && Math.min(...lons) <= east;
+  });
+  let stale = false;
+  const atolls = await Promise.all(
+    wanted.map(async (atoll): Promise<ShelterAtoll | null> => {
+      const offshore = await loadOffshore(atoll, { wait: false }).catch(() => null);
+      if (!offshore || offshore.sides.length === 0) return null;
+      stale ||= offshore.stale;
+      const wayId = rimWayId(atoll);
+      const { south: gridSouth, west: gridWest, runs } = grid.atolls[wayId];
+      return { south: gridSouth, west: gridWest, stepDeg: SHELTER_STEP_DEG, runs, bands: shelterBands(wayId, offshore, time) };
+    }),
+  );
+  return { time, atolls: atolls.filter((atoll): atoll is ShelterAtoll => atoll != null), stale };
 }

@@ -9,6 +9,7 @@ import {
   readLayerChoice,
   readableBase,
   saveLayerChoice,
+  shelterRectangles,
   type LayerChoice,
 } from "./map-layers";
 
@@ -56,6 +57,7 @@ describe("layer choice", () => {
         depthShading: true,
         sonarDepths: false,
         depthContours: true,
+        shelter: true,
         grid: true,
       },
     };
@@ -115,5 +117,18 @@ describe("coordinate grid", () => {
     expect(formatGridLabel(-0.6, "lat")).toBe("0°36′S");
     expect(formatGridLabel(73.5, "lon")).toBe("73°30′E");
     expect(formatGridLabel(0, "lat")).toBe("0°00′");
+  });
+});
+
+describe("shelterRectangles", () => {
+  it("joins side-by-side cells of one band and skips unknown cells", () => {
+    const shapes = shelterRectangles({ south: 4, west: 73, stepDeg: 0.01, runs: [[0, 2, 4], [1, 0, 2]], bands: "cc?mrr" }).map(
+      (shape) => shape.map((value) => (typeof value === "number" ? Math.round(value * 1000) / 1000 : value)),
+    );
+    expect(shapes).toEqual([
+      [4, 73.02, 4.01, 73.04, "c"],
+      [4, 73.05, 4.01, 73.06, "m"],
+      [4.01, 73, 4.02, 73.02, "r"],
+    ]);
   });
 });

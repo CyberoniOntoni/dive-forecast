@@ -8,10 +8,12 @@ import {
   ringCentre,
   siteExposure,
   snapToWaveGrid,
-  STEP_DEG,
+  type ExposureIsland,
   type ExposureKind,
+  type ExposureRing,
   type SiteExposure,
 } from "./wave-exposure";
+import { readIslands, WOODED_MIN_HA } from "./islands";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
 import { fetchWind, type WindHour } from "./wind";
 import type { FetchOptions } from "./marine";
@@ -123,7 +125,7 @@ export function fetchLimitedChopM(speedMs: number, fetchKm: number): number {
 /** Chop the wind raises over the open water upwind of the site, from the ray nearest the wind's direction. */
 function localChopM(exposure: SiteExposure, wind: WindHour): number {
   const count = exposure.fetchKm.length;
-  const index = ((Math.round(wind.fromDeg / STEP_DEG) % count) + count) % count;
+  const index = ((Math.round(wind.fromDeg / (360 / count)) % count) + count) % count;
   const fetchKm = exposure.fetchKm[index];
   return fetchKm == null ? 0 : fetchLimitedChopM(wind.speedMs, fetchKm);
 }
@@ -193,6 +195,16 @@ export function exposureKind(site: Site, mates: readonly Site[]): ExposureKind {
 
 const exposureMemo = new Map<string, SiteExposure>();
 
+/** Every atoll outline, for the ray tracer. */
+export function exposureRings(): ExposureRing[] {
+  return [...allRims()].map(([wayId, ring]) => ({ wayId, ring }));
+}
+
+/** Every island, for the ray tracer. Reads data/islands.json, so a corrupt file throws here. */
+export function exposureIslands(): ExposureIsland[] {
+  return readIslands().map((island) => ({ ring: island.ring, wooded: island.areaHa >= WOODED_MIN_HA }));
+}
+
 export function exposureForSite(
   site: Site,
   mates: readonly Site[],
@@ -204,10 +216,9 @@ export function exposureForSite(
   const key = `${site.id}|${site.lat}|${site.lon}|${kind}|${inwardBearingDeg}|${ownWayId}`;
   const kept = exposureMemo.get(key);
   if (kept) return kept;
-  // Read first: a corrupt openings file throws here and nothing is memoised.
+  // Read first: a corrupt openings or islands file throws here and nothing is memoised.
   const openings = readOpenings();
-  const rings = [...allRims()].map(([wayId, ring]) => ({ wayId, ring }));
-  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, rings, openings);
+  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, exposureRings(), openings, exposureIslands());
   exposureMemo.set(key, exposure);
   return exposure;
 }

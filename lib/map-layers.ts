@@ -10,6 +10,11 @@ import {
 
 type LeafletLib = typeof import("leaflet");
 
+/** One atoll's lagoon cells and their sea band, as the getShelter action returns them. */
+export type ShelterAtollCells = { south: number; west: number; stepDeg: number; runs: [number, number, number][]; bands: string };
+export type ShelterCells = { time: string; atolls: ShelterAtollCells[]; stale: boolean };
+export type LoadShelter = (view: { south: number; west: number; north: number; east: number }) => Promise<ShelterCells>;
+
 /**
  * Map layers a viewer can switch. One base at a time; every overlay on or off on its own.
  * The dive pins are not a layer here: they are always on.
@@ -23,6 +28,7 @@ export type OverlayId =
   | "depthShading"
   | "sonarDepths"
   | "depthContours"
+  | "shelter"
   | "grid";
 
 export type LayerChoice = { base: BaseId; overlays: Record<OverlayId, boolean> };
@@ -41,6 +47,7 @@ export const OVERLAYS: readonly { id: OverlayId; label: string; defaultOn: boole
   { id: "depthShading", label: "Depth shading", defaultOn: false },
   { id: "sonarDepths", label: "Sonar depths", defaultOn: false },
   { id: "depthContours", label: "Depth contours", defaultOn: false },
+  { id: "shelter", label: "Sheltered water", defaultOn: false },
   { id: "grid", label: "Coordinate grid", defaultOn: true },
 ];
 
@@ -260,6 +267,125 @@ function atlasLegend(L: LeafletLib, map: LeafletMap, overlay: AtlasOverlay) {
   };
 }
 
+/** Below this zoom the 500 m cells are too small to read and an atoll's worth is a lot to draw. */
+const SHELTER_MIN_ZOOM = 9;
+
+/** Map colours for each band letter of the shelter cells; "?" (unknown) is left undrawn. */
+export const SHELTER_COLORS: Record<string, { name: string; color: string }> = {
+  c: { name: "Calm", color: "#34d399" },
+  m: { name: "Moderate", color: "#facc15" },
+  h: { name: "Choppy", color: "#fb923c" },
+  r: { name: "Rough", color: "#ef4444" },
+};
+
+/**
+ * Cells of one band side by side in a row become one rectangle: [south, west, north, east, letter]. A whole atoll is
+ * then a few hundred shapes, not thousands.
+ */
+export function shelterRectangles(atoll: ShelterAtollCells): [number, number, number, number, string][] {
+  const shapes: [number, number, number, number, string][] = [];
+  let cell = 0;
+  for (const [row, firstColumn, count] of atoll.runs) {
+    const south = atoll.south + row * atoll.stepDeg;
+    let start = 0;
+    for (let index = 1; index <= count; index += 1) {
+      if (index < count && atoll.bands[cell + index] === atoll.bands[cell + start]) continue;
+      const letter = atoll.bands[cell + start];
+      if (letter in SHELTER_COLORS) {
+        const west = atoll.west + (firstColumn + start) * atoll.stepDeg;
+        shapes.push([south, west, south + atoll.stepDeg, west + (index - start) * atoll.stepDeg, letter]);
+      }
+      start = index;
+    }
+    cell += count;
+  }
+  return shapes;
+}
+
+/**
+ * The sheltered-water layer: each atoll lagoon's 500 m cells coloured by this hour's sea state, from the same
+ * offshore waves, wind, reef, gaps and islands as the dive sites' sea state. Redrawn as the map moves.
+ */
+function shelterLayer(L: LeafletLib, map: LeafletMap, load: LoadShelter | undefined): LayerGroup {
+  // Credited in the page footer with the rest of the wave and outline data.
+  const group = L.layerGroup();
+  const renderer = L.canvas({ padding: 0.3 });
+  let control: Control | null = null;
+  let note: HTMLElement | null = null;
+  let request = 0;
+
+  const setNote = (text: string) => {
+    if (note) {
+      note.textContent = text;
+      note.hidden = text === "";
+    }
+  };
+  const refresh = async () => {
+    if (!map.hasLayer(group)) return;
+    if (!load) return setNote("Not available here");
+    if (map.getZoom() < SHELTER_MIN_ZOOM) {
+      group.clearLayers();
+      return setNote("Zoom in to see it");
+    }
+    const mine = ++request;
+    const view = map.getBounds();
+    let cells: ShelterCells;
+    try {
+      cells = await load({ south: view.getSouth(), west: view.getWest(), north: view.getNorth(), east: view.getEast() });
+    } catch {
+      if (mine === request) setNote("Sea state is unavailable");
+      return;
+    }
+    if (mine !== request || !map.hasLayer(group)) return;
+    group.clearLayers();
+    for (const atoll of cells.atolls) {
+      for (const [south, west, north, east, letter] of shelterRectangles(atoll)) {
+        group.addLayer(
+          L.rectangle(
+            [
+              [south, west],
+              [north, east],
+            ],
+            { renderer, stroke: false, fillColor: SHELTER_COLORS[letter].color, fillOpacity: 0.45, interactive: false },
+          ),
+        );
+      }
+    }
+    const hour = cells.time.slice(11, 16);
+    setNote(cells.atolls.length === 0 ? "Waves for this area are still loading" : `At ${hour}${cells.stale ? " (old wave data)" : ""}`);
+  };
+
+  group.on("add", () => {
+    control = new L.Control({ position: "topleft" });
+    control.onAdd = () => {
+      const box = L.DomUtil.create("div", "dive-atlas-legend");
+      L.DomEvent.disableClickPropagation(box);
+      const title = L.DomUtil.create("p", "dive-atlas-legend-title", box);
+      title.textContent = "Sea state in the atolls";
+      note = L.DomUtil.create("p", "dive-atlas-legend-note", box);
+      const list = L.DomUtil.create("ul", "", box);
+      for (const { name, color } of Object.values(SHELTER_COLORS)) {
+        const row = L.DomUtil.create("li", "", list);
+        const swatch = L.DomUtil.create("span", "dive-atlas-swatch", row);
+        swatch.style.background = color;
+        row.append(name);
+      }
+      return box;
+    };
+    control.addTo(map);
+    map.on("moveend", refresh);
+    void refresh();
+  });
+  group.on("remove", () => {
+    control?.remove();
+    control = null;
+    note = null;
+    map.off("moveend", refresh);
+    group.clearLayers();
+  });
+  return group;
+}
+
 /** Thin lat/long lines for the visible area, redrawn as the map moves. Labels sit on the left and top edges. */
 function coordinateGrid(L: LeafletLib, map: LeafletMap): LayerGroup {
   const group = L.layerGroup();
@@ -316,7 +442,7 @@ function baseLayer(L: LeafletLib, id: BaseId): Layer {
   return L.layerGroup();
 }
 
-function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
+function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap, loadShelter: LoadShelter | undefined): Layer {
   switch (id) {
     case "seamarks":
       return L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", { maxZoom: 18, attribution: OPENSEAMAP });
@@ -351,13 +477,15 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
     case "bottomTypes":
     case "reefOutline":
       return atlasLayer(L, map, ATLAS_OVERLAYS[id]);
+    case "shelter":
+      return shelterLayer(L, map, loadShelter);
     case "grid":
       return coordinateGrid(L, map);
   }
 }
 
 /** Adds the saved base and overlays, and a layer switcher under the zoom buttons that remembers what the viewer picks. */
-export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
+export function addMapLayers(L: LeafletLib, map: LeafletMap, options: { loadShelter?: LoadShelter } = {}): void {
   const choice = readLayerChoice();
   choice.base = readableBase(choice);
   const bases: Record<string, Layer> = {};
@@ -374,7 +502,7 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
     if (item.id === choice.base) layer.addTo(map);
   }
   for (const item of OVERLAYS) {
-    const layer = overlayLayer(L, item.id, map);
+    const layer = overlayLayer(L, item.id, map, options.loadShelter);
     overlays[item.label] = layer;
     overlayByLabel.set(item.label, item.id);
     if (choice.overlays[item.id]) layer.addTo(map);

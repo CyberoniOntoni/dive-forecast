@@ -109,3 +109,37 @@ describe("offshorePoints", () => {
     expect(east.lon).toBeGreaterThan(73.65);
   });
 });
+
+describe("siteExposure with islands", () => {
+  // A 400 m square island 1 km east of a site in open water.
+  const island = (lonOffset: number, wooded = true) => ({
+    wooded,
+    ring: [
+      [3.998, 73.509 + lonOffset],
+      [4.002, 73.509 + lonOffset],
+      [4.002, 73.513 + lonOffset],
+      [3.998, 73.513 + lonOffset],
+      [3.998, 73.509 + lonOffset],
+    ] as RimRing,
+  });
+  const site = { lat: 4.0, lon: 73.5, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: null };
+
+  it("shelters the water just behind an island from swell, less so farther off", () => {
+    const near = siteExposure({ ...site, lon: 73.508 }, [], [], [island(0)]);
+    const open = siteExposure(site, [], [], []);
+    const far = siteExposure({ ...site, lon: 73.45 }, [], [], [island(0)]);
+    expect(exposureAt(open.swell, 90)).toBe(1);
+    expect(exposureAt(near.swell, 90)).toBeLessThan(0.3);
+    expect(exposureAt(far.swell, 90)).toBeGreaterThan(0.85);
+    expect(exposureAt(near.swell, 270)).toBe(1);
+  });
+
+  it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {
+    const wooded = siteExposure(site, [], [], [island(0)]);
+    const bare = siteExposure(site, [], [], [island(0, false)]);
+    // The island's west shore is about 1 km east; the trees' calm patch takes 0.2 km of it.
+    expect(wooded.fetchKm[90 / STEP_DEG]).toBeCloseTo(1.0 - 0.2, 1);
+    expect(bare.fetchKm[90 / STEP_DEG]).toBeNull();
+    expect(exposureAt(bare.swell, 90)).toBeLessThan(0.8);
+  });
+});
