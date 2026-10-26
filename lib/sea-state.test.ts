@@ -148,11 +148,11 @@ describe("seaStateHours with an unknown component", () => {
 
 describe("local wind chop", () => {
   const time = "2026-10-13T08:00";
-  /** A lagoon site with 20 km of open lagoon to the east and the rim close by everywhere else. */
+  /** A lagoon site with 20 km of open lagoon across the east (30° to 150°) and the rim close by everywhere else. */
   const LAGOON: SiteExposure = {
     swell: Array(360 / STEP_DEG).fill(0.1),
     wind: Array(360 / STEP_DEG).fill(0.1),
-    fetchKm: Array.from({ length: 360 / STEP_DEG }, (_, index) => (index * STEP_DEG === 90 ? 20 : 1)),
+    fetchKm: Array.from({ length: 360 / STEP_DEG }, (_, index) => (Math.abs(index * STEP_DEG - 90) <= 60 ? 20 : 1)),
   };
   const calmSea: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.3, 90, 0.1, 90)] }];
 

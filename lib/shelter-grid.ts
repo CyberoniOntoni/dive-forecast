@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { seaStateHours, type Offshore } from "./sea-state";
 import type { SiteExposure } from "./wave-exposure";
-import type { SeaBand } from "./types";
+import { FIELD_MAX, FIELD_NONE, FIELD_STEP_M, FIELD_UNKNOWN } from "./shelter-field";
 
 /**
  * The sheltered-water map layer: a 500 m grid over every atoll's lagoon, each cell with its exposure to seas from
@@ -116,20 +116,29 @@ export function shelterCells(wayId: string): { lat: number; lon: number; exposur
   return cells;
 }
 
-/** Band letters for the client, one per cell in run order: c calm, m moderate, h choppy, r rough, ? unknown. */
-const BAND_LETTER: Record<SeaBand, string> = { calm: "c", moderate: "m", choppy: "h", rough: "r" };
+/** One atoll's felt height at one hour on its full grid rectangle, row 0 at the south, as one byte per cell. */
+export type ShelterField = { south: number; west: number; rows: number; columns: number; values: Uint8Array };
 
 /**
- * Every cell's sea band at one hour, as a string of BAND_LETTER in the grid's run order. A cell the sea-state rules
- * leave out (a missing upwind sample or no wind that hour, and not already rough) is "?".
+ * Every cell's felt height at one hour, from the atoll's offshore waves and wind, exactly as a dive site's sea state
+ * is worked out (seaStateHours).
  */
-export function shelterBands(wayId: string, offshore: Offshore, time: string): string {
+export function shelterField(wayId: string, offshore: Offshore, time: string): ShelterField | null {
+  const grid = readShelterGrid().atolls[wayId];
+  if (!grid) return null;
+  const rows = grid.runs.reduce((most, [row]) => Math.max(most, row + 1), 0);
+  const columns = grid.runs.reduce((most, [, first, count]) => Math.max(most, first + count), 0);
+  const values = new Uint8Array(rows * columns).fill(FIELD_NONE);
   const sides = offshore.sides.map((side) => ({ sideDeg: side.sideDeg, hours: side.hours.filter((hour) => hour.time === time) }));
   const wind = (offshore.wind ?? []).filter((hour) => hour.time === time);
-  return shelterCells(wayId)
-    .map(({ exposure }) => {
-      const [hour] = seaStateHours({ sides, exposure, wind });
-      return hour ? BAND_LETTER[hour.band] : "?";
-    })
-    .join("");
+  const cells = shelterCells(wayId);
+  let cell = 0;
+  for (const [row, first, count] of grid.runs) {
+    for (let column = first; column < first + count; column += 1) {
+      const [hour] = seaStateHours({ sides, exposure: cells[cell].exposure, wind });
+      values[row * columns + column] = hour ? Math.min(FIELD_MAX, Math.round(hour.feltM / FIELD_STEP_M)) : FIELD_UNKNOWN;
+      cell += 1;
+    }
+  }
+  return { south: grid.south, west: grid.west, rows, columns, values };
 }

@@ -8,7 +8,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
-import { getShelter } from "@/lib/actions";
+import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
 import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
@@ -161,6 +161,21 @@ const MAP_STYLE = `
 .dive-atlas-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
 .dive-atlas-legend ul{list-style:none;margin:0;padding:0}
 .dive-atlas-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dive-shelter-legend{min-width:210px;max-width:240px}
+.dive-shelter-time{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.dive-shelter-time>span{flex:1;text-align:center}
+.dive-shelter-time button{min-width:28px;height:28px;border-radius:4px;border:1px solid color-mix(in srgb, var(--foam) 35%, transparent);background:transparent;color:var(--foam);font:600 14px/1 inherit;cursor:pointer}
+.dive-shelter-time button.dive-shelter-now{padding:0 6px;font-size:12px}
+.dive-shelter-time button:disabled{opacity:.35;cursor:default}
+.dive-shelter-time button:focus-visible{outline:2px solid var(--incoming);outline-offset:1px}
+.dive-shelter-bar{height:10px;border-radius:3px;opacity:.85}
+.dive-shelter-ticks{position:relative;height:30px;margin:2px 0 2px;font-size:10px;line-height:12px}
+.dive-shelter-ticks span{position:absolute;top:0;width:44px;margin-left:-1px;padding-left:3px;border-left:1px solid color-mix(in srgb, var(--foam) 60%, transparent)}
+.dive-shelter-note{margin:2px 0 0}
+.dive-shelter-ticks small{display:block;font-size:10px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
+@media (max-width:640px){.dive-shelter-legend{min-width:0;width:210px;max-width:210px}.dive-shelter-time{font-size:11px}.dive-shelter-ticks{height:14px}.dive-shelter-ticks small,.dive-shelter-tick-mid,.dive-shelter-note,.dive-shelter-date{display:none}}
+.dive-shelter-popup p{margin:0 0 2px}
+.dive-shelter-popup-head{font-weight:600}
 .dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
 .dive-cluster-icon{background:transparent;border:none}
 .dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
@@ -184,7 +199,7 @@ function mountDiveMap(
 ): { map: LeafletMapType; pins: MarkerClusterGroup; destroy: () => void } {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  addMapLayers(L, map, { loadShelter: getShelter });
+  addMapLayers(L, map, { shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint } });
   const pins = L.markerClusterGroup({
     disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,
     maxClusterRadius: 48,

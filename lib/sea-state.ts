@@ -17,9 +17,9 @@ import { readIslands, WOODED_MIN_HA } from "./islands";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
 import { fetchWind, type WindHour } from "./wind";
 import type { FetchOptions } from "./marine";
-import type { Atoll, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Site, SiteWave } from "./types";
+import { SEA_BAND_LIMITS_M, type Atoll, type ForecastRoute, type HourForecast, type SeaBand, type SeaStateHour, type Site, type SiteWave } from "./types";
 
-export { SEA_BANDS, type SeaBand, type SeaStateHour, type SiteWave } from "./types";
+export { SEA_BAND_LIMITS_M, SEA_BANDS, type SeaBand, type SeaStateHour, type SiteWave } from "./types";
 
 /**
  * Sea state at a dive site. Offshore waves come from Open-Meteo's wave model on the side of the atoll each sea comes
@@ -27,11 +27,6 @@ export { SEA_BANDS, type SeaBand, type SeaStateHour, type SiteWave } from "./typ
  * forecast or FORECAST_MODEL_VERSION.
  */
 
-/**
- * Upper limits of each band on the felt height, metres. First guesses from the plan, to tune from reports.
- * Rough is everything from 1.5 m up.
- */
-export const SEA_BAND_LIMITS_M: Record<Exclude<SeaBand, "rough">, number> = { calm: 0.5, moderate: 1.0, choppy: 1.5 };
 /** Short wind waves feel this much bigger than swell of the same height. */
 export const WIND_WAVE_WEIGHT = 1.4;
 /** Swell at least this high, running into a strong outgoing current, stands up at a channel mouth. */
@@ -122,12 +117,33 @@ export function fetchLimitedChopM(speedMs: number, fetchKm: number): number {
   return Math.min(limited, (FULLY_DEVELOPED * speedMs ** 2) / GRAVITY);
 }
 
-/** Chop the wind raises over the open water upwind of the site, from the ray nearest the wind's direction. */
+/** Wind direction spread for local chop: the wind is never one bearing, so chop is averaged over this much each side. */
+const WIND_SPREAD_DEG = 45;
+
+/**
+ * Chop the wind raises over the open water upwind of the site. The wind's direction wanders, so the chop is the
+ * energy mean (cos² weights, as for the swell) over WIND_SPREAD_DEG each side of it, each direction's fetch read
+ * between the table's entries. A direction whose ray runs out to sea adds nothing here: the wave model covers it.
+ */
 function localChopM(exposure: SiteExposure, wind: WindHour): number {
   const count = exposure.fetchKm.length;
-  const index = ((Math.round(wind.fromDeg / (360 / count)) % count) + count) % count;
-  const fetchKm = exposure.fetchKm[index];
-  return fetchKm == null ? 0 : fetchLimitedChopM(wind.speedMs, fetchKm);
+  const stepDeg = 360 / count;
+  const chopAt = (index: number) => {
+    const fetchKm = exposure.fetchKm[((index % count) + count) % count];
+    return fetchKm == null ? 0 : fetchLimitedChopM(wind.speedMs, fetchKm);
+  };
+  let energy = 0;
+  let weights = 0;
+  for (let offset = -WIND_SPREAD_DEG; offset <= WIND_SPREAD_DEG; offset += 5) {
+    const weight = Math.cos((offset * Math.PI) / 180) ** 2;
+    const position = (wind.fromDeg + offset) / stepDeg;
+    const low = Math.floor(position);
+    const share = position - low;
+    const chop = chopAt(low) * (1 - share) + chopAt(low + 1) * share;
+    energy += weight * chop ** 2;
+    weights += weight;
+  }
+  return Math.sqrt(energy / weights);
 }
 
 export function seaBand(feltM: number): SeaBand {

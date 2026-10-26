@@ -5,9 +5,12 @@ import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
-import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
-import { readShelterGrid, SHELTER_STEP_DEG, shelterBands } from "./shelter-grid";
-import { rimForAtoll, rimWayId } from "./rim";
+import { exposureIslands, exposureRings, loadOffshore, seaStateHours, siteSeaState, type Offshore } from "./sea-state";
+import { readShelterGrid, SHELTER_STEP_DEG, shelterField } from "./shelter-grid";
+import { readIslands } from "./islands";
+import { readOpenings } from "./openings";
+import { pointInRing, rimForAtoll, rimWayId, type RimRing } from "./rim";
+import { siteExposure } from "./wave-exposure";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
@@ -350,27 +353,37 @@ function slugFromName(name: string): string {
   return trimmed || "site";
 }
 
-/** One atoll's sheltered-water cells for the map, as lib/shelter-grid.ts lays them out. */
+/** One atoll's felt height on its 500 m grid for the map: one byte per cell, row 0 at the south (lib/shelter-grid.ts). */
 export type ShelterAtoll = {
+  wayId: string;
   south: number;
   west: number;
   stepDeg: number;
-  runs: [number, number, number][];
-  /** One letter per cell in run order: c calm, m moderate, h choppy, r rough, ? unknown. */
-  bands: string;
+  rows: number;
+  columns: number;
+  /** Base64 bytes: felt height in FIELD_STEP_M, FIELD_NONE where there is no water cell, FIELD_UNKNOWN where unknown. */
+  values: string;
 };
-export type ShelterView = { time: string; atolls: ShelterAtoll[]; stale: boolean };
+/** The hour shown, the hours that can be picked (from now, as far as the waves go), and the atolls in view. */
+export type ShelterView = { time: string; hours: string[]; atolls: ShelterAtoll[]; stale: boolean };
+
+/** Hours the layer offers: from the current one, three days on. */
+const SHELTER_HOURS = 72;
 
 /**
- * The sea band in every lagoon cell of the atolls in view, for the current Maldives hour. An atoll whose offshore
- * waves are not loaded yet is left out, and its fetch runs in the background for the next view.
+ * Felt height in every lagoon cell of the atolls in view, at `time` (a Maldives wall hour) or the current hour. An
+ * atoll whose offshore waves are not loaded yet is left out, and its fetch runs in the background for the next view.
  */
-export async function getShelter(view: { south: number; west: number; north: number; east: number }): Promise<ShelterView> {
+export async function getShelter(
+  view: { south: number; west: number; north: number; east: number },
+  time?: string,
+): Promise<ShelterView> {
   const { south, west, north, east } = view ?? {};
   if (![south, west, north, east].every((value) => typeof value === "number" && Number.isFinite(value))) {
     throw new Error("Bad view");
   }
-  const time = `${toMaldivesWall(new Date().toISOString()).slice(0, 13)}:00`;
+  if (time !== undefined && !/^\d{4}-\d{2}-\d{2}T\d{2}:00$/.test(time)) throw new Error("Bad time");
+  const now = currentHour();
   const grid = readShelterGrid();
   const seen = new Set<string>();
   const wanted = readCatalog().atolls.filter((atoll) => {
@@ -379,20 +392,95 @@ export async function getShelter(view: { south: number; west: number; north: num
     // Two catalog atolls can share one outline; draw it once.
     if (!ring || !grid.atolls[wayId] || seen.has(wayId)) return false;
     seen.add(wayId);
-    const lats = ring.map((point) => point[0]);
-    const lons = ring.map((point) => point[1]);
-    return Math.max(...lats) >= south && Math.min(...lats) <= north && Math.max(...lons) >= west && Math.min(...lons) <= east;
+    const { south: ringSouth, north: ringNorth, west: ringWest, east: ringEast } = ringBox(ring);
+    return ringNorth >= south && ringSouth <= north && ringEast >= west && ringWest <= east;
   });
-  let stale = false;
-  const atolls = await Promise.all(
-    wanted.map(async (atoll): Promise<ShelterAtoll | null> => {
-      const offshore = await loadOffshore(atoll, { wait: false }).catch(() => null);
-      if (!offshore || offshore.sides.length === 0) return null;
-      stale ||= offshore.stale;
-      const wayId = rimWayId(atoll);
-      const { south: gridSouth, west: gridWest, runs } = grid.atolls[wayId];
-      return { south: gridSouth, west: gridWest, stepDeg: SHELTER_STEP_DEG, runs, bands: shelterBands(wayId, offshore, time) };
-    }),
+  const loaded = await Promise.all(
+    wanted.map(async (atoll) => ({ atoll, offshore: await loadOffshore(atoll, { wait: false }).catch(() => null) })),
   );
-  return { time, atolls: atolls.filter((atoll): atoll is ShelterAtoll => atoll != null), stale };
+  const ready = loaded.filter((item): item is { atoll: Atoll; offshore: Offshore } => item.offshore != null && item.offshore.sides.length > 0);
+  const hours = [...new Set(ready.flatMap(({ offshore }) => offshore.sides.flatMap((side) => side.hours.map((hour) => hour.time))))]
+    .filter((hour) => hour >= now)
+    .sort()
+    .slice(0, SHELTER_HOURS);
+  const shown = time && hours.includes(time) ? time : now;
+  const atolls: ShelterAtoll[] = [];
+  for (const { atoll, offshore } of ready) {
+    const wayId = rimWayId(atoll);
+    const field = shelterField(wayId, offshore, shown);
+    if (!field) continue;
+    atolls.push({
+      wayId,
+      south: field.south,
+      west: field.west,
+      stepDeg: SHELTER_STEP_DEG,
+      rows: field.rows,
+      columns: field.columns,
+      values: Buffer.from(field.values).toString("base64"),
+    });
+  }
+  return { time: shown, hours, atolls, stale: ready.some(({ offshore }) => offshore.stale) };
+}
+
+/** An atoll's outline and the islands inside it, for the map to cut the shading to water. */
+export async function getShelterShapes(wayId: string): Promise<{ outline: RimRing; islands: RimRing[] } | null> {
+  if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
+  const atoll = readCatalog().atolls.find((item) => rimWayId(item) === wayId);
+  const outline = rimForAtoll(atoll);
+  if (!outline) return null;
+  const box = ringBox(outline);
+  const islands = readIslands()
+    .map((island) => island.ring)
+    .filter((ring) => {
+      const island = ringBox(ring);
+      return island.north >= box.south && island.south <= box.north && island.east >= box.west && island.west <= box.east;
+    });
+  return { outline, islands };
+}
+
+/**
+ * The sea state at one point of a lagoon, traced on its own (not read off the grid), for the map's tap readout.
+ * Null outside every atoll outline or on land.
+ */
+export async function getShelterPoint(lat: number, lon: number, time: string): Promise<SeaStateHour | "unknown" | null> {
+  if (![lat, lon].every((value) => typeof value === "number" && Number.isFinite(value))) throw new Error("Bad point");
+  if (typeof time !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:00$/.test(time)) throw new Error("Bad time");
+  const atoll = readCatalog().atolls.find((item) => {
+    const ring = rimForAtoll(item);
+    return ring != null && pointInRing(lat, lon, ring);
+  });
+  if (!atoll) return null;
+  if (readIslands().some((island) => pointInRing(lat, lon, island.ring))) return null;
+  const offshore = await loadOffshore(atoll, { wait: false }).catch(() => null);
+  if (!offshore || offshore.sides.length === 0) return "unknown";
+  const exposure = siteExposure(
+    { lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: rimWayId(atoll) },
+    exposureRings(),
+    readOpenings(),
+    exposureIslands(),
+  );
+  const [hour] = seaStateHours({
+    sides: offshore.sides.map((side) => ({ sideDeg: side.sideDeg, hours: side.hours.filter((item) => item.time === time) })),
+    exposure,
+    wind: (offshore.wind ?? []).filter((item) => item.time === time),
+  });
+  return hour ?? "unknown";
+}
+
+function currentHour(): string {
+  return `${toMaldivesWall(new Date().toISOString()).slice(0, 13)}:00`;
+}
+
+function ringBox(ring: RimRing): { south: number; north: number; west: number; east: number } {
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const [lat, lon] of ring) {
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+  }
+  return { south, north, west, east };
 }
