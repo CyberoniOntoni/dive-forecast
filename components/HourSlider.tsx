@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
+import { seaDetail } from "@/lib/sea-text";
 import { compassWord, confidenceOpacity, onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Strength } from "@/lib/types";
 
@@ -234,7 +235,7 @@ function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
           {SEA_LABEL[sea.band].toLowerCase()}
         </span>
         <span className="text-foam/80"> · {seaDetail(sea)}</span>
-        {stale ? <span className="text-foam/80"> (old wave data)</span> : null}
+        {stale ? <span className="text-foam/80"> (old wave or wind data)</span> : null}
       </p>
       {sea.againstCurrent ? (
         <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
@@ -243,20 +244,6 @@ function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
   );
 }
 
-/** "1.2 m swell from SW, 11 s · 0.4 m wind chop", leaving out what is too small to feel. */
-export function seaDetail(sea: SeaStateHour): string {
-  const parts: string[] = [];
-  if (sea.swell) {
-    const period = sea.swell.periodS == null ? "" : `, ${Math.round(sea.swell.periodS)} s`;
-    parts.push(`${metres(sea.swell.heightM)} swell from ${compassWord(sea.swell.fromDeg)}${period}`);
-  }
-  if (sea.windWaveM >= 0.1) parts.push(`${metres(sea.windWaveM)} wind chop`);
-  return parts.length > 0 ? parts.join(" · ") : "no swell or wind chop to speak of";
-}
-
-function metres(value: number): string {
-  return `${(Math.round(value * 10) / 10).toFixed(1)} m`;
-}
 
 /** One cell per forecast hour, coloured by sea band, under the week strip so a calm window can be picked by eye. */
 function SeaStrip({

@@ -7,6 +7,7 @@ import {
   type AtlasTile,
   type AtlasTileEntry,
 } from "./atlas-overlays";
+import { shelterLayer, type ShelterLayer, type ShelterSource } from "./shelter-layer";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -23,6 +24,7 @@ export type OverlayId =
   | "depthShading"
   | "sonarDepths"
   | "depthContours"
+  | "shelter"
   | "grid";
 
 export type LayerChoice = { base: BaseId; overlays: Record<OverlayId, boolean> };
@@ -41,6 +43,7 @@ export const OVERLAYS: readonly { id: OverlayId; label: string; defaultOn: boole
   { id: "depthShading", label: "Depth shading", defaultOn: false },
   { id: "sonarDepths", label: "Sonar depths", defaultOn: false },
   { id: "depthContours", label: "Depth contours", defaultOn: false },
+  { id: "shelter", label: "Sheltered water", defaultOn: false },
   { id: "grid", label: "Coordinate grid", defaultOn: true },
 ];
 
@@ -228,7 +231,7 @@ function atlasLegend(L: LeafletLib, map: LeafletMap, overlay: AtlasOverlay) {
   return {
     show() {
       if (control) return;
-      control = new L.Control({ position: "topleft" });
+      control = new L.Control({ position: "topright" });
       control.onAdd = () => {
         const box = L.DomUtil.create("div", "dive-atlas-legend");
         L.DomEvent.disableClickPropagation(box);
@@ -316,7 +319,7 @@ function baseLayer(L: LeafletLib, id: BaseId): Layer {
   return L.layerGroup();
 }
 
-function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
+function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap, shelter: ShelterLayer): Layer {
   switch (id) {
     case "seamarks":
       return L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", { maxZoom: 18, attribution: OPENSEAMAP });
@@ -351,13 +354,20 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap): Layer {
     case "bottomTypes":
     case "reefOutline":
       return atlasLayer(L, map, ATLAS_OVERLAYS[id]);
+    case "shelter":
+      return shelter.layer;
     case "grid":
       return coordinateGrid(L, map);
   }
 }
 
 /** Adds the saved base and overlays, and a layer switcher under the zoom buttons that remembers what the viewer picks. */
-export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
+export function addMapLayers(
+  L: LeafletLib,
+  map: LeafletMap,
+  options: { shelter?: ShelterSource } = {},
+): { readSea: (lat: number, lon: number) => boolean } {
+  const shelter = shelterLayer(L, map, options.shelter);
   const choice = readLayerChoice();
   choice.base = readableBase(choice);
   const bases: Record<string, Layer> = {};
@@ -374,7 +384,7 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
     if (item.id === choice.base) layer.addTo(map);
   }
   for (const item of OVERLAYS) {
-    const layer = overlayLayer(L, item.id, map);
+    const layer = overlayLayer(L, item.id, map, shelter);
     overlays[item.label] = layer;
     overlayByLabel.set(item.label, item.id);
     if (choice.overlays[item.id]) layer.addTo(map);
@@ -385,6 +395,7 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap): void {
   // Leaflet adds layers only once the map has its first view, and removes them all when it is torn down. Both fire
   // the switcher's events, so listen only in between: from the first view (after the initial adds) until unload.
   map.whenReady(() => listenForChoices(map, choice, baseById, baseByLabel, overlayByLabel));
+  return { readSea: shelter.read };
 }
 
 function listenForChoices(

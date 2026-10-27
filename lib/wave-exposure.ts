@@ -19,6 +19,11 @@ export const REEF_TRANSMISSION = 0.15;
 export const RAY_KM = 60;
 /** Fetch at which wind waves reach the offshore wind-wave height. */
 export const FULL_FETCH_KM = 60;
+/**
+ * Calm water just behind a wooded island: the trees lift the wind off the surface for some way downwind (roughly
+ * 10 to 20 tree heights). A first guess.
+ */
+export const WIND_SHADOW_KM = 0.2;
 /** Fetch behind a wall's own reef for wind from the lagoon side. */
 const OWN_LEE_FETCH_KM = 0.5;
 /** A gap's spread: a site this many gap-widths behind it keeps the full swell; past that it falls with sqrt(distance). */
@@ -52,11 +57,28 @@ export type ExposureSite = {
   ownWayId: string | null;
 };
 
-/** Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from north). */
-export type SiteExposure = { swell: number[]; wind: number[] };
+/**
+ * Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from
+ * north). fetchKm is the open water upwind of the site in each direction before the first reef (or the wall's own reef
+ * on its lagoon side), for wind chop raised locally; null where the ray runs out to sea, which the wave model covers.
+ * swell and wind are spread over ±45° (the seas fan out); rayWind is each ray's own wind share before that spread,
+ * which says whether the water behind that ray's fetch is sheltered or open but for a sliver.
+ */
+export type SiteExposure = { swell: number[]; wind: number[]; rayWind: number[]; fetchKm: (number | null)[] };
+
+/** An island in the ray tracer: its outline, and whether trees on it shelter the water behind from the wind. */
+export type ExposureIsland = { ring: RimRing; wooded: boolean };
 
 type Vec = [number, number];
+/** One edge of an atoll outline. */
 type Segment = { from: Vec; to: Vec; wayId: string };
+/**
+ * Islands are not traced along the rays but by the arc of the horizon each one fills, in steps this fine, so an island
+ * narrower than the STEP_DEG between two rays still casts its shadow, in proportion to how much of the sky it covers.
+ */
+const ARC_STEP_DEG = 0.5;
+const ARCS = 360 / ARC_STEP_DEG;
+const ARCS_PER_RAY = STEP_DEG / ARC_STEP_DEG;
 
 /**
  * A rim site sits on its own reef, but the pin is never exactly on the coarse outline: a pin set by hand as a channel
@@ -68,6 +90,7 @@ export function siteExposure(
   site: ExposureSite,
   rings: readonly ExposureRing[],
   openings: readonly GapOpening[],
+  islands: readonly ExposureIsland[] = [],
 ): SiteExposure {
   const reachLat = RAY_KM / KM_PER_DEG_LAT + 0.1;
   const project = (lat: number, lon: number): Vec => [
@@ -86,23 +109,56 @@ export function siteExposure(
       segments.push({ from: points[index], to: points[index + 1], wayId });
     }
   }
+  const shadows = islandShadows(
+    islands
+      .filter(({ ring }) => ring.some(([lat, lon]) => Math.abs(lat - site.lat) < reachLat && Math.abs(lon - site.lon) < reachLat))
+      .map(({ ring, wooded }) => ({ points: ring.map(([lat, lon]) => project(lat, lon)), wooded })),
+  );
+  const byRay = segmentsByRay(segments);
   const gaps = openings
     .map((opening) => ({ at: project(opening.lat, opening.lon), opening }))
     .filter(({ at }) => Math.hypot(at[0], at[1]) < RAY_KM + 2);
 
   const raySwell: number[] = [];
   const rayWind: number[] = [];
+  const fetchKm: (number | null)[] = [];
   for (let index = 0; index < DIRECTIONS; index += 1) {
-    const ray = traceRay(index * STEP_DEG, site, segments, gaps, ownSkipKm);
-    raySwell.push(ray.swell);
-    rayWind.push(ray.wind);
+    const ray = traceRay(index * STEP_DEG, site, byRay[index], gaps, ownSkipKm);
+    const shaded = ray.lee ? ray : withIslands(ray, index, shadows);
+    raySwell.push(shaded.swell);
+    rayWind.push(shaded.wind);
+    fetchKm.push(shaded.fetchKm == null ? null : Math.round(shaded.fetchKm * 100) / 100);
   }
-  return { swell: spread(raySwell), wind: spread(rayWind) };
+  return { swell: spread(raySwell), wind: spread(rayWind), rayWind: rayWind.map((share) => Math.round(share * 100) / 100), fetchKm };
 }
 
-/** The table's share for seas from `fromDeg`, between its STEP_DEG entries. */
+/**
+ * The segments each ray can cross: those whose ends, seen from the site, lie either side of the ray's bearing. With
+ * long outlines nearby, this keeps each ray to the few edges it might hit.
+ */
+function segmentsByRay(segments: readonly Segment[]): Segment[][] {
+  const byRay: Segment[][] = Array.from({ length: DIRECTIONS }, () => []);
+  for (const segment of segments) {
+    if (Math.hypot(...segment.from) > RAY_KM + 1 && Math.hypot(...segment.to) > RAY_KM + 1) continue;
+    let low = bearingOf(segment.from);
+    let span = bearingOf(segment.to) - low;
+    if (span > 180) span -= 360;
+    if (span < -180) span += 360;
+    if (span < 0) {
+      low += span;
+      span = -span;
+    }
+    // A segment through the site itself spans 180°; any ray may touch it.
+    const first = Math.ceil(low / STEP_DEG - 1e-9);
+    const last = Math.floor((low + span) / STEP_DEG + 1e-9);
+    for (let step = first; step <= last; step += 1) byRay[((step % DIRECTIONS) + DIRECTIONS) % DIRECTIONS].push(segment);
+  }
+  return byRay;
+}
+
+/** The table's share for seas from `fromDeg`, between its entries (evenly spaced round the compass, 0 = from north). */
 export function exposureAt(table: readonly number[], fromDeg: number): number {
-  const position = ((((fromDeg % 360) + 360) % 360) / STEP_DEG) % table.length;
+  const position = ((((fromDeg % 360) + 360) % 360) / (360 / table.length)) % table.length;
   const low = Math.floor(position);
   const high = (low + 1) % table.length;
   const share = position - low;
@@ -115,10 +171,15 @@ function traceRay(
   segments: readonly Segment[],
   gaps: readonly { at: Vec; opening: GapOpening }[],
   ownSkipKm: number,
-): { swell: number; wind: number } {
+): { swell: number; wind: number; fetchKm: number | null; lee: boolean } {
   if (site.kind === "wall" && site.inwardBearingDeg != null && angleBetween(towardDeg, site.inwardBearingDeg) < 90) {
     // The lagoon side of a wall: the wall's own reef and island are between the sea and the dive.
-    return { swell: REEF_TRANSMISSION, wind: Math.max(REEF_TRANSMISSION, fetchShare(OWN_LEE_FETCH_KM)) };
+    return {
+      swell: REEF_TRANSMISSION,
+      wind: Math.max(REEF_TRANSMISSION, fetchShare(OWN_LEE_FETCH_KM)),
+      fetchKm: OWN_LEE_FETCH_KM,
+      lee: true,
+    };
   }
   const radians = (towardDeg * Math.PI) / 180;
   const direction: Vec = [Math.sin(radians), Math.cos(radians)];
@@ -130,7 +191,7 @@ function traceRay(
       return [{ km, wayId: segment.wayId }];
     })
     .sort((a, b) => a.km - b.km);
-  if (hits.length === 0) return { swell: 1, wind: 1 };
+  if (hits.length === 0) return { swell: 1, wind: 1, fetchKm: null, lee: false };
 
   let swell = 1;
   for (const { km, wayId } of hits) {
@@ -147,7 +208,124 @@ function traceRay(
     const widthKm = gap.opening.widthM / 1000;
     swell *= (gap.opening.reefFlatBridges ? BRIDGED_GAP : 1) * Math.min(1, Math.sqrt((GAP_SPREAD_WIDTHS * widthKm) / km));
   }
-  return { swell, wind: Math.max(swell, fetchShare(hits[0].km)) };
+  // The open water the wind has to raise chop over, up to the first reef.
+  const fetchKm = hits[0].km;
+  return { swell, wind: Math.max(swell, fetchShare(fetchKm)), fetchKm, lee: false };
+}
+
+/** A share of one arc that a wooded island fills, and its shore along the arc's bearing, km. */
+type Shore = { share: number; km: number };
+
+/**
+ * Round the horizon in ARC_STEP_DEG arcs: how much of each arc land fills (0 to 1); and for wooded islands, the
+ * shores across each arc, nearest first, each with the share of the arc it fills that no nearer shore already does
+ * (the shares sum to at most 1). Arcs with no wooded island have no entry.
+ */
+type Shadows = { land: Float32Array; shores: Map<number, Shore[]> };
+
+function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): Shadows {
+  const land = new Float32Array(ARCS);
+  const found = new Map<number, Shore[]>();
+  for (const { points, wooded: trees } of islands) {
+    let nearKm = Number.POSITIVE_INFINITY;
+    for (let index = 0; index + 1 < points.length; index += 1) nearKm = Math.min(nearKm, distanceToSegment(points[index], points[index + 1]));
+    if (nearKm > RAY_KM) continue;
+    // The arc the island spans, followed round its outline so it may straddle north.
+    const start = bearingOf(points[0]);
+    let turned = 0;
+    let low = 0;
+    let high = 0;
+    for (let index = 1; index < points.length; index += 1) {
+      let step = bearingOf(points[index]) - bearingOf(points[index - 1]);
+      if (step > 180) step -= 360;
+      if (step < -180) step += 360;
+      turned += step;
+      low = Math.min(low, turned);
+      high = Math.max(high, turned);
+    }
+    // An outline that winds right round the point has it on land; no site or cell sits there.
+    if (Math.abs(turned) > 180) continue;
+    const from = (start + low) / ARC_STEP_DEG;
+    const to = (start + high) / ARC_STEP_DEG;
+    for (let arc = Math.floor(from); arc < Math.ceil(to); arc += 1) {
+      const covered = Math.min(to, arc + 1) - Math.max(from, arc);
+      const at = ((arc % ARCS) + ARCS) % ARCS;
+      land[at] = Math.max(land[at], covered);
+      if (!trees) continue;
+      // The shore along the middle of the part of this arc the island fills, as a reef's fetch is read along its ray.
+      const radians = (((Math.max(from, arc) + Math.min(to, arc + 1)) / 2) * ARC_STEP_DEG * Math.PI) / 180;
+      const direction: Vec = [Math.sin(radians), Math.cos(radians)];
+      let shoreKm = Number.POSITIVE_INFINITY;
+      for (let index = 0; index + 1 < points.length; index += 1) {
+        const km = crossingKm(direction, points[index], points[index + 1]);
+        if (km != null) shoreKm = Math.min(shoreKm, km);
+      }
+      if (shoreKm === Number.POSITIVE_INFINITY) continue;
+      const list = found.get(at);
+      if (list) list.push({ share: covered, km: shoreKm });
+      else found.set(at, [{ share: covered, km: shoreKm }]);
+    }
+  }
+  // Nearest shore first; a farther one only adds the part of the arc the nearer ones leave open.
+  const shores = new Map<number, Shore[]>();
+  for (const [at, list] of found) {
+    let filled = 0;
+    const kept: Shore[] = [];
+    for (const { share, km } of list.sort((a, b) => a.km - b.km)) {
+      const adds = Math.min(share, 1 - filled);
+      if (adds <= 0) break;
+      kept.push({ share: adds, km });
+      filled += adds;
+    }
+    shores.set(at, kept);
+  }
+  return { land, shores };
+}
+
+/**
+ * A ray's reef-only exposure with the islands across its STEP_DEG of horizon. Land stops swell outright, so the swell
+ * keeps only the share of the ray's arcs that no island fills. A wooded island ends the wind's fetch WIND_SHADOW_KM
+ * short of its shore, if that is nearer than the reef; bare sand islands block swell but not the wind. The ray's fetch
+ * is the shortest of its arcs' (as a grid bin keeps the shortest of its rays'), so a lee on any arc is kept; the wind
+ * share counts each part of an arc at its own shore's fetch, and the rest of the arc at the reef's.
+ */
+function withIslands(
+  ray: { swell: number; wind: number; fetchKm: number | null },
+  index: number,
+  { land, shores }: Shadows,
+): { swell: number; wind: number; fetchKm: number | null } {
+  let open = 0;
+  let windSum = 0;
+  let fetchKm = ray.fetchKm;
+  const reefWind = ray.fetchKm == null ? 1 : fetchShare(ray.fetchKm);
+  for (let offset = -ARCS_PER_RAY / 2; offset < ARCS_PER_RAY / 2; offset += 1) {
+    const at = (((index * ARCS_PER_RAY + offset) % ARCS) + ARCS) % ARCS;
+    open += 1 - land[at];
+    let calmed = 0;
+    let arcWind = 0;
+    for (const shore of shores.get(at) ?? []) {
+      const island = Math.max(0, shore.km - WIND_SHADOW_KM);
+      if (ray.fetchKm != null && island >= ray.fetchKm) continue;
+      calmed += shore.share;
+      arcWind += shore.share * fetchShare(island);
+      fetchKm = fetchKm == null ? island : Math.min(fetchKm, island);
+    }
+    windSum += arcWind + (1 - calmed) * reefWind;
+  }
+  const swell = ray.swell * (open / ARCS_PER_RAY);
+  return { swell, wind: Math.max(swell, windSum / ARCS_PER_RAY), fetchKm };
+}
+
+function bearingOf([x, y]: Vec): number {
+  return (((Math.atan2(x, y) * 180) / Math.PI) % 360 + 360) % 360;
+}
+
+/** Km from the origin to the nearest point of the segment. */
+function distanceToSegment(from: Vec, to: Vec): number {
+  const edge: Vec = [to[0] - from[0], to[1] - from[1]];
+  const length = edge[0] ** 2 + edge[1] ** 2;
+  const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(from[0] * edge[0] + from[1] * edge[1]) / length));
+  return Math.hypot(from[0] + along * edge[0], from[1] + along * edge[1]);
 }
 
 /** Wind-wave height share grown over this fetch: fetch-limited growth goes as its square root. */
@@ -196,11 +374,7 @@ const WAVE_GRID_DEG = 1 / 12;
  * edge on that side and snapped to the wave model's grid.
  */
 export function offshorePoints(ring: RimRing): { sideDeg: number; lat: number; lon: number }[] {
-  const open = ring.slice(0, -1);
-  const centre = {
-    lat: open.reduce((sum, point) => sum + point[0], 0) / open.length,
-    lon: open.reduce((sum, point) => sum + point[1], 0) / open.length,
-  };
+  const centre = ringCentre(ring);
   const project = (lat: number, lon: number): Vec => [
     (lon - centre.lon) * KM_PER_DEG_LON * Math.cos((centre.lat * Math.PI) / 180),
     (lat - centre.lat) * KM_PER_DEG_LAT,
@@ -219,6 +393,20 @@ export function offshorePoints(ring: RimRing): { sideDeg: number; lat: number; l
     sides.push({ sideDeg, lat: snap(at.lat), lon: snap(at.lon) });
   }
   return sides;
+}
+
+/** The mean of an outline's points: the atoll's middle, where its one wind sample is taken. */
+export function ringCentre(ring: RimRing): { lat: number; lon: number } {
+  const open = ring.slice(0, -1);
+  return {
+    lat: open.reduce((sum, point) => sum + point[0], 0) / open.length,
+    lon: open.reduce((sum, point) => sum + point[1], 0) / open.length,
+  };
+}
+
+/** A position snapped to the wave model's grid, so nearby samples share one cache file. */
+export function snapToWaveGrid(point: { lat: number; lon: number }): { lat: number; lon: number } {
+  return { lat: snap(point.lat), lon: snap(point.lon) };
 }
 
 function snap(degrees: number): number {

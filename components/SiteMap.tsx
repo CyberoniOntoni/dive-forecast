@@ -8,6 +8,7 @@ import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
+import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
 import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
@@ -160,6 +161,21 @@ const MAP_STYLE = `
 .dive-atlas-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
 .dive-atlas-legend ul{list-style:none;margin:0;padding:0}
 .dive-atlas-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dive-shelter-legend{min-width:210px;max-width:240px}
+.dive-shelter-time{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
+.dive-shelter-time>span{flex:1;text-align:center}
+.dive-shelter-time button{min-width:28px;height:28px;border-radius:4px;border:1px solid color-mix(in srgb, var(--foam) 35%, transparent);background:transparent;color:var(--foam);font:600 14px/1 inherit;cursor:pointer}
+.dive-shelter-time button.dive-shelter-now{padding:0 6px;font-size:12px}
+.dive-shelter-time button:disabled{opacity:.35;cursor:default}
+.dive-shelter-time button:focus-visible{outline:2px solid var(--incoming);outline-offset:1px}
+.dive-shelter-bar{height:10px;border-radius:3px;opacity:.85}
+.dive-shelter-ticks{position:relative;height:30px;margin:2px 0 2px;font-size:10px;line-height:12px}
+.dive-shelter-ticks span{position:absolute;top:0;width:44px;margin-left:-1px;padding-left:3px;border-left:1px solid color-mix(in srgb, var(--foam) 60%, transparent)}
+.dive-shelter-note{margin:2px 0 0}
+.dive-shelter-ticks small{display:block;font-size:10px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
+@media (max-width:640px){.dive-shelter-legend{min-width:0;width:210px;max-width:210px}.dive-shelter-time{font-size:11px}.dive-shelter-ticks{height:14px}.dive-shelter-ticks small,.dive-shelter-tick-mid,.dive-shelter-note,.dive-shelter-date{display:none}}
+.dive-shelter-popup p{margin:0 0 2px}
+.dive-shelter-popup-head{font-weight:600}
 .dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
 .dive-cluster-icon{background:transparent;border:none}
 .dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
@@ -177,13 +193,15 @@ function mountDiveMap(
   hooks: {
     isAdding: () => boolean;
     onPick: (point: Point) => void;
+    /** Clears the spotlight ring if one is up; true when it did. */
+    clearSpotlight: () => boolean;
     onZoom: (zoom: number) => void;
     onView: (view: MapView) => void;
   },
 ): { map: LeafletMapType; pins: MarkerClusterGroup; destroy: () => void } {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  addMapLayers(L, map);
+  const { readSea } = addMapLayers(L, map, { shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint } });
   const pins = L.markerClusterGroup({
     disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,
     maxClusterRadius: 48,
@@ -209,9 +227,12 @@ function mountDiveMap(
   if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
   else frameSites(L, map, siteGlances);
 
+  // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
+  // sea state where the sheltered-water layer is on.
   map.on("click", (event: LeafletMouseEvent) => {
-    if (!hooks.isAdding()) return;
-    hooks.onPick({ lat: event.latlng.lat, lon: event.latlng.lng });
+    const { lat, lng } = event.latlng;
+    if (hooks.isAdding()) hooks.onPick({ lat, lon: lng });
+    else if (!hooks.clearSpotlight()) readSea(lat, lng);
   });
 
   const resize = new ResizeObserver(() => {
@@ -241,10 +262,10 @@ function frameOn(map: LeafletMapType, bounds: ReturnType<LeafletLib["latLngBound
 
 /**
  * Ring one site and fly to it: centred, close enough that pins no longer cluster (spotlightZoom). The ring carries
- * the site's label as a permanent tooltip, so it reads at once even while the pin is still inside a cluster. A click
- * on the map calls `onClear`. Returns the cleanup, which removes the ring and the click listener.
+ * the site's label as a permanent tooltip, so it reads at once even while the pin is still inside a cluster. A map
+ * click clears it (through mountDiveMap's click handler). Returns the cleanup, which removes the ring.
  */
-function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance, onClear: () => void): () => void {
+function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance): () => void {
   const point = L.latLng(item.site.lat, item.site.lon);
   const ring = L.marker(point, {
     icon: L.divIcon({ className: "dive-spotlight", html: "<span></span>", iconSize: [52, 52], iconAnchor: [26, 26] }),
@@ -254,10 +275,8 @@ function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance, o
   })
     .bindTooltip(escapeHtml(withAge(item.glance.spoken, item.age)), { permanent: true, direction: "top", offset: [0, -26] })
     .addTo(map);
-  map.on("click", onClear);
   frameOn(map, L.latLngBounds(point, point), spotlightZoom(map.getZoom()), true);
   return () => {
-    map.off("click", onClear);
     ring.remove();
   };
 }
@@ -384,6 +403,8 @@ const LeafletMap = dynamic(
       onSpotlightClear,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
+      // Set while the spotlight ring is on the map, so a map click knows to clear it.
+      const spotlightUpRef = useRef(false);
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
       const pinsRef = useRef<MarkerClusterGroup | null>(null);
@@ -414,6 +435,11 @@ const LeafletMap = dynamic(
         const mounted = mountDiveMap(L, container, siteGlances, {
           isAdding: () => addingRef.current,
           onPick: (point) => onPickRef.current(point),
+          clearSpotlight: () => {
+            if (!spotlightUpRef.current) return false;
+            onSpotlightClearRef.current();
+            return true;
+          },
           onZoom: (next) => setZoom(next),
           onView: (view) => onViewRef.current(view),
         });
@@ -470,7 +496,12 @@ const LeafletMap = dynamic(
         if (!map || mapEpoch === 0 || !spotlight) return;
         const item = siteGlances.find(({ site }) => site.id === spotlight.siteId);
         if (!item) return;
-        return attachSpotlight(L, map, item, () => onSpotlightClearRef.current());
+        const detach = attachSpotlight(L, map, item);
+        spotlightUpRef.current = true;
+        return () => {
+          spotlightUpRef.current = false;
+          detach();
+        };
         // Fly only when a site is picked, not when the forecast refreshes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [spotlight, mapEpoch]);

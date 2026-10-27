@@ -30,6 +30,7 @@ Marine-life forecasts, visibility as its own product, and 3D seafloor maps are n
 - Lagoon flow: thilas inside the atoll follow the water moving through the rim and channels.
 - The model, its constants and its limits are written down in `FORECAST_MODEL.md`.
 - Sea state on the site page: calm, moderate, choppy or rough each hour, with the swell and wind chop that reach the site after the atoll's shelter, a strip of the week under the current strip, and a warning on channels when swell runs into a strong outgoing current.
+- Sheltered-water map layer: every lagoon shaded by wave height for any hour over the next three days, smoothed and cut to the water, with islands and the local wind taken into account and a tap readout, to pick a calm anchorage.
 
 ## Before production
 

@@ -225,6 +225,12 @@ export const SEA_BANDS = ["calm", "moderate", "choppy", "rough"] as const;
 /** How rough the surface is at a site (lib/sea-state.ts). */
 export type SeaBand = (typeof SEA_BANDS)[number];
 
+/**
+ * Upper limits of each band on the felt height, metres. First guesses from the plan, to tune from reports.
+ * Rough is everything from 1.5 m up.
+ */
+export const SEA_BAND_LIMITS_M: Record<Exclude<SeaBand, "rough">, number> = { calm: 0.5, moderate: 1.0, choppy: 1.5 };
+
 /** A wave component as it arrives at the site: height in metres, the direction it comes from, period in seconds. */
 export type SiteWave = { heightM: number; fromDeg: number; periodS: number | null };
 
@@ -235,7 +241,10 @@ export type SeaStateHour = {
   feltM: number;
   /** The bigger swell reaching the site, or null when none does. */
   swell: SiteWave | null;
+  /** Wind chop at the site: the wave model's wind sea through the reef, or what the local wind raises, if bigger. */
   windWaveM: number;
+  /** The 10 m wind over the atoll that hour. */
+  wind: { speedMs: number; fromDeg: number } | null;
   /** A channel hour where swell runs into a strong outgoing current. */
   againstCurrent: boolean;
 };

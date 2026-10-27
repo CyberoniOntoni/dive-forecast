@@ -56,6 +56,7 @@ describe("layer choice", () => {
         depthShading: true,
         sonarDepths: false,
         depthContours: true,
+        shelter: true,
         grid: true,
       },
     };
@@ -117,3 +118,4 @@ describe("coordinate grid", () => {
     expect(formatGridLabel(0, "lat")).toBe("0°00′");
   });
 });
+

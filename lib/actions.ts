@@ -6,6 +6,8 @@ import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
+import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
+import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import {
@@ -346,4 +348,34 @@ function slugFromName(name: string): string {
   const dashed = letters.replace(/[^a-z0-9]+/g, "-");
   const trimmed = dashed.replace(/^-|-$/g, "");
   return trimmed || "site";
+}
+
+export type { ShelterAtoll, ShelterView } from "./shelter-grid";
+
+const WALL_HOUR = /^\d{4}-\d{2}-\d{2}T\d{2}:00$/;
+
+/** The sheltered-water layer's felt height for the view, at `time` (a Maldives wall hour) or now. */
+export async function getShelter(
+  view: { south: number; west: number; north: number; east: number },
+  time?: string,
+): Promise<ShelterView> {
+  const { south, west, north, east } = view ?? {};
+  if (![south, west, north, east].every((value) => typeof value === "number" && Number.isFinite(value))) {
+    throw new Error("Bad view");
+  }
+  if (time !== undefined && !WALL_HOUR.test(time)) throw new Error("Bad time");
+  return shelterView({ south, west, north, east }, time);
+}
+
+/** An atoll's outline and the islands in and round it, for the map to cut the shading to water. */
+export async function getShelterShapes(wayId: string): Promise<{ outline: RimRing; islands: RimRing[] } | null> {
+  if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
+  return shelterShapes(wayId);
+}
+
+/** The sea state at one tapped spot of the layer. */
+export async function getShelterPoint(lat: number, lon: number, time: string): Promise<SeaStateHour | "unknown" | null> {
+  if (![lat, lon].every((value) => typeof value === "number" && Number.isFinite(value))) throw new Error("Bad point");
+  if (typeof time !== "string" || !WALL_HOUR.test(time)) throw new Error("Bad time");
+  return shelterPoint(lat, lon, time);
 }
