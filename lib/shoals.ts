@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { ringProblem } from "./islands";
 import type { RimRing } from "./rim";
+import { REEF_TRANSMISSION } from "./wave-exposure";
 
 /**
  * Shoals inside atoll lagoons (data/shoals.json, from the Allen Coral Atlas reef zones; npm run shoals): reef tops
@@ -12,11 +13,10 @@ export type ShoalKind = "reef" | "shallow";
 export type Shoal = { kind: ShoalKind; ring: RimRing };
 
 /**
- * Share of the swell height left after crossing a shoal. A reef top breaks swell as the atoll's rim does
- * (REEF_TRANSMISSION in lib/wave-exposure.ts). Sand a few metres down only trips the bigger swells; half is a first
- * guess.
+ * Share of the swell height left after crossing a shoal. A reef top breaks swell as the atoll's rim does. Sand a few
+ * metres down only trips the bigger swells; half is a first guess.
  */
-export const SHOAL_TRANSMISSION: Record<ShoalKind, number> = { reef: 0.15, shallow: 0.5 };
+export const SHOAL_TRANSMISSION: Record<ShoalKind, number> = { reef: REEF_TRANSMISSION, shallow: 0.5 };
 
 const SHOALS_PATH = path.join(process.cwd(), "data", "shoals.json");
 let loadedShoals: Shoal[] | null = null;

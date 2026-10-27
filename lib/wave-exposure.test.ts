@@ -207,7 +207,10 @@ describe("siteExposure with islands", () => {
     expect(exposureAt(sand.swell, 90)).toBeLessThan(exposureAt(open.swell, 90));
     expect(exposureAt(sand.swell, 90)).toBeGreaterThan(exposureAt(behind.swell, 90));
     expect(exposureAt(behind.swell, 270)).toBeCloseTo(exposureAt(open.swell, 270), 3);
+    // Swell only: the wind blows on over a shoal, so its share, the unspread ray share and the fetch stay as they were.
     expect(behind.fetchKm).toEqual(open.fetchKm);
+    expect(behind.wind).toEqual(open.wind);
+    expect(behind.rayWind).toEqual(open.rayWind);
     // Out past the rim (and its gap), the reef has cut that swell already: the shoal adds nothing.
     const outside = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.06, 0.15)]);
     expect(outside.swell).toEqual(open.swell);

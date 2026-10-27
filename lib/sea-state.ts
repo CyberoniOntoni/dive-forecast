@@ -289,12 +289,13 @@ export function exposureIslands(): ExposureIsland[] {
   return readIslands().map((island) => ({ ring: island.ring, wooded: island.areaHa >= WOODED_MIN_HA }));
 }
 
-let shoalsMemo: { from: ReturnType<typeof readShoals>; shoals: ExposureShoal[] } | null = null;
+/** The tracer's shoals, kept against the readShoals() list they were built from (a new read rebuilds them). */
+let shoalsMemo: { read: ReturnType<typeof readShoals>; shoals: ExposureShoal[] } | null = null;
 
 /** Every lagoon shoal, for the ray tracer, with its box. Reads data/shoals.json, so a corrupt file throws here. */
 export function exposureShoals(): ExposureShoal[] {
   const read = readShoals();
-  if (shoalsMemo?.from === read) return shoalsMemo.shoals;
+  if (shoalsMemo?.read === read) return shoalsMemo.shoals;
   const shoals = read.map(({ kind, ring }) => ({
     ring,
     transmission: SHOAL_TRANSMISSION[kind],
@@ -303,7 +304,7 @@ export function exposureShoals(): ExposureShoal[] {
     west: Math.min(...ring.map(([, lon]) => lon)),
     east: Math.max(...ring.map(([, lon]) => lon)),
   }));
-  shoalsMemo = { from: read, shoals };
+  shoalsMemo = { read, shoals };
   return shoals;
 }
 
@@ -318,7 +319,7 @@ export function exposureForSite(
   const key = `${site.id}|${site.lat}|${site.lon}|${kind}|${inwardBearingDeg}|${ownWayId}`;
   const kept = exposureMemo.get(key);
   if (kept) return kept;
-  // Read first: a corrupt openings or islands file throws here and nothing is memoised.
+  // Read first: a corrupt openings, islands or shoals file throws here and nothing is memoised.
   const openings = readOpenings();
   const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, exposureRings(), openings, exposureIslands(), exposureShoals());
   exposureMemo.set(key, exposure);
