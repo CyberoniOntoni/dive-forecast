@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
-import { allRims, KM_PER_DEG_LAT, pointInRing, type RimRing } from "../lib/rim";
+import { allRims, KM_PER_DEG_LAT, pointInRing, ringBox, type RimRing, type RingBox } from "../lib/rim";
 import { exposureIslands, exposureRings, exposureShoals } from "../lib/sea-state";
 import {
   encodeCells,
@@ -36,14 +36,14 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
 const FINE_PER_COARSE = Math.round(SHELTER_STEP_DEG / SHELTER_FINE_STEP_DEG);
 
 type Region = "inner" | "outer" | "land" | "other" | null;
-type Box = { south: number; north: number; west: number; east: number };
+type Box = RingBox;
 
 function buildAtoll(wayId: string): ShelterAtollGrid {
   const outline = allRims().get(wayId) as RimRing;
   const padDeg = SHELTER_BAND_KM / KM_PER_DEG_LAT + 2 * SHELTER_STEP_DEG;
-  const reach = padBox(boxOf(outline), padDeg);
+  const reach = padBox(ringBox(outline), padDeg);
   const allIslands = exposureIslands();
-  const islands = allIslands.map(({ ring }) => ({ ring, box: boxOf(ring) })).filter(({ box }) => overlaps(box, reach));
+  const islands = allIslands.map(({ ring }) => ({ ring, box: ringBox(ring) })).filter(({ box }) => overlaps(box, reach));
   const rings = exposureRings();
   const openings = readOpenings();
   const shoals = exposureShoals();
@@ -152,19 +152,6 @@ class LayerBuilder {
   }
 }
 
-function boxOf(ring: RimRing): Box {
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
-  for (const [lat, lon] of ring) {
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lon);
-    east = Math.max(east, lon);
-  }
-  return { south, north, west, east };
-}
 
 function padBox(box: Box, by: number): Box {
   return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };

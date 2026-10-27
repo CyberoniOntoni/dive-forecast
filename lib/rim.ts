@@ -230,3 +230,20 @@ function insideKm(point: [number, number], ring: readonly [number, number][]): b
   }
   return inside;
 }
+
+/** The lat/lon box round a ring. */
+export type RingBox = { south: number; north: number; west: number; east: number };
+
+export function ringBox(ring: readonly (readonly [number, number])[]): RingBox {
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const [lat, lon] of ring) {
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+  }
+  return { south, north, west, east };
+}

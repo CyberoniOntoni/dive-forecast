@@ -1,6 +1,6 @@
 import { destinationKm } from "./marine";
 import type { ReefOpening } from "./openings";
-import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, type RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, ringBox, type RimRing } from "./rim";
 
 /**
  * How much of the open-ocean sea reaches a site, by the direction it comes from. The wave model (about 9 km) treats a
@@ -74,17 +74,7 @@ export type ExposureShoal = { ring: RimRing; transmission: number; south: number
 
 /** A shoal for the ray tracer, with the box read off its ring (the tracer's reach test uses the box). */
 export function exposureShoal(ring: RimRing, transmission: number): ExposureShoal {
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
-  for (const [lat, lon] of ring) {
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lon);
-    east = Math.max(east, lon);
-  }
-  return { ring, transmission, south, north, west, east };
+  return { ring, transmission, ...ringBox(ring) };
 }
 /**
  * Shoals are counted out to this far. A shoal is small next to an atoll's rim, and swell bends back in behind it within

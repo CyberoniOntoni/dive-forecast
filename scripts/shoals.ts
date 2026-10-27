@@ -28,7 +28,8 @@ const RIM_TOUCH_KM = 0.1;
 /** Two shoals whose outlines come this close are one reef. */
 const JOIN_KM = 0.03;
 
-type Candidate = { kind: ShoalKind; ring: RimRing; wayId: string; rim: boolean };
+/** partOfRim: the shoal is the rim's own reef (near the outline, or joined to a shoal that is). */
+type Candidate = { kind: ShoalKind; ring: RimRing; wayId: string; partOfRim: boolean };
 
 function main(): void {
   const overlay = ATLAS_OVERLAYS.reefZones;
@@ -45,8 +46,8 @@ function main(): void {
       if (ring.length < 4) continue;
       const owner = rims.find(([, rim]) => ring.every(([lat, lon]) => pointInRing(lat, lon, rim)));
       if (!owner) continue;
-      const rim = ring.some(([lat, lon]) => outlineKm(lat, lon, owner[1]) <= RIM_TOUCH_KM);
-      candidates.push({ kind, ring, wayId: owner[0], rim });
+      const partOfRim = ring.some(([lat, lon]) => outlineKm(lat, lon, owner[1]) <= RIM_TOUCH_KM);
+      candidates.push({ kind, ring, wayId: owner[0], partOfRim });
     }
   }
 
@@ -62,7 +63,7 @@ function main(): void {
       else if (list[list.length - 1] !== index) list.push(index);
     }
   });
-  const queue = candidates.flatMap((candidate, index) => (candidate.rim ? [index] : []));
+  const queue = candidates.flatMap((candidate, index) => (candidate.partOfRim ? [index] : []));
   while (queue.length > 0) {
     const from = candidates[queue.pop() as number];
     for (const [lat, lon] of from.ring) {
@@ -72,8 +73,8 @@ function main(): void {
         for (let dColumn = -1; dColumn <= 1; dColumn += 1) {
           for (const index of buckets.get(`${row + dRow},${column + dColumn}`) ?? []) {
             const next = candidates[index];
-            if (next.rim || !touches(from.ring, next.ring)) continue;
-            next.rim = true;
+            if (next.partOfRim || !touches(from.ring, next.ring)) continue;
+            next.partOfRim = true;
             queue.push(index);
           }
         }
@@ -81,7 +82,7 @@ function main(): void {
     }
   }
 
-  const kept = candidates.filter((candidate) => !candidate.rim);
+  const kept = candidates.filter((candidate) => !candidate.partOfRim);
   const shoals = kept.map(({ kind, ring }) => ({ kind, ring: ring.map(([lat, lon]) => [round(lat), round(lon)]) }));
   const out = path.join(process.cwd(), "data", "shoals.json");
   fs.writeFileSync(out, `${JSON.stringify({ source: "Allen Coral Atlas geomorphic zones, CC BY 4.0", shoals })}\n`);

@@ -4,7 +4,7 @@ import zlib from "zlib";
 import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
-import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, type RimRing } from "./rim";
+import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, ringBox, type RimRing, type RingBox } from "./rim";
 import { blendSeaState, exposureIslands, exposureRings, exposureShoals, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
 import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
@@ -355,8 +355,8 @@ let ownerOutlines: OwnerOutline[] | null = null;
 let ownerIslands: { ring: RimRing; south: number; north: number; west: number; east: number }[] | null = null;
 
 export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null {
-  ownerOutlines ??= [...allRims()].map(([wayId, ring]) => ({ wayId, ring, ...boxOf(ring) }));
-  ownerIslands ??= readIslands().map(({ ring }) => ({ ring, ...boxOf(ring) }));
+  ownerOutlines ??= [...allRims()].map(([wayId, ring]) => ({ wayId, ring, ...ringBox(ring) }));
+  ownerIslands ??= readIslands().map(({ ring }) => ({ ring, ...ringBox(ring) }));
   const pad = (SHELTER_BAND_KM + slackKm) / KM_PER_DEG_LAT + 0.01;
   const island = ownerIslands.some((item) => inBox(lat, lon, item, 0) && pointInRing(lat, lon, item.ring));
   const within = ownerOutlines.find((item) => inBox(lat, lon, item, 0) && pointInRing(lat, lon, item.ring));
@@ -388,21 +388,7 @@ export function outlineKm(lat: number, lon: number, ring: RimRing): number {
   return Math.sqrt(nearest);
 }
 
-type Box = { south: number; north: number; west: number; east: number };
-
-function boxOf(ring: RimRing): Box {
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
-  for (const [lat, lon] of ring) {
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lon);
-    east = Math.max(east, lon);
-  }
-  return { south, north, west, east };
-}
+type Box = RingBox;
 
 function inBox(lat: number, lon: number, box: Box, pad: number): boolean {
   return lat >= box.south - pad && lat <= box.north + pad && lon >= box.west - pad && lon <= box.east + pad;
@@ -463,7 +449,7 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
   const grid = readShelterGrid();
   const band = SHELTER_BAND_KM / KM_PER_DEG_LAT;
   const atolls = gridAtolls();
-  const shown = atolls.filter(({ ring }) => overlaps(view, pad(boxOf(ring), band)));
+  const shown = atolls.filter(({ ring }) => overlaps(view, pad(ringBox(ring), band)));
   // Atolls in view, and their neighbours whose seas they blend with where the two meet.
   const wanted = new Set(shown.map(({ wayId }) => wayId));
   for (const { wayId } of shown) for (const neighbour of Object.keys(grid.atolls[wayId].coarse.blend)) wanted.add(neighbour);
@@ -497,10 +483,10 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
 export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
   const outline = allRims().get(wayId);
   if (!outline) return null;
-  const box = pad(boxOf(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
+  const box = pad(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
   const islands = readIslands()
     .map((island) => island.ring)
-    .filter((ring) => overlaps(boxOf(ring), box));
+    .filter((ring) => overlaps(ringBox(ring), box));
   return { outline, islands };
 }
 
