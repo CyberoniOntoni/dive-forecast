@@ -212,15 +212,16 @@ function traceRay(
 }
 
 /**
- * Round the horizon in ARC_STEP_DEG arcs: how much of each arc land fills (0 to 1), and how far off the nearest wooded
- * island filling most of it is (Infinity where none does).
+ * Round the horizon in ARC_STEP_DEG arcs: how much of each arc land fills (0 to 1); and for wooded islands, how much
+ * of it they fill and how far the shore is along the arc's bearing (Infinity where none does).
  */
-type Shadows = { land: Float32Array; woodedKm: Float32Array };
+type Shadows = { land: Float32Array; wooded: Float32Array; woodedKm: Float32Array };
 
 function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): Shadows {
   const land = new Float32Array(ARCS);
+  const wooded = new Float32Array(ARCS);
   const woodedKm = new Float32Array(ARCS).fill(Number.POSITIVE_INFINITY);
-  for (const { points, wooded } of islands) {
+  for (const { points, wooded: trees } of islands) {
     let nearKm = Number.POSITIVE_INFINITY;
     for (let index = 0; index + 1 < points.length; index += 1) nearKm = Math.min(nearKm, distanceToSegment(points[index], points[index + 1]));
     if (nearKm > RAY_KM) continue;
@@ -245,41 +246,51 @@ function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): 
       const covered = Math.min(to, arc + 1) - Math.max(from, arc);
       const at = ((arc % ARCS) + ARCS) % ARCS;
       land[at] = Math.max(land[at], covered);
-      if (wooded && covered >= 0.5) woodedKm[at] = Math.min(woodedKm[at], nearKm);
+      if (!trees) continue;
+      // The shore along the middle of the part of this arc the island fills, as a reef's fetch is read along its ray.
+      const radians = (((Math.max(from, arc) + Math.min(to, arc + 1)) / 2) * ARC_STEP_DEG * Math.PI) / 180;
+      const direction: Vec = [Math.sin(radians), Math.cos(radians)];
+      let shoreKm = Number.POSITIVE_INFINITY;
+      for (let index = 0; index + 1 < points.length; index += 1) {
+        const km = crossingKm(direction, points[index], points[index + 1]);
+        if (km != null) shoreKm = Math.min(shoreKm, km);
+      }
+      if (shoreKm === Number.POSITIVE_INFINITY) continue;
+      wooded[at] = Math.max(wooded[at], covered);
+      woodedKm[at] = Math.min(woodedKm[at], shoreKm);
     }
   }
-  return { land, woodedKm };
+  return { land, wooded, woodedKm };
 }
 
 /**
  * A ray's reef-only exposure with the islands across its STEP_DEG of horizon. Land stops swell outright, so the swell
- * keeps only the share of the arc that no island fills. A wooded island ends the wind's fetch WIND_SHADOW_KM short of
- * its shore, if that is nearer than the reef; bare sand islands block swell but not the wind. Chop grows with the
- * square root of fetch, so the arcs' fetches are blended that way.
+ * keeps only the share of the ray's arcs that no island fills. A wooded island ends the wind's fetch WIND_SHADOW_KM
+ * short of its shore, if that is nearer than the reef; bare sand islands block swell but not the wind. The ray's fetch
+ * is the shortest of its arcs' (as a grid bin keeps the shortest of its rays'), so a lee on any arc is kept; the wind
+ * share counts each arc by how much of it the trees fill.
  */
 function withIslands(
   ray: { swell: number; wind: number; fetchKm: number | null },
   index: number,
-  { land, woodedKm }: Shadows,
+  { land, wooded, woodedKm }: Shadows,
 ): { swell: number; wind: number; fetchKm: number | null } {
   let open = 0;
   let windSum = 0;
-  let rootSum = 0;
-  let finite = 0;
+  let fetchKm = ray.fetchKm;
+  const reefWind = ray.fetchKm == null ? 1 : fetchShare(ray.fetchKm);
   for (let offset = -ARCS_PER_RAY / 2; offset < ARCS_PER_RAY / 2; offset += 1) {
     const at = (((index * ARCS_PER_RAY + offset) % ARCS) + ARCS) % ARCS;
     open += 1 - land[at];
     const island = woodedKm[at] === Number.POSITIVE_INFINITY ? null : Math.max(0, woodedKm[at] - WIND_SHADOW_KM);
-    const fetchKm = island != null && (ray.fetchKm == null || island < ray.fetchKm) ? island : ray.fetchKm;
-    windSum += fetchKm == null ? 1 : fetchShare(fetchKm);
-    if (fetchKm != null) {
-      rootSum += Math.sqrt(fetchKm);
-      finite += 1;
+    if (island == null || (ray.fetchKm != null && island >= ray.fetchKm)) {
+      windSum += reefWind;
+      continue;
     }
+    windSum += wooded[at] * fetchShare(island) + (1 - wooded[at]) * reefWind;
+    fetchKm = fetchKm == null ? island : Math.min(fetchKm, island);
   }
   const swell = ray.swell * (open / ARCS_PER_RAY);
-  // Mostly open sea upwind: the wave model's wind sea covers it, as for a ray with no reef at all.
-  const fetchKm = finite * 2 > ARCS_PER_RAY ? (rootSum / finite) ** 2 : null;
   return { swell, wind: Math.max(swell, windSum / ARCS_PER_RAY), fetchKm };
 }
 

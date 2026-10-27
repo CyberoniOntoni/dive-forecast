@@ -156,6 +156,25 @@ describe("siteExposure with islands", () => {
     expect(exposureAt(far.swell, 90)).toBeLessThan(1);
   });
 
+  it("reads a wooded island's fetch along each bearing, not from its nearest point", () => {
+    // A 4 km wooded island running north-south 500 m east of the site.
+    const long = { wooded: true, ring: [[3.982, 73.5045], [4.018, 73.5045], [4.018, 73.508], [3.982, 73.508], [3.982, 73.5045]] as RimRing };
+    const exposure = siteExposure(site, [], [], [long]);
+    expect(exposure.fetchKm[90 / STEP_DEG]).toBeCloseTo(0.5 - 0.2, 1);
+    // The 30° ray spans 27.5° to 32.5°: the shore is 0.5 / sin 32.5° = 0.93 km off along its nearest arc, not 0.5.
+    expect(exposure.fetchKm[30 / STEP_DEG]).toBeCloseTo(0.93 - 0.2, 1);
+  });
+
+  it("keeps a wooded islet's lee when it falls between two rays", () => {
+    // About 100 m across, 1.5 km off at 92.5°: under half of each of the 90° and 95° rays.
+    const at = (92.5 * Math.PI) / 180;
+    const islet = { wooded: true, ring: square(4.0 + (1.5 * Math.cos(at)) / 110.57, 73.5 + (1.5 * Math.sin(at)) / 111.04, 0.0009) };
+    const exposure = siteExposure(site, [], [], [islet]);
+    expect(exposure.fetchKm[90 / STEP_DEG]).toBeCloseTo(1.45 - 0.2, 1);
+    expect(exposure.fetchKm[95 / STEP_DEG]).toBeCloseTo(1.45 - 0.2, 1);
+    expect(exposure.fetchKm[100 / STEP_DEG]).toBeNull();
+  });
+
   it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {
     const wooded = siteExposure(site, [], [], [island(0)]);
     const bare = siteExposure(site, [], [], [island(0, false)]);

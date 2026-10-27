@@ -112,6 +112,47 @@ export function seaStateHours(input: {
   return result;
 }
 
+/** Winds further apart than this are not one wind: a blend of them names none. */
+const BLEND_WIND_AGREE_DEG = 45;
+
+/**
+ * Two hours of sea state at one spot mixed as one sea, `share` of `own` and the rest of `other`: where two atolls'
+ * seas meet on the sheltered-water map, each atoll's offshore samples give an hour and the spot sits between them.
+ * Swell (all swell together, as felt) and chop are averaged by share and the felt height is put together from them as
+ * seaStateHours does, so the headline and the detail describe the same sea. Swell direction and period come from the
+ * side whose swell weighs more; the wind is named only when both hours have it and agree. When one hour is missing
+ * (unknown), the other stands only if it is already rough, as for any unknown part of a sea.
+ */
+export function blendSeaState(own: SeaStateHour | null, other: SeaStateHour | null, share: number): SeaStateHour | null {
+  if (!own || !other) {
+    const known = own ?? other;
+    return known && known.band === "rough" ? known : null;
+  }
+  const swellFelt = (hour: SeaStateHour) => Math.sqrt(Math.max(0, hour.feltM ** 2 - (WIND_WAVE_WEIGHT * hour.windWaveM) ** 2));
+  const swellM = share * swellFelt(own) + (1 - share) * swellFelt(other);
+  const windWaveM = share * own.windWaveM + (1 - share) * other.windWaveM;
+  const feltM = Math.sqrt(swellM ** 2 + (WIND_WAVE_WEIGHT * windWaveM) ** 2);
+  const ownWeight = share * (own.swell?.heightM ?? 0);
+  const otherWeight = (1 - share) * (other.swell?.heightM ?? 0);
+  const lead = ownWeight >= otherWeight ? own.swell : other.swell;
+  const shownSwellM = share * (own.swell?.heightM ?? 0) + (1 - share) * (other.swell?.heightM ?? 0);
+  const wind =
+    own.wind && other.wind && angleBetween(own.wind.fromDeg, other.wind.fromDeg) <= BLEND_WIND_AGREE_DEG
+      ? share >= 0.5
+        ? own.wind
+        : other.wind
+      : null;
+  return {
+    time: own.time,
+    band: seaBand(feltM),
+    feltM: round2(feltM),
+    swell: lead && shownSwellM >= 0.05 ? { ...lead, heightM: round2(shownSwellM) } : null,
+    windWaveM: round2(windWaveM),
+    wind,
+    againstCurrent: false,
+  };
+}
+
 /** Wind sea raised by this wind over this much open water, metres. */
 export function fetchLimitedChopM(speedMs: number, fetchKm: number): number {
   if (!(speedMs > 0) || !(fetchKm > 0)) return 0;
@@ -149,14 +190,24 @@ function localChopM(exposure: SiteExposure, wind: WindHour): number {
 }
 
 /**
- * Whether any direction within WIND_SPREAD_DEG of `fromDeg` has sheltered water upwind (a finite fetch), where local
- * chop would count. With no direction to go by (no wind and no wave-model wind sea), any direction at all.
+ * A direction whose wind share is at least this is open water in all but a sliver (a far islet across part of the
+ * ray): the wave model's wind sea through it outweighs any chop the short fetch behind the sliver could raise.
+ */
+const OPEN_WIND_SHARE = 0.9;
+
+/**
+ * Whether any direction within WIND_SPREAD_DEG of `fromDeg` has sheltered water upwind, where local chop would count:
+ * a finite fetch on a ray that is not open but for a sliver. With no direction to go by (no wind and no wave-model
+ * wind sea), any direction at all.
  */
 function hasLocalFetch(exposure: SiteExposure, fromDeg: number | null): boolean {
   const count = exposure.fetchKm.length;
   const stepDeg = 360 / count;
   return exposure.fetchKm.some(
-    (fetchKm, index) => fetchKm != null && (fromDeg == null || angleBetween(index * stepDeg, fromDeg) <= WIND_SPREAD_DEG + stepDeg / 2),
+    (fetchKm, index) =>
+      fetchKm != null &&
+      exposure.wind[index] < OPEN_WIND_SHARE &&
+      (fromDeg == null || angleBetween(index * stepDeg, fromDeg) <= WIND_SPREAD_DEG + stepDeg / 2),
   );
 }
 

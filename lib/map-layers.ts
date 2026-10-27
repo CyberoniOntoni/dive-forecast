@@ -7,7 +7,7 @@ import {
   type AtlasTile,
   type AtlasTileEntry,
 } from "./atlas-overlays";
-import { shelterLayer, type ShelterSource } from "./shelter-layer";
+import { shelterLayer, type ShelterLayer, type ShelterSource } from "./shelter-layer";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -319,7 +319,7 @@ function baseLayer(L: LeafletLib, id: BaseId): Layer {
   return L.layerGroup();
 }
 
-function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap, shelter: ShelterSource | undefined): Layer {
+function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap, shelter: ShelterLayer): Layer {
   switch (id) {
     case "seamarks":
       return L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", { maxZoom: 18, attribution: OPENSEAMAP });
@@ -355,14 +355,19 @@ function overlayLayer(L: LeafletLib, id: OverlayId, map: LeafletMap, shelter: Sh
     case "reefOutline":
       return atlasLayer(L, map, ATLAS_OVERLAYS[id]);
     case "shelter":
-      return shelterLayer(L, map, shelter);
+      return shelter.layer;
     case "grid":
       return coordinateGrid(L, map);
   }
 }
 
 /** Adds the saved base and overlays, and a layer switcher under the zoom buttons that remembers what the viewer picks. */
-export function addMapLayers(L: LeafletLib, map: LeafletMap, options: { shelter?: ShelterSource } = {}): void {
+export function addMapLayers(
+  L: LeafletLib,
+  map: LeafletMap,
+  options: { shelter?: ShelterSource } = {},
+): { readSea: (lat: number, lon: number) => boolean } {
+  const shelter = shelterLayer(L, map, options.shelter);
   const choice = readLayerChoice();
   choice.base = readableBase(choice);
   const bases: Record<string, Layer> = {};
@@ -379,7 +384,7 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap, options: { shelter?
     if (item.id === choice.base) layer.addTo(map);
   }
   for (const item of OVERLAYS) {
-    const layer = overlayLayer(L, item.id, map, options.shelter);
+    const layer = overlayLayer(L, item.id, map, shelter);
     overlays[item.label] = layer;
     overlayByLabel.set(item.label, item.id);
     if (choice.overlays[item.id]) layer.addTo(map);
@@ -390,6 +395,7 @@ export function addMapLayers(L: LeafletLib, map: LeafletMap, options: { shelter?
   // Leaflet adds layers only once the map has its first view, and removes them all when it is torn down. Both fire
   // the switcher's events, so listen only in between: from the first view (after the initial adds) until unload.
   map.whenReady(() => listenForChoices(map, choice, baseById, baseByLabel, overlayByLabel));
+  return { readSea: shelter.read };
 }
 
 function listenForChoices(

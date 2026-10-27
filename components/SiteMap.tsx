@@ -193,13 +193,15 @@ function mountDiveMap(
   hooks: {
     isAdding: () => boolean;
     onPick: (point: Point) => void;
+    /** Clears the spotlight ring if one is up; true when it did. */
+    clearSpotlight: () => boolean;
     onZoom: (zoom: number) => void;
     onView: (view: MapView) => void;
   },
 ): { map: LeafletMapType; pins: MarkerClusterGroup; destroy: () => void } {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  addMapLayers(L, map, { shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint } });
+  const { readSea } = addMapLayers(L, map, { shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint } });
   const pins = L.markerClusterGroup({
     disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,
     maxClusterRadius: 48,
@@ -225,9 +227,12 @@ function mountDiveMap(
   if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
   else frameSites(L, map, siteGlances);
 
+  // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
+  // sea state where the sheltered-water layer is on.
   map.on("click", (event: LeafletMouseEvent) => {
-    if (!hooks.isAdding()) return;
-    hooks.onPick({ lat: event.latlng.lat, lon: event.latlng.lng });
+    const { lat, lng } = event.latlng;
+    if (hooks.isAdding()) hooks.onPick({ lat, lon: lng });
+    else if (!hooks.clearSpotlight()) readSea(lat, lng);
   });
 
   const resize = new ResizeObserver(() => {
@@ -257,10 +262,10 @@ function frameOn(map: LeafletMapType, bounds: ReturnType<LeafletLib["latLngBound
 
 /**
  * Ring one site and fly to it: centred, close enough that pins no longer cluster (spotlightZoom). The ring carries
- * the site's label as a permanent tooltip, so it reads at once even while the pin is still inside a cluster. A click
- * on the map calls `onClear`. Returns the cleanup, which removes the ring and the click listener.
+ * the site's label as a permanent tooltip, so it reads at once even while the pin is still inside a cluster. A map
+ * click clears it (through mountDiveMap's click handler). Returns the cleanup, which removes the ring.
  */
-function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance, onClear: () => void): () => void {
+function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance): () => void {
   const point = L.latLng(item.site.lat, item.site.lon);
   const ring = L.marker(point, {
     icon: L.divIcon({ className: "dive-spotlight", html: "<span></span>", iconSize: [52, 52], iconAnchor: [26, 26] }),
@@ -270,10 +275,8 @@ function attachSpotlight(L: LeafletLib, map: LeafletMapType, item: SiteGlance, o
   })
     .bindTooltip(escapeHtml(withAge(item.glance.spoken, item.age)), { permanent: true, direction: "top", offset: [0, -26] })
     .addTo(map);
-  map.on("click", onClear);
   frameOn(map, L.latLngBounds(point, point), spotlightZoom(map.getZoom()), true);
   return () => {
-    map.off("click", onClear);
     ring.remove();
   };
 }
@@ -400,6 +403,8 @@ const LeafletMap = dynamic(
       onSpotlightClear,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
+      // Set while the spotlight ring is on the map, so a map click knows to clear it.
+      const spotlightUpRef = useRef(false);
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
       const pinsRef = useRef<MarkerClusterGroup | null>(null);
@@ -430,6 +435,11 @@ const LeafletMap = dynamic(
         const mounted = mountDiveMap(L, container, siteGlances, {
           isAdding: () => addingRef.current,
           onPick: (point) => onPickRef.current(point),
+          clearSpotlight: () => {
+            if (!spotlightUpRef.current) return false;
+            onSpotlightClearRef.current();
+            return true;
+          },
           onZoom: (next) => setZoom(next),
           onView: (view) => onViewRef.current(view),
         });
@@ -486,7 +496,12 @@ const LeafletMap = dynamic(
         if (!map || mapEpoch === 0 || !spotlight) return;
         const item = siteGlances.find(({ site }) => site.id === spotlight.siteId);
         if (!item) return;
-        return attachSpotlight(L, map, item, () => onSpotlightClearRef.current());
+        const detach = attachSpotlight(L, map, item);
+        spotlightUpRef.current = true;
+        return () => {
+          spotlightUpRef.current = false;
+          detach();
+        };
         // Fly only when a site is picked, not when the forecast refreshes.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [spotlight, mapEpoch]);

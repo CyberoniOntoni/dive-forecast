@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { fetchLimitedChopM, seaBand, seaStateHours, type OffshoreSide } from "./sea-state";
+import { blendSeaState, fetchLimitedChopM, seaBand, seaStateHours, WIND_WAVE_WEIGHT, type OffshoreSide } from "./sea-state";
 import { STEP_DEG, type SiteExposure } from "./wave-exposure";
-import type { HourForecast } from "./types";
+import type { HourForecast, SeaStateHour } from "./types";
 import type { WaveHour } from "./waves";
 import type { WindHour } from "./wind";
 
@@ -203,6 +203,48 @@ describe("local wind chop", () => {
     const fromEast: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.7, 90, 0.2, 90)] }];
     expect(seaStateHours({ sides: fromEast, exposure: westFetch, wind: [] })[0]?.band).toBe("moderate");
     const fromWest: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.7, 270, 0.2, 270)] }];
-    expect(seaStateHours({ sides: fromWest, exposure: westFetch, wind: [] })).toEqual([]);
+    expect(seaStateHours({ sides: fromWest, exposure: { ...westFetch, wind: FULL.wind.map(() => 0.5) }, wind: [] })).toEqual([]);
+    // A sliver of sheltered water on otherwise open rays: the wave model's wind sea stands.
+    expect(seaStateHours({ sides: fromWest, exposure: westFetch, wind: [] })[0]?.band).toBe("moderate");
+  });
+});
+
+describe("blendSeaState", () => {
+  const time = "2026-10-13T08:00";
+  /** An hour of `swellM` swell from `fromDeg` and `chopM` chop, felt as seaStateHours puts them together. */
+  const sea = (swellM: number, chopM: number, fromDeg: number): SeaStateHour => {
+    const feltM = Math.sqrt(swellM ** 2 + (WIND_WAVE_WEIGHT * chopM) ** 2);
+    return {
+      time,
+      band: seaBand(feltM),
+      feltM,
+      swell: { heightM: swellM, fromDeg, periodS: 8 },
+      windWaveM: chopM,
+      wind: { speedMs: 6, fromDeg: 260 },
+      againstCurrent: false,
+    };
+  };
+
+  it("mixes the two seas so the detail describes the felt height", () => {
+    const own = sea(0.3, 0.2, 140); // felt about 0.41 m
+    const other = sea(1.5, 0.3, 120); // felt about 1.56 m
+    const mixed = blendSeaState(own, other, 0.5);
+    expect(mixed).not.toBeNull();
+    expect(mixed!.swell?.heightM).toBeCloseTo(0.9, 2);
+    expect(mixed!.swell?.fromDeg).toBe(120); // the heavier swell
+    expect(mixed!.windWaveM).toBeCloseTo(0.25, 2);
+    expect(mixed!.feltM).toBeCloseTo(Math.sqrt(0.9 ** 2 + (WIND_WAVE_WEIGHT * 0.25) ** 2), 2);
+    expect(mixed!.band).toBe("moderate");
+    expect(mixed!.wind?.fromDeg).toBe(260);
+  });
+
+  it("drops the wind when the two disagree", () => {
+    const other = { ...sea(1.5, 0.3, 120), wind: { speedMs: 6, fromDeg: 80 } };
+    expect(blendSeaState(sea(0.3, 0.2, 140), other, 0.5)?.wind).toBeNull();
+  });
+
+  it("keeps a missing side unknown unless the known one is already rough", () => {
+    expect(blendSeaState(sea(0.3, 0.2, 140), null, 0.7)).toBeNull();
+    expect(blendSeaState(null, sea(2, 0.3, 120), 0.7)?.band).toBe("rough");
   });
 });

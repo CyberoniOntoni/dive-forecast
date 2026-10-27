@@ -5,7 +5,7 @@ import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, type RimRing } from "./rim";
-import { exposureIslands, exposureRings, loadOffshore, seaBand, seaStateHours, type Offshore } from "./sea-state";
+import { blendSeaState, exposureIslands, exposureRings, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
 import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, fieldByte } from "./shelter-field";
@@ -325,16 +325,14 @@ function samplesAt(offshore: Offshore, time: string): HourSamples {
 
 /**
  * The sea state at one spot of the layer, from its exposure and its atoll's samples for the hour. Near where two
- * atolls' seas meet, the felt height blends with what the neighbour's samples give (`share` is this atoll's part);
- * the band follows the blended height. Null when the hour is unknown.
+ * atolls' seas meet, it is the two atolls' seas mixed by the spot's share (blendSeaState). Null when the hour is
+ * unknown.
  */
 function seaAt(exposure: SiteExposure, own: HourSamples, blend?: { share: number; samples: HourSamples }): SeaStateHour | null {
   const [hour] = seaStateHours({ ...own, exposure });
-  if (!hour || !blend) return hour ?? null;
+  if (!blend) return hour ?? null;
   const [other] = seaStateHours({ ...blend.samples, exposure });
-  if (!other) return hour;
-  const feltM = Math.round((blend.share * hour.feltM + (1 - blend.share) * other.feltM) * 100) / 100;
-  return { ...hour, feltM, band: seaBand(feltM) };
+  return blendSeaState(hour ?? null, other ?? null, blend.share);
 }
 
 /**

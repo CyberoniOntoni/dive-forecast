@@ -1,4 +1,4 @@
-import type { Control, LeafletMouseEvent, Map as LeafletMap } from "leaflet";
+import type { Control, Layer, Map as LeafletMap } from "leaflet";
 import type { RimRing } from "./rim";
 import { seaDetail } from "./sea-text";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, FIELD_OUTSIDE, FIELD_STEP_M, FIELD_UNKNOWN } from "./shelter-field";
@@ -71,6 +71,8 @@ export function scaleGradient(): string {
 
 /** The sea outside the atolls fades out over this many 500 m cells toward the layer's edge. */
 const SEA_FADE_STEPS = 4;
+/** The 125 m cells fade out over their last cell, so where they end the 500 m field beneath takes over smoothly. */
+const FINE_FADE_STEPS = 2;
 /** How many cells deep the field is extended past the water's edge, so the smoothed edge is full colour up to the cut. */
 const EDGE_FILL_STEPS = 3;
 
@@ -174,9 +176,12 @@ type Drawn = { field: ShelterAtollField; inner: HTMLCanvasElement; outer: HTMLCa
  * The sheltered-water layer: each atoll's lagoon and the sea for a few km round it shaded by felt wave height at the
  * chosen hour, smoothed between the 500 m cells (125 m near islands once zoomed in) and cut exactly to water: islands
  * left clear, and the reef a sharp line between the lagoon and the sea. A legend steps through the hours; tapping the
- * water traces that exact spot and shows its sea state.
+ * water (through `read`, which the map's click handler calls) traces that exact spot and shows its sea state.
  */
-export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSource | undefined) {
+/** The layer, and its tap readout for the map's click handler. */
+export type ShelterLayer = { layer: Layer; read: (lat: number, lon: number) => boolean };
+
+export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSource | undefined): ShelterLayer {
   const layer = new L.Layer();
   let canvas: HTMLCanvasElement | null = null;
   let work: HTMLCanvasElement | null = null;
@@ -188,7 +193,6 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
   let request = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const shapes = new Map<string, Promise<ShelterShapes | null>>();
-  const images = new Map<string, HTMLCanvasElement>();
 
   const setNote = (text: string) => {
     if (parts) parts.note.textContent = text;
@@ -203,21 +207,18 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     return kept;
   };
 
-  const imageFor = (field: ShelterAtollField, time: string, outside: boolean) => {
-    const key = `${field.wayId}|${field.layer}|${outside}|${time}|${field.south}|${field.west}|${field.values.length}|${field.values.slice(0, 32)}`;
-    let image = images.get(key);
-    if (image) return image;
+  // The images drawn for the current response; a new response always paints afresh.
+  const imageFor = (field: ShelterAtollField, outside: boolean) => {
     const bytes = Uint8Array.from(atob(field.values), (char) => char.charCodeAt(0));
-    image = document.createElement("canvas");
+    const image = document.createElement("canvas");
     image.width = field.columns;
     image.height = field.rows;
     const context = image.getContext("2d");
     if (context) {
-      const pixels = fieldPixels(field.rows, field.columns, bytes, outside, outside && field.layer === "coarse" ? SEA_FADE_STEPS : 0);
+      const fade = field.layer === "fine" ? FINE_FADE_STEPS : outside ? SEA_FADE_STEPS : 0;
+      const pixels = fieldPixels(field.rows, field.columns, bytes, outside, fade);
       context.putImageData(new ImageData(pixels as ImageDataArray, field.columns, field.rows), 0, 0);
     }
-    if (images.size > 80) images.clear();
-    images.set(key, image);
     return image;
   };
 
@@ -321,8 +322,8 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     const withShapes = await Promise.all(
       next.atolls.map(async (field) => ({
         field,
-        inner: imageFor(field, next.time, false),
-        outer: imageFor(field, next.time, true),
+        inner: imageFor(field, false),
+        outer: imageFor(field, true),
         shapes: await shapesFor(field.wayId),
       })),
     );
@@ -357,26 +358,34 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     void refresh();
   };
 
-  const onClick = async (event: LeafletMouseEvent) => {
-    if (!source || !view || map.getZoom() < MIN_ZOOM) return;
-    const { lat, lng } = event.latlng;
+  /**
+   * Reads the sea state at a tapped spot and shows it in a popup. The map's own click handler calls this (it decides
+   * what a click means: placing a pin, dismissing a ring, or this). True when the layer took the tap.
+   */
+  const read = (lat: number, lon: number): boolean => {
+    if (!source || !view || !map.hasLayer(layer) || map.getZoom() < MIN_ZOOM) return false;
     const time = view.time;
-    const hour = await source.point(lat, lng, time).catch(() => "unknown" as const);
-    if (hour == null || !map.hasLayer(layer)) return;
-    const box = document.createElement("div");
-    box.className = "dive-shelter-popup";
-    const head = document.createElement("p");
-    head.className = "dive-shelter-popup-head";
-    const body = document.createElement("p");
-    if (hour === "unknown") {
-      head.textContent = "Sea state unknown";
-      body.textContent = `No wave or wind data here for ${hourLabel(time)}.`;
-    } else {
-      head.textContent = `${hour.band[0].toUpperCase()}${hour.band.slice(1)} · ${hour.feltM.toFixed(1)} m felt`;
-      body.textContent = `${seaDetail(hour)}. ${hourLabel(time)}.`;
-    }
-    box.append(head, body);
-    L.popup({ maxWidth: 260 }).setLatLng(event.latlng).setContent(box).openOn(map);
+    void source
+      .point(lat, lon, time)
+      .catch(() => "unknown" as const)
+      .then((hour) => {
+        if (hour == null || !map.hasLayer(layer)) return;
+        const box = document.createElement("div");
+        box.className = "dive-shelter-popup";
+        const head = document.createElement("p");
+        head.className = "dive-shelter-popup-head";
+        const body = document.createElement("p");
+        if (hour === "unknown") {
+          head.textContent = "Sea state unknown";
+          body.textContent = `No wave or wind data here for ${hourLabel(time)}.`;
+        } else {
+          head.textContent = `${hour.band[0].toUpperCase()}${hour.band.slice(1)} · ${hour.feltM.toFixed(1)} m felt`;
+          body.textContent = `${seaDetail(hour)}. ${hourLabel(time)}.`;
+        }
+        box.append(head, body);
+        L.popup({ maxWidth: 260 }).setLatLng([lat, lon]).setContent(box).openOn(map);
+      });
+    return true;
   };
 
   const buildLegend = () => {
@@ -436,7 +445,6 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     legend.addTo(map);
     map.on("moveend resize", soon);
     map.on("zoomend", draw);
-    map.on("click", onClick);
     void refresh();
     return layer;
   };
@@ -453,8 +461,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     request += 1;
     map.off("moveend resize", soon);
     map.off("zoomend", draw);
-    map.off("click", onClick);
     return layer;
   };
-  return layer;
+  return { layer, read };
 }
