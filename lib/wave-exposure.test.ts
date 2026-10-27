@@ -123,6 +123,15 @@ describe("siteExposure with islands", () => {
     ] as RimRing,
   });
   const site = { lat: 4.0, lon: 73.5, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: null };
+  /** A square island of side `size` degrees centred on a point. */
+  const square = (lat: number, lon: number, size: number) =>
+    [
+      [lat - size / 2, lon - size / 2],
+      [lat + size / 2, lon - size / 2],
+      [lat + size / 2, lon + size / 2],
+      [lat - size / 2, lon + size / 2],
+      [lat - size / 2, lon - size / 2],
+    ] as RimRing;
 
   it("shelters the water just behind an island from swell, less so farther off", () => {
     const near = siteExposure({ ...site, lon: 73.508 }, [], [], [island(0)]);
@@ -132,6 +141,19 @@ describe("siteExposure with islands", () => {
     expect(exposureAt(near.swell, 90)).toBeLessThan(0.3);
     expect(exposureAt(far.swell, 90)).toBeGreaterThan(0.85);
     expect(exposureAt(near.swell, 270)).toBe(1);
+  });
+
+  it("lets a small island between two rays cast its shadow, by the share of sky it fills", () => {
+    // A 60 m islet 300 m away at 92°, between the 90° and 95° rays: about 11° of the horizon.
+    const islet = { wooded: false, ring: square(4.0 - 0.0105 * Math.cos((92 * Math.PI) / 180), 73.5 + 0.0027, 0.00054) };
+    const open = siteExposure(site, [], [], []);
+    const behind = siteExposure(site, [], [], [islet]);
+    expect(exposureAt(behind.swell, 92)).toBeLessThan(exposureAt(open.swell, 92) - 0.1);
+    expect(exposureAt(behind.swell, 272)).toBe(1);
+    // Far off, the same islet fills a sliver of sky and barely matters.
+    const far = siteExposure(site, [], [], [{ ...islet, ring: square(4.0, 73.5 + 0.045, 0.00054) }]);
+    expect(exposureAt(far.swell, 90)).toBeGreaterThan(0.97);
+    expect(exposureAt(far.swell, 90)).toBeLessThan(1);
   });
 
   it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {

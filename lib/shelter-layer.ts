@@ -1,14 +1,15 @@
 import type { Control, LeafletMouseEvent, Map as LeafletMap } from "leaflet";
 import type { RimRing } from "./rim";
 import { seaDetail } from "./sea-text";
-import { FIELD_NONE, FIELD_STEP_M, FIELD_UNKNOWN } from "./shelter-field";
+import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, FIELD_OUTSIDE, FIELD_STEP_M, FIELD_UNKNOWN } from "./shelter-field";
 import { SEA_BAND_LIMITS_M, type SeaStateHour } from "./types";
 
 type LeafletLib = typeof import("leaflet");
 
-/** One atoll's felt height on its grid, as the getShelter action sends it. */
+/** One atoll's felt height on one of its grids, as the getShelter action sends it. */
 export type ShelterAtollField = {
   wayId: string;
+  layer: "coarse" | "fine";
   south: number;
   west: number;
   stepDeg: number;
@@ -29,7 +30,7 @@ export type ShelterSource = {
 /** Below this zoom an atoll is a few pixels of shading and not worth the fetch. */
 const MIN_ZOOM = 8;
 /** Shading opacity over the satellite base: strong enough to read, light enough to see the reef through. */
-const OPACITY = 0.75;
+const OPACITY = 0.85;
 /** The colour scale's top, metres of felt height; anything higher is drawn as this. */
 const SCALE_MAX_M = 2;
 
@@ -68,25 +69,35 @@ export function scaleGradient(): string {
   return `linear-gradient(to right, ${stops.join(", ")})`;
 }
 
+/** The sea outside the atolls fades out over this many 500 m cells toward the layer's edge. */
+const SEA_FADE_STEPS = 4;
 /** How many cells deep the field is extended past the water's edge, so the smoothed edge is full colour up to the cut. */
 const EDGE_FILL_STEPS = 3;
 
 /**
- * The field as RGBA pixels, one per cell, row 0 at the top (north). Cells with no water (land, past the outline) take
- * the mean of their water neighbours, a few cells deep, so the shading runs right up to the coast before the map cuts
- * it there; cells of unknown sea state stay clear.
+ * One side of the outline's field (the lagoon, or the sea outside when `outside`) as RGBA pixels, one per cell, row 0
+ * at the top (north). Islands and the other side's water take the mean of their neighbours on this side, a few cells
+ * deep, so the shading runs right up to the coast and the reef before the map cuts it there. Cells of unknown sea
+ * state, another atoll's water and cells past the grid stay clear. With `fadeSteps`, the shading fades out over that
+ * many cells toward the grid's outer edge, so the open sea has no hard line where the layer ends.
  */
-export function fieldPixels(rows: number, columns: number, values: Uint8Array): Uint8ClampedArray {
+export function fieldPixels(rows: number, columns: number, values: Uint8Array, outside = false, fadeSteps = 0): Uint8ClampedArray {
   const felt = new Float32Array(rows * columns).fill(Number.NaN);
+  const fillable = new Uint8Array(rows * columns);
   for (let index = 0; index < values.length; index += 1) {
-    if (values[index] !== FIELD_NONE && values[index] !== FIELD_UNKNOWN) felt[index] = values[index] * FIELD_STEP_M;
+    const value = values[index];
+    if (value === FIELD_NONE || value === FIELD_OTHER) continue;
+    const mine = value !== FIELD_LAND && (value >= FIELD_OUTSIDE) === outside;
+    const low = value & ~FIELD_OUTSIDE;
+    if (!mine) fillable[index] = 1;
+    else if (low !== FIELD_UNKNOWN) felt[index] = low * FIELD_STEP_M;
   }
   for (let step = 0; step < EDGE_FILL_STEPS; step += 1) {
     const next = felt.slice();
     for (let row = 0; row < rows; row += 1) {
       for (let column = 0; column < columns; column += 1) {
         const index = row * columns + column;
-        if (values[index] !== FIELD_NONE || !Number.isNaN(felt[index])) continue;
+        if (!fillable[index] || !Number.isNaN(felt[index])) continue;
         let sum = 0;
         let count = 0;
         for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]) {
@@ -103,6 +114,26 @@ export function fieldPixels(rows: number, columns: number, values: Uint8Array): 
     }
     felt.set(next);
   }
+  // Distance in cells from the grid's edge (0 on it), up to fadeSteps. Diagonal steps count √2, so the fade follows
+  // the band's round edge rather than the cells' staircase.
+  const fromEdge = new Float32Array(rows * columns).fill(fadeSteps);
+  for (let index = 0; index < values.length; index += 1) if (values[index] === FIELD_NONE) fromEdge[index] = 0;
+  for (let pass = 0; pass < 2 * fadeSteps; pass += 1) {
+    for (let row = 0; row < rows; row += 1) {
+      for (let column = 0; column < columns; column += 1) {
+        let best = fromEdge[row * columns + column];
+        for (let dr = -1; dr <= 1; dr += 1) {
+          for (let dc = -1; dc <= 1; dc += 1) {
+            const r = row + dr;
+            const c = column + dc;
+            if (r < 0 || r >= rows || c < 0 || c >= columns || (dr === 0 && dc === 0)) continue;
+            best = Math.min(best, fromEdge[r * columns + c] + (dr !== 0 && dc !== 0 ? Math.SQRT2 : 1));
+          }
+        }
+        fromEdge[row * columns + column] = best;
+      }
+    }
+  }
   const pixels = new Uint8ClampedArray(rows * columns * 4);
   for (let row = 0; row < rows; row += 1) {
     for (let column = 0; column < columns; column += 1) {
@@ -113,7 +144,7 @@ export function fieldPixels(rows: number, columns: number, values: Uint8Array): 
       pixels[at] = r;
       pixels[at + 1] = g;
       pixels[at + 2] = b;
-      pixels[at + 3] = 255;
+      pixels[at + 3] = fadeSteps > 0 ? Math.round((255 * Math.min(fadeSteps, fromEdge[row * columns + column])) / fadeSteps) : 255;
     }
   }
   return pixels;
@@ -136,16 +167,19 @@ export function hourLabel(time: string): string {
   return `${weekday} ${dayMonth}, ${clock}`;
 }
 
-type Drawn = { field: ShelterAtollField; image: HTMLCanvasElement; shapes: ShelterShapes | null };
+/** A field drawn as two images, the lagoon and the sea outside, each cut to its side of the outline. */
+type Drawn = { field: ShelterAtollField; inner: HTMLCanvasElement; outer: HTMLCanvasElement; shapes: ShelterShapes | null };
 
 /**
- * The sheltered-water layer: each atoll's lagoon shaded by felt wave height at the chosen hour, smoothed between the
- * 500 m cells and cut exactly to water (inside the atoll outline, islands left clear). A legend steps through the
- * hours; tapping the water traces that exact spot and shows its sea state.
+ * The sheltered-water layer: each atoll's lagoon and the sea for a few km round it shaded by felt wave height at the
+ * chosen hour, smoothed between the 500 m cells (125 m near islands once zoomed in) and cut exactly to water: islands
+ * left clear, and the reef a sharp line between the lagoon and the sea. A legend steps through the hours; tapping the
+ * water traces that exact spot and shows its sea state.
  */
 export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSource | undefined) {
   const layer = new L.Layer();
   let canvas: HTMLCanvasElement | null = null;
+  let work: HTMLCanvasElement | null = null;
   let legend: Control | null = null;
   let parts: { time: HTMLElement; note: HTMLElement; back: HTMLButtonElement; next: HTMLButtonElement; now: HTMLButtonElement } | null = null;
   let drawn: Drawn[] = [];
@@ -169,8 +203,8 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     return kept;
   };
 
-  const imageFor = (field: ShelterAtollField, time: string) => {
-    const key = `${field.wayId}|${time}|${field.values.length}|${field.values.slice(0, 32)}`;
+  const imageFor = (field: ShelterAtollField, time: string, outside: boolean) => {
+    const key = `${field.wayId}|${field.layer}|${outside}|${time}|${field.south}|${field.west}|${field.values.length}|${field.values.slice(0, 32)}`;
     let image = images.get(key);
     if (image) return image;
     const bytes = Uint8Array.from(atob(field.values), (char) => char.charCodeAt(0));
@@ -179,9 +213,10 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     image.height = field.rows;
     const context = image.getContext("2d");
     if (context) {
-      context.putImageData(new ImageData(fieldPixels(field.rows, field.columns, bytes) as ImageDataArray, field.columns, field.rows), 0, 0);
+      const pixels = fieldPixels(field.rows, field.columns, bytes, outside, outside && field.layer === "coarse" ? SEA_FADE_STEPS : 0);
+      context.putImageData(new ImageData(pixels as ImageDataArray, field.columns, field.rows), 0, 0);
     }
-    if (images.size > 40) images.clear();
+    if (images.size > 80) images.clear();
     images.set(key, image);
     return image;
   };
@@ -196,31 +231,56 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     canvas.style.height = `${size.y}px`;
     L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
     const context = canvas.getContext("2d");
-    if (!context) return;
-    context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.clearRect(0, 0, size.x, size.y);
-    context.globalAlpha = OPACITY;
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-    for (const { field, image, shapes: shape } of drawn) {
-      if (!shape) continue;
-      context.save();
-      context.beginPath();
-      for (const ring of [shape.outline, ...shape.islands]) {
-        ring.forEach(([lat, lon], index) => {
-          const point = map.latLngToContainerPoint([lat, lon]);
-          if (index === 0) context.moveTo(point.x, point.y);
-          else context.lineTo(point.x, point.y);
-        });
-        context.closePath();
-      }
-      // Islands sit inside the outline, so even-odd leaves them as holes.
-      context.clip("evenodd");
+    work ??= document.createElement("canvas");
+    work.width = canvas.width;
+    work.height = canvas.height;
+    const scratch = work.getContext("2d");
+    if (!context || !scratch) return;
+    scratch.setTransform(ratio, 0, 0, ratio, 0, 0);
+    scratch.imageSmoothingEnabled = true;
+    scratch.imageSmoothingQuality = "high";
+    const trace = (ring: RimRing) => {
+      ring.forEach(([lat, lon], index) => {
+        const point = map.latLngToContainerPoint([lat, lon]);
+        if (index === 0) scratch.moveTo(point.x, point.y);
+        else scratch.lineTo(point.x, point.y);
+      });
+      scratch.closePath();
+    };
+    const screen = () => scratch.rect(-size.x, -size.y, 3 * size.x, 3 * size.y);
+    const paint = ({ field, inner, outer, shapes: shape }: Drawn, outside: boolean) => {
+      if (!shape) return;
+      scratch.save();
+      // Islands are holes in the screen; the lagoon is inside the outline, the sea is the screen less the outline.
+      scratch.beginPath();
+      screen();
+      shape.islands.forEach(trace);
+      scratch.clip("evenodd");
+      scratch.beginPath();
+      if (outside) screen();
+      trace(shape.outline);
+      scratch.clip("evenodd");
       const northWest = map.latLngToContainerPoint([field.south + field.rows * field.stepDeg, field.west]);
       const southEast = map.latLngToContainerPoint([field.south, field.west + field.columns * field.stepDeg]);
-      context.drawImage(image, northWest.x, northWest.y, southEast.x - northWest.x, southEast.y - northWest.y);
-      context.restore();
+      scratch.drawImage(outside ? outer : inner, northWest.x, northWest.y, southEast.x - northWest.x, southEast.y - northWest.y);
+      scratch.restore();
+    };
+    const coarse = drawn.filter(({ field }) => field.layer === "coarse");
+    const fine = drawn.filter(({ field }) => field.layer === "fine");
+    // Neighbouring atolls' seas meet where each fades out; added together the two fades make one even shade.
+    scratch.globalCompositeOperation = "lighter";
+    for (const item of coarse) paint(item, true);
+    scratch.globalCompositeOperation = "source-over";
+    for (const item of coarse) paint(item, false);
+    // The 125 m cells near islands over the 500 m ones; they fade out where they end.
+    for (const item of fine) {
+      paint(item, true);
+      paint(item, false);
     }
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.globalAlpha = OPACITY;
+    context.drawImage(work, 0, 0);
   };
 
   const showTime = () => {
@@ -259,14 +319,21 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
       return;
     }
     const withShapes = await Promise.all(
-      next.atolls.map(async (field) => ({ field, image: imageFor(field, next.time), shapes: await shapesFor(field.wayId) })),
+      next.atolls.map(async (field) => ({
+        field,
+        inner: imageFor(field, next.time, false),
+        outer: imageFor(field, next.time, true),
+        shapes: await shapesFor(field.wayId),
+      })),
     );
     if (mine !== request || !map.hasLayer(layer)) return;
     view = next;
     drawn = withShapes;
     draw();
     showTime();
-    const unknown = next.atolls.some((field) => atob(field.values).includes(String.fromCharCode(FIELD_UNKNOWN)));
+    const unknown = next.atolls.some((field) =>
+      Array.from(atob(field.values)).some((char) => (char.charCodeAt(0) & ~FIELD_OUTSIDE) === FIELD_UNKNOWN),
+    );
     setNote(
       next.atolls.length === 0
         ? "Waves for this area are still loading. Move the map in a moment."
@@ -319,7 +386,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
       L.DomEvent.disableClickPropagation(box);
       L.DomEvent.disableScrollPropagation(box);
       const title = L.DomUtil.create("p", "dive-atlas-legend-title", box);
-      title.textContent = "Sea state in the atolls";
+      title.textContent = "Sea state";
       const row = L.DomUtil.create("div", "dive-shelter-time", box);
       const back = L.DomUtil.create("button", "", row) as HTMLButtonElement;
       back.type = "button";
@@ -376,6 +443,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
   layer.onRemove = () => {
     canvas?.remove();
     canvas = null;
+    work = null;
     legend?.remove();
     legend = null;
     parts = null;
