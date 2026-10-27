@@ -27,8 +27,8 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
  * cell of water it owns (inside its outline, and within SHELTER_BAND_KM outside it where no other outline is nearer:
  * seaOwner),
  * and every 125 m cell of that water within SHELTER_FINE_KM of an island, with its exposure from the same ray tracing
- * as the dive sites. Atolls are built in parallel, one process per core. Rerun after rims.json, openings.json or
- * islands.json change. Takes a few minutes.
+ * as the dive sites. Atolls are built in parallel, one process per core. Rerun after rims.json, openings.json,
+ * islands.json or shoals.json change. Takes about seven minutes.
  *
  *   npm run shelter-grid
  */

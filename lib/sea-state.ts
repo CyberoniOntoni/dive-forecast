@@ -4,6 +4,7 @@ import { crossesRim } from "./site-type";
 import {
   angleBetween,
   exposureAt,
+  exposureShoal,
   offshorePoints,
   ringCentre,
   siteExposure,
@@ -296,14 +297,7 @@ let shoalsMemo: { read: ReturnType<typeof readShoals>; shoals: ExposureShoal[] }
 export function exposureShoals(): ExposureShoal[] {
   const read = readShoals();
   if (shoalsMemo?.read === read) return shoalsMemo.shoals;
-  const shoals = read.map(({ kind, ring }) => ({
-    ring,
-    transmission: SHOAL_TRANSMISSION[kind],
-    south: Math.min(...ring.map(([lat]) => lat)),
-    north: Math.max(...ring.map(([lat]) => lat)),
-    west: Math.min(...ring.map(([, lon]) => lon)),
-    east: Math.max(...ring.map(([, lon]) => lon)),
-  }));
+  const shoals = read.map(({ kind, ring }) => exposureShoal(ring, SHOAL_TRANSMISSION[kind]));
   shoalsMemo = { read, shoals };
   return shoals;
 }

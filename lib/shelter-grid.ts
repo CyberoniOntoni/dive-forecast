@@ -14,7 +14,7 @@ import type { Atoll, SeaStateHour } from "./types";
 /**
  * The sheltered-water map layer: every atoll's lagoon and the sea for SHELTER_BAND_KM outside its outline, each cell
  * with its exposure to seas from each direction (worked out once by npm run shelter-grid with the same ray tracing as
- * the dive sites, islands and reef gaps included), banded for one hour from the atoll's offshore waves and wind exactly
+ * the dive sites, islands, lagoon shoals and reef gaps included), banded for one hour from the atoll's offshore waves and wind exactly
  * as a site's sea state is. Two layers: 500 m cells everywhere, and 125 m cells within SHELTER_FINE_KM of an island,
  * where a small island's lee is only a few hundred metres long.
  */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RimRing } from "./rim";
-import { exposureAt, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, STEP_DEG, type ExposureRing } from "./wave-exposure";
+import { exposureAt, exposureShoal, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, STEP_DEG, type ExposureRing } from "./wave-exposure";
 
 // A square atoll about 22 km across, centred on 4.0 N 73.5 E, with one 1 km gap in the middle of its east side.
 const SQUARE: RimRing = [
@@ -196,10 +196,7 @@ describe("siteExposure with islands", () => {
   it("cuts the swell behind a lagoon shoal, by how much of the sky it fills, but not the wind", () => {
     // Inside SQUARE, 5 km from its east rim: a reef top 1 km east, about 450 m across (about 25° of sky).
     const lagoon = { lat: 4.0, lon: 73.555, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: "own" };
-    const shoal = (lonOffset: number, transmission: number) => {
-      const ring = square(4.0, 73.555 + lonOffset, 0.004);
-      return { ring, transmission, south: 3.998, north: 4.002, west: 73.553 + lonOffset, east: 73.557 + lonOffset };
-    };
+    const shoal = (lonOffset: number, transmission: number) => exposureShoal(square(4.0, 73.555 + lonOffset, 0.004), transmission);
     const open = siteExposure(lagoon, [OWN], [EAST_GAP]);
     const behind = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.15)]);
     const sand = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.5)]);

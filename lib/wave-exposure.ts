@@ -69,8 +69,23 @@ export type SiteExposure = { swell: number[]; wind: number[]; rayWind: number[];
 /** An island in the ray tracer: its outline, and whether trees on it shelter the water behind from the wind. */
 export type ExposureIsland = { ring: RimRing; wooded: boolean };
 
-/** A shoal in the ray tracer: its outline and box, and the share of the swell height that crosses it. */
+/** A shoal in the ray tracer: its outline and box, and the share of the swell height that crosses it. Make with exposureShoal. */
 export type ExposureShoal = { ring: RimRing; transmission: number; south: number; north: number; west: number; east: number };
+
+/** A shoal for the ray tracer, with the box read off its ring (the tracer's reach test uses the box). */
+export function exposureShoal(ring: RimRing, transmission: number): ExposureShoal {
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const [lat, lon] of ring) {
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+  }
+  return { ring, transmission, south, north, west, east };
+}
 /**
  * Shoals are counted out to this far. A shoal is small next to an atoll's rim, and swell bends back in behind it within
  * a few of its widths, so a far one hardly shelters (it also keeps the tracing quick: there are thousands).
