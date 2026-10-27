@@ -20,6 +20,7 @@ describe("shelter grid cells", () => {
   const exposure = (wind: number) => ({
     swell: Array.from({ length: rays }, (_, index) => index / rays),
     wind: Array.from({ length: rays }, () => wind),
+    rayWind: Array.from({ length: rays }, (_, index) => (index % 3 === 0 ? 0.4 : 0.95)),
     fetchKm: Array.from({ length: rays }, (_, index) => (index % 2 === 0 ? null : 12.3)),
   });
 
@@ -33,6 +34,10 @@ describe("shelter grid cells", () => {
     expect(unpackExposure(bytes, 2, 0).wind[5]).toBe(0.5);
     // Rays alternate open sea and 12.3 km: every bin has one of each, so keeps the fetch.
     expect(back.fetchKm[0]).toBeCloseTo(12.25, 5);
+    // Direction 0 spans rays 71, 0 and 1; ray 0 is open sea, so its 0.4 does not count: the sheltered ones are 0.95.
+    expect(back.rayWind[0]).toBe(0.95);
+    // Direction 1 spans rays 2, 3, 4; ray 3 (0.4) has a fetch.
+    expect(back.rayWind[1]).toBe(0.4);
   });
 
   it("keeps a short fetch seen by only one ray of a bin", () => {

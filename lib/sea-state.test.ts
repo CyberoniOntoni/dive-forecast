@@ -6,11 +6,17 @@ import type { WaveHour } from "./waves";
 import type { WindHour } from "./wind";
 
 const OPEN_SEA: null[] = Array(360 / STEP_DEG).fill(null);
-const FULL: SiteExposure = { swell: Array(360 / STEP_DEG).fill(1), wind: Array(360 / STEP_DEG).fill(1), fetchKm: OPEN_SEA };
+const FULL: SiteExposure = {
+  swell: Array(360 / STEP_DEG).fill(1),
+  wind: Array(360 / STEP_DEG).fill(1),
+  rayWind: Array(360 / STEP_DEG).fill(1),
+  fetchKm: OPEN_SEA,
+};
 /** Open to the east (from 45 to 135), sheltered to a tenth everywhere else. */
 const EAST_ONLY: SiteExposure = {
   swell: Array.from({ length: 360 / STEP_DEG }, (_, index) => (index * STEP_DEG >= 45 && index * STEP_DEG <= 135 ? 1 : 0.1)),
   wind: Array.from({ length: 360 / STEP_DEG }, (_, index) => (index * STEP_DEG >= 45 && index * STEP_DEG <= 135 ? 1 : 0.1)),
+  rayWind: Array.from({ length: 360 / STEP_DEG }, (_, index) => (index * STEP_DEG >= 45 && index * STEP_DEG <= 135 ? 1 : 0.1)),
   fetchKm: OPEN_SEA,
 };
 /** No wind at the hours the tests use, so only the wave model's seas count. */
@@ -152,6 +158,7 @@ describe("local wind chop", () => {
   const LAGOON: SiteExposure = {
     swell: Array(360 / STEP_DEG).fill(0.1),
     wind: Array(360 / STEP_DEG).fill(0.1),
+    rayWind: Array(360 / STEP_DEG).fill(0.1),
     fetchKm: Array.from({ length: 360 / STEP_DEG }, (_, index) => (Math.abs(index * STEP_DEG - 90) <= 60 ? 20 : 1)),
   };
   const calmSea: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.3, 90, 0.1, 90)] }];
@@ -203,9 +210,30 @@ describe("local wind chop", () => {
     const fromEast: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.7, 90, 0.2, 90)] }];
     expect(seaStateHours({ sides: fromEast, exposure: westFetch, wind: [] })[0]?.band).toBe("moderate");
     const fromWest: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.7, 270, 0.2, 270)] }];
-    expect(seaStateHours({ sides: fromWest, exposure: { ...westFetch, wind: FULL.wind.map(() => 0.5) }, wind: [] })).toEqual([]);
+    expect(seaStateHours({ sides: fromWest, exposure: { ...westFetch, rayWind: FULL.wind.map(() => 0.5) }, wind: [] })).toEqual([]);
     // A sliver of sheltered water on otherwise open rays: the wave model's wind sea stands.
     expect(seaStateHours({ sides: fromWest, exposure: westFetch, wind: [] })[0]?.band).toBe("moderate");
+  });
+
+  it("reads the gate from each ray's own wind share, not the spread table", () => {
+    // A 15° window of 20 km lagoon to the west (rays 265°, 270°, 275°), open sea on every other ray. Each of those rays
+    // keeps sqrt(20 / 60) ≈ 0.58 of the wind; spread over ±45° with open neighbours the table reads about 0.92 there.
+    const window = (index: number) => Math.abs(index * STEP_DEG - 270) <= 5;
+    const exposure: SiteExposure = {
+      ...FULL,
+      wind: FULL.wind.map((_, index) => (window(index) ? 0.92 : 1)),
+      rayWind: FULL.wind.map((_, index) => (window(index) ? 0.58 : 1)),
+      fetchKm: FULL.wind.map((_, index) => (window(index) ? 20 : null)),
+    };
+    const moderate: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.7, 270, 0.2, 270)] }];
+    // Without the wind, the chop that 20 km could raise is unknown: the moderate hour is left out.
+    expect(seaStateHours({ sides: moderate, exposure, wind: [] })).toEqual([]);
+    // Already rough whatever the chop: shown.
+    const rough: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 1.8, 270, 0.2, 270)] }];
+    expect(seaStateHours({ sides: rough, exposure, wind: [] })[0]?.band).toBe("rough");
+    // The same window behind a sliver (each ray over 90% open): the wave model's band stands.
+    const sliver = { ...exposure, rayWind: exposure.rayWind.map((share) => (share < 1 ? 0.95 : 1)) };
+    expect(seaStateHours({ sides: moderate, exposure: sliver, wind: [] })[0]?.band).toBe("moderate");
   });
 });
 
@@ -236,6 +264,22 @@ describe("blendSeaState", () => {
     expect(mixed!.feltM).toBeCloseTo(Math.sqrt(0.9 ** 2 + (WIND_WAVE_WEIGHT * 0.25) ** 2), 2);
     expect(mixed!.band).toBe("moderate");
     expect(mixed!.wind?.fromDeg).toBe(260);
+  });
+
+  it("mixes the felt swell, second swell included, so one sea feeds the band and the detail", () => {
+    // Two equal 1.2 m swells and no chop: shown as 1.2 m, felt sqrt(2) × 1.2 ≈ 1.70 m (rounded, as stored).
+    const crossed: SeaStateHour = { ...sea(1.2, 0, 140), feltM: 1.7, band: "rough" };
+    const flat = sea(0, 0, 90);
+    const mixed = blendSeaState(crossed, { ...flat, swell: null }, 0.6)!;
+    expect(mixed.swell?.heightM).toBeCloseTo(1.02, 2);
+    expect(mixed.swell?.fromDeg).toBe(140);
+    expect(mixed.feltM).toBeCloseTo(1.02, 2);
+    expect(mixed.band).toBe("choppy");
+    // At share 1 the owner's sea comes back as its felt height.
+    const whole = blendSeaState(crossed, flat, 1)!;
+    expect(whole.feltM).toBe(1.7);
+    expect(whole.swell?.heightM).toBe(1.7);
+    expect(whole.band).toBe("rough");
   });
 
   it("drops the wind when the two disagree", () => {

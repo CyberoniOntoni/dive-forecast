@@ -175,6 +175,24 @@ describe("siteExposure with islands", () => {
     expect(exposure.fetchKm[100 / STEP_DEG]).toBeNull();
   });
 
+  it("calms only the part of an arc a near islet fills; the rest keeps the farther shore's fetch", () => {
+    // A 20 m wooded islet 0.4 km east (about 2.9° of sky, so partly filling the arcs at its edges) in front of a long
+    // wooded island 30 km east that fills the whole 90° ray.
+    const islet = { wooded: true, ring: square(4.0, 73.5 + 0.4 / 111.04, 0.00018) };
+    const far = { wooded: true, ring: [[3.7, 73.77], [4.3, 73.77], [4.3, 73.8], [3.7, 73.8], [3.7, 73.77]] as RimRing };
+    const ray = 90 / STEP_DEG;
+    const alone = siteExposure(site, [], [], [islet]).rayWind[ray];
+    const behind = siteExposure(site, [], [], [far]).rayWind[ray];
+    const both = siteExposure(site, [], [], [islet, far]);
+    expect(both.fetchKm[ray]).toBeCloseTo(0.4 - 0.009 - 0.2, 1);
+    // Each share of an arc counts at its own shore. Alone, the islet's share s calms the ray by s·(1 − f_islet); in
+    // front of the far island the same share swaps that island's wind for the islet's: s·(f_far − f_islet). Counting
+    // the islet's edge arcs as wholly calmed would make the second drop bigger than this ratio says.
+    const fIslet = fetchShare(0.4 - 0.009 - 0.2);
+    const fFar = fetchShare(30 - 0.2);
+    expect((behind - both.rayWind[ray]) / (1 - alone)).toBeCloseTo((fFar - fIslet) / (1 - fIslet), 1);
+  });
+
   it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {
     const wooded = siteExposure(site, [], [], [island(0)]);
     const bare = siteExposure(site, [], [], [island(0, false)]);

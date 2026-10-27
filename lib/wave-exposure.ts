@@ -61,8 +61,10 @@ export type ExposureSite = {
  * Share of the offshore wave height that reaches the site, for seas from each STEP_DEG direction (index 0 = from
  * north). fetchKm is the open water upwind of the site in each direction before the first reef (or the wall's own reef
  * on its lagoon side), for wind chop raised locally; null where the ray runs out to sea, which the wave model covers.
+ * swell and wind are spread over ±45° (the seas fan out); rayWind is each ray's own wind share before that spread,
+ * which says whether the water behind that ray's fetch is sheltered or open but for a sliver.
  */
-export type SiteExposure = { swell: number[]; wind: number[]; fetchKm: (number | null)[] };
+export type SiteExposure = { swell: number[]; wind: number[]; rayWind: number[]; fetchKm: (number | null)[] };
 
 /** An island in the ray tracer: its outline, and whether trees on it shelter the water behind from the wind. */
 export type ExposureIsland = { ring: RimRing; wooded: boolean };
@@ -127,7 +129,7 @@ export function siteExposure(
     rayWind.push(shaded.wind);
     fetchKm.push(shaded.fetchKm == null ? null : Math.round(shaded.fetchKm * 100) / 100);
   }
-  return { swell: spread(raySwell), wind: spread(rayWind), fetchKm };
+  return { swell: spread(raySwell), wind: spread(rayWind), rayWind: rayWind.map((share) => Math.round(share * 100) / 100), fetchKm };
 }
 
 /**
@@ -211,16 +213,19 @@ function traceRay(
   return { swell, wind: Math.max(swell, fetchShare(fetchKm)), fetchKm, lee: false };
 }
 
+/** A share of one arc that a wooded island fills, and its shore along the arc's bearing, km. */
+type Shore = { share: number; km: number };
+
 /**
- * Round the horizon in ARC_STEP_DEG arcs: how much of each arc land fills (0 to 1); and for wooded islands, how much
- * of it they fill and how far the shore is along the arc's bearing (Infinity where none does).
+ * Round the horizon in ARC_STEP_DEG arcs: how much of each arc land fills (0 to 1); and for wooded islands, the
+ * shores across each arc, nearest first, each with the share of the arc it fills that no nearer shore already does
+ * (the shares sum to at most 1). Arcs with no wooded island have no entry.
  */
-type Shadows = { land: Float32Array; wooded: Float32Array; woodedKm: Float32Array };
+type Shadows = { land: Float32Array; shores: Map<number, Shore[]> };
 
 function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): Shadows {
   const land = new Float32Array(ARCS);
-  const wooded = new Float32Array(ARCS);
-  const woodedKm = new Float32Array(ARCS).fill(Number.POSITIVE_INFINITY);
+  const found = new Map<number, Shore[]>();
   for (const { points, wooded: trees } of islands) {
     let nearKm = Number.POSITIVE_INFINITY;
     for (let index = 0; index + 1 < points.length; index += 1) nearKm = Math.min(nearKm, distanceToSegment(points[index], points[index + 1]));
@@ -256,11 +261,25 @@ function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): 
         if (km != null) shoreKm = Math.min(shoreKm, km);
       }
       if (shoreKm === Number.POSITIVE_INFINITY) continue;
-      wooded[at] = Math.max(wooded[at], covered);
-      woodedKm[at] = Math.min(woodedKm[at], shoreKm);
+      const list = found.get(at);
+      if (list) list.push({ share: covered, km: shoreKm });
+      else found.set(at, [{ share: covered, km: shoreKm }]);
     }
   }
-  return { land, wooded, woodedKm };
+  // Nearest shore first; a farther one only adds the part of the arc the nearer ones leave open.
+  const shores = new Map<number, Shore[]>();
+  for (const [at, list] of found) {
+    let filled = 0;
+    const kept: Shore[] = [];
+    for (const { share, km } of list.sort((a, b) => a.km - b.km)) {
+      const adds = Math.min(share, 1 - filled);
+      if (adds <= 0) break;
+      kept.push({ share: adds, km });
+      filled += adds;
+    }
+    shores.set(at, kept);
+  }
+  return { land, shores };
 }
 
 /**
@@ -268,12 +287,12 @@ function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): 
  * keeps only the share of the ray's arcs that no island fills. A wooded island ends the wind's fetch WIND_SHADOW_KM
  * short of its shore, if that is nearer than the reef; bare sand islands block swell but not the wind. The ray's fetch
  * is the shortest of its arcs' (as a grid bin keeps the shortest of its rays'), so a lee on any arc is kept; the wind
- * share counts each arc by how much of it the trees fill.
+ * share counts each part of an arc at its own shore's fetch, and the rest of the arc at the reef's.
  */
 function withIslands(
   ray: { swell: number; wind: number; fetchKm: number | null },
   index: number,
-  { land, wooded, woodedKm }: Shadows,
+  { land, shores }: Shadows,
 ): { swell: number; wind: number; fetchKm: number | null } {
   let open = 0;
   let windSum = 0;
@@ -282,13 +301,16 @@ function withIslands(
   for (let offset = -ARCS_PER_RAY / 2; offset < ARCS_PER_RAY / 2; offset += 1) {
     const at = (((index * ARCS_PER_RAY + offset) % ARCS) + ARCS) % ARCS;
     open += 1 - land[at];
-    const island = woodedKm[at] === Number.POSITIVE_INFINITY ? null : Math.max(0, woodedKm[at] - WIND_SHADOW_KM);
-    if (island == null || (ray.fetchKm != null && island >= ray.fetchKm)) {
-      windSum += reefWind;
-      continue;
+    let calmed = 0;
+    let arcWind = 0;
+    for (const shore of shores.get(at) ?? []) {
+      const island = Math.max(0, shore.km - WIND_SHADOW_KM);
+      if (ray.fetchKm != null && island >= ray.fetchKm) continue;
+      calmed += shore.share;
+      arcWind += shore.share * fetchShare(island);
+      fetchKm = fetchKm == null ? island : Math.min(fetchKm, island);
     }
-    windSum += wooded[at] * fetchShare(island) + (1 - wooded[at]) * reefWind;
-    fetchKm = fetchKm == null ? island : Math.min(fetchKm, island);
+    windSum += arcWind + (1 - calmed) * reefWind;
   }
   const swell = ray.swell * (open / ARCS_PER_RAY);
   return { swell, wind: Math.max(swell, windSum / ARCS_PER_RAY), fetchKm };

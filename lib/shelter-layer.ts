@@ -198,13 +198,19 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     if (parts) parts.note.textContent = text;
   };
 
-  const shapesFor = (wayId: string) => {
+  // An atoll's outline and islands, kept once fetched (a resolved null is an atoll with no rim, also kept). A failed
+  // fetch is not kept: that atoll is skipped this time and asked for again on the next refresh.
+  const shapesFor = (wayId: string): Promise<ShelterShapes | null> => {
     let kept = shapes.get(wayId);
     if (!kept) {
-      kept = source ? source.shapes(wayId).catch(() => null) : Promise.resolve(null);
-      shapes.set(wayId, kept);
+      const asked = source ? source.shapes(wayId) : Promise.resolve(null);
+      kept = asked;
+      shapes.set(wayId, asked);
+      asked.catch(() => {
+        if (shapes.get(wayId) === asked) shapes.delete(wayId);
+      });
     }
-    return kept;
+    return kept.catch(() => null);
   };
 
   // The images drawn for the current response; a new response always paints afresh.

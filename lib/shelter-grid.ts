@@ -34,8 +34,8 @@ export const SHELTER_BLEND_KM = 2;
 export const SHELTER_FINE_KM = 0.4;
 /** Directions kept per cell, evenly round the compass. The tables are already spread over ±45°, so 15° loses little. */
 export const SHELTER_DIRECTIONS = 24;
-/** Bytes per cell: swell share, wind share and fetch for each direction. */
-export const SHELTER_CELL_BYTES = SHELTER_DIRECTIONS * 3;
+/** Bytes per cell: swell share, wind share, fetch and the sheltered rays' own wind share for each direction. */
+export const SHELTER_CELL_BYTES = SHELTER_DIRECTIONS * 4;
 /** Share quantum: 0 to 100 is 0 to 1. Fetch quantum: 0.25 km, with NO_FETCH for a ray that runs out to sea. */
 const SHARE_SCALE = 100;
 const FETCH_SCALE = 4;
@@ -92,11 +92,16 @@ export function packExposures(exposures: readonly SiteExposure[]): Uint8Array {
       // The bin centred on direction `index`: rays from half a bin before it to half a bin after.
       const bin = Array.from({ length: perBin }, (_, offset) => (index * perBin + offset - Math.floor(perBin / 2) + rays) % rays);
       const mean = (table: readonly number[]) => bin.reduce((sum, ray) => sum + table[ray], 0) / bin.length;
-      const fetches = bin.map((ray) => exposure.fetchKm[ray]).filter((km): km is number => km != null);
+      const sheltered = bin.filter((ray) => exposure.fetchKm[ray] != null);
+      const fetches = sheltered.map((ray) => exposure.fetchKm[ray] as number);
       bytes[index * count + cell] = Math.round(mean(exposure.swell) * SHARE_SCALE);
       bytes[(SHELTER_DIRECTIONS + index) * count + cell] = Math.round(mean(exposure.wind) * SHARE_SCALE);
       bytes[(2 * SHELTER_DIRECTIONS + index) * count + cell] =
         fetches.length === 0 ? NO_FETCH : Math.min(NO_FETCH - 1, Math.round(Math.min(...fetches) * FETCH_SCALE));
+      // The least open of the rays with a fetch, so a bin is sheltered upwind exactly when one of its rays is.
+      bytes[(3 * SHELTER_DIRECTIONS + index) * count + cell] = Math.round(
+        Math.min(1, ...sheltered.map((ray) => exposure.rayWind[ray])) * SHARE_SCALE,
+      );
     }
   });
   return bytes;
@@ -106,14 +111,16 @@ export function packExposures(exposures: readonly SiteExposure[]): Uint8Array {
 export function unpackExposure(bytes: Uint8Array, count: number, cell: number): SiteExposure {
   const swell: number[] = [];
   const wind: number[] = [];
+  const rayWind: number[] = [];
   const fetchKm: (number | null)[] = [];
   for (let index = 0; index < SHELTER_DIRECTIONS; index += 1) {
     swell.push(bytes[index * count + cell] / SHARE_SCALE);
     wind.push(bytes[(SHELTER_DIRECTIONS + index) * count + cell] / SHARE_SCALE);
     const fetch = bytes[(2 * SHELTER_DIRECTIONS + index) * count + cell];
     fetchKm.push(fetch === NO_FETCH ? null : fetch / FETCH_SCALE);
+    rayWind.push(bytes[(3 * SHELTER_DIRECTIONS + index) * count + cell] / SHARE_SCALE);
   }
-  return { swell, wind, fetchKm };
+  return { swell, wind, rayWind, fetchKm };
 }
 
 /** Bytes from packExposures as `cells` stores them. */

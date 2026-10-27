@@ -128,14 +128,15 @@ export function blendSeaState(own: SeaStateHour | null, other: SeaStateHour | nu
     const known = own ?? other;
     return known && known.band === "rough" ? known : null;
   }
+  // Each side's swell as its felt height holds it: every swell component together, not just the biggest one shown.
   const swellFelt = (hour: SeaStateHour) => Math.sqrt(Math.max(0, hour.feltM ** 2 - (WIND_WAVE_WEIGHT * hour.windWaveM) ** 2));
-  const swellM = share * swellFelt(own) + (1 - share) * swellFelt(other);
+  const ownSwell = share * swellFelt(own);
+  const otherSwell = (1 - share) * swellFelt(other);
+  const swellM = ownSwell + otherSwell;
   const windWaveM = share * own.windWaveM + (1 - share) * other.windWaveM;
   const feltM = Math.sqrt(swellM ** 2 + (WIND_WAVE_WEIGHT * windWaveM) ** 2);
-  const ownWeight = share * (own.swell?.heightM ?? 0);
-  const otherWeight = (1 - share) * (other.swell?.heightM ?? 0);
-  const lead = ownWeight >= otherWeight ? own.swell : other.swell;
-  const shownSwellM = share * (own.swell?.heightM ?? 0) + (1 - share) * (other.swell?.heightM ?? 0);
+  // Direction and period from the side that brings more of it; the height shown is the one the felt height uses.
+  const lead = ownSwell >= otherSwell ? (own.swell ?? other.swell) : (other.swell ?? own.swell);
   const wind =
     own.wind && other.wind && angleBetween(own.wind.fromDeg, other.wind.fromDeg) <= BLEND_WIND_AGREE_DEG
       ? share >= 0.5
@@ -146,7 +147,7 @@ export function blendSeaState(own: SeaStateHour | null, other: SeaStateHour | nu
     time: own.time,
     band: seaBand(feltM),
     feltM: round2(feltM),
-    swell: lead && shownSwellM >= 0.05 ? { ...lead, heightM: round2(shownSwellM) } : null,
+    swell: lead && swellM >= 0.05 ? { ...lead, heightM: round2(swellM) } : null,
     windWaveM: round2(windWaveM),
     wind,
     againstCurrent: false,
@@ -206,7 +207,7 @@ function hasLocalFetch(exposure: SiteExposure, fromDeg: number | null): boolean 
   return exposure.fetchKm.some(
     (fetchKm, index) =>
       fetchKm != null &&
-      exposure.wind[index] < OPEN_WIND_SHARE &&
+      exposure.rayWind[index] < OPEN_WIND_SHARE &&
       (fromDeg == null || angleBetween(index * stepDeg, fromDeg) <= WIND_SPREAD_DEG + stepDeg / 2),
   );
 }
