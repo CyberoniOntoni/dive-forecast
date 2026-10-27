@@ -4,7 +4,19 @@ import zlib from "zlib";
 import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
-import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, ringBox, type RimRing, type RingBox } from "./rim";
+import {
+  allRims,
+  boxesOverlap,
+  KM_PER_DEG_LAT,
+  outlineKm,
+  padBox,
+  pointInRing,
+  rimForAtoll,
+  rimWayId,
+  ringBox,
+  type RimRing,
+  type RingBox,
+} from "./rim";
 import { blendSeaState, exposureIslands, exposureRings, exposureShoals, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
 import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
@@ -372,30 +384,8 @@ export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null
   return { wayId: owner.wayId, outside: true, island, ...(next && share < 1 ? { blend: { wayId: next.wayId, share } } : {}) };
 }
 
-/** Km from a point to the nearest edge of an outline, at the point's latitude. */
-export function outlineKm(lat: number, lon: number, ring: RimRing): number {
-  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const x0 = (ring[index][1] - lon) * kx;
-    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
-    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
-    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const length = ex * ex + ey * ey;
-    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
-    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
-  }
-  return Math.sqrt(nearest);
-}
-
-type Box = RingBox;
-
-function inBox(lat: number, lon: number, box: Box, pad: number): boolean {
+function inBox(lat: number, lon: number, box: RingBox, pad: number): boolean {
   return lat >= box.south - pad && lat <= box.north + pad && lon >= box.west - pad && lon <= box.east + pad;
-}
-
-function overlaps(a: Box, b: Box): boolean {
-  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }
 
 /** One atoll's felt height on one of its grids for the map, as the getShelter action sends it. */
@@ -449,7 +439,7 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
   const grid = readShelterGrid();
   const band = SHELTER_BAND_KM / KM_PER_DEG_LAT;
   const atolls = gridAtolls();
-  const shown = atolls.filter(({ ring }) => overlaps(view, pad(ringBox(ring), band)));
+  const shown = atolls.filter(({ ring }) => boxesOverlap(view, padBox(ringBox(ring), band)));
   // Atolls in view, and their neighbours whose seas they blend with where the two meet.
   const wanted = new Set(shown.map(({ wayId }) => wayId));
   for (const { wayId } of shown) for (const neighbour of Object.keys(grid.atolls[wayId].coarse.blend)) wanted.add(neighbour);
@@ -483,10 +473,10 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
 export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
   const outline = allRims().get(wayId);
   if (!outline) return null;
-  const box = pad(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
+  const box = padBox(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
   const islands = readIslands()
     .map((island) => island.ring)
-    .filter((ring) => overlaps(ringBox(ring), box));
+    .filter((ring) => boxesOverlap(ringBox(ring), box));
   return { outline, islands };
 }
 
@@ -514,8 +504,4 @@ export async function shelterPoint(lat: number, lon: number, time: string): Prom
   );
   const blend = owner.blend && neighbour ? { share: owner.blend.share, samples: samplesAt(neighbour, time) } : undefined;
   return seaAt(exposure, samplesAt(offshore, time), blend) ?? "unknown";
-}
-
-function pad(box: Box, by: number): Box {
-  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
 }

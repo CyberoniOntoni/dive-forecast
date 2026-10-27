@@ -247,3 +247,28 @@ export function ringBox(ring: readonly (readonly [number, number])[]): RingBox {
   }
   return { south, north, west, east };
 }
+
+/** The box grown by `by` degrees on every side. */
+export function padBox(box: RingBox, by: number): RingBox {
+  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
+}
+
+export function boxesOverlap(a: RingBox, b: RingBox): boolean {
+  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
+}
+
+/** Km from a point to the nearest edge of an outline, at the point's latitude. */
+export function outlineKm(lat: number, lon: number, ring: RimRing): number {
+  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + 1 < ring.length; index += 1) {
+    const x0 = (ring[index][1] - lon) * kx;
+    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
+    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
+    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
+    const length = ex * ex + ey * ey;
+    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
+    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
+  }
+  return Math.sqrt(nearest);
+}

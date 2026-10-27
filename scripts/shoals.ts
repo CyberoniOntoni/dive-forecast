@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ATLAS_OVERLAYS, decodeRing } from "../lib/atlas-overlays";
-import { allRims, pointInRing, type RimRing } from "../lib/rim";
-import { outlineKm } from "../lib/shelter-grid";
+import { allRims, outlineKm, pointInRing, type RimRing } from "../lib/rim";
 import type { ShoalKind } from "../lib/shoals";
 
 /**

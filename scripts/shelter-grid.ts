@@ -3,11 +3,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
-import { allRims, KM_PER_DEG_LAT, pointInRing, ringBox, type RimRing, type RingBox } from "../lib/rim";
+import { allRims, boxesOverlap, KM_PER_DEG_LAT, outlineKm, padBox, pointInRing, ringBox, type RimRing } from "../lib/rim";
 import { exposureIslands, exposureRings, exposureShoals } from "../lib/sea-state";
 import {
   encodeCells,
-  outlineKm,
   packExposures,
   seaOwner,
   SHELTER_BAND_KM,
@@ -36,14 +35,13 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
 const FINE_PER_COARSE = Math.round(SHELTER_STEP_DEG / SHELTER_FINE_STEP_DEG);
 
 type Region = "inner" | "outer" | "land" | "other" | null;
-type Box = RingBox;
 
 function buildAtoll(wayId: string): ShelterAtollGrid {
   const outline = allRims().get(wayId) as RimRing;
   const padDeg = SHELTER_BAND_KM / KM_PER_DEG_LAT + 2 * SHELTER_STEP_DEG;
   const reach = padBox(ringBox(outline), padDeg);
   const allIslands = exposureIslands();
-  const islands = allIslands.map(({ ring }) => ({ ring, box: ringBox(ring) })).filter(({ box }) => overlaps(box, reach));
+  const islands = allIslands.map(({ ring }) => ({ ring, box: ringBox(ring) })).filter(({ box }) => boxesOverlap(box, reach));
   const rings = exposureRings();
   const openings = readOpenings();
   const shoals = exposureShoals();
@@ -150,15 +148,6 @@ class LayerBuilder {
       cells: encodeCells(packExposures([...this.exposures.inner, ...this.exposures.outer])),
     };
   }
-}
-
-
-function padBox(box: Box, by: number): Box {
-  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
-}
-
-function overlaps(a: Box, b: Box): boolean {
-  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }
 
 
