@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
 import { allRims, KM_PER_DEG_LAT, pointInRing, type RimRing } from "../lib/rim";
-import { exposureIslands, exposureRings } from "../lib/sea-state";
+import { exposureIslands, exposureRings, exposureShoals } from "../lib/sea-state";
 import {
   encodeCells,
   outlineKm,
@@ -46,6 +46,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
   const islands = allIslands.map(({ ring }) => ({ ring, box: boxOf(ring) })).filter(({ box }) => overlaps(box, reach));
   const rings = exposureRings();
   const openings = readOpenings();
+  const shoals = exposureShoals();
 
   // Whose water each spot is follows the layer's one rule (seaOwner): this atoll's lagoon or sea, another atoll's
   // water, or nothing past the band.
@@ -57,7 +58,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
     return { kind: owner.outside ? "outer" : "inner", blend: owner.blend };
   };
   const exposureAt = (lat: number, lon: number) =>
-    siteExposure({ lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: wayId }, rings, openings, allIslands);
+    siteExposure({ lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: wayId }, rings, openings, allIslands, shoals);
 
   const south = Math.floor(reach.south / SHELTER_STEP_DEG) * SHELTER_STEP_DEG;
   const west = Math.floor(reach.west / SHELTER_STEP_DEG) * SHELTER_STEP_DEG;

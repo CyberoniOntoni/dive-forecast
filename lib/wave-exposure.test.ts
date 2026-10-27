@@ -193,6 +193,29 @@ describe("siteExposure with islands", () => {
     expect((behind - both.rayWind[ray]) / (1 - alone)).toBeCloseTo((fFar - fIslet) / (1 - fIslet), 1);
   });
 
+  it("cuts the swell behind a lagoon shoal, by how much of the sky it fills, but not the wind", () => {
+    // Inside SQUARE, 5 km from its east rim: a reef top 1 km east, about 450 m across (about 25° of sky).
+    const lagoon = { lat: 4.0, lon: 73.555, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: "own" };
+    const shoal = (lonOffset: number, transmission: number) => {
+      const ring = square(4.0, 73.555 + lonOffset, 0.004);
+      return { ring, transmission, south: 3.998, north: 4.002, west: 73.553 + lonOffset, east: 73.557 + lonOffset };
+    };
+    const open = siteExposure(lagoon, [OWN], [EAST_GAP]);
+    const behind = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.15)]);
+    const sand = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.5)]);
+    expect(exposureAt(behind.swell, 90)).toBeLessThan(0.6 * exposureAt(open.swell, 90));
+    expect(exposureAt(sand.swell, 90)).toBeLessThan(exposureAt(open.swell, 90));
+    expect(exposureAt(sand.swell, 90)).toBeGreaterThan(exposureAt(behind.swell, 90));
+    expect(exposureAt(behind.swell, 270)).toBeCloseTo(exposureAt(open.swell, 270), 3);
+    expect(behind.fetchKm).toEqual(open.fetchKm);
+    // Out past the rim (and its gap), the reef has cut that swell already: the shoal adds nothing.
+    const outside = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.06, 0.15)]);
+    expect(outside.swell).toEqual(open.swell);
+    // A cell on the shoal itself reads the swell that crossed the shoals round it.
+    const onTop = siteExposure({ ...lagoon, lon: 73.564 }, [OWN], [EAST_GAP], [], [shoal(0.009, 0.15)]);
+    expect(onTop.swell).toEqual(siteExposure({ ...lagoon, lon: 73.564 }, [OWN], [EAST_GAP]).swell);
+  });
+
   it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {
     const wooded = siteExposure(site, [], [], [island(0)]);
     const bare = siteExposure(site, [], [], [island(0, false)]);

@@ -5,7 +5,7 @@ import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, type RimRing } from "./rim";
-import { blendSeaState, exposureIslands, exposureRings, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
+import { blendSeaState, exposureIslands, exposureRings, exposureShoals, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
 import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, fieldByte } from "./shelter-field";
@@ -524,6 +524,7 @@ export async function shelterPoint(lat: number, lon: number, time: string): Prom
     exposureRings(),
     readOpenings(),
     exposureIslands(),
+    exposureShoals(),
   );
   const blend = owner.blend && neighbour ? { share: owner.blend.share, samples: samplesAt(neighbour, time) } : undefined;
   return seaAt(exposure, samplesAt(offshore, time), blend) ?? "unknown";

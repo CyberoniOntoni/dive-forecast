@@ -11,9 +11,11 @@ import {
   type ExposureIsland,
   type ExposureKind,
   type ExposureRing,
+  type ExposureShoal,
   type SiteExposure,
 } from "./wave-exposure";
 import { readIslands, WOODED_MIN_HA } from "./islands";
+import { readShoals, SHOAL_TRANSMISSION } from "./shoals";
 import { fetchWaves, type WaveComponent, type WaveHour } from "./waves";
 import { fetchWind, type WindHour } from "./wind";
 import type { FetchOptions } from "./marine";
@@ -287,6 +289,24 @@ export function exposureIslands(): ExposureIsland[] {
   return readIslands().map((island) => ({ ring: island.ring, wooded: island.areaHa >= WOODED_MIN_HA }));
 }
 
+let shoalsMemo: { from: ReturnType<typeof readShoals>; shoals: ExposureShoal[] } | null = null;
+
+/** Every lagoon shoal, for the ray tracer, with its box. Reads data/shoals.json, so a corrupt file throws here. */
+export function exposureShoals(): ExposureShoal[] {
+  const read = readShoals();
+  if (shoalsMemo?.from === read) return shoalsMemo.shoals;
+  const shoals = read.map(({ kind, ring }) => ({
+    ring,
+    transmission: SHOAL_TRANSMISSION[kind],
+    south: Math.min(...ring.map(([lat]) => lat)),
+    north: Math.max(...ring.map(([lat]) => lat)),
+    west: Math.min(...ring.map(([, lon]) => lon)),
+    east: Math.max(...ring.map(([, lon]) => lon)),
+  }));
+  shoalsMemo = { from: read, shoals };
+  return shoals;
+}
+
 export function exposureForSite(
   site: Site,
   mates: readonly Site[],
@@ -300,7 +320,7 @@ export function exposureForSite(
   if (kept) return kept;
   // Read first: a corrupt openings or islands file throws here and nothing is memoised.
   const openings = readOpenings();
-  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, exposureRings(), openings, exposureIslands());
+  const exposure = siteExposure({ lat: site.lat, lon: site.lon, kind, inwardBearingDeg, ownWayId }, exposureRings(), openings, exposureIslands(), exposureShoals());
   exposureMemo.set(key, exposure);
   return exposure;
 }

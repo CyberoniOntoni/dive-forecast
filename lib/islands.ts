@@ -52,6 +52,11 @@ function islandProblem(item: unknown): string | null {
   if (!isRecord(item)) return "is not an object";
   const { areaHa, ring } = item;
   if (typeof areaHa !== "number" || !Number.isFinite(areaHa) || areaHa < 0) return "has no valid areaHa";
+  return ringProblem(ring);
+}
+
+/** What is wrong with a closed ring of [lat, lon] pairs read from a data file, or null when nothing is. */
+export function ringProblem(ring: unknown): string | null {
   if (!Array.isArray(ring) || ring.length < 4) return "has a ring of fewer than four points";
   for (const point of ring) {
     if (!Array.isArray(point) || point.length !== 2) return "has a point that is not a [lat, lon] pair";
