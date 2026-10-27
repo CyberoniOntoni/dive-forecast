@@ -3,13 +3,14 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
-import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, type RimRing } from "../lib/rim";
+import { allRims, KM_PER_DEG_LAT, pointInRing, type RimRing } from "../lib/rim";
 import { exposureIslands, exposureRings } from "../lib/sea-state";
 import {
   encodeCells,
+  outlineKm,
   packExposures,
+  seaOwner,
   SHELTER_BAND_KM,
-  SHELTER_BLEND_KM,
   SHELTER_DIRECTIONS,
   SHELTER_FINE_KM,
   SHELTER_FINE_STEP_DEG,
@@ -23,10 +24,11 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
 
 /**
  * Builds data/shelter-grid.json for the sheltered-water map layer (lib/shelter-grid.ts): for each atoll, every 500 m
- * cell of water inside its outline and within SHELTER_BAND_KM outside it (where no other atoll's outline is nearer),
+ * cell of water it owns (inside its outline, and within SHELTER_BAND_KM outside it where no other outline is nearer:
+ * seaOwner),
  * and every 125 m cell of that water within SHELTER_FINE_KM of an island, with its exposure from the same ray tracing
  * as the dive sites. Atolls are built in parallel, one process per core. Rerun after rims.json, openings.json or
- * islands.json change. Takes about ten minutes.
+ * islands.json change. Takes a few minutes.
  *
  *   npm run shelter-grid
  */
@@ -36,77 +38,23 @@ const FINE_PER_COARSE = Math.round(SHELTER_STEP_DEG / SHELTER_FINE_STEP_DEG);
 type Region = "inner" | "outer" | "land" | "other" | null;
 type Box = { south: number; north: number; west: number; east: number };
 
-/** An outline or island in km about a fixed latitude, for fast distances. */
-type Shape = { ring: RimRing; box: Box; xs: Float64Array; ys: Float64Array };
-
-const KM_X = KM_PER_DEG_LON * Math.cos((4 * Math.PI) / 180);
-
-function shape(ring: RimRing): Shape {
-  return {
-    ring,
-    box: boxOf(ring),
-    xs: Float64Array.from(ring, ([, lon]) => lon * KM_X),
-    ys: Float64Array.from(ring, ([lat]) => lat * KM_PER_DEG_LAT),
-  };
-}
-
-/** Km from a point to the nearest edge of the shape (the Maldives span a few degrees, so one scale serves). */
-function edgeKm(lat: number, lon: number, { xs, ys }: Shape): number {
-  const x = lon * KM_X;
-  const y = lat * KM_PER_DEG_LAT;
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < xs.length; index += 1) {
-    const ex = xs[index + 1] - xs[index];
-    const ey = ys[index + 1] - ys[index];
-    const length = ex * ex + ey * ey;
-    const along = length === 0 ? 0 : Math.max(0, Math.min(1, ((x - xs[index]) * ex + (y - ys[index]) * ey) / length));
-    const dx = xs[index] + along * ex - x;
-    const dy = ys[index] + along * ey - y;
-    nearest = Math.min(nearest, dx * dx + dy * dy);
-  }
-  return Math.sqrt(nearest);
-}
-
 function buildAtoll(wayId: string): ShelterAtollGrid {
-  const rims = allRims();
-  const own = shape(rims.get(wayId) as RimRing);
+  const outline = allRims().get(wayId) as RimRing;
   const padDeg = SHELTER_BAND_KM / KM_PER_DEG_LAT + 2 * SHELTER_STEP_DEG;
-  const reach = padBox(own.box, padDeg);
-  const others = [...rims]
-    .filter(([id]) => id !== wayId)
-    .map(([id, ring]) => ({ id, ...shape(ring) }))
-    .filter(({ box }) => overlaps(padBox(box, padDeg), reach));
+  const reach = padBox(boxOf(outline), padDeg);
   const allIslands = exposureIslands();
-  const islands = allIslands
-    .map(({ ring }) => shape(ring))
-    .filter(({ box }) => overlaps(box, reach));
+  const islands = allIslands.map(({ ring }) => ({ ring, box: boxOf(ring) })).filter(({ box }) => overlaps(box, reach));
   const rings = exposureRings();
   const openings = readOpenings();
 
-  // Inside this outline, or nearest it and within the band: this atoll's water. Inside another outline, or nearest
-  // another within the band: that atoll's. An island in this atoll's water is land. Sea within SHELTER_BLEND_KM of
-  // where another atoll's band meets this one blends toward that atoll's waves, so the two meet without a step.
+  // Whose water each spot is follows the layer's one rule (seaOwner): this atoll's lagoon or sea, another atoll's
+  // water, or nothing past the band.
   const region = (lat: number, lon: number): { kind: Region; blend?: { wayId: string; share: number } } => {
-    let kind: Region = null;
-    let blend: { wayId: string; share: number } | undefined;
-    if (pointInRing(lat, lon, own.ring)) kind = "inner";
-    else if (others.some((other) => inBox(lat, lon, other.box) && pointInRing(lat, lon, other.ring))) return { kind: "other" };
-    else {
-      const km = edgeKm(lat, lon, own);
-      let nearest: { id: string; km: number } | null = null;
-      for (const other of others) {
-        if (!inBox(lat, lon, padBox(other.box, padDeg))) continue;
-        const otherKm = edgeKm(lat, lon, other);
-        if (otherKm <= SHELTER_BAND_KM && (!nearest || otherKm < nearest.km)) nearest = { id: other.id, km: otherKm };
-      }
-      if (nearest && nearest.km < km) return { kind: "other" };
-      if (km > SHELTER_BAND_KM) return { kind: null };
-      kind = "outer";
-      const share = Math.min(1, 0.5 + (nearest ? nearest.km - km : Number.POSITIVE_INFINITY) / (2 * SHELTER_BLEND_KM));
-      if (nearest && share < 1) blend = { wayId: nearest.id, share };
-    }
-    if (islands.some((island) => inBox(lat, lon, island.box) && pointInRing(lat, lon, island.ring))) return { kind: "land" };
-    return { kind, blend };
+    const owner = seaOwner(lat, lon);
+    if (!owner) return { kind: null };
+    if (owner.wayId !== wayId) return { kind: "other" };
+    if (owner.island) return { kind: "land" };
+    return { kind: owner.outside ? "outer" : "inner", blend: owner.blend };
   };
   const exposureAt = (lat: number, lon: number) =>
     siteExposure({ lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: wayId }, rings, openings, allIslands);
@@ -143,7 +91,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
         if (fineCells.has(key)) continue;
         const lat = south + (row + 0.5) * SHELTER_FINE_STEP_DEG;
         const lon = west + (column + 0.5) * SHELTER_FINE_STEP_DEG;
-        if (edgeKm(lat, lon, island) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
+        if (outlineKm(lat, lon, island.ring) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
       }
     }
   }
@@ -225,9 +173,6 @@ function overlaps(a: Box, b: Box): boolean {
   return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }
 
-function inBox(lat: number, lon: number, box: Box): boolean {
-  return lat >= box.south && lat <= box.north && lon >= box.west && lon <= box.east;
-}
 
 function round(value: number): number {
   return Math.round(value * 1e6) / 1e6;

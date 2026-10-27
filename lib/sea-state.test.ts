@@ -178,11 +178,31 @@ describe("local wind chop", () => {
     expect(sea.windWaveM).toBeCloseTo(0.1, 5);
   });
 
-  it("leaves out an hour with no wind unless it is already rough", () => {
+  it("leaves out a lagoon hour with no wind unless it is already rough", () => {
     expect(seaStateHours({ sides: calmSea, exposure: LAGOON, wind: [] })).toEqual([]);
     const big: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 1.8, 90)] }];
-    const [sea] = seaStateHours({ sides: big, exposure: FULL, wind: [] });
+    // Rough swell reaching a spot with sheltered water upwind: rough whatever the chop.
+    const [sea] = seaStateHours({ sides: big, exposure: { ...LAGOON, swell: FULL.swell }, wind: [] });
     expect(sea.band).toBe("rough");
     expect(sea.wind).toBeNull();
+  });
+
+  it("keeps the wave model's band on open water when the wind is missing", () => {
+    const moderate: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.7, 90, 0.2)] }];
+    const [sea] = seaStateHours({ sides: moderate, exposure: FULL, wind: [] });
+    expect(sea.band).toBe("moderate");
+    expect(sea.wind).toBeNull();
+  });
+
+  it("only needs the wind where the water upwind of it is sheltered", () => {
+    // Sheltered water to the west only; the wave model's wind sea comes from the east.
+    const westFetch: SiteExposure = {
+      ...FULL,
+      fetchKm: Array.from({ length: 360 / STEP_DEG }, (_, index) => (index * STEP_DEG >= 225 && index * STEP_DEG <= 315 ? 5 : null)),
+    };
+    const fromEast: OffshoreSide[] = [{ sideDeg: 90, hours: [wave(time, 0.7, 90, 0.2, 90)] }];
+    expect(seaStateHours({ sides: fromEast, exposure: westFetch, wind: [] })[0]?.band).toBe("moderate");
+    const fromWest: OffshoreSide[] = [{ sideDeg: 270, hours: [wave(time, 0.7, 270, 0.2, 270)] }];
+    expect(seaStateHours({ sides: fromWest, exposure: westFetch, wind: [] })).toEqual([]);
   });
 });

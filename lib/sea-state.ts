@@ -59,7 +59,7 @@ export function seaStateHours(input: {
   exposure: SiteExposure;
   /**
    * 10 m wind over the atoll. Raises chop over the open water upwind of the site (exposure.fetchKm), which the wave
-   * model is too coarse to see. An hour missing here makes that chop unknown.
+   * model is too coarse to see. An hour missing here makes that chop unknown, unless the water upwind is all open sea.
    */
   wind: readonly WindHour[];
   /** The current forecast's hours, for the swell-against-current check. Only "channel" hours are checked. */
@@ -78,8 +78,10 @@ export function seaStateHours(input: {
     const secondaryPick = upstream(byTime, time, "secondarySwell");
     const windPick = upstream(byTime, time, "windWave");
     const windHour = windAt.get(time);
-    // No wind that hour: the chop it raises over the lagoon is as unknown as a missing upwind wave sample.
-    const unknown = windHour == null || [swellPick, secondaryPick, windPick].some((pick) => pick.kind === "unknown");
+    // No wind that hour: the chop it would raise over sheltered water upwind is as unknown as a missing upwind wave
+    // sample. Where the water upwind is all open sea, the wave model's wind sea already covers it.
+    const windUnknown = windHour == null && hasLocalFetch(input.exposure, windPick.kind === "value" ? windPick.wave.fromDeg : null);
+    const unknown = windUnknown || [swellPick, secondaryPick, windPick].some((pick) => pick.kind === "unknown");
     const swells = [swellPick, secondaryPick]
       .flatMap((pick) => (pick.kind === "value" ? [pick.wave] : []))
       .map((wave) => ({ ...wave, heightM: wave.heightM * exposureAt(input.exposure.swell, wave.fromDeg) }));
@@ -144,6 +146,18 @@ function localChopM(exposure: SiteExposure, wind: WindHour): number {
     weights += weight;
   }
   return Math.sqrt(energy / weights);
+}
+
+/**
+ * Whether any direction within WIND_SPREAD_DEG of `fromDeg` has sheltered water upwind (a finite fetch), where local
+ * chop would count. With no direction to go by (no wind and no wave-model wind sea), any direction at all.
+ */
+function hasLocalFetch(exposure: SiteExposure, fromDeg: number | null): boolean {
+  const count = exposure.fetchKm.length;
+  const stepDeg = 360 / count;
+  return exposure.fetchKm.some(
+    (fetchKm, index) => fetchKm != null && (fromDeg == null || angleBetween(index * stepDeg, fromDeg) <= WIND_SPREAD_DEG + stepDeg / 2),
+  );
 }
 
 export function seaBand(feltM: number): SeaBand {
@@ -287,7 +301,7 @@ export function siteSeaState(
   const hours = seaStateHours({
     sides: offshore.sides,
     exposure,
-    // No wind series: every hour's local chop is unknown, so only hours already rough are shown.
+    // No wind series: local chop is unknown, so where there is sheltered water upwind only hours already rough show.
     wind: offshore.wind ?? [],
     current: current.hours,
     // A lagoon site that fell back to channel hours has no channel mouth of its own.
