@@ -3,16 +3,12 @@
  * a route, and the words the panel shows. No file reads here; the route itself comes from lib/boat-route.ts.
  */
 
-import { distanceKm, footOnSegment } from "./geometry";
-
-export { distanceKm };
-
-export type LatLon = { lat: number; lon: number };
+import { bearingDeg, distanceKm, footOnSegment, polylineKm, type LatLon } from "./geometry";
 
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
 
-export const KM_PER_NM = 1.852;
+const KM_PER_NM = 1.852;
 const MS_PER_KNOT = KM_PER_NM / 3.6;
 
 /** Fixes this old still count toward the speed worked out from positions. */
@@ -20,30 +16,9 @@ export const SPEED_WINDOW_MS = 30_000;
 /** Positions this far apart in time at least, before a speed is worked out from them. */
 const SPEED_MIN_SPAN_MS = 4_000;
 /** Under this the boat counts as stopped: GPS drift, a drifting dhoni, no useful ETA. */
-export const UNDERWAY_KNOTS = 2;
+const UNDERWAY_KNOTS = 2;
 /** Cruising speeds the panel quotes while the boat is stopped: a dhoni and a speedboat. */
 export const REFERENCE_KNOTS = [8, 20] as const;
-
-export function polylineKm(points: readonly (readonly [number, number])[]): number {
-  let total = 0;
-  for (let index = 0; index + 1 < points.length; index += 1) {
-    total += distanceKm(
-      { lat: points[index][0], lon: points[index][1] },
-      { lat: points[index + 1][0], lon: points[index + 1][1] },
-    );
-  }
-  return total;
-}
-
-/** Initial great-circle bearing from a to b, degrees clockwise from north. */
-export function bearingDeg(a: LatLon, b: LatLon): number {
-  const toRad = Math.PI / 180;
-  const y = Math.sin((b.lon - a.lon) * toRad) * Math.cos(b.lat * toRad);
-  const x =
-    Math.cos(a.lat * toRad) * Math.sin(b.lat * toRad) -
-    Math.sin(a.lat * toRad) * Math.cos(b.lat * toRad) * Math.cos((b.lon - a.lon) * toRad);
-  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-}
 
 export type Motion = { knots: number; courseDeg: number | null };
 
@@ -95,9 +70,9 @@ export function alongRoute(boat: LatLon, points: readonly (readonly [number, num
   }
   // A degree of longitude is cos(lat) of a degree of latitude, so legs are measured in degrees of latitude.
   const lonScale = Math.cos((boat.lat * Math.PI) / 180);
-  // To plane [scaled lon, lat] for footOnSegment, and back to [lat, lon].
-  const toPlane = ([lat, lon]: readonly [number, number]): [number, number] => [lon * lonScale, lat];
-  const fromPlane = ([scaledLon, lat]: readonly [number, number]): [number, number] => [lat, scaledLon / lonScale];
+  // footOnSegment works on any flat pair, so the plane keeps [lat, lon] order with longitude scaled.
+  const toPlane = ([lat, lon]: readonly [number, number]): [number, number] => [lat, lon * lonScale];
+  const fromPlane = ([lat, scaledLon]: readonly [number, number]): [number, number] => [lat, scaledLon / lonScale];
   let best = { offKm: Infinity, leg: 0, foot: points[0] as readonly [number, number] };
   for (let index = 0; index + 1 < points.length; index += 1) {
     const foot = fromPlane(footOnSegment(toPlane([boat.lat, boat.lon]), toPlane(points[index]), toPlane(points[index + 1])));

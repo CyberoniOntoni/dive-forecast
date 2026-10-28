@@ -1,8 +1,7 @@
-import { polylineKm, type LatLon } from "./boat-nav";
-import { distanceKm } from "./geometry";
+import { distanceKm, polylineKm, type LatLon } from "./geometry";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
-import { allRims, boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, nearestRimPoint, padBox, ringBox, type RimRing, type RingBox } from "./rim";
+import { allRims, boxesOverlap, CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, nearestRimPoint, padBox, ringBox, type RimRing, type RingBox } from "./rim";
 import { readShoals } from "./shoals";
 import { listMergedSites } from "./store";
 
@@ -40,7 +39,7 @@ export type BoatRoute = {
 };
 
 /** Grid cell edge, metres. Grown for long routes so the grid stays under MAX_CELLS. */
-export const CELL_M = 50;
+const CELL_M = 50;
 const MAX_CELLS = 2_000_000;
 /**
  * The searches tried in turn until one finds a path: the water round the two ends it may use (km), and whether a
@@ -52,7 +51,7 @@ const ATTEMPTS = [
   { padKm: 12, sills: true },
 ] as const;
 /** Within this of either end the route may cross shapes: a thila pin sits on its reef, a boat may lie alongside an island. */
-export const ENDPOINT_FREE_M = 300;
+const ENDPOINT_FREE_M = 300;
 /** Cells this close (in cells) to a shape cost more, up to 1 + MARGIN_CELLS × MARGIN_COST next to it. */
 const MARGIN_CELLS = 4;
 const MARGIN_COST = 0.6;
@@ -61,8 +60,6 @@ const SHALLOW_GAP_COST = 40;
 const ENDPOINT_COST = 4;
 /** How far from the pin a pass site's outline crossing counts as open, metres. */
 const PASS_OPEN_M = 150;
-/** A pass pin farther than this from its outline does not open it. */
-const PASS_RIM_MAX_KM = 0.8;
 
 /** Cells past the last straight leg that pullStraight still tries before it keeps that corner. */
 const PULL_LOOKAHEAD = 80;
@@ -136,19 +133,22 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
     };
   }
   const { blockers, rims, gaps } = shapeCache;
-  // A pass dive site is a way through its outline even where the crest map shows no gap.
+  // A pass dive site is a way through its outline even where the crest map shows no gap. The reach is the one the
+  // forecast uses to tie a pass to its outline, so a pass the coarse outline puts inside the lagoon still opens it.
   const passes = sites
     .filter((site) => site.siteType === "pass")
     .flatMap((site) => {
       const foot = nearestOnRims(site, rims);
-      return foot && foot.km <= PASS_RIM_MAX_KM ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
+      return foot && foot.km <= CHANNEL_RIM_REACH_KM ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
     });
   return { blockers, rims, gaps: [...gaps, ...passes] };
 }
 
 /** The nearest point on any outline whose box lies near the pin. */
 function nearestOnRims(pin: LatLon, rims: readonly RimRing[]): ReturnType<typeof nearestRimPoint> | null {
-  const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, 0.02);
+  // Wide enough for CHANNEL_RIM_REACH_KM on both axes (a degree of longitude is the shorter).
+  const reachDeg = CHANNEL_RIM_REACH_KM / (KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180));
+  const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, reachDeg);
   let best: ReturnType<typeof nearestRimPoint> | null = null;
   for (const ring of rims) {
     if (!boxesOverlap(boxOf(ring), near)) continue;

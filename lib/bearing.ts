@@ -1,4 +1,4 @@
-import { distanceKm } from "./geometry";
+import { bearingDeg, distanceKm } from "./geometry";
 import { CHANNEL_RIM_REACH_KM, rimDistanceKm, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
@@ -43,9 +43,9 @@ function heuristicBearing(
   const seeded = seededMates(site, mates);
   if (seeded.length >= 2) {
     const center = centroid(seeded);
-    return bearingClockwiseFromNorth(site.lat, site.lon, center.lat, center.lon);
+    return bearingDeg(site, center);
   }
-  return bearingClockwiseFromNorth(outside.lat, outside.lon, site.lat, site.lon);
+  return bearingDeg(outside, site);
 }
 
 function seededMates(site: Site, mates: readonly Site[]): Site[] {
@@ -67,17 +67,6 @@ function centroid(sites: readonly Site[]): { lat: number; lon: number } {
     lonSum += site.lon;
   }
   return { lat: latSum / sites.length, lon: lonSum / sites.length };
-}
-
-function bearingClockwiseFromNorth(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const startLat = toRadians(lat1);
-  const endLat = toRadians(lat2);
-  const deltaLon = toRadians(lon2 - lon1);
-  const east = Math.sin(deltaLon) * Math.cos(endLat);
-  const north =
-    Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(deltaLon);
-  const degrees = toDegrees(Math.atan2(east, north));
-  return wrapDegrees(degrees);
 }
 
 /** A pin farther than this from every stored atoll outline is not in a seeded atoll. */
@@ -113,14 +102,6 @@ export function nearestAtoll(lat: number, lon: number, atolls: Atoll[]): Atoll {
     }
   }
   return best;
-}
-
-function toRadians(degrees: number): number {
-  return (degrees * Math.PI) / 180;
-}
-
-function toDegrees(radians: number): number {
-  return (radians * 180) / Math.PI;
 }
 
 export function wrapDegrees(degrees: number): number {

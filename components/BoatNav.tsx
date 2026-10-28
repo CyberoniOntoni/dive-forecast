@@ -4,8 +4,6 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { getBoatRoute, type BoatRoute } from "@/lib/actions";
 import {
   alongRoute,
-  bearingDeg,
-  distanceKm,
   etaMinutes,
   formatBearing,
   formatDuration,
@@ -14,9 +12,9 @@ import {
   motionFrom,
   REFERENCE_KNOTS,
   type Fix,
-  type LatLon,
   type Motion,
 } from "@/lib/boat-nav";
+import { bearingDeg, distanceKm, type LatLon } from "@/lib/geometry";
 import { currentWallTime, MALDIVES_TIME } from "@/lib/site-time";
 
 /** What the map draws while navigating. */

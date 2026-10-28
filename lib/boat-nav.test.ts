@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   alongRoute,
-  bearingDeg,
-  distanceKm,
   etaMinutes,
   formatBearing,
   formatDuration,
@@ -12,6 +10,7 @@ import {
   SPEED_WINDOW_MS,
   type Fix,
 } from "./boat-nav";
+import { bearingDeg, distanceKm } from "./geometry";
 
 /** One nautical mile of latitude is one minute of arc. */
 const NM_LAT = 1 / 60;
