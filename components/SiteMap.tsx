@@ -158,7 +158,6 @@ const MAP_STYLE = `
 .dive-map .leaflet-bar a:hover,.dive-map .leaflet-bar a:focus{background:color-mix(in srgb, var(--ink) 78%, var(--foam));color:var(--foam)}
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 ${CREDIT_STYLE}
-.dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 80%, transparent);backdrop-filter:blur(8px);color:color-mix(in srgb, var(--foam) 85%, transparent);border-bottom-right-radius:10px}
 .dive-map.leaflet-container{background:var(--ink)}
 .dive-map .leaflet-control-layers{background:var(--glass);backdrop-filter:blur(10px);color:var(--foam)}
 .dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
@@ -575,6 +574,15 @@ export function SiteMap({
   const { navigating, site: navSite, pick: pickNavSite, change: changeNavSite } = useNavigateTab(sites);
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
+  // Add-site mode belongs to the Map tab: opening Navigate ends it, so it is not waiting there on the way back.
+  const [wasNavigating, setWasNavigating] = useState(navigating);
+  if (navigating !== wasNavigating) {
+    setWasNavigating(navigating);
+    if (navigating) {
+      setAdding(false);
+      setDraft(null);
+    }
+  }
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
@@ -629,7 +637,7 @@ export function SiteMap({
           <LeafletMap
             siteGlances={siteGlances}
             draft={draft}
-            adding={adding && !navigating}
+            adding={adding}
             onPick={setDraft}
             onView={setView}
             focus={focus}

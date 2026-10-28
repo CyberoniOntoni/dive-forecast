@@ -191,7 +191,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
               {REFERENCE_KNOTS.map((knots) => `At ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
             </p>
           ) : null}
-          <RouteNote route={route} routeError={routeError} shallow={shallow} steer={steer} accuracyM={boat.accuracyM} />
+          <RouteNote route={route} routeError={routeError} shallow={shallow} steer={steer} courseDeg={motion?.courseDeg ?? null} accuracyM={boat.accuracyM} />
         </>
       )}
     </section>
@@ -247,17 +247,22 @@ function RouteNote({
   routeError,
   shallow,
   steer,
+  courseDeg,
   accuracyM,
 }: {
   route: BoatRoute | null;
   routeError: boolean;
   shallow: boolean;
   steer: number | null;
+  /** Course over ground, to compare with the steer bearing. */
+  courseDeg: number | null;
   accuracyM: number;
 }) {
   const gaps = route?.routed ? route.gaps.length : 0;
   const parts = [
     steer != null ? `Steer ${formatBearing(steer)}` : null,
+    courseDeg != null ? `heading ${formatBearing(courseDeg)}` : null,
+    route?.routed ? `${formatNm(route.lengthKm)} by route (${formatNm(route.directKm)} straight)` : null,
     gaps > 0 ? (gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`) : null,
     `GPS ±${Math.round(accuracyM)} m`,
     "not a chart, keep a lookout",

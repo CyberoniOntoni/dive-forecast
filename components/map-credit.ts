@@ -24,8 +24,16 @@ export const CREDIT_STYLE = `
  */
 export function attachCredits(map: LeafletMapType): () => void {
   map.attributionControl.addAttribution(DATA_CREDIT_HTML);
-  if (window.matchMedia("(max-width: 1023px)").matches) map.attributionControl.setPosition("topright");
-  return foldCredit(map.attributionControl.getContainer());
+  const phone = window.matchMedia("(max-width: 1023px)");
+  // Follows a turned phone or a resized window across the breakpoint.
+  const place = () => map.attributionControl.setPosition(phone.matches ? "topright" : "bottomright");
+  place();
+  phone.addEventListener("change", place);
+  const unfold = foldCredit(map.attributionControl.getContainer());
+  return () => {
+    phone.removeEventListener("change", place);
+    unfold();
+  };
 }
 
 /** How long the credits show in full when the map opens, before they fold to the "i" button. */
@@ -47,8 +55,10 @@ function foldCredit(credit: HTMLElement | undefined): () => void {
   };
   setOpen(true);
   const fold = window.setTimeout(() => setOpen(false), CREDIT_SHOWN_MS);
+  // Someone reading the credits, or tabbed into them, keeps them open.
+  const hold = () => window.clearTimeout(fold);
   const onClick = (event: MouseEvent) => {
-    window.clearTimeout(fold);
+    hold();
     const open = credit.classList.contains("dive-credit-open");
     if (open && event.target instanceof Element && event.target.closest("a")) return;
     event.preventDefault();
@@ -57,14 +67,18 @@ function foldCredit(credit: HTMLElement | undefined): () => void {
   const onKey = (event: KeyboardEvent) => {
     if (event.target !== credit || (event.key !== "Enter" && event.key !== " ")) return;
     event.preventDefault();
-    window.clearTimeout(fold);
+    hold();
     setOpen(!credit.classList.contains("dive-credit-open"));
   };
   credit.addEventListener("click", onClick);
   credit.addEventListener("keydown", onKey);
+  credit.addEventListener("pointerenter", hold);
+  credit.addEventListener("focusin", hold);
   return () => {
-    window.clearTimeout(fold);
+    hold();
     credit.removeEventListener("click", onClick);
     credit.removeEventListener("keydown", onKey);
+    credit.removeEventListener("pointerenter", hold);
+    credit.removeEventListener("focusin", hold);
   };
 }

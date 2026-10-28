@@ -569,7 +569,6 @@ function dayName(date: string, today: string): string {
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-/** A week of labels has to fit a phone: "Today", then "Fri 2". */
 /** "Thu 29" under the week strip; just "Thu" on a narrow phone, where the dates would run into each other. */
 function DayTick({ date, today }: { date: string; today: string }) {
   const [weekday, day] = shortDayName(date, today).split(" ");
@@ -581,6 +580,7 @@ function DayTick({ date, today }: { date: string; today: string }) {
   );
 }
 
+/** A week of labels has to fit a phone: "Today", then "Fri 2". */
 function shortDayName(date: string, today: string): string {
   if (date === today) return "Today";
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
