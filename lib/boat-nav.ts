@@ -119,15 +119,15 @@ export const DESTINATION_LIMIT = 40;
 
 /**
  * The Navigate tab's destination list: sites whose name or atoll holds the search, nearest first once the boat's
- * position is known, else by name. Capped at DESTINATION_LIMIT.
+ * position is known, else by name. Capped at DESTINATION_LIMIT; `total` counts every match.
  */
 export function destinationList(
   sites: readonly (LatLon & { id: string; name: string; atoll: string | null })[],
   query: string,
   from: LatLon | null,
-): Destination[] {
+): { items: Destination[]; total: number } {
   const matches = sites.filter((site) => matchesSearch(site, site.atoll ?? undefined, query));
   const withKm = matches.map((site) => ({ ...site, km: from ? distanceKm(from, site) : null }));
   withKm.sort((a, b) => (a.km != null && b.km != null ? a.km - b.km : a.name.localeCompare(b.name)));
-  return withKm.slice(0, DESTINATION_LIMIT);
+  return { items: withKm.slice(0, DESTINATION_LIMIT), total: withKm.length };
 }

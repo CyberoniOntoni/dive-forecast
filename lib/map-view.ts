@@ -86,6 +86,11 @@ export function navigateHref(siteId: string | null): string {
   return siteId ? `/?navigate=${encodeURIComponent(siteId)}` : "/?navigate";
 }
 
+/** The Navigate tab's state in the address: null off the tab, "" on the destination list, else the site id. */
+export function navigateParam(params: { get(name: string): string | null }): string | null {
+  return params.get("navigate");
+}
+
 /** The site boat navigation last headed for in this tab, so the Navigate tab comes back to it. Null when unknown. */
 export function loadNavSite(storage: SessionLike | undefined = tabStorage()): string | null {
   try {

@@ -31,10 +31,12 @@ export function attachCredits(map: LeafletMapType): () => void {
   // again, so a credit would stay after its layer is switched off. Follows a turned phone or a resized window.
   const place = () => moveToCorner(map, credit, phone.matches ? "topright" : "bottomright");
   place();
-  phone.addEventListener("change", place);
+  // Old Safari (13 and before) has no addEventListener here; there the corner is fixed at load.
+  const follows = typeof phone.addEventListener === "function";
+  if (follows) phone.addEventListener("change", place);
   const unfold = foldCredit(credit);
   return () => {
-    phone.removeEventListener("change", place);
+    if (follows) phone.removeEventListener("change", place);
     unfold();
   };
 }

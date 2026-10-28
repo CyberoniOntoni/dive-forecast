@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { destinationList, formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { navigateHref, saveNavSite } from "@/lib/map-view";
+import { navigateHref, navigateParam, saveNavSite } from "@/lib/map-view";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
@@ -24,8 +24,9 @@ export function useNavigateTab(sites: readonly Site[]): {
 } {
   const router = useRouter();
   const params = useSearchParams();
-  const navigating = params.has("navigate");
-  const siteId = params.get("navigate") || null;
+  const param = navigateParam(params);
+  const navigating = param != null;
+  const siteId = param || null;
   const site = useMemo<NavSite | null>(() => {
     if (!navigating) return null;
     const found = sites.find((item) => item.id === siteId);
@@ -117,7 +118,7 @@ function DestinationPicker({
     () => sites.map((site) => ({ id: site.id, name: site.name, lat: site.lat, lon: site.lon, atoll: atollNames[site.atollId] ?? null })),
     [sites, atollNames],
   );
-  const list = destinationList(named, query, from);
+  const { items: list, total } = destinationList(named, query, from);
 
   return (
     <section aria-labelledby="destination-heading">
@@ -156,6 +157,11 @@ function DestinationPicker({
         ))}
       </ul>
       {list.length === 0 ? <p className="mt-2 text-sm text-foam/80">No sites match. Try fewer letters.</p> : null}
+      {total > list.length ? (
+        <p className="mt-2 text-xs text-foam/70">
+          {list.length} of {total} sites shown. Search to find the rest.
+        </p>
+      ) : null}
     </section>
   );
 }
