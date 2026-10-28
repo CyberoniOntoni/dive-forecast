@@ -85,7 +85,8 @@ export function parseRims(text: string): Map<string, RimRing> {
   return rims;
 }
 
-function ringProblem(ring: unknown): string | null {
+/** What is wrong with a closed ring of [lat, lon] pairs read from a data file, or null when nothing is. */
+export function ringProblem(ring: unknown): string | null {
   if (!Array.isArray(ring)) return "is not a list of points";
   if (ring.length < 4) return "has fewer than four points";
   for (const [index, point] of ring.entries()) {

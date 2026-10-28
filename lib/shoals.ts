@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ringProblem } from "./islands";
-import type { RimRing } from "./rim";
+import { ringProblem, type RimRing } from "./rim";
 import { REEF_TRANSMISSION } from "./wave-exposure";
 
 /**
@@ -49,7 +48,7 @@ export function parseShoals(text: string): Shoal[] {
     const { kind, ring } = (typeof item === "object" && item !== null ? item : {}) as { kind?: unknown; ring?: unknown };
     if (kind !== "reef" && kind !== "shallow") throw new Error(`shoals.json: shoal ${index} has no valid kind`);
     const problem = ringProblem(ring);
-    if (problem) throw new Error(`shoals.json: shoal ${index} ${problem}`);
+    if (problem) throw new Error(`shoals.json: shoal ${index} ring ${problem}`);
     return { kind, ring: ring as RimRing };
   });
 }
