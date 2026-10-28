@@ -1,6 +1,6 @@
 import { destinationKm } from "./marine";
 import type { ReefOpening } from "./openings";
-import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, ringBox, type RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, ringBox, type RimRing, type RingBox } from "./rim";
 
 /**
  * How much of the open-ocean sea reaches a site, by the direction it comes from. The wave model (about 9 km) treats a
@@ -70,7 +70,7 @@ export type SiteExposure = { swell: number[]; wind: number[]; rayWind: number[];
 export type ExposureIsland = { ring: RimRing; wooded: boolean };
 
 /** A shoal in the ray tracer: its outline and box, and the share of the swell height that crosses it. Make with exposureShoal. */
-export type ExposureShoal = { ring: RimRing; transmission: number; south: number; north: number; west: number; east: number };
+export type ExposureShoal = { ring: RimRing; transmission: number } & RingBox;
 
 /** A shoal for the ray tracer, with the box read off its ring (the tracer's reach test uses the box). */
 export function exposureShoal(ring: RimRing, transmission: number): ExposureShoal {

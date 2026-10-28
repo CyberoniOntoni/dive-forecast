@@ -362,9 +362,9 @@ function seaAt(exposure: SiteExposure, own: HourSamples, blend?: { share: number
  */
 export type SeaOwner = { wayId: string; outside: boolean; island: boolean; blend?: { wayId: string; share: number } };
 
-type OwnerOutline = { wayId: string; ring: RimRing; south: number; north: number; west: number; east: number };
+type OwnerOutline = { wayId: string; ring: RimRing } & RingBox;
 let ownerOutlines: OwnerOutline[] | null = null;
-let ownerIslands: { ring: RimRing; south: number; north: number; west: number; east: number }[] | null = null;
+let ownerIslands: ({ ring: RimRing } & RingBox)[] | null = null;
 
 export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null {
   ownerOutlines ??= [...allRims()].map(([wayId, ring]) => ({ wayId, ring, ...ringBox(ring) }));

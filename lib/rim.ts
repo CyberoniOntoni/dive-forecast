@@ -185,8 +185,7 @@ export function rimEdgeKm({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing
     const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
     const ex = (ring[index + 1][1] - ring[index][1]) * kx;
     const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const length = ex * ex + ey * ey;
-    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
+    const along = alongSegment(-x0, -y0, ex, ey);
     nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
   }
   return Math.sqrt(nearest);
@@ -200,10 +199,14 @@ function footOnSegment(
 ): [number, number] {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
-  const lengthSq = dx * dx + dy * dy;
-  if (lengthSq === 0) return [from[0], from[1]];
-  const along = Math.max(0, Math.min(1, ((pin[0] - from[0]) * dx + (pin[1] - from[1]) * dy) / lengthSq));
+  const along = alongSegment(pin[0] - from[0], pin[1] - from[1], dx, dy);
   return [from[0] + along * dx, from[1] + along * dy];
+}
+
+/** How far along a segment (0 to 1) the foot of a point lies, given the point and the segment's end from its start. */
+function alongSegment(px: number, py: number, dx: number, dy: number): number {
+  const lengthSq = dx * dx + dy * dy;
+  return lengthSq === 0 ? 0 : Math.max(0, Math.min(1, (px * dx + py * dy) / lengthSq));
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */
