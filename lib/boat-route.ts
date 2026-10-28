@@ -1,4 +1,5 @@
-import { distanceKm, polylineKm, type LatLon } from "./boat-nav";
+import { polylineKm, type LatLon } from "./boat-nav";
+import { distanceKm } from "./geometry";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import { allRims, boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, nearestRimPoint, padBox, ringBox, type RimRing, type RingBox } from "./rim";
@@ -106,13 +107,22 @@ export async function boatRoute(from: LatLon, siteId: string): Promise<BoatRoute
   return planRoute(from, site, routeShapes(sites));
 }
 
-type Boxed = { ring: RimRing; box: RingBox };
-let shapeCache: { blockers: Boxed[]; rims: Boxed[]; gaps: RouteGap[] } | null = null;
+/** Each ring's box, worked out once per ring. */
+const boxes = new WeakMap<RimRing, RingBox>();
+function boxOf(ring: RimRing): RingBox {
+  let box = boxes.get(ring);
+  if (!box) {
+    box = ringBox(ring);
+    boxes.set(ring, box);
+  }
+  return box;
+}
+
+let shapeCache: { blockers: RimRing[]; rims: RimRing[]; gaps: RouteGap[] } | null = null;
 
 function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string }[]): RouteShapes {
   if (!shapeCache) {
-    const boxed = (ring: RimRing): Boxed => ({ ring, box: ringBox(ring) });
-    const rims = [...allRims().values()].map(boxed);
+    const rims = [...allRims().values()];
     const openings = readOpenings().map(({ lat, lon, widthM, reefFlatBridges }) => ({
       lat,
       lon,
@@ -120,7 +130,7 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
       shallow: reefFlatBridges === true,
     }));
     shapeCache = {
-      blockers: [...readIslands().map((island) => boxed(island.ring)), ...readShoals().map((shoal) => boxed(shoal.ring))],
+      blockers: [...readIslands().map((island) => island.ring), ...readShoals().map((shoal) => shoal.ring)],
       rims,
       gaps: openings,
     };
@@ -133,15 +143,15 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
       const foot = nearestOnRims(site, rims);
       return foot && foot.km <= PASS_RIM_MAX_KM ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
     });
-  return { blockers: blockers.map((item) => item.ring), rims: rims.map((item) => item.ring), gaps: [...gaps, ...passes] };
+  return { blockers, rims, gaps: [...gaps, ...passes] };
 }
 
 /** The nearest point on any outline whose box lies near the pin. */
-function nearestOnRims(pin: LatLon, rims: readonly Boxed[]): ReturnType<typeof nearestRimPoint> | null {
+function nearestOnRims(pin: LatLon, rims: readonly RimRing[]): ReturnType<typeof nearestRimPoint> | null {
   const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, 0.02);
   let best: ReturnType<typeof nearestRimPoint> | null = null;
-  for (const { ring, box } of rims) {
-    if (!boxesOverlap(box, near)) continue;
+  for (const ring of rims) {
+    if (!boxesOverlap(boxOf(ring), near)) continue;
     const foot = nearestRimPoint(pin, ring);
     if (!best || foot.km < best.km) best = foot;
   }
@@ -173,12 +183,12 @@ function buildGrid(from: LatLon, to: LatLon, shapes: RouteShapes, padKm: number,
   };
   const box: RingBox = { south, north, west, east };
   for (const ring of shapes.blockers) {
-    if (!boxesOverlap(ringBox(ring), box)) continue;
+    if (!boxesOverlap(boxOf(ring), box)) continue;
     fillRing(grid, ring);
     traceRing(grid, ring, BLOCK);
   }
   for (const ring of shapes.rims) {
-    if (boxesOverlap(ringBox(ring), box)) traceRing(grid, ring, RIM);
+    if (boxesOverlap(boxOf(ring), box)) traceRing(grid, ring, RIM);
   }
   shapes.gaps.forEach((gap, index) => {
     if (sills || !gap.shallow) openGap(grid, gap, index);
@@ -238,15 +248,52 @@ function traceRing(grid: Grid, ring: RimRing, flag: number) {
   }
 }
 
-/** Calls `visit` for each grid cell a straight line crosses (in cell units), sampled at a third of a cell. */
-function forCellsOnLine(grid: Grid, from: readonly [number, number], to: readonly [number, number], visit: (cell: number) => void) {
+/**
+ * Calls `visit` for every grid cell a straight line (in cell units) passes through, in order: a cell-by-cell walk
+ * (Amanatides and Woo), so a corner clipped by a hair still counts. Through an exact corner both side cells count, so
+ * no leg slips between two diagonal blocked cells.
+ */
+export function forCellsOnLine(
+  grid: Pick<Grid, "width" | "height">,
+  from: readonly [number, number],
+  to: readonly [number, number],
+  visit: (cell: number) => void,
+) {
   const [x1, y1] = from;
   const [x2, y2] = to;
-  const steps = Math.ceil(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 3) + 1;
-  for (let step = 0; step <= steps; step += 1) {
-    const x = Math.floor(x1 + ((x2 - x1) * step) / steps);
-    const y = Math.floor(y1 + ((y2 - y1) * step) / steps);
-    if (x >= 0 && y >= 0 && x < grid.width && y < grid.height) visit(y * grid.width + x);
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const stepX = Math.sign(dx);
+  const stepY = Math.sign(dy);
+  const deltaX = stepX === 0 ? Infinity : Math.abs(1 / dx);
+  const deltaY = stepY === 0 ? Infinity : Math.abs(1 / dy);
+  let x = Math.floor(x1);
+  let y = Math.floor(y1);
+  let nextX = stepX > 0 ? (x + 1 - x1) * deltaX : stepX < 0 ? (x1 - x) * deltaX : Infinity;
+  let nextY = stepY > 0 ? (y + 1 - y1) * deltaY : stepY < 0 ? (y1 - y) * deltaY : Infinity;
+  const at = (cx: number, cy: number) => {
+    if (cx >= 0 && cy >= 0 && cx < grid.width && cy < grid.height) visit(cy * grid.width + cx);
+  };
+  at(x, y);
+  // Each step crosses one cell edge (two at a corner); the line ends at t = 1.
+  for (let left = Math.abs(Math.floor(x2) - x) + Math.abs(Math.floor(y2) - y); left > 0; left -= 1) {
+    if (Math.min(nextX, nextY) > 1) break;
+    if (Math.abs(nextX - nextY) < 1e-9) {
+      at(x + stepX, y);
+      at(x, y + stepY);
+      x += stepX;
+      y += stepY;
+      nextX += deltaX;
+      nextY += deltaY;
+      left -= 1;
+    } else if (nextX < nextY) {
+      x += stepX;
+      nextX += deltaX;
+    } else {
+      y += stepY;
+      nextY += deltaY;
+    }
+    at(x, y);
   }
 }
 

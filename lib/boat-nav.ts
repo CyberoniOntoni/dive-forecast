@@ -3,7 +3,9 @@
  * a route, and the words the panel shows. No file reads here; the route itself comes from lib/boat-route.ts.
  */
 
-import { footOnSegment } from "./segment";
+import { distanceKm, footOnSegment } from "./geometry";
+
+export { distanceKm };
 
 export type LatLon = { lat: number; lon: number };
 
@@ -21,15 +23,6 @@ const SPEED_MIN_SPAN_MS = 4_000;
 export const UNDERWAY_KNOTS = 2;
 /** Cruising speeds the panel quotes while the boat is stopped: a dhoni and a speedboat. */
 export const REFERENCE_KNOTS = [8, 20] as const;
-
-/** Great-circle distance, km. */
-export function distanceKm(a: LatLon, b: LatLon): number {
-  const toRad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * toRad;
-  const dLon = (b.lon - a.lon) * toRad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * toRad) * Math.cos(b.lat * toRad) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
 
 export function polylineKm(points: readonly (readonly [number, number])[]): number {
   let total = 0;
@@ -65,14 +58,15 @@ export function motionFrom(fixes: readonly Fix[]): Motion | null {
   const oldest = fixes.find((fix) => latest.timeMs - fix.timeMs <= SPEED_WINDOW_MS) ?? latest;
   const span = latest.timeMs - oldest.timeMs;
   const movedKm = distanceKm(oldest, latest);
-  const derivedCourse = span >= SPEED_MIN_SPAN_MS && movedKm > 0 ? bearingDeg(oldest, latest) : null;
+  const driftM = (oldest.accuracyM + latest.accuracyM) / 2;
+  // A course from positions only once they are farther apart than the GPS can wander.
+  const derivedCourse = span >= SPEED_MIN_SPAN_MS && movedKm * 1000 > driftM ? bearingDeg(oldest, latest) : null;
   if (latest.speedMs != null && Number.isFinite(latest.speedMs)) {
     const knots = Math.max(0, latest.speedMs) / MS_PER_KNOT;
     const deviceCourse = latest.headingDeg != null && Number.isFinite(latest.headingDeg) ? latest.headingDeg : null;
     return { knots, courseDeg: knots >= UNDERWAY_KNOTS ? (deviceCourse ?? derivedCourse) : null };
   }
   if (span < SPEED_MIN_SPAN_MS) return null;
-  const driftM = (oldest.accuracyM + latest.accuracyM) / 2;
   if (movedKm * 1000 <= driftM) return { knots: 0, courseDeg: null };
   const knots = movedKm / KM_PER_NM / (span / 3_600_000);
   return { knots, courseDeg: knots >= UNDERWAY_KNOTS ? derivedCourse : null };
@@ -101,11 +95,12 @@ export function alongRoute(boat: LatLon, points: readonly (readonly [number, num
   }
   // A degree of longitude is cos(lat) of a degree of latitude, so legs are measured in degrees of latitude.
   const lonScale = Math.cos((boat.lat * Math.PI) / 180);
-  const flat = ([lat, lon]: readonly [number, number]): [number, number] => [lon * lonScale, lat];
+  // To plane [scaled lon, lat] for footOnSegment, and back to [lat, lon].
+  const toPlane = ([lat, lon]: readonly [number, number]): [number, number] => [lon * lonScale, lat];
+  const fromPlane = ([scaledLon, lat]: readonly [number, number]): [number, number] => [lat, scaledLon / lonScale];
   let best = { offKm: Infinity, leg: 0, foot: points[0] as readonly [number, number] };
   for (let index = 0; index + 1 < points.length; index += 1) {
-    const [x, lat] = footOnSegment(flat([boat.lat, boat.lon]), flat(points[index]), flat(points[index + 1]));
-    const foot: [number, number] = [lat, x / lonScale];
+    const foot = fromPlane(footOnSegment(toPlane([boat.lat, boat.lon]), toPlane(points[index]), toPlane(points[index + 1])));
     const offKm = distanceKm(boat, { lat: foot[0], lon: foot[1] });
     if (offKm < best.offKm) best = { offKm, leg: index, foot };
   }

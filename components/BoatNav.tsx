@@ -110,13 +110,15 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
     const state = routing.current;
     const now = Date.now();
     const needed = route == null || (along != null && along.offKm > REROUTE_OFF_KM);
-    if (!needed || state.busy || (route != null && now - state.lastMs < REROUTE_EVERY_MS)) return;
+    // The pause holds after a failed request too, so a server error is not asked again on every fix.
+    if (!needed || state.busy || now - state.lastMs < REROUTE_EVERY_MS) return;
     state.busy = true;
     state.lastMs = now;
     const first = route == null;
     getBoatRoute({ lat: boat.lat, lon: boat.lon }, site.id)
       .then((next) => {
-        setRoute(next);
+        // An unknown site leaves any earlier route in place and says so.
+        if (next) setRoute(next);
         setRouteError(next == null);
         if (first) setFrame((count) => count + 1);
       })
@@ -216,7 +218,10 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function RouteNote({ route, routeError, shallow }: { route: BoatRoute | null; routeError: boolean; shallow: boolean }) {
-  if (routeError) return <p className="mt-1 text-sm text-outgoing">No route; the line is straight to the site.</p>;
+  if (routeError && route) {
+    return <p className="mt-1 text-sm text-outgoing">Could not update the route; showing the last one.</p>;
+  }
+  if (routeError) return <p className="mt-1 text-sm text-outgoing">No route yet; the line is straight to the site. Trying again shortly.</p>;
   if (!route) return <p className="mt-1 text-sm text-foam/80">Planning the route…</p>;
   if (!route.routed) {
     return <p className="mt-1 text-sm text-outgoing">No way round the mapped reef found; the line is straight to the site.</p>;

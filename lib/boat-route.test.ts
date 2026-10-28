@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pointInRing, type RimRing } from "./rim";
-import { planRoute, type RouteShapes } from "./boat-route";
+import { forCellsOnLine, planRoute, type RouteShapes } from "./boat-route";
 
 /** A closed box ring, [lat, lon]. */
 function box(south: number, west: number, north: number, east: number): RimRing {
@@ -76,5 +76,52 @@ describe("planRoute", () => {
     const route = planRoute({ lat: 4.05, lon: 73.43 }, { lat: 4.05, lon: 73.45 }, { ...NONE, blockers: [thila] });
     expect(route.routed).toBe(true);
     expect(route.points[route.points.length - 1]).toEqual([4.05, 73.45]);
+  });
+
+  it("never straightens a leg through a thin diagonal reef", () => {
+    // A sliver a few metres wide from SW to NE: the grid sees it only as a chain of cells touching at their corners.
+    const sliver: RimRing = [
+      [4.0, 73.4],
+      [4.03, 73.43],
+      [4.03, 73.43003],
+      [4.0, 73.40003],
+      [4.0, 73.4],
+    ];
+    const route = planRoute({ lat: 4.02, lon: 73.405 }, { lat: 4.005, lon: 73.425 }, { ...NONE, blockers: [sliver] });
+    expect(route.routed).toBe(true);
+    expect(crosses(route.points, sliver)).toBe(false);
+  });
+});
+
+describe("forCellsOnLine", () => {
+  const grid = { width: 5, height: 3 };
+  const cells = (from: [number, number], to: [number, number]) => {
+    const seen: [number, number][] = [];
+    forCellsOnLine(grid, from, to, (cell) => seen.push([cell % grid.width, Math.floor(cell / grid.width)]));
+    return seen;
+  };
+
+  it("visits a cell the line only clips at its corner", () => {
+    // Crosses y = 1 at x = 1.95, so it spends 0.05 of a cell in (1, 1).
+    expect(cells([0, 0.5], [4, 0.5 + (0.5 / 1.95) * 4])).toEqual([
+      [0, 0],
+      [1, 0],
+      [1, 1],
+      [2, 1],
+      [3, 1],
+      [4, 1],
+    ]);
+  });
+
+  it("counts both side cells when the line runs exactly through a corner", () => {
+    expect(cells([0.5, 0.5], [2.5, 2.5])).toEqual([
+      [0, 0],
+      [1, 0],
+      [0, 1],
+      [1, 1],
+      [2, 1],
+      [1, 2],
+      [2, 2],
+    ]);
   });
 });

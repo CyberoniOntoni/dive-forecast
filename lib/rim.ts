@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { footOnSegment } from "./segment";
+import { footOnSegment } from "./geometry";
 import type { Atoll, Site } from "./types";
 
 export type RimRing = readonly (readonly [number, number])[];

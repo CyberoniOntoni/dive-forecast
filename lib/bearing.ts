@@ -1,3 +1,4 @@
+import { distanceKm } from "./geometry";
 import { CHANNEL_RIM_REACH_KM, rimDistanceKm, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, BearingSource, Site } from "./types";
 
@@ -105,24 +106,13 @@ export function nearestAtoll(lat: number, lon: number, atolls: Atoll[]): Atoll {
   let best = atolls[0];
   let bestKm = Number.POSITIVE_INFINITY;
   for (const atoll of atolls) {
-    const km = haversineKm(lat, lon, atoll.oceanLat, atoll.oceanLon);
+    const km = distanceKm({ lat, lon }, { lat: atoll.oceanLat, lon: atoll.oceanLon });
     if (km < bestKm) {
       best = atoll;
       bestKm = km;
     }
   }
   return best;
-}
-
-function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const dLat = toRadians(lat2 - lat1);
-  const dLon = toRadians(lon2 - lon1);
-  const startLat = toRadians(lat1);
-  const endLat = toRadians(lat2);
-  const haversine =
-    Math.sin(dLat / 2) ** 2 + Math.cos(startLat) * Math.cos(endLat) * Math.sin(dLon / 2) ** 2;
-  const chord = Math.min(1, Math.sqrt(haversine));
-  return 2 * 6371 * Math.asin(chord);
 }
 
 function toRadians(degrees: number): number {

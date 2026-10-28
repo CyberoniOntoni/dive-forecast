@@ -39,6 +39,12 @@ describe("motionFrom", () => {
     expect(motion).toEqual({ knots: 0, courseDeg: null });
   });
 
+  it("takes no course from a move inside the GPS accuracy, even with a device speed", () => {
+    const motion = motionFrom([fix(0, 4, { accuracyM: 20 }), fix(20, 4.0001, { accuracyM: 20, speedMs: 3 })]);
+    expect(motion?.knots).toBeGreaterThan(5);
+    expect(motion?.courseDeg).toBeNull();
+  });
+
   it("says nothing until the fixes span a few seconds", () => {
     expect(motionFrom([])).toBeNull();
     expect(motionFrom([fix(0, 4), fix(1, 4.0001)])).toBeNull();
