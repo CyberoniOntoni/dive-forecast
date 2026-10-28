@@ -7,7 +7,7 @@ export default function NotFound() {
         <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">Dive site not found</h1>
         <Link
           href="/"
-          className="inline-flex min-h-11 w-fit items-center self-start rounded-xl border border-foam/25 bg-ink px-4 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="button-quiet w-fit self-start bg-ink px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           Back to map
         </Link>

@@ -37,6 +37,31 @@
     0 12px 32px -16px rgba(0, 0, 0, 0.55);
 }
 
+/* A text field or select: the one look for every form on the site. Width and focus ring stay with the element. */
+@utility field {
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--foam) 25%, transparent);
+  background-color: var(--ink);
+  padding-inline: 0.75rem;
+  font-size: 1rem;
+  line-height: 1.5rem;
+  color: var(--foam);
+}
+
+/* A quiet outlined button or link (Map, Clear, Back to now). Padding and width stay with the element. */
+@utility button-quiet {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--foam) 25%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+  color: var(--foam);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;

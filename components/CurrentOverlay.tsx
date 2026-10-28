@@ -196,7 +196,7 @@ export function CurrentOverlay({
               maxLength={80}
               value={filter.query}
               onChange={(event) => changeFilter({ ...filter, query: event.target.value })}
-              className="min-h-11 w-full min-w-0 flex-1 rounded-xl border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              className="field w-full min-w-0 flex-1 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
             />
             {filtered ? (
               <button
@@ -205,7 +205,7 @@ export function CurrentOverlay({
                   changeFilter({ query: "", atollId: "" });
                   onSpotlight(null);
                 }}
-                className="min-h-11 shrink-0 rounded-xl border border-foam/25 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+                className="button-quiet shrink-0 px-3 font-normal hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
               >
                 Clear
               </button>
@@ -218,7 +218,7 @@ export function CurrentOverlay({
             id="site-atoll"
             value={filter.atollId}
             onChange={(event) => changeFilter({ ...filter, atollId: event.target.value })}
-            className="min-h-11 w-full min-w-0 rounded-xl border border-foam/25 bg-ink px-3 text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             <option value="">All atolls (sites in view)</option>
             {atolls.map((atoll) => (

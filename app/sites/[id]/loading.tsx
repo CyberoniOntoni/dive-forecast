@@ -6,10 +6,10 @@ export default function Loading() {
     >
       <p className="sr-only">Loading</p>
       <div className="flex flex-wrap gap-2" aria-hidden="true">
-        <div className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 bg-ink px-4 text-sm font-medium text-foam/40">
+        <div className="button-quiet bg-ink px-4 text-foam/40">
           Map
         </div>
-        <div className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 px-4 text-sm font-medium text-foam/40">
+        <div className="button-quiet px-4 text-foam/40">
           Navigate here by boat
         </div>
       </div>

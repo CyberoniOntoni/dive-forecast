@@ -28,7 +28,7 @@ export default function Error({
           </button>
           <Link
             href="/"
-            className="inline-flex min-h-11 w-fit items-center rounded-xl border border-foam/25 bg-ink px-4 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="button-quiet w-fit bg-ink px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Return to map
           </Link>

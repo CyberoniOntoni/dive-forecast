@@ -2,19 +2,19 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import { DATA_CREDIT_HTML } from "@/components/Attribution";
-import type { NavDraw, NavSite } from "@/components/BoatNav";
+import type { NavDraw } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
+import { attachCredits, CREDIT_STYLE } from "@/components/map-credit";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
-import { NavigatePanel } from "@/components/NavigatePanel";
+import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
-import { loadMapView, navigateHref, saveMapView, saveNavSite, spotlightZoom, type MapView } from "@/lib/map-view";
+import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site, Strength } from "@/lib/types";
@@ -157,13 +157,8 @@ const MAP_STYLE = `
 .dive-map .leaflet-bar a{width:44px!important;height:44px!important;line-height:44px!important;background:var(--glass);backdrop-filter:blur(10px);color:var(--foam);border-bottom-color:color-mix(in srgb, var(--foam) 18%, transparent)}
 .dive-map .leaflet-bar a:hover,.dive-map .leaflet-bar a:focus{background:color-mix(in srgb, var(--ink) 78%, var(--foam));color:var(--foam)}
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
+${CREDIT_STYLE}
 .dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 80%, transparent);backdrop-filter:blur(8px);color:color-mix(in srgb, var(--foam) 85%, transparent);border-bottom-right-radius:10px}
-.dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
-.dive-map.leaflet-container .leaflet-control-attribution{cursor:pointer;margin:6px!important;padding:3px 8px;border-radius:12px}
-.dive-map.leaflet-container .leaflet-control-attribution:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open){font-size:0;width:32px;max-width:none;height:32px;margin:8px 16px 0 0!important;padding:0;border-radius:999px;display:grid;place-items:center}
-.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)>*{display:none}
-.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)::before{content:"i";font:600 italic 15px/1 Georgia,serif;color:var(--foam)}
 .dive-map.leaflet-container{background:var(--ink)}
 .dive-map .leaflet-control-layers{background:var(--glass);backdrop-filter:blur(10px);color:var(--foam)}
 .dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
@@ -196,11 +191,8 @@ const MAP_STYLE = `
 .dive-shelter-popup-head{font-weight:600}
 .dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
 .dive-cluster-icon{background:transparent;border:none}
-.dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
+.dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--glass);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:var(--foam);border:2px solid color-mix(in srgb, var(--incoming) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
 .dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
-@media (max-width:1023px){
-  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 2rem);font-size:11px;line-height:16px}
-}
 `;
 
 function mountDiveMap(
@@ -245,11 +237,7 @@ function mountDiveMap(
   else frameSites(L, map, siteGlances);
   // Layers credit themselves once the map has a view, so this goes after them: the open credits start with the
   // imagery credit.
-  map.attributionControl.addAttribution(DATA_CREDIT_HTML);
-  // The site sheet and the navigate panel cover a phone map's bottom, so the credits button joins the buttons on the
-  // right, under the layers.
-  if (window.matchMedia("(max-width: 1023px)").matches) map.attributionControl.setPosition("topright");
-  const unfoldCredit = foldCredit(map.attributionControl.getContainer());
+  const detachCredits = attachCredits(map);
 
   // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
   // sea state where the sheltered-water layer is on.
@@ -272,50 +260,9 @@ function mountDiveMap(
     pins,
     destroy: () => {
       resize.disconnect();
-      unfoldCredit();
+      detachCredits();
       map.remove();
     },
-  };
-}
-
-/** How long the credits show in full when the map opens, before they fold to the "i" button. */
-const CREDIT_SHOWN_MS = 6000;
-
-/**
- * The map and data credits fold to a small "i" button that opens them; they show in full for a few seconds when the
- * map opens, so they are seen once without covering the map all the time. Open, a link works as usual and a tap
- * elsewhere on them folds them again.
- */
-function foldCredit(credit: HTMLElement | undefined): () => void {
-  if (!credit) return () => {};
-  credit.setAttribute("role", "button");
-  credit.tabIndex = 0;
-  credit.setAttribute("aria-label", "Map and data credits");
-  const setOpen = (open: boolean) => {
-    credit.classList.toggle("dive-credit-open", open);
-    credit.setAttribute("aria-expanded", open ? "true" : "false");
-  };
-  setOpen(true);
-  const fold = window.setTimeout(() => setOpen(false), CREDIT_SHOWN_MS);
-  const onClick = (event: MouseEvent) => {
-    window.clearTimeout(fold);
-    const open = credit.classList.contains("dive-credit-open");
-    if (open && event.target instanceof Element && event.target.closest("a")) return;
-    event.preventDefault();
-    setOpen(!open);
-  };
-  const onKey = (event: KeyboardEvent) => {
-    if (event.target !== credit || (event.key !== "Enter" && event.key !== " ")) return;
-    event.preventDefault();
-    window.clearTimeout(fold);
-    setOpen(!credit.classList.contains("dive-credit-open"));
-  };
-  credit.addEventListener("click", onClick);
-  credit.addEventListener("keydown", onKey);
-  return () => {
-    window.clearTimeout(fold);
-    credit.removeEventListener("click", onClick);
-    credit.removeEventListener("keydown", onKey);
   };
 }
 
@@ -625,30 +572,17 @@ export function SiteMap({
   atollNames: Record<string, string>;
 }) {
   const router = useRouter();
-  // The Navigate tab is this map with "?navigate", and "?navigate=<site id>" once a destination is picked.
-  const params = useSearchParams();
-  const navigating = params.has("navigate");
-  const navSiteId = params.get("navigate") || null;
+  const { navigating, site: navSite, pick: pickNavSite, change: changeNavSite } = useNavigateTab(sites);
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
   const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
-  const navSite = useMemo<NavSite | null>(() => {
-    if (!navigating) return null;
-    const site = sites.find((item) => item.id === navSiteId);
-    return site ? { id: site.id, name: site.name, lat: site.lat, lon: site.lon } : null;
-  }, [sites, navigating, navSiteId]);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
   );
-
-  // Kept for the tab, so the header's Navigate tab comes back to it from the map or a site page.
-  useEffect(() => {
-    if (navSite) saveNavSite(navSite.id);
-  }, [navSite]);
 
   function setAddingMode(open: boolean) {
     setAdding(open);
@@ -670,11 +604,8 @@ export function SiteMap({
             sites={sites}
             atollNames={atollNames}
             site={navSite}
-            onPick={(siteId) => router.replace(navigateHref(siteId))}
-            onChange={() => {
-              saveNavSite(null);
-              router.replace(navigateHref(null));
-            }}
+            onPick={pickNavSite}
+            onChange={changeNavSite}
             onDraw={setNavDraw}
           />
         ) : (

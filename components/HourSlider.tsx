@@ -195,7 +195,7 @@ export function HourSlider({
           <button
             type="button"
             onClick={() => setIndex(nowIndex)}
-            className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 px-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="button-quiet px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Back to now
           </button>

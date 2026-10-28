@@ -98,7 +98,7 @@ export function ReportForm({
             required
             defaultValue={defaultTime}
             onInput={(event) => setTime(event.currentTarget.value)}
-            className="min-h-11 w-full min-w-0 rounded-xl border border-foam/20 bg-ink px-3 text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           />
         </label>
         {theirs ? (

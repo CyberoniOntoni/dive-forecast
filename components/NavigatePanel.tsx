@@ -1,14 +1,51 @@
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { destinationList, formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
+import { navigateHref, saveNavSite } from "@/lib/map-view";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
 const PANEL_CLASS =
   "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/15 bg-glass px-4 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foam shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:pt-4 lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
+
+/**
+ * The Navigate tab's state, from the address: the map with "?navigate", and "?navigate=<site id>" once a destination
+ * is picked. The destination is kept for the browser tab, so the header's Navigate tab comes back to it.
+ */
+export function useNavigateTab(sites: readonly Site[]): {
+  navigating: boolean;
+  site: NavSite | null;
+  pick: (siteId: string) => void;
+  change: () => void;
+} {
+  const router = useRouter();
+  const params = useSearchParams();
+  const navigating = params.has("navigate");
+  const siteId = params.get("navigate") || null;
+  const site = useMemo<NavSite | null>(() => {
+    if (!navigating) return null;
+    const found = sites.find((item) => item.id === siteId);
+    return found ? { id: found.id, name: found.name, lat: found.lat, lon: found.lon } : null;
+  }, [sites, navigating, siteId]);
+
+  useEffect(() => {
+    if (site) saveNavSite(site.id);
+  }, [site]);
+
+  return {
+    navigating,
+    site,
+    pick: (id) => router.replace(navigateHref(id)),
+    change: () => {
+      saveNavSite(null);
+      router.replace(navigateHref(null));
+    },
+  };
+}
 
 /** The Navigate tab: pick a destination, then follow the boat to it. */
 export function NavigatePanel({
@@ -94,7 +131,7 @@ function DestinationPicker({
         maxLength={80}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        className="mt-2 min-h-11 w-full min-w-0 rounded-xl border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        className="field mt-2 w-full min-w-0 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
       />
       <ul className="mt-2">
         {list.map((item) => (

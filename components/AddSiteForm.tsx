@@ -54,7 +54,7 @@ export function AddSiteForm({
           onChange={(event) => setName(event.target.value)}
           required
           autoComplete="off"
-          className="min-h-11 rounded-xl border border-foam/25 bg-ink px-3 text-base font-normal text-foam outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="field font-normal outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         />
       </label>
       <p className="text-sm leading-5 text-foam/80">{pinCopy}</p>
