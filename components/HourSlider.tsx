@@ -202,6 +202,7 @@ export function HourSlider({
         )}
       </div>
       {/* Folded so a phone shows the week without scrolling past the method; the confidence above still says how sure. */}
+      {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <details className="group mt-3 text-sm leading-6 text-foam/80">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
           <span
@@ -210,8 +211,7 @@ export function HourSlider({
           />
           How this forecast works
         </summary>
-        {siteNote ? <p className="mt-1">{siteNote}</p> : null}
-        <p className="mt-3">{notice}</p>
+        <p className="mt-1">{notice}</p>
       </details>
     </section>
   );

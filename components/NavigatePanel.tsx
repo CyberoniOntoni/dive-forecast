@@ -32,9 +32,14 @@ export function useNavigateTab(sites: readonly Site[]): {
     return found ? { id: found.id, name: found.name, lat: found.lat, lon: found.lon } : null;
   }, [sites, navigating, siteId]);
 
+  // A destination that is gone (a removed site, an old link) is forgotten, so the Navigate tab stops coming back to it.
   useEffect(() => {
     if (site) saveNavSite(site.id);
-  }, [site]);
+    else if (siteId) {
+      saveNavSite(null);
+      router.replace(navigateHref(null));
+    }
+  }, [site, siteId, router]);
 
   return {
     navigating,
@@ -66,7 +71,7 @@ export function NavigatePanel({
   onDraw: (draw: NavDraw | null) => void;
 }) {
   return (
-    <aside aria-label="Boat navigation" className={PANEL_CLASS}>
+    <aside aria-label="Boat navigation" data-nav-panel className={PANEL_CLASS}>
       <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-9 rounded-full bg-foam/30 lg:hidden" />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />

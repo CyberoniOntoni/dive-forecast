@@ -4,6 +4,7 @@
  */
 
 import { bearingDeg, distanceKm, nearestOnPolyline, polylineKm, type LatLon } from "./geometry";
+import { matchesSearch } from "./site-search";
 
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
@@ -125,11 +126,7 @@ export function destinationList(
   query: string,
   from: LatLon | null,
 ): Destination[] {
-  const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const matches = sites.filter((site) => {
-    const text = `${site.name} ${site.atoll ?? ""}`.toLowerCase();
-    return words.every((word) => text.includes(word));
-  });
+  const matches = sites.filter((site) => matchesSearch(site, site.atoll ?? undefined, query));
   const withKm = matches.map((site) => ({ ...site, km: from ? distanceKm(from, site) : null }));
   withKm.sort((a, b) => (a.km != null && b.km != null ? a.km - b.km : a.name.localeCompare(b.name)));
   return withKm.slice(0, DESTINATION_LIMIT);

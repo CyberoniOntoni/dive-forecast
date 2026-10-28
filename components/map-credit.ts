@@ -18,22 +18,33 @@ export const CREDIT_STYLE = `
 `;
 
 /**
- * Adds the data credit after the layers' own (so the open credits start with the imagery), moves the button to the
+ * Adds the data credit after the layers' own (so the open credits start with the imagery), keeps the button in the
  * right-hand controls on a phone, where the site sheet and the navigate panel cover the bottom, and folds it. Returns
  * the cleanup.
  */
 export function attachCredits(map: LeafletMapType): () => void {
   map.attributionControl.addAttribution(DATA_CREDIT_HTML);
+  const credit = map.attributionControl.getContainer();
+  if (!credit) return () => {};
   const phone = window.matchMedia("(max-width: 1023px)");
-  // Follows a turned phone or a resized window across the breakpoint.
-  const place = () => map.attributionControl.setPosition(phone.matches ? "topright" : "bottomright");
+  // Moved by hand, not with setPosition: that builds a new container (losing the fold) and counts every layer's credit
+  // again, so a credit would stay after its layer is switched off. Follows a turned phone or a resized window.
+  const place = () => moveToCorner(map, credit, phone.matches ? "topright" : "bottomright");
   place();
   phone.addEventListener("change", place);
-  const unfold = foldCredit(map.attributionControl.getContainer());
+  const unfold = foldCredit(credit);
   return () => {
     phone.removeEventListener("change", place);
     unfold();
   };
+}
+
+/** Puts a control's element in a map corner the way Leaflet's addTo does: last at the top, first at the bottom. */
+function moveToCorner(map: LeafletMapType, element: HTMLElement, corner: "topright" | "bottomright") {
+  const target = map.getContainer().querySelector(corner === "topright" ? ".leaflet-top.leaflet-right" : ".leaflet-bottom.leaflet-right");
+  if (!target || element.parentElement === target) return;
+  if (corner === "bottomright") target.insertBefore(element, target.firstChild);
+  else target.appendChild(element);
 }
 
 /** How long the credits show in full when the map opens, before they fold to the "i" button. */
@@ -44,14 +55,20 @@ const CREDIT_SHOWN_MS = 6000;
  * map opens, so they are seen once without covering the map all the time. Open, a link works as usual and a tap
  * elsewhere on them folds them again.
  */
-function foldCredit(credit: HTMLElement | undefined): () => void {
-  if (!credit) return () => {};
-  credit.setAttribute("role", "button");
+function foldCredit(credit: HTMLElement): () => void {
   credit.tabIndex = 0;
-  credit.setAttribute("aria-label", "Map and data credits");
+  // A button only while folded: open, it holds links, which a button would hide from screen readers.
   const setOpen = (open: boolean) => {
     credit.classList.toggle("dive-credit-open", open);
-    credit.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) {
+      credit.removeAttribute("role");
+      credit.removeAttribute("aria-expanded");
+      credit.removeAttribute("aria-label");
+    } else {
+      credit.setAttribute("role", "button");
+      credit.setAttribute("aria-expanded", "false");
+      credit.setAttribute("aria-label", "Show map and data credits");
+    }
   };
   setOpen(true);
   const fold = window.setTimeout(() => setOpen(false), CREDIT_SHOWN_MS);

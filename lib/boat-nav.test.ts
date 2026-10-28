@@ -127,6 +127,9 @@ describe("destinationList", () => {
     expect(destinationList(sites, "north", null).map((site) => site.id)).toEqual(["banana", "kuda"]);
     expect(destinationList(sites, "  Male  thila ", null).map((site) => site.id)).toEqual(["kandooma"]);
     expect(destinationList(sites, "wreck", null)).toEqual([]);
+    // The same search as the Map list: word starts, punctuation and accents ignored.
+    expect(destinationList(sites, "kuda-far", null).map((site) => site.id)).toEqual(["kuda"]);
+    expect(destinationList(sites, "anana", null)).toEqual([]);
   });
 
   it("keeps the list short", () => {

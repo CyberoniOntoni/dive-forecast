@@ -134,8 +134,15 @@ function framePadding(phoneBottom = 88) {
   return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, phoneBottom] as [number, number], maxZoom: 11 };
 }
 
-/** The Navigate tab's panel on a phone, with the readouts showing. */
+/** The Navigate tab's panel on a phone, with the readouts showing, until it can be measured. */
 const NAV_PANEL_PX = 190;
+
+/** How much of a phone map's bottom edge the Navigate panel covers; measured, since its height follows its lines. */
+function navPanelCover(map: LeafletMapType): number {
+  const panel = document.querySelector("[data-nav-panel]");
+  if (!panel) return NAV_PANEL_PX;
+  return Math.max(0, map.getContainer().getBoundingClientRect().bottom - panel.getBoundingClientRect().top) + 12;
+}
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
 function leafletApi(mod: LeafletLib): LeafletLib {
@@ -540,7 +547,7 @@ const LeafletMap = dynamic(
       useEffect(() => {
         const map = mapRef.current;
         if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
-        frameOn(map, navBounds(L, nav), 15, true, NAV_PANEL_PX);
+        frameOn(map, navBounds(L, nav), 15, true, navPanelCover(map));
         // Frame only when asked (first route, "Show route"), not on every fix.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [nav?.frame, mapEpoch]);
