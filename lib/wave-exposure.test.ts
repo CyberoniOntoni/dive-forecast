@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RimRing } from "./rim";
-import { exposureAt, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, STEP_DEG, type ExposureRing } from "./wave-exposure";
+import { exposureAt, exposureShoal, fetchShare, offshorePoints, REEF_TRANSMISSION, siteExposure, STEP_DEG, type ExposureRing } from "./wave-exposure";
 
 // A square atoll about 22 km across, centred on 4.0 N 73.5 E, with one 1 km gap in the middle of its east side.
 const SQUARE: RimRing = [
@@ -191,6 +191,29 @@ describe("siteExposure with islands", () => {
     const fIslet = fetchShare(0.4 - 0.009 - 0.2);
     const fFar = fetchShare(30 - 0.2);
     expect((behind - both.rayWind[ray]) / (1 - alone)).toBeCloseTo((fFar - fIslet) / (1 - fIslet), 1);
+  });
+
+  it("cuts the swell behind a lagoon shoal, by how much of the sky it fills, but not the wind", () => {
+    // Inside SQUARE, 5 km from its east rim: a reef top 1 km east, about 450 m across (about 25° of sky).
+    const lagoon = { lat: 4.0, lon: 73.555, kind: "lagoon" as const, inwardBearingDeg: null, ownWayId: "own" };
+    const shoal = (lonOffset: number, transmission: number) => exposureShoal(square(4.0, 73.555 + lonOffset, 0.004), transmission);
+    const open = siteExposure(lagoon, [OWN], [EAST_GAP]);
+    const behind = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.15)]);
+    const sand = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.009, 0.5)]);
+    expect(exposureAt(behind.swell, 90)).toBeLessThan(0.6 * exposureAt(open.swell, 90));
+    expect(exposureAt(sand.swell, 90)).toBeLessThan(exposureAt(open.swell, 90));
+    expect(exposureAt(sand.swell, 90)).toBeGreaterThan(exposureAt(behind.swell, 90));
+    expect(exposureAt(behind.swell, 270)).toBeCloseTo(exposureAt(open.swell, 270), 3);
+    // Swell only: the wind blows on over a shoal, so its share, the unspread ray share and the fetch stay as they were.
+    expect(behind.fetchKm).toEqual(open.fetchKm);
+    expect(behind.wind).toEqual(open.wind);
+    expect(behind.rayWind).toEqual(open.rayWind);
+    // Out past the rim (and its gap), the reef has cut that swell already: the shoal adds nothing.
+    const outside = siteExposure(lagoon, [OWN], [EAST_GAP], [], [shoal(0.06, 0.15)]);
+    expect(outside.swell).toEqual(open.swell);
+    // A cell on the shoal itself reads the swell that crossed the shoals round it.
+    const onTop = siteExposure({ ...lagoon, lon: 73.564 }, [OWN], [EAST_GAP], [], [shoal(0.009, 0.15)]);
+    expect(onTop.swell).toEqual(siteExposure({ ...lagoon, lon: 73.564 }, [OWN], [EAST_GAP]).swell);
   });
 
   it("ends the wind's fetch behind a wooded island, but not behind bare sand", () => {

@@ -85,7 +85,8 @@ export function parseRims(text: string): Map<string, RimRing> {
   return rims;
 }
 
-function ringProblem(ring: unknown): string | null {
+/** What is wrong with a closed ring of [lat, lon] pairs read from a data file, or null when nothing is. */
+export function ringProblem(ring: unknown): string | null {
   if (!Array.isArray(ring)) return "is not a list of points";
   if (ring.length < 4) return "has fewer than four points";
   for (const [index, point] of ring.entries()) {
@@ -176,16 +177,19 @@ export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): n
   return rimEdgeKm(site, ring);
 }
 
-/** Km from the pin to the nearest point of the outline, from inside or outside. */
-export function rimEdgeKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): number {
-  const points = ring.map(([lat, lon]) => toKm(lat, lon, site.lat));
-  const pin = toKm(site.lat, site.lon, site.lat);
+/** Km from the pin to the nearest point of the outline, from inside or outside, at the pin's latitude. */
+export function rimEdgeKm({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): number {
+  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
   let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < points.length; index += 1) {
-    const foot = footOnSegment(pin, points[index], points[index + 1]);
-    nearest = Math.min(nearest, Math.hypot(pin[0] - foot[0], pin[1] - foot[1]));
+  for (let index = 0; index + 1 < ring.length; index += 1) {
+    const x0 = (ring[index][1] - lon) * kx;
+    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
+    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
+    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
+    const along = alongSegment(-x0, -y0, ex, ey);
+    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
   }
-  return nearest;
+  return Math.sqrt(nearest);
 }
 
 /** Closest point to `pin` on the segment from `from` to `to`, all in km. */
@@ -196,10 +200,14 @@ function footOnSegment(
 ): [number, number] {
   const dx = to[0] - from[0];
   const dy = to[1] - from[1];
-  const lengthSq = dx * dx + dy * dy;
-  if (lengthSq === 0) return [from[0], from[1]];
-  const along = Math.max(0, Math.min(1, ((pin[0] - from[0]) * dx + (pin[1] - from[1]) * dy) / lengthSq));
+  const along = alongSegment(pin[0] - from[0], pin[1] - from[1], dx, dy);
   return [from[0] + along * dx, from[1] + along * dy];
+}
+
+/** How far along a segment (0 to 1) the foot of a point lies, given the point and the segment's end from its start. */
+function alongSegment(px: number, py: number, dx: number, dy: number): number {
+  const lengthSq = dx * dx + dy * dy;
+  return lengthSq === 0 ? 0 : Math.max(0, Math.min(1, (px * dx + py * dy) / lengthSq));
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */
@@ -229,4 +237,30 @@ function insideKm(point: [number, number], ring: readonly [number, number][]): b
     }
   }
   return inside;
+}
+
+/** The lat/lon box round a ring. */
+export type RingBox = { south: number; north: number; west: number; east: number };
+
+export function ringBox(ring: readonly (readonly [number, number])[]): RingBox {
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const [lat, lon] of ring) {
+    south = Math.min(south, lat);
+    north = Math.max(north, lat);
+    west = Math.min(west, lon);
+    east = Math.max(east, lon);
+  }
+  return { south, north, west, east };
+}
+
+/** The box grown by `by` degrees on every side. */
+export function padBox(box: RingBox, by: number): RingBox {
+  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
+}
+
+export function boxesOverlap(a: RingBox, b: RingBox): boolean {
+  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }

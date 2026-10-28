@@ -3,11 +3,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
-import { allRims, KM_PER_DEG_LAT, pointInRing, type RimRing } from "../lib/rim";
-import { exposureIslands, exposureRings } from "../lib/sea-state";
+import { allRims, boxesOverlap, KM_PER_DEG_LAT, padBox, pointInRing, rimEdgeKm, ringBox, type RimRing } from "../lib/rim";
+import { exposureIslands, exposureRings, exposureShoals } from "../lib/sea-state";
 import {
   encodeCells,
-  outlineKm,
   packExposures,
   seaOwner,
   SHELTER_BAND_KM,
@@ -27,8 +26,8 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
  * cell of water it owns (inside its outline, and within SHELTER_BAND_KM outside it where no other outline is nearer:
  * seaOwner),
  * and every 125 m cell of that water within SHELTER_FINE_KM of an island, with its exposure from the same ray tracing
- * as the dive sites. Atolls are built in parallel, one process per core. Rerun after rims.json, openings.json or
- * islands.json change. Takes a few minutes.
+ * as the dive sites. Atolls are built in parallel, one process per core. Rerun after rims.json, openings.json,
+ * islands.json or shoals.json change. Takes about seven minutes.
  *
  *   npm run shelter-grid
  */
@@ -36,16 +35,16 @@ import { siteExposure, type SiteExposure } from "../lib/wave-exposure";
 const FINE_PER_COARSE = Math.round(SHELTER_STEP_DEG / SHELTER_FINE_STEP_DEG);
 
 type Region = "inner" | "outer" | "land" | "other" | null;
-type Box = { south: number; north: number; west: number; east: number };
 
 function buildAtoll(wayId: string): ShelterAtollGrid {
   const outline = allRims().get(wayId) as RimRing;
   const padDeg = SHELTER_BAND_KM / KM_PER_DEG_LAT + 2 * SHELTER_STEP_DEG;
-  const reach = padBox(boxOf(outline), padDeg);
+  const reach = padBox(ringBox(outline), padDeg);
   const allIslands = exposureIslands();
-  const islands = allIslands.map(({ ring }) => ({ ring, box: boxOf(ring) })).filter(({ box }) => overlaps(box, reach));
+  const islands = allIslands.map(({ ring }) => ({ ring, box: ringBox(ring) })).filter(({ box }) => boxesOverlap(box, reach));
   const rings = exposureRings();
   const openings = readOpenings();
+  const shoals = exposureShoals();
 
   // Whose water each spot is follows the layer's one rule (seaOwner): this atoll's lagoon or sea, another atoll's
   // water, or nothing past the band.
@@ -57,7 +56,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
     return { kind: owner.outside ? "outer" : "inner", blend: owner.blend };
   };
   const exposureAt = (lat: number, lon: number) =>
-    siteExposure({ lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: wayId }, rings, openings, allIslands);
+    siteExposure({ lat, lon, kind: "lagoon", inwardBearingDeg: null, ownWayId: wayId }, rings, openings, allIslands, shoals);
 
   const south = Math.floor(reach.south / SHELTER_STEP_DEG) * SHELTER_STEP_DEG;
   const west = Math.floor(reach.west / SHELTER_STEP_DEG) * SHELTER_STEP_DEG;
@@ -91,7 +90,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
         if (fineCells.has(key)) continue;
         const lat = south + (row + 0.5) * SHELTER_FINE_STEP_DEG;
         const lon = west + (column + 0.5) * SHELTER_FINE_STEP_DEG;
-        if (outlineKm(lat, lon, island.ring) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
+        if (rimEdgeKm({ lat, lon }, island.ring) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
       }
     }
   }
@@ -149,28 +148,6 @@ class LayerBuilder {
       cells: encodeCells(packExposures([...this.exposures.inner, ...this.exposures.outer])),
     };
   }
-}
-
-function boxOf(ring: RimRing): Box {
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
-  for (const [lat, lon] of ring) {
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lon);
-    east = Math.max(east, lon);
-  }
-  return { south, north, west, east };
-}
-
-function padBox(box: Box, by: number): Box {
-  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
-}
-
-function overlaps(a: Box, b: Box): boolean {
-  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }
 
 

@@ -4,8 +4,20 @@ import zlib from "zlib";
 import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
-import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, type RimRing } from "./rim";
-import { blendSeaState, exposureIslands, exposureRings, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
+import {
+  allRims,
+  boxesOverlap,
+  KM_PER_DEG_LAT,
+  padBox,
+  pointInRing,
+  rimEdgeKm,
+  rimForAtoll,
+  rimWayId,
+  ringBox,
+  type RimRing,
+  type RingBox,
+} from "./rim";
+import { blendSeaState, exposureIslands, exposureRings, exposureShoals, loadOffshore, seaStateHours, type Offshore } from "./sea-state";
 import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, fieldByte } from "./shelter-field";
@@ -14,7 +26,7 @@ import type { Atoll, SeaStateHour } from "./types";
 /**
  * The sheltered-water map layer: every atoll's lagoon and the sea for SHELTER_BAND_KM outside its outline, each cell
  * with its exposure to seas from each direction (worked out once by npm run shelter-grid with the same ray tracing as
- * the dive sites, islands and reef gaps included), banded for one hour from the atoll's offshore waves and wind exactly
+ * the dive sites, islands, lagoon shoals and reef gaps included), banded for one hour from the atoll's offshore waves and wind exactly
  * as a site's sea state is. Two layers: 500 m cells everywhere, and 125 m cells within SHELTER_FINE_KM of an island,
  * where a small island's lee is only a few hundred metres long.
  */
@@ -350,20 +362,20 @@ function seaAt(exposure: SiteExposure, own: HourSamples, blend?: { share: number
  */
 export type SeaOwner = { wayId: string; outside: boolean; island: boolean; blend?: { wayId: string; share: number } };
 
-type OwnerOutline = { wayId: string; ring: RimRing; south: number; north: number; west: number; east: number };
+type OwnerOutline = { wayId: string; ring: RimRing } & RingBox;
 let ownerOutlines: OwnerOutline[] | null = null;
-let ownerIslands: { ring: RimRing; south: number; north: number; west: number; east: number }[] | null = null;
+let ownerIslands: ({ ring: RimRing } & RingBox)[] | null = null;
 
 export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null {
-  ownerOutlines ??= [...allRims()].map(([wayId, ring]) => ({ wayId, ring, ...boxOf(ring) }));
-  ownerIslands ??= readIslands().map(({ ring }) => ({ ring, ...boxOf(ring) }));
+  ownerOutlines ??= [...allRims()].map(([wayId, ring]) => ({ wayId, ring, ...ringBox(ring) }));
+  ownerIslands ??= readIslands().map(({ ring }) => ({ ring, ...ringBox(ring) }));
   const pad = (SHELTER_BAND_KM + slackKm) / KM_PER_DEG_LAT + 0.01;
   const island = ownerIslands.some((item) => inBox(lat, lon, item, 0) && pointInRing(lat, lon, item.ring));
   const within = ownerOutlines.find((item) => inBox(lat, lon, item, 0) && pointInRing(lat, lon, item.ring));
   if (within) return { wayId: within.wayId, outside: false, island };
   const near = ownerOutlines
     .filter((item) => inBox(lat, lon, item, pad))
-    .map((item) => ({ wayId: item.wayId, km: outlineKm(lat, lon, item.ring) }))
+    .map((item) => ({ wayId: item.wayId, km: rimEdgeKm({ lat, lon }, item.ring) }))
     .filter(({ km }) => km <= SHELTER_BAND_KM + slackKm)
     .sort((a, b) => a.km - b.km);
   if (near.length === 0) return null;
@@ -372,44 +384,8 @@ export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null
   return { wayId: owner.wayId, outside: true, island, ...(next && share < 1 ? { blend: { wayId: next.wayId, share } } : {}) };
 }
 
-/** Km from a point to the nearest edge of an outline, at the point's latitude. */
-export function outlineKm(lat: number, lon: number, ring: RimRing): number {
-  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const x0 = (ring[index][1] - lon) * kx;
-    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
-    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
-    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const length = ex * ex + ey * ey;
-    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
-    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
-  }
-  return Math.sqrt(nearest);
-}
-
-type Box = { south: number; north: number; west: number; east: number };
-
-function boxOf(ring: RimRing): Box {
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
-  for (const [lat, lon] of ring) {
-    south = Math.min(south, lat);
-    north = Math.max(north, lat);
-    west = Math.min(west, lon);
-    east = Math.max(east, lon);
-  }
-  return { south, north, west, east };
-}
-
-function inBox(lat: number, lon: number, box: Box, pad: number): boolean {
+function inBox(lat: number, lon: number, box: RingBox, pad: number): boolean {
   return lat >= box.south - pad && lat <= box.north + pad && lon >= box.west - pad && lon <= box.east + pad;
-}
-
-function overlaps(a: Box, b: Box): boolean {
-  return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
 }
 
 /** One atoll's felt height on one of its grids for the map, as the getShelter action sends it. */
@@ -463,7 +439,7 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
   const grid = readShelterGrid();
   const band = SHELTER_BAND_KM / KM_PER_DEG_LAT;
   const atolls = gridAtolls();
-  const shown = atolls.filter(({ ring }) => overlaps(view, pad(boxOf(ring), band)));
+  const shown = atolls.filter(({ ring }) => boxesOverlap(view, padBox(ringBox(ring), band)));
   // Atolls in view, and their neighbours whose seas they blend with where the two meet.
   const wanted = new Set(shown.map(({ wayId }) => wayId));
   for (const { wayId } of shown) for (const neighbour of Object.keys(grid.atolls[wayId].coarse.blend)) wanted.add(neighbour);
@@ -497,10 +473,10 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
 export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
   const outline = allRims().get(wayId);
   if (!outline) return null;
-  const box = pad(boxOf(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
+  const box = padBox(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
   const islands = readIslands()
     .map((island) => island.ring)
-    .filter((ring) => overlaps(boxOf(ring), box));
+    .filter((ring) => boxesOverlap(ringBox(ring), box));
   return { outline, islands };
 }
 
@@ -524,11 +500,8 @@ export async function shelterPoint(lat: number, lon: number, time: string): Prom
     exposureRings(),
     readOpenings(),
     exposureIslands(),
+    exposureShoals(),
   );
   const blend = owner.blend && neighbour ? { share: owner.blend.share, samples: samplesAt(neighbour, time) } : undefined;
   return seaAt(exposure, samplesAt(offshore, time), blend) ?? "unknown";
-}
-
-function pad(box: Box, by: number): Box {
-  return { south: box.south - by, north: box.north + by, west: box.west - by, east: box.east + by };
 }

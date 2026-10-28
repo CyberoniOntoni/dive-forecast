@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import type { RimRing } from "./rim";
+import { ringProblem, type RimRing } from "./rim";
 
 /**
  * Islands (data/islands.json, from OpenStreetMap land polygons; npm run islands). Land stops swell outright, and an
@@ -52,17 +52,8 @@ function islandProblem(item: unknown): string | null {
   if (!isRecord(item)) return "is not an object";
   const { areaHa, ring } = item;
   if (typeof areaHa !== "number" || !Number.isFinite(areaHa) || areaHa < 0) return "has no valid areaHa";
-  if (!Array.isArray(ring) || ring.length < 4) return "has a ring of fewer than four points";
-  for (const point of ring) {
-    if (!Array.isArray(point) || point.length !== 2) return "has a point that is not a [lat, lon] pair";
-    const [lat, lon] = point as unknown[];
-    if (typeof lat !== "number" || !Number.isFinite(lat) || Math.abs(lat) > 90) return "has a point with no valid lat";
-    if (typeof lon !== "number" || !Number.isFinite(lon) || Math.abs(lon) > 180) return "has a point with no valid lon";
-  }
-  const first = ring[0] as number[];
-  const last = ring[ring.length - 1] as number[];
-  if (first[0] !== last[0] || first[1] !== last[1]) return "has a ring that is not closed";
-  return null;
+  const problem = ringProblem(ring);
+  return problem && `ring ${problem}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -1,6 +1,6 @@
 import { destinationKm } from "./marine";
 import type { ReefOpening } from "./openings";
-import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, type RimRing } from "./rim";
+import { CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, RIM_NEAR_KM, rimEdgeKm, ringBox, type RimRing, type RingBox } from "./rim";
 
 /**
  * How much of the open-ocean sea reaches a site, by the direction it comes from. The wave model (about 9 km) treats a
@@ -69,6 +69,19 @@ export type SiteExposure = { swell: number[]; wind: number[]; rayWind: number[];
 /** An island in the ray tracer: its outline, and whether trees on it shelter the water behind from the wind. */
 export type ExposureIsland = { ring: RimRing; wooded: boolean };
 
+/** A shoal in the ray tracer: its outline and box, and the share of the swell height that crosses it. Make with exposureShoal. */
+export type ExposureShoal = { ring: RimRing; transmission: number } & RingBox;
+
+/** A shoal for the ray tracer, with the box read off its ring (the tracer's reach test uses the box). */
+export function exposureShoal(ring: RimRing, transmission: number): ExposureShoal {
+  return { ring, transmission, ...ringBox(ring) };
+}
+/**
+ * Shoals are counted out to this far. A shoal is small next to an atoll's rim, and swell bends back in behind it within
+ * a few of its widths, so a far one hardly shelters (it also keeps the tracing quick: there are thousands).
+ */
+const SHOAL_REACH_KM = 10;
+
 type Vec = [number, number];
 /** One edge of an atoll outline. */
 type Segment = { from: Vec; to: Vec; wayId: string };
@@ -91,8 +104,11 @@ export function siteExposure(
   rings: readonly ExposureRing[],
   openings: readonly GapOpening[],
   islands: readonly ExposureIsland[] = [],
+  shoals: readonly ExposureShoal[] = [],
 ): SiteExposure {
   const reachLat = RAY_KM / KM_PER_DEG_LAT + 0.1;
+  const shoalLat = SHOAL_REACH_KM / KM_PER_DEG_LAT;
+  const shoalLon = SHOAL_REACH_KM / (KM_PER_DEG_LON * Math.cos((site.lat * Math.PI) / 180));
   const project = (lat: number, lon: number): Vec => [
     (lon - site.lon) * KM_PER_DEG_LON * Math.cos((site.lat * Math.PI) / 180),
     (lat - site.lat) * KM_PER_DEG_LAT,
@@ -109,10 +125,19 @@ export function siteExposure(
       segments.push({ from: points[index], to: points[index + 1], wayId });
     }
   }
-  const shadows = islandShadows(
+  const shadows = horizonShadows(
     islands
       .filter(({ ring }) => ring.some(([lat, lon]) => Math.abs(lat - site.lat) < reachLat && Math.abs(lon - site.lon) < reachLat))
       .map(({ ring, wooded }) => ({ points: ring.map(([lat, lon]) => project(lat, lon)), wooded })),
+    shoals
+      .filter(
+        (shoal) =>
+          shoal.north > site.lat - shoalLat &&
+          shoal.south < site.lat + shoalLat &&
+          shoal.east > site.lon - shoalLon &&
+          shoal.west < site.lon + shoalLon,
+      )
+      .map(({ ring, transmission }) => ({ points: ring.map(([lat, lon]) => project(lat, lon)), transmission })),
   );
   const byRay = segmentsByRay(segments);
   const gaps = openings
@@ -124,7 +149,7 @@ export function siteExposure(
   const fetchKm: (number | null)[] = [];
   for (let index = 0; index < DIRECTIONS; index += 1) {
     const ray = traceRay(index * STEP_DEG, site, byRay[index], gaps, ownSkipKm);
-    const shaded = ray.lee ? ray : withIslands(ray, index, shadows);
+    const shaded = ray.lee ? ray : withShadows(ray, index, shadows, ownSkipKm);
     raySwell.push(shaded.swell);
     rayWind.push(shaded.wind);
     fetchKm.push(shaded.fetchKm == null ? null : Math.round(shaded.fetchKm * 100) / 100);
@@ -221,49 +246,76 @@ type Shore = { share: number; km: number };
  * shores across each arc, nearest first, each with the share of the arc it fills that no nearer shore already does
  * (the shares sum to at most 1). Arcs with no wooded island have no entry.
  */
-type Shadows = { land: Float32Array; shores: Map<number, Shore[]> };
+type Shadows = { land: Float32Array; shores: Map<number, Shore[]>; shoals: Map<number, ShoalCrossing[]> };
 
-function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): Shadows {
+/** A shoal across part of one arc: the share of the swell that arc keeps past it, and how far off it starts, km. */
+type ShoalCrossing = { keeps: number; km: number };
+
+/**
+ * The arcs an outline spans seen from the site (in ARC_STEP_DEG units, `from` to `to`; it may straddle north), or null
+ * when it is out of reach or winds right round the site, which then sits on it.
+ */
+function arcSpan(points: readonly Vec[], reachKm: number): { from: number; to: number } | null {
+  let nearKm = Number.POSITIVE_INFINITY;
+  for (let index = 0; index + 1 < points.length; index += 1) nearKm = Math.min(nearKm, distanceToSegment(points[index], points[index + 1]));
+  if (nearKm > reachKm) return null;
+  const start = bearingOf(points[0]);
+  let turned = 0;
+  let low = 0;
+  let high = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    let step = bearingOf(points[index]) - bearingOf(points[index - 1]);
+    if (step > 180) step -= 360;
+    if (step < -180) step += 360;
+    turned += step;
+    low = Math.min(low, turned);
+    high = Math.max(high, turned);
+  }
+  if (Math.abs(turned) > 180) return null;
+  return { from: (start + low) / ARC_STEP_DEG, to: (start + high) / ARC_STEP_DEG };
+}
+
+/**
+ * Each arc an outline covers, with the share of it covered and, along the middle of that covered part (as a reef's
+ * distance is read along its ray), how far off the outline's near edge is (Infinity if the bearing misses it).
+ */
+function* coveredArcs(points: readonly Vec[], { from, to }: { from: number; to: number }) {
+  for (let arc = Math.floor(from); arc < Math.ceil(to); arc += 1) {
+    const covered = Math.min(to, arc + 1) - Math.max(from, arc);
+    const radians = (((Math.max(from, arc) + Math.min(to, arc + 1)) / 2) * ARC_STEP_DEG * Math.PI) / 180;
+    const direction: Vec = [Math.sin(radians), Math.cos(radians)];
+    let edgeKm = Number.POSITIVE_INFINITY;
+    for (let index = 0; index + 1 < points.length; index += 1) {
+      const km = crossingKm(direction, points[index], points[index + 1]);
+      if (km != null) edgeKm = Math.min(edgeKm, km);
+    }
+    yield { at: ((arc % ARCS) + ARCS) % ARCS, covered, edgeKm };
+  }
+}
+
+/** What islands and shoals cast across the horizon, arc by arc. */
+function horizonShadows(
+  islands: readonly { points: Vec[]; wooded: boolean }[],
+  shoalOutlines: readonly { points: Vec[]; transmission: number }[],
+): Shadows {
   const land = new Float32Array(ARCS);
   const found = new Map<number, Shore[]>();
   for (const { points, wooded: trees } of islands) {
-    let nearKm = Number.POSITIVE_INFINITY;
-    for (let index = 0; index + 1 < points.length; index += 1) nearKm = Math.min(nearKm, distanceToSegment(points[index], points[index + 1]));
-    if (nearKm > RAY_KM) continue;
-    // The arc the island spans, followed round its outline so it may straddle north.
-    const start = bearingOf(points[0]);
-    let turned = 0;
-    let low = 0;
-    let high = 0;
-    for (let index = 1; index < points.length; index += 1) {
-      let step = bearingOf(points[index]) - bearingOf(points[index - 1]);
-      if (step > 180) step -= 360;
-      if (step < -180) step += 360;
-      turned += step;
-      low = Math.min(low, turned);
-      high = Math.max(high, turned);
-    }
-    // An outline that winds right round the point has it on land; no site or cell sits there.
-    if (Math.abs(turned) > 180) continue;
-    const from = (start + low) / ARC_STEP_DEG;
-    const to = (start + high) / ARC_STEP_DEG;
-    for (let arc = Math.floor(from); arc < Math.ceil(to); arc += 1) {
-      const covered = Math.min(to, arc + 1) - Math.max(from, arc);
-      const at = ((arc % ARCS) + ARCS) % ARCS;
+    // A site or cell is never on land, so an outline that winds round it is skipped.
+    const span = arcSpan(points, RAY_KM);
+    if (!span) continue;
+    for (const { at, covered, edgeKm } of coveredArcs(points, span)) {
       land[at] = Math.max(land[at], covered);
-      if (!trees) continue;
-      // The shore along the middle of the part of this arc the island fills, as a reef's fetch is read along its ray.
-      const radians = (((Math.max(from, arc) + Math.min(to, arc + 1)) / 2) * ARC_STEP_DEG * Math.PI) / 180;
-      const direction: Vec = [Math.sin(radians), Math.cos(radians)];
-      let shoreKm = Number.POSITIVE_INFINITY;
-      for (let index = 0; index + 1 < points.length; index += 1) {
-        const km = crossingKm(direction, points[index], points[index + 1]);
-        if (km != null) shoreKm = Math.min(shoreKm, km);
-      }
-      if (shoreKm === Number.POSITIVE_INFINITY) continue;
-      const list = found.get(at);
-      if (list) list.push({ share: covered, km: shoreKm });
-      else found.set(at, [{ share: covered, km: shoreKm }]);
+      if (trees && edgeKm !== Number.POSITIVE_INFINITY) pushAt(found, at, { share: covered, km: edgeKm });
+    }
+  }
+  // A shoal the site sits on is skipped too: its swell is what crossed the shoals round it.
+  const shoals = new Map<number, ShoalCrossing[]>();
+  for (const { points, transmission } of shoalOutlines) {
+    const span = arcSpan(points, SHOAL_REACH_KM);
+    if (!span) continue;
+    for (const { at, covered, edgeKm } of coveredArcs(points, span)) {
+      if (edgeKm !== Number.POSITIVE_INFINITY) pushAt(shoals, at, { keeps: 1 - covered * (1 - transmission), km: edgeKm });
     }
   }
   // Nearest shore first; a farther one only adds the part of the arc the nearer ones leave open.
@@ -279,28 +331,45 @@ function islandShadows(islands: readonly { points: Vec[]; wooded: boolean }[]): 
     }
     shores.set(at, kept);
   }
-  return { land, shores };
+  return { land, shores, shoals };
+}
+
+function pushAt<T>(lists: Map<number, T[]>, at: number, item: T): void {
+  const list = lists.get(at);
+  if (list) list.push(item);
+  else lists.set(at, [item]);
 }
 
 /**
- * A ray's reef-only exposure with the islands across its STEP_DEG of horizon. Land stops swell outright, so the swell
+ * A ray's reef-only exposure with the islands and shoals across its STEP_DEG of horizon. Land stops swell outright, so the swell
  * keeps only the share of the ray's arcs that no island fills. A wooded island ends the wind's fetch WIND_SHADOW_KM
  * short of its shore, if that is nearer than the reef; bare sand islands block swell but not the wind. The ray's fetch
  * is the shortest of its arcs' (as a grid bin keeps the shortest of its rays'), so a lee on any arc is kept; the wind
- * share counts each part of an arc at its own shore's fetch, and the rest of the arc at the reef's.
+ * share counts each part of an arc at its own shore's fetch, and the rest of the arc at the reef's. Each shoal in front
+ * of the reef cuts the swell on the arcs it covers; the wind blows on over it, so the wind share keeps the floor of
+ * the swell past land alone. Shoals behind the reef are left out, the reef having already cut that swell. So are
+ * shoals within `ownReefKm` of a rim site (pass or wall): there the reef the pass cuts through, or the wall stands on,
+ * runs on inside the outline, and it is the site's own reef, as its rim is. (A wall's lagoon-side rays are its own reef's lee and never get here.)
  */
-function withIslands(
+function withShadows(
   ray: { swell: number; wind: number; fetchKm: number | null },
   index: number,
-  { land, shores }: Shadows,
+  { land, shores, shoals }: Shadows,
+  ownReefKm = 0,
 ): { swell: number; wind: number; fetchKm: number | null } {
   let open = 0;
+  let pastLand = 0;
   let windSum = 0;
   let fetchKm = ray.fetchKm;
   const reefWind = ray.fetchKm == null ? 1 : fetchShare(ray.fetchKm);
   for (let offset = -ARCS_PER_RAY / 2; offset < ARCS_PER_RAY / 2; offset += 1) {
     const at = (((index * ARCS_PER_RAY + offset) % ARCS) + ARCS) % ARCS;
-    open += 1 - land[at];
+    let keeps = 1 - land[at];
+    pastLand += keeps;
+    for (const shoal of shoals.get(at) ?? []) {
+      if (shoal.km > ownReefKm && (ray.fetchKm == null || shoal.km < ray.fetchKm)) keeps *= shoal.keeps;
+    }
+    open += keeps;
     let calmed = 0;
     let arcWind = 0;
     for (const shore of shores.get(at) ?? []) {
@@ -313,7 +382,7 @@ function withIslands(
     windSum += arcWind + (1 - calmed) * reefWind;
   }
   const swell = ray.swell * (open / ARCS_PER_RAY);
-  return { swell, wind: Math.max(swell, windSum / ARCS_PER_RAY), fetchKm };
+  return { swell, wind: Math.max(ray.swell * (pastLand / ARCS_PER_RAY), windSum / ARCS_PER_RAY), fetchKm };
 }
 
 function bearingOf([x, y]: Vec): number {
