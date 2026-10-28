@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { footOnSegment, nearestOnPolyline } from "./geometry";
 import type { Atoll, Site } from "./types";
 
 export type RimRing = readonly (readonly [number, number])[];
@@ -178,36 +179,42 @@ export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): n
 }
 
 /** Km from the pin to the nearest point of the outline, from inside or outside, at the pin's latitude. */
-export function rimEdgeKm({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): number {
-  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const x0 = (ring[index][1] - lon) * kx;
-    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
-    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
-    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const along = alongSegment(-x0, -y0, ex, ey);
-    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
+export function rimEdgeKm(pin: Pick<Site, "lat" | "lon">, ring: RimRing): number {
+  return nearestRimPoint(pin, ring).km;
+}
+
+/** The point of the outline nearest the pin, and its distance in km, measured flat at the pin's latitude. */
+export function nearestRimPoint({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): { lat: number; lon: number; km: number } {
+  const kmPerDegLon = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
+  // Not toKm: that scales then subtracts, this subtracts then scales, and the last bits of rimEdgeKm (and so of every
+  // rim bearing) must stay as they were, or the forecast changes without a version bump.
+  const toPinKm = ([pointLat, pointLon]: readonly [number, number]): [number, number] => [
+    (pointLon - lon) * kmPerDegLon,
+    (pointLat - lat) * KM_PER_DEG_LAT,
+  ];
+  const { foot, distanceSq } = nearestOnPolyline([0, 0], ring.map(toPinKm));
+  return { lat: lat + foot[1] / KM_PER_DEG_LAT, lon: lon + foot[0] / kmPerDegLon, km: Math.sqrt(distanceSq) };
+}
+
+/**
+ * The nearest point, within `reachKm`, on any of the outlines, or null when none comes that close. Outlines whose box
+ * lies farther than the reach are skipped unmeasured.
+ */
+export function nearestRimWithin(
+  pin: Pick<Site, "lat" | "lon">,
+  rims: Iterable<RimRing>,
+  reachKm: number,
+): { lat: number; lon: number; km: number } | null {
+  // A degree of longitude is the shorter, so its reach covers both axes.
+  const reachDeg = reachKm / (KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180));
+  const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, reachDeg);
+  let best: { lat: number; lon: number; km: number } | null = null;
+  for (const ring of rims) {
+    if (!boxesOverlap(ringBox(ring), near)) continue;
+    const foot = nearestRimPoint(pin, ring);
+    if (foot.km <= reachKm && (!best || foot.km < best.km)) best = foot;
   }
-  return Math.sqrt(nearest);
-}
-
-/** Closest point to `pin` on the segment from `from` to `to`, all in km. */
-function footOnSegment(
-  pin: readonly [number, number],
-  from: readonly [number, number],
-  to: readonly [number, number],
-): [number, number] {
-  const dx = to[0] - from[0];
-  const dy = to[1] - from[1];
-  const along = alongSegment(pin[0] - from[0], pin[1] - from[1], dx, dy);
-  return [from[0] + along * dx, from[1] + along * dy];
-}
-
-/** How far along a segment (0 to 1) the foot of a point lies, given the point and the segment's end from its start. */
-function alongSegment(px: number, py: number, dx: number, dy: number): number {
-  const lengthSq = dx * dx + dy * dy;
-  return lengthSq === 0 ? 0 : Math.max(0, Math.min(1, (px * dx + py * dy) / lengthSq));
+  return best;
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */

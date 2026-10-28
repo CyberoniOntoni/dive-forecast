@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { inwardBearingDeg, resolveBearing } from "./bearing";
-import { parseRims, pointInRing, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
+import { nearestRimWithin, parseRims, pointInRing, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Catalog, Site } from "./types";
 
 // A 0.2 degree square centered on the origin, closed.
@@ -128,5 +128,26 @@ describe("seeded catalog bearings", () => {
       const lon = site.lon + (Math.sin(radians) * 1) / (111.32 * Math.cos((site.lat * Math.PI) / 180));
       expect(pointInRing(lat, lon, rim), `${site.id} at ${deg.toFixed(0)} deg`).toBe(true);
     }
+  });
+});
+
+describe("nearestRimWithin", () => {
+  const square: RimRing = [
+    [4.0, 73.4],
+    [4.1, 73.4],
+    [4.1, 73.5],
+    [4.0, 73.5],
+    [4.0, 73.4],
+  ];
+
+  it("finds the nearest outline point inside the reach", () => {
+    const foot = nearestRimWithin({ lat: 4.05, lon: 73.51 }, [square], 3);
+    expect(foot?.lat).toBeCloseTo(4.05, 6);
+    expect(foot?.lon).toBeCloseTo(73.5, 6);
+    expect(foot?.km).toBeCloseTo(1.11, 2);
+  });
+
+  it("is null when every outline is out of reach", () => {
+    expect(nearestRimWithin({ lat: 4.05, lon: 73.53 }, [square], 3)).toBeNull();
   });
 });

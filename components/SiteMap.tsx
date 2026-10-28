@@ -3,9 +3,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
+import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
+import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
+import { drawNav, navBounds } from "@/components/boat-nav-layer";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
@@ -33,6 +35,8 @@ type MapProps = {
   spotlight: { siteId: string; count: number } | null;
   /** The ring was dismissed on the map (a click): clear the spotlight state. */
   onSpotlightClear: () => void;
+  /** Boat navigation: the boat, its route and the site it goes to. */
+  nav: NavDraw | null;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -401,6 +405,7 @@ const LeafletMap = dynamic(
       focus,
       spotlight,
       onSpotlightClear,
+      nav,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -506,6 +511,23 @@ const LeafletMap = dynamic(
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [spotlight, mapEpoch]);
 
+      // Boat navigation: drawn afresh on each fix, above the pins.
+      const navLayerRef = useRef<LayerGroup | null>(null);
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0) return;
+        navLayerRef.current?.remove();
+        navLayerRef.current = nav ? drawNav(L, map, nav) : null;
+      }, [nav, mapEpoch]);
+
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
+        frameOn(map, navBounds(L, nav), 15, true);
+        // Frame only when asked (first route, "Show route"), not on every fix.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [nav?.frame, mapEpoch]);
+
       return <div ref={containerRef} className="dive-map absolute inset-0" />;
     }
 
@@ -524,12 +546,15 @@ export function SiteMap({
   nowcasts,
   maldivesWall,
   atollNames,
+  navigateTo = null,
 }: {
   sites: Site[];
   nowcasts: SiteNowcast[];
   maldivesWall: string;
   /** Short atoll names by id, shown after site names that more than one site uses. */
   atollNames: Record<string, string>;
+  /** A site to start boat navigation to (the site page's "Navigate by boat"). */
+  navigateTo?: string | null;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Point | null>(null);
@@ -537,6 +562,12 @@ export function SiteMap({
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
+  const [navSiteId, setNavSiteId] = useState<string | null>(navigateTo);
+  const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
+  const navSite = useMemo<NavSite | null>(() => {
+    const site = sites.find((item) => item.id === navSiteId);
+    return site ? { id: site.id, name: site.name, lat: site.lat, lon: site.lon } : null;
+  }, [sites, navSiteId]);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -582,10 +613,25 @@ export function SiteMap({
             focus={focus}
             spotlight={spotlight}
             onSpotlightClear={() => setSpotlight(null)}
+            nav={navSite ? navDraw : null}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
           />
+          {navSite ? (
+            // Below the attribution row on a phone; clear of the zoom and layer buttons on the right.
+            <div className="pointer-events-none absolute left-2 right-16 top-12 z-[1000] max-w-md lg:left-3 lg:top-3">
+              <BoatNav
+                key={navSite.id}
+                site={navSite}
+                onDraw={setNavDraw}
+                onClose={() => {
+                  setNavSiteId(null);
+                  router.replace("/");
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
