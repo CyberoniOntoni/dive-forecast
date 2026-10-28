@@ -1,7 +1,8 @@
 "use server";
 
 import { atollForPin } from "./bearing";
-import { boatRoute, type BoatRoute } from "./boat-route";
+import type { BoatRoute } from "./boat-route";
+import { boatRoute } from "./boat-route-data";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";

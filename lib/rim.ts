@@ -203,6 +203,27 @@ export function nearestRimPoint({ lat, lon }: Pick<Site, "lat" | "lon">, ring: R
   return { lat: lat + best[1] / KM_PER_DEG_LAT, lon: lon + best[0] / kmPerDegLon, km: Math.sqrt(bestSq) };
 }
 
+/**
+ * The nearest point, within `reachKm`, on any of the outlines, or null when none comes that close. Outlines whose box
+ * lies farther than the reach are skipped unmeasured.
+ */
+export function nearestRimWithin(
+  pin: Pick<Site, "lat" | "lon">,
+  rims: Iterable<RimRing>,
+  reachKm: number,
+): { lat: number; lon: number; km: number } | null {
+  // A degree of longitude is the shorter, so its reach covers both axes.
+  const reachDeg = reachKm / (KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180));
+  const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, reachDeg);
+  let best: { lat: number; lon: number; km: number } | null = null;
+  for (const ring of rims) {
+    if (!boxesOverlap(ringBox(ring), near)) continue;
+    const foot = nearestRimPoint(pin, ring);
+    if (foot.km <= reachKm && (!best || foot.km < best.km)) best = foot;
+  }
+  return best;
+}
+
 /** True when the point is inside the ring (ray casting on lat/lon). */
 export function pointInRing(lat: number, lon: number, ring: RimRing): boolean {
   let inside = false;

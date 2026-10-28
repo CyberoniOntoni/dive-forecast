@@ -1,14 +1,10 @@
 import { distanceKm, polylineKm, type LatLon } from "./geometry";
-import { readIslands } from "./islands";
-import { readOpenings } from "./openings";
-import { allRims, boxesOverlap, CHANNEL_RIM_REACH_KM, KM_PER_DEG_LAT, KM_PER_DEG_LON, nearestRimPoint, padBox, ringBox, type RimRing, type RingBox } from "./rim";
-import { readShoals } from "./shoals";
-import { listMergedSites } from "./store";
+import { boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, ringBox, type RimRing, type RingBox } from "./rim";
 
 /**
- * A boat route to a dive site that keeps off the land and reef the app knows of: OSM islands, Allen Coral Atlas lagoon
- * reef tops and sand shallows, and the atoll outlines, which it crosses only at a reef-crest gap (data/openings.json)
- * or a pass dive site. These are satellite outlines, not a chart: no depths, no buoys, nothing under 50 m across.
+ * Plans a boat route that keeps off the shapes it is given (lib/boat-route-data.ts loads them from data/): islands and
+ * reef it never enters, and atoll outlines it crosses only at a gap. These are satellite outlines, not a chart: no
+ * depths, no buoys, nothing under 50 m across.
  *
  * The search runs on a grid of square cells over the box round both ends: blocked cells are the shapes, every other
  * cell costs more the nearer it lies to a shape, so the route keeps a margin where there is room and still threads a
@@ -58,8 +54,6 @@ const MARGIN_COST = 0.6;
 /** Extra cost per cell over a reef-flat sill gap (when one is allowed) and inside the free zone round the ends. */
 const SHALLOW_GAP_COST = 40;
 const ENDPOINT_COST = 4;
-/** How far from the pin a pass site's outline crossing counts as open, metres. */
-const PASS_OPEN_M = 150;
 
 /** Cells past the last straight leg that pullStraight still tries before it keeps that corner. */
 const PULL_LOOKAHEAD = 80;
@@ -96,14 +90,6 @@ export function planRoute(from: LatLon, to: LatLon, shapes: RouteShapes): BoatRo
   return { points: [[from.lat, from.lon], [to.lat, to.lon]], lengthKm: directKm, routed: false, gaps: [], directKm };
 }
 
-/** The route from the boat to a catalog site, through the shapes in data/. */
-export async function boatRoute(from: LatLon, siteId: string): Promise<BoatRoute | null> {
-  const sites = await listMergedSites();
-  const site = sites.find((item) => item.id === siteId);
-  if (!site) return null;
-  return planRoute(from, site, routeShapes(sites));
-}
-
 /** Each ring's box, worked out once per ring. */
 const boxes = new WeakMap<RimRing, RingBox>();
 function boxOf(ring: RimRing): RingBox {
@@ -113,49 +99,6 @@ function boxOf(ring: RimRing): RingBox {
     boxes.set(ring, box);
   }
   return box;
-}
-
-let shapeCache: { blockers: RimRing[]; rims: RimRing[]; gaps: RouteGap[] } | null = null;
-
-function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string }[]): RouteShapes {
-  if (!shapeCache) {
-    const rims = [...allRims().values()];
-    const openings = readOpenings().map(({ lat, lon, widthM, reefFlatBridges }) => ({
-      lat,
-      lon,
-      widthM,
-      shallow: reefFlatBridges === true,
-    }));
-    shapeCache = {
-      blockers: [...readIslands().map((island) => island.ring), ...readShoals().map((shoal) => shoal.ring)],
-      rims,
-      gaps: openings,
-    };
-  }
-  const { blockers, rims, gaps } = shapeCache;
-  // A pass dive site is a way through its outline even where the crest map shows no gap. The reach is the one the
-  // forecast uses to tie a pass to its outline, so a pass the coarse outline puts inside the lagoon still opens it.
-  const passes = sites
-    .filter((site) => site.siteType === "pass")
-    .flatMap((site) => {
-      const foot = nearestOnRims(site, rims);
-      return foot && foot.km <= CHANNEL_RIM_REACH_KM ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
-    });
-  return { blockers, rims, gaps: [...gaps, ...passes] };
-}
-
-/** The nearest point on any outline whose box lies near the pin. */
-function nearestOnRims(pin: LatLon, rims: readonly RimRing[]): ReturnType<typeof nearestRimPoint> | null {
-  // Wide enough for CHANNEL_RIM_REACH_KM on both axes (a degree of longitude is the shorter).
-  const reachDeg = CHANNEL_RIM_REACH_KM / (KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180));
-  const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, reachDeg);
-  let best: ReturnType<typeof nearestRimPoint> | null = null;
-  for (const ring of rims) {
-    if (!boxesOverlap(boxOf(ring), near)) continue;
-    const foot = nearestRimPoint(pin, ring);
-    if (!best || foot.km < best.km) best = foot;
-  }
-  return best;
 }
 
 function buildGrid(from: LatLon, to: LatLon, shapes: RouteShapes, padKm: number, sills: boolean): Grid {
