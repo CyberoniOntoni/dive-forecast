@@ -20,6 +20,23 @@ export function footOnSegment(
   return [from[0] + along * dx, from[1] + along * dy];
 }
 
+/**
+ * The point of a polyline nearest `pin`, all flat pairs in one plane: the foot, the index of the segment it lies on,
+ * and its squared distance. The first segment wins a tie.
+ */
+export function nearestOnPolyline(
+  pin: readonly [number, number],
+  points: readonly (readonly [number, number])[],
+): { foot: [number, number]; segment: number; distanceSq: number } {
+  let best = { foot: [Infinity, Infinity] as [number, number], segment: 0, distanceSq: Infinity };
+  for (let index = 0; index + 1 < points.length; index += 1) {
+    const foot = footOnSegment(pin, points[index], points[index + 1]);
+    const distanceSq = (foot[0] - pin[0]) ** 2 + (foot[1] - pin[1]) ** 2;
+    if (distanceSq < best.distanceSq) best = { foot, segment: index, distanceSq };
+  }
+  return best;
+}
+
 /** Great-circle distance between two points, km. */
 export function distanceKm(a: LatLon, b: LatLon): number {
   const toRad = Math.PI / 180;

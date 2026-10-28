@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { footOnSegment } from "./geometry";
+import { footOnSegment, nearestOnPolyline } from "./geometry";
 import type { Atoll, Site } from "./types";
 
 export type RimRing = readonly (readonly [number, number])[];
@@ -190,17 +190,8 @@ export function nearestRimPoint({ lat, lon }: Pick<Site, "lat" | "lon">, ring: R
     (pointLon - lon) * kmPerDegLon,
     (pointLat - lat) * KM_PER_DEG_LAT,
   ];
-  let best: [number, number] = [Infinity, Infinity];
-  let bestSq = Infinity;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const foot = footOnSegment([0, 0], toPinKm(ring[index]), toPinKm(ring[index + 1]));
-    const sq = foot[0] ** 2 + foot[1] ** 2;
-    if (sq < bestSq) {
-      bestSq = sq;
-      best = foot;
-    }
-  }
-  return { lat: lat + best[1] / KM_PER_DEG_LAT, lon: lon + best[0] / kmPerDegLon, km: Math.sqrt(bestSq) };
+  const { foot, distanceSq } = nearestOnPolyline([0, 0], ring.map(toPinKm));
+  return { lat: lat + foot[1] / KM_PER_DEG_LAT, lon: lon + foot[0] / kmPerDegLon, km: Math.sqrt(distanceSq) };
 }
 
 /**

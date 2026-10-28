@@ -3,7 +3,7 @@
  * a route, and the words the panel shows. No file reads here; the route itself comes from lib/boat-route.ts.
  */
 
-import { bearingDeg, distanceKm, footOnSegment, polylineKm, type LatLon } from "./geometry";
+import { bearingDeg, distanceKm, nearestOnPolyline, polylineKm, type LatLon } from "./geometry";
 
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
@@ -70,20 +70,14 @@ export function alongRoute(boat: LatLon, points: readonly (readonly [number, num
   }
   // A degree of longitude is cos(lat) of a degree of latitude, so legs are measured in degrees of latitude.
   const lonScale = Math.cos((boat.lat * Math.PI) / 180);
-  // footOnSegment works on any flat pair, so the plane keeps [lat, lon] order with longitude scaled.
+  // nearestOnPolyline works on any flat pairs, so the plane keeps [lat, lon] order with longitude scaled.
   const toPlane = ([lat, lon]: readonly [number, number]): [number, number] => [lat, lon * lonScale];
-  const fromPlane = ([lat, scaledLon]: readonly [number, number]): [number, number] => [lat, scaledLon / lonScale];
-  let best = { offKm: Infinity, leg: 0, foot: points[0] as readonly [number, number] };
-  for (let index = 0; index + 1 < points.length; index += 1) {
-    const foot = fromPlane(footOnSegment(toPlane([boat.lat, boat.lon]), toPlane(points[index]), toPlane(points[index + 1])));
-    const offKm = distanceKm(boat, { lat: foot[0], lon: foot[1] });
-    if (offKm < best.offKm) best = { offKm, leg: index, foot };
-  }
-  const foot = best.foot;
-  const ahead = points[best.leg + 1];
+  const nearest = nearestOnPolyline(toPlane([boat.lat, boat.lon]), points.map(toPlane));
+  const foot: [number, number] = [nearest.foot[0], nearest.foot[1] / lonScale];
+  const ahead = points[nearest.segment + 1];
   return {
-    remainingKm: polylineKm([foot, ...points.slice(best.leg + 1)]),
-    offKm: best.offKm,
+    remainingKm: polylineKm([foot, ...points.slice(nearest.segment + 1)]),
+    offKm: distanceKm(boat, { lat: foot[0], lon: foot[1] }),
     next: { lat: ahead[0], lon: ahead[1] },
   };
 }
