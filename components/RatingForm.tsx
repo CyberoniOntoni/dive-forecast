@@ -7,7 +7,7 @@ const SCORES = [1, 2, 3, 4, 5] as const;
 
 function scoreButtonClass(selected: boolean): string {
   const tone = selected ? "border-foam bg-foam text-ink" : "border-foam/20 bg-ink text-foam";
-  return `min-h-11 flex-1 rounded-md border text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-60 ${tone}`;
+  return `min-h-11 flex-1 rounded-xl border text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-60 ${tone}`;
 }
 export function RatingForm({
   siteId,
@@ -34,7 +34,7 @@ export function RatingForm({
 
   return (
     <section
-      className="flex flex-col gap-3 rounded-2xl border border-foam/15 bg-glass p-4 sm:p-5"
+      className="flex flex-col gap-3 surface p-4 sm:p-5"
       aria-labelledby="rating-heading"
     >
       <h2 id="rating-heading" className="text-base font-semibold text-foam">

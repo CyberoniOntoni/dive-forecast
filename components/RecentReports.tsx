@@ -15,7 +15,7 @@ export function RecentReports({ rows }: { rows: readonly RecentReportRow[] }) {
   return (
     <section
       aria-labelledby="recent-reports-heading"
-      className="flex min-w-0 flex-col gap-3 rounded-2xl border border-foam/15 bg-glass p-4 sm:p-5"
+      className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5"
     >
       <h2 id="recent-reports-heading" className="text-base font-semibold text-foam">
         Recent reports

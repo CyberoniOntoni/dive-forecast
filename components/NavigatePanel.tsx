@@ -8,7 +8,7 @@ import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
 const PANEL_CLASS =
-  "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-2xl border border-foam/20 bg-ink p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
+  "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/20 bg-ink p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
 
 /** The Navigate tab: pick a destination, then follow the boat to it. */
 export function NavigatePanel({
@@ -93,7 +93,7 @@ function DestinationPicker({
         maxLength={80}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        className="mt-2 min-h-11 w-full min-w-0 rounded-md border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        className="mt-2 min-h-11 w-full min-w-0 rounded-xl border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
       />
       <ul className="mt-2">
         {list.map((item) => (

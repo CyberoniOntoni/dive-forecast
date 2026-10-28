@@ -153,13 +153,14 @@ const MAP_STYLE = `
 .dive-spotlight span{position:absolute;inset:0;border-radius:999px;border:3px solid var(--foam);box-shadow:0 0 0 2px var(--ink),inset 0 0 0 2px var(--ink);animation:dive-spotlight-pulse 1.1s ease-out 3}
 @keyframes dive-spotlight-pulse{0%{transform:scale(.55);opacity:1}70%{transform:scale(1.35);opacity:.3}100%{transform:scale(1);opacity:.9}}
 @media (prefers-reduced-motion: reduce){.dive-spotlight span{animation:none}}
-.dive-map .leaflet-bar a{width:44px!important;height:44px!important;line-height:44px!important;background:var(--ink);color:var(--foam);border-bottom-color:color-mix(in srgb, var(--foam) 28%, transparent)}
+.dive-map .leaflet-bar,.dive-map .leaflet-control-layers{border:1px solid color-mix(in srgb, var(--foam) 18%, transparent)!important;border-radius:14px!important;overflow:hidden;box-shadow:0 8px 24px -10px rgba(0,0,0,.6)!important}
+.dive-map .leaflet-bar a{width:44px!important;height:44px!important;line-height:44px!important;background:var(--glass);backdrop-filter:blur(10px);color:var(--foam);border-bottom-color:color-mix(in srgb, var(--foam) 18%, transparent)}
 .dive-map .leaflet-bar a:hover,.dive-map .leaflet-bar a:focus{background:color-mix(in srgb, var(--ink) 78%, var(--foam));color:var(--foam)}
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 88%, transparent);color:var(--foam)}
+.dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 80%, transparent);backdrop-filter:blur(8px);color:color-mix(in srgb, var(--foam) 85%, transparent);border-bottom-right-radius:10px}
 .dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
 .dive-map.leaflet-container{background:var(--ink)}
-.dive-map .leaflet-control-layers{background:var(--ink);color:var(--foam);border:2px solid rgba(0,0,0,0.2);border-radius:4px}
+.dive-map .leaflet-control-layers{background:var(--glass);backdrop-filter:blur(10px);color:var(--foam)}
 .dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
 .dive-map .leaflet-control-layers-toggle:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 .dive-map .leaflet-control-layers-expanded{padding:4px 10px 4px 8px;font:500 14px/1.2 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif}
@@ -168,7 +169,7 @@ const MAP_STYLE = `
 .dive-map .leaflet-control-layers input{width:18px;height:18px;margin:0;accent-color:var(--incoming)}
 .dive-map .leaflet-control-layers input:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 .dive-map .leaflet-control-layers-separator{border-top-color:color-mix(in srgb, var(--foam) 28%, transparent)}
-.dive-atlas-legend{background:color-mix(in srgb, var(--ink) 90%, transparent);color:var(--foam);border-radius:6px;padding:6px 10px;font:500 12px/1.3 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;max-width:190px}
+.dive-atlas-legend{background:var(--glass);backdrop-filter:blur(10px);color:var(--foam);border-radius:14px;border:1px solid color-mix(in srgb, var(--foam) 14%, transparent);box-shadow:0 8px 24px -10px rgba(0,0,0,.6);padding:6px 10px;font:500 12px/1.3 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;max-width:190px}
 .dive-atlas-legend-title{font-weight:600;margin:0 0 2px}
 .dive-atlas-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
 .dive-atlas-legend ul{list-style:none;margin:0;padding:0}
@@ -176,7 +177,7 @@ const MAP_STYLE = `
 .dive-shelter-legend{min-width:210px;max-width:240px}
 .dive-shelter-time{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
 .dive-shelter-time>span{flex:1;text-align:center}
-.dive-shelter-time button{min-width:28px;height:28px;border-radius:4px;border:1px solid color-mix(in srgb, var(--foam) 35%, transparent);background:transparent;color:var(--foam);font:600 14px/1 inherit;cursor:pointer}
+.dive-shelter-time button{min-width:28px;height:28px;border-radius:10px;border:1px solid color-mix(in srgb, var(--foam) 35%, transparent);background:transparent;color:var(--foam);font:600 14px/1 inherit;cursor:pointer}
 .dive-shelter-time button.dive-shelter-now{padding:0 6px;font-size:12px}
 .dive-shelter-time button:disabled{opacity:.35;cursor:default}
 .dive-shelter-time button:focus-visible{outline:2px solid var(--incoming);outline-offset:1px}

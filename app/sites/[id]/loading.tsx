@@ -6,23 +6,23 @@ export default function Loading() {
     >
       <p className="sr-only">Loading</p>
       <div className="flex flex-wrap gap-2" aria-hidden="true">
-        <div className="inline-flex min-h-11 items-center rounded-md border border-foam/25 bg-ink px-4 text-sm font-medium text-foam/40">
+        <div className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 bg-ink px-4 text-sm font-medium text-foam/40">
           Map
         </div>
-        <div className="inline-flex min-h-11 items-center rounded-md border border-foam/25 px-4 text-sm font-medium text-foam/40">
+        <div className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 px-4 text-sm font-medium text-foam/40">
           Navigate here by boat
         </div>
       </div>
       <header className="flex min-w-0 flex-col gap-2">
-        <div className="h-8 w-2/3 max-w-sm rounded-md bg-foam/15 sm:h-9" />
+        <div className="h-8 w-2/3 max-w-sm rounded-xl bg-foam/15 sm:h-9" />
       </header>
-      <section className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
+      <section className="surface p-4 sm:p-6">
         <div className="flex min-w-0 items-center gap-4">
           <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-foam/15" />
           <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <div className="h-12 w-48 max-w-full animate-pulse rounded-md bg-foam/20 sm:h-16" />
-            <div className="h-6 w-24 animate-pulse rounded-md bg-foam/15" />
-            <div className="h-4 w-36 animate-pulse rounded-md bg-foam/10" />
+            <div className="h-12 w-48 max-w-full animate-pulse rounded-xl bg-foam/20 sm:h-16" />
+            <div className="h-6 w-24 animate-pulse rounded-xl bg-foam/15" />
+            <div className="h-4 w-36 animate-pulse rounded-xl bg-foam/10" />
           </div>
         </div>
         <div className="mt-6 px-6">

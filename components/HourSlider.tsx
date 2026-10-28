@@ -69,7 +69,7 @@ export function HourSlider({
 
   if (unavailable || hours.length === 0) {
     return (
-      <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
+      <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
         <h2 id="forecast-heading" className="text-sm font-medium text-foam/80">
           Forecast
         </h2>
@@ -104,7 +104,7 @@ export function HourSlider({
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
-    <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
+    <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
       <h2 id="forecast-heading" className="sr-only">
         Forecast hour
       </h2>
@@ -195,7 +195,7 @@ export function HourSlider({
           <button
             type="button"
             onClick={() => setIndex(nowIndex)}
-            className="inline-flex min-h-11 items-center rounded-md border border-foam/25 px-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="inline-flex min-h-11 items-center rounded-xl border border-foam/25 px-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Back to now
           </button>

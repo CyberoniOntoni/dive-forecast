@@ -150,7 +150,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
           <button
             type="button"
             onClick={() => setFrame((count) => count + 1)}
-            className="min-h-11 rounded-md border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="min-h-11 rounded-xl border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Show route
           </button>
@@ -159,7 +159,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
           type="button"
           onClick={onChange}
           aria-label="Change destination"
-          className="min-h-11 shrink-0 rounded-md border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="min-h-11 shrink-0 rounded-xl border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           Change
         </button>

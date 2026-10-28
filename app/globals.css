@@ -27,6 +27,16 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* A card: the forecast, the forms, the reports. Lifted off the page by a soft shadow, not a hard border. */
+@utility surface {
+  border-radius: 1.5rem;
+  border: 1px solid color-mix(in srgb, var(--foam) 10%, transparent);
+  background-color: var(--glass);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--foam) 8%, transparent) inset,
+    0 12px 32px -16px rgba(0, 0, 0, 0.55);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
@@ -52,6 +62,8 @@ body {
   display: flex;
   flex-direction: column;
   background-color: var(--ink);
+  /* A little light from above, as at the surface. */
+  background-image: radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--foam) 7%, transparent), transparent 70%);
   color: var(--foam);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
@@ -111,15 +123,15 @@ main > .chart-credit {
   outline-offset: 2px;
 }
 
-.chart-bar a {
+.chart-bar a:not([data-tab]) {
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--incoming);
   text-underline-offset: 2px;
 }
 
-/* The header's view tabs show which is open by their fill, not an underline. */
-.chart-bar a[data-tab] {
+/* The brand link is a home link, not running text. The view tabs (data-tab) style themselves. */
+.chart-bar a.no-underline {
   text-decoration: none;
 }
 

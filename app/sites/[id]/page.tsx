@@ -52,7 +52,7 @@ export default async function SitePage({
         <Link
           href="/"
           aria-label="Back to map"
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-md border border-foam/25 bg-ink pr-4 pl-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-foam/25 bg-ink pr-4 pl-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 5l-7 7 7 7" />
@@ -61,7 +61,7 @@ export default async function SitePage({
         </Link>
         <Link
           href={`/?navigate=${encodeURIComponent(site.id)}`}
-          className="inline-flex min-h-11 items-center gap-2 rounded-md border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
             <path d="M12 2l7 19-7-4-7 4z" />
