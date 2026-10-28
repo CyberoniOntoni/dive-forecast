@@ -5,11 +5,13 @@ export default function Loading() {
       aria-busy="true"
     >
       <p className="sr-only">Loading</p>
-      <div
-        className="inline-flex min-h-11 w-fit items-center self-start rounded-md border border-foam/25 bg-ink px-4 text-sm font-medium text-foam/40"
-        aria-hidden="true"
-      >
-        Back to map
+      <div className="flex flex-wrap gap-2" aria-hidden="true">
+        <div className="inline-flex min-h-11 items-center rounded-md border border-foam/25 bg-ink px-4 text-sm font-medium text-foam/40">
+          Map
+        </div>
+        <div className="inline-flex min-h-11 items-center rounded-md border border-foam/25 px-4 text-sm font-medium text-foam/40">
+          Navigate here by boat
+        </div>
       </div>
       <header className="flex min-w-0 flex-col gap-2">
         <div className="h-8 w-2/3 max-w-sm rounded-md bg-foam/15 sm:h-9" />

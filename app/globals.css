@@ -93,6 +93,11 @@ body {
   color: color-mix(in srgb, var(--foam) 62%, var(--ink));
 }
 
+/* At the foot of a scrolling page, the page's own padding lines it up. */
+main > .chart-credit {
+  padding-inline: 0;
+}
+
 .chart-credit a {
   color: inherit;
   text-decoration: underline;

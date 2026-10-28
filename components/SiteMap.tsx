@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
+import { DATA_CREDIT_HTML } from "@/components/Attribution";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
@@ -138,7 +139,7 @@ function leafletApi(mod: LeafletLib): LeafletLib {
   return mod;
 }
 
-/** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left. */
+/** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left, folded to one line. */
 const MAP_STYLE = `
 .dive-pin{background:transparent;border:none}
 .dive-spotlight{background:transparent;border:none;pointer-events:none}
@@ -177,7 +178,7 @@ const MAP_STYLE = `
 .dive-shelter-ticks span{position:absolute;top:0;width:44px;margin-left:-1px;padding-left:3px;border-left:1px solid color-mix(in srgb, var(--foam) 60%, transparent)}
 .dive-shelter-note{margin:2px 0 0}
 .dive-shelter-ticks small{display:block;font-size:10px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
-@media (max-width:640px){.dive-shelter-legend{min-width:0;width:210px;max-width:210px}.dive-shelter-time{font-size:11px}.dive-shelter-ticks{height:14px}.dive-shelter-ticks small,.dive-shelter-tick-mid,.dive-shelter-note,.dive-shelter-date{display:none}}
+@media (max-width:640px){.dive-shelter-legend{min-width:0;width:220px;max-width:220px}.dive-shelter-time{font-size:11px;gap:4px}.dive-shelter-time button{min-width:44px;height:44px;font-size:18px}.dive-shelter-time button.dive-shelter-now{font-size:13px}.dive-shelter-ticks{height:14px}.dive-shelter-ticks small,.dive-shelter-tick-mid,.dive-shelter-note,.dive-shelter-date{display:none}}
 .dive-shelter-popup p{margin:0 0 2px}
 .dive-shelter-popup-head{font-weight:600}
 .dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
@@ -187,6 +188,8 @@ const MAP_STYLE = `
 @media (max-width:1023px){
   .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
   .dive-map .leaflet-bottom.leaflet-right .leaflet-control-attribution{float:left}
+  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 4.5rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;line-height:20px;padding:0 6px;cursor:pointer}
+  .dive-map.leaflet-container .leaflet-control-attribution.dive-credit-open{white-space:normal;line-height:16px;padding:2px 6px}
 }
 `;
 
@@ -230,6 +233,10 @@ function mountDiveMap(
   const saved = loadMapView();
   if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
   else frameSites(L, map, siteGlances);
+  // Layers credit themselves once the map has a view, so this goes after them: the folded phone line starts with the
+  // imagery credit.
+  map.attributionControl.addAttribution(DATA_CREDIT_HTML);
+  const unfoldCredit = foldCreditOnPhone(map.attributionControl.getContainer());
 
   // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
   // sea state where the sheltered-water layer is on.
@@ -252,9 +259,27 @@ function mountDiveMap(
     pins,
     destroy: () => {
       resize.disconnect();
+      unfoldCredit();
       map.remove();
     },
   };
+}
+
+/**
+ * On a phone the credits are one line that a tap opens in full; a second tap, or a link once open, works as usual.
+ * Wide windows always show them in full.
+ */
+function foldCreditOnPhone(credit: HTMLElement | undefined): () => void {
+  if (!credit) return () => {};
+  const phone = window.matchMedia("(max-width: 1023px)");
+  credit.title = "Map and data credits";
+  const onClick = (event: MouseEvent) => {
+    if (!phone.matches || credit.classList.contains("dive-credit-open")) return;
+    event.preventDefault();
+    credit.classList.add("dive-credit-open");
+  };
+  credit.addEventListener("click", onClick);
+  return () => credit.removeEventListener("click", onClick);
 }
 
 /** Frame bounds in the part of the map the list does not cover, at most `maxZoom` (framePadding's by default). */
@@ -619,8 +644,8 @@ export function SiteMap({
             }}
           />
           {navSite ? (
-            // Below the attribution row on a phone; clear of the zoom and layer buttons on the right.
-            <div className="pointer-events-none absolute left-2 right-16 top-12 z-[1000] max-w-md lg:left-3 lg:top-3">
+            // Below the one-line attribution on a phone; clear of the zoom and layer buttons on the right.
+            <div className="pointer-events-none absolute left-2 right-16 top-7 z-[1000] max-w-md lg:left-3 lg:top-3">
               <BoatNav
                 key={navSite.id}
                 site={navSite}

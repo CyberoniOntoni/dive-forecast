@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import type { ReactNode } from "react";
-import { Attribution } from "@/components/Attribution";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,10 +27,10 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body className="min-h-full">
         <header className="chart-bar chart-bar-top">
           <p className="chart-name">Dive current</p>
-          <p className="chart-line">Maldives dive sites, incoming or outgoing right now.</p>
+          {/* On a phone the map and the forecast need the height more than the tagline. */}
+          <p className="chart-line hidden sm:block">Maldives dive sites, incoming or outgoing right now.</p>
         </header>
         <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
-        <Attribution />
       </body>
     </html>
   );
