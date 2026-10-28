@@ -3,7 +3,7 @@
  * a route, and the words the panel shows. No file reads here; the route itself comes from lib/boat-route.ts.
  */
 
-import { alongSegment } from "./segment";
+import { footOnSegment } from "./segment";
 
 export type LatLon = { lat: number; lon: number };
 
@@ -101,20 +101,15 @@ export function alongRoute(boat: LatLon, points: readonly (readonly [number, num
   }
   // A degree of longitude is cos(lat) of a degree of latitude, so legs are measured in degrees of latitude.
   const lonScale = Math.cos((boat.lat * Math.PI) / 180);
-  let best = { offKm: Infinity, leg: 0, t: 0 };
+  const flat = ([lat, lon]: readonly [number, number]): [number, number] => [lon * lonScale, lat];
+  let best = { offKm: Infinity, leg: 0, foot: points[0] as readonly [number, number] };
   for (let index = 0; index + 1 < points.length; index += 1) {
-    const [lat1, lon1] = points[index];
-    const [lat2, lon2] = points[index + 1];
-    const dx = (lon2 - lon1) * lonScale;
-    const dy = lat2 - lat1;
-    const t = alongSegment((boat.lon - lon1) * lonScale, boat.lat - lat1, dx, dy);
-    const foot = { lat: lat1 + t * dy, lon: lon1 + t * (lon2 - lon1) };
-    const offKm = distanceKm(boat, foot);
-    if (offKm < best.offKm) best = { offKm, leg: index, t };
+    const [x, lat] = footOnSegment(flat([boat.lat, boat.lon]), flat(points[index]), flat(points[index + 1]));
+    const foot: [number, number] = [lat, x / lonScale];
+    const offKm = distanceKm(boat, { lat: foot[0], lon: foot[1] });
+    if (offKm < best.offKm) best = { offKm, leg: index, foot };
   }
-  const [lat1, lon1] = points[best.leg];
-  const [lat2, lon2] = points[best.leg + 1];
-  const foot: [number, number] = [lat1 + best.t * (lat2 - lat1), lon1 + best.t * (lon2 - lon1)];
+  const foot = best.foot;
   const ahead = points[best.leg + 1];
   return {
     remainingKm: polylineKm([foot, ...points.slice(best.leg + 1)]),

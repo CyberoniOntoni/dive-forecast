@@ -1,8 +1,7 @@
 import { distanceKm, polylineKm, type LatLon } from "./boat-nav";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
-import { allRims, boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, padBox, ringBox, type RimRing, type RingBox } from "./rim";
-import { alongSegment } from "./segment";
+import { allRims, boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, nearestRimPoint, padBox, ringBox, type RimRing, type RingBox } from "./rim";
 import { readShoals } from "./shoals";
 import { listMergedSites } from "./store";
 
@@ -132,28 +131,19 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
     .filter((site) => site.siteType === "pass")
     .flatMap((site) => {
       const foot = nearestOnRims(site, rims);
-      return foot && foot.km <= PASS_RIM_MAX_KM ? [{ ...foot.point, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
+      return foot && foot.km <= PASS_RIM_MAX_KM ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
     });
   return { blockers: blockers.map((item) => item.ring), rims: rims.map((item) => item.ring), gaps: [...gaps, ...passes] };
 }
 
-function nearestOnRims(pin: LatLon, rims: readonly Boxed[]): { point: LatLon; km: number } | null {
-  let best: { point: LatLon; km: number } | null = null;
-  const kmPerDegLon = KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180);
+/** The nearest point on any outline whose box lies near the pin. */
+function nearestOnRims(pin: LatLon, rims: readonly Boxed[]): ReturnType<typeof nearestRimPoint> | null {
   const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, 0.02);
+  let best: ReturnType<typeof nearestRimPoint> | null = null;
   for (const { ring, box } of rims) {
     if (!boxesOverlap(box, near)) continue;
-    for (let index = 0; index + 1 < ring.length; index += 1) {
-      const ax = (ring[index][1] - pin.lon) * kmPerDegLon;
-      const ay = (ring[index][0] - pin.lat) * KM_PER_DEG_LAT;
-      const dx = (ring[index + 1][1] - pin.lon) * kmPerDegLon - ax;
-      const dy = (ring[index + 1][0] - pin.lat) * KM_PER_DEG_LAT - ay;
-      const t = alongSegment(-ax, -ay, dx, dy);
-      const x = ax + t * dx;
-      const y = ay + t * dy;
-      const km = Math.hypot(x, y);
-      if (!best || km < best.km) best = { point: { lat: pin.lat + y / KM_PER_DEG_LAT, lon: pin.lon + x / kmPerDegLon }, km };
-    }
+    const foot = nearestRimPoint(pin, ring);
+    if (!best || foot.km < best.km) best = foot;
   }
   return best;
 }
@@ -240,14 +230,23 @@ function fillRing(grid: Grid, ring: RimRing) {
 /** Every cell the ring's edge passes through, so a shape thinner than a cell still blocks. */
 function traceRing(grid: Grid, ring: RimRing, flag: number) {
   for (let index = 0; index + 1 < ring.length; index += 1) {
-    const [x1, y1] = toCellXY(grid, ring[index][0], ring[index][1]);
-    const [x2, y2] = toCellXY(grid, ring[index + 1][0], ring[index + 1][1]);
-    const steps = Math.ceil(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 3) + 1;
-    for (let step = 0; step <= steps; step += 1) {
-      const x = Math.floor(x1 + ((x2 - x1) * step) / steps);
-      const y = Math.floor(y1 + ((y2 - y1) * step) / steps);
-      if (x >= 0 && y >= 0 && x < grid.width && y < grid.height) grid.flags[y * grid.width + x] |= flag;
-    }
+    const from = toCellXY(grid, ring[index][0], ring[index][1]);
+    const to = toCellXY(grid, ring[index + 1][0], ring[index + 1][1]);
+    forCellsOnLine(grid, from, to, (cell) => {
+      grid.flags[cell] |= flag;
+    });
+  }
+}
+
+/** Calls `visit` for each grid cell a straight line crosses (in cell units), sampled at a third of a cell. */
+function forCellsOnLine(grid: Grid, from: readonly [number, number], to: readonly [number, number], visit: (cell: number) => void) {
+  const [x1, y1] = from;
+  const [x2, y2] = to;
+  const steps = Math.ceil(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * 3) + 1;
+  for (let step = 0; step <= steps; step += 1) {
+    const x = Math.floor(x1 + ((x2 - x1) * step) / steps);
+    const y = Math.floor(y1 + ((y2 - y1) * step) / steps);
+    if (x >= 0 && y >= 0 && x < grid.width && y < grid.height) visit(y * grid.width + x);
   }
 }
 
@@ -381,18 +380,13 @@ function walkBack(came: Int32Array, goal: number): number[] {
   return path.reverse();
 }
 
-/** The cells a straight leg crosses, sampled at a third of a cell. */
+/** The cells a straight leg between two cell centres crosses. */
 function legCells(grid: Grid, a: number, b: number): number[] {
-  const ax = (a % grid.width) + 0.5;
-  const ay = Math.floor(a / grid.width) + 0.5;
-  const bx = (b % grid.width) + 0.5;
-  const by = Math.floor(b / grid.width) + 0.5;
-  const steps = Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)) * 3) + 1;
+  const centre = (cell: number): [number, number] => [(cell % grid.width) + 0.5, Math.floor(cell / grid.width) + 0.5];
   const cells: number[] = [];
-  for (let step = 0; step <= steps; step += 1) {
-    const cell = Math.floor(ay + ((by - ay) * step) / steps) * grid.width + Math.floor(ax + ((bx - ax) * step) / steps);
+  forCellsOnLine(grid, centre(a), centre(b), (cell) => {
     if (cells[cells.length - 1] !== cell) cells.push(cell);
-  }
+  });
   return cells;
 }
 

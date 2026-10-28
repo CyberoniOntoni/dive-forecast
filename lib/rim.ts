@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { alongSegment } from "./segment";
+import { footOnSegment } from "./segment";
 import type { Atoll, Site } from "./types";
 
 export type RimRing = readonly (readonly [number, number])[];
@@ -179,30 +179,28 @@ export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): n
 }
 
 /** Km from the pin to the nearest point of the outline, from inside or outside, at the pin's latitude. */
-export function rimEdgeKm({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): number {
-  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const x0 = (ring[index][1] - lon) * kx;
-    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
-    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
-    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const along = alongSegment(-x0, -y0, ex, ey);
-    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
-  }
-  return Math.sqrt(nearest);
+export function rimEdgeKm(pin: Pick<Site, "lat" | "lon">, ring: RimRing): number {
+  return nearestRimPoint(pin, ring).km;
 }
 
-/** Closest point to `pin` on the segment from `from` to `to`, all in km. */
-function footOnSegment(
-  pin: readonly [number, number],
-  from: readonly [number, number],
-  to: readonly [number, number],
-): [number, number] {
-  const dx = to[0] - from[0];
-  const dy = to[1] - from[1];
-  const along = alongSegment(pin[0] - from[0], pin[1] - from[1], dx, dy);
-  return [from[0] + along * dx, from[1] + along * dy];
+/** The point of the outline nearest the pin, and its distance in km, measured flat at the pin's latitude. */
+export function nearestRimPoint({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): { lat: number; lon: number; km: number } {
+  const kmPerDegLon = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
+  const toPinKm = ([pointLat, pointLon]: readonly [number, number]): [number, number] => [
+    (pointLon - lon) * kmPerDegLon,
+    (pointLat - lat) * KM_PER_DEG_LAT,
+  ];
+  let best: [number, number] = [Infinity, Infinity];
+  let bestSq = Infinity;
+  for (let index = 0; index + 1 < ring.length; index += 1) {
+    const foot = footOnSegment([0, 0], toPinKm(ring[index]), toPinKm(ring[index + 1]));
+    const sq = foot[0] ** 2 + foot[1] ** 2;
+    if (sq < bestSq) {
+      bestSq = sq;
+      best = foot;
+    }
+  }
+  return { lat: lat + best[1] / KM_PER_DEG_LAT, lon: lon + best[0] / kmPerDegLon, km: Math.sqrt(bestSq) };
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */
