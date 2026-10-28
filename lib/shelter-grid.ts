@@ -8,9 +8,9 @@ import {
   allRims,
   boxesOverlap,
   KM_PER_DEG_LAT,
-  outlineKm,
   padBox,
   pointInRing,
+  rimEdgeKm,
   rimForAtoll,
   rimWayId,
   ringBox,
@@ -375,7 +375,7 @@ export function seaOwner(lat: number, lon: number, slackKm = 0): SeaOwner | null
   if (within) return { wayId: within.wayId, outside: false, island };
   const near = ownerOutlines
     .filter((item) => inBox(lat, lon, item, pad))
-    .map((item) => ({ wayId: item.wayId, km: outlineKm(lat, lon, item.ring) }))
+    .map((item) => ({ wayId: item.wayId, km: rimEdgeKm({ lat, lon }, item.ring) }))
     .filter(({ km }) => km <= SHELTER_BAND_KM + slackKm)
     .sort((a, b) => a.km - b.km);
   if (near.length === 0) return null;

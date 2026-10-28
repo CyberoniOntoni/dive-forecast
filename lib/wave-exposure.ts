@@ -348,8 +348,8 @@ function pushAt<T>(lists: Map<number, T[]>, at: number, item: T): void {
  * share counts each part of an arc at its own shore's fetch, and the rest of the arc at the reef's. Each shoal in front
  * of the reef cuts the swell on the arcs it covers; the wind blows on over it, so the wind share keeps the floor of
  * the swell past land alone. Shoals behind the reef are left out, the reef having already cut that swell. So are
- * shoals within `ownReefKm` of a rim site: there the reef the pass cuts through runs on inside the outline, and it is
- * the site's own reef, as its rim is. (A wall's lagoon-side rays are its own reef's lee and never get here.)
+ * shoals within `ownReefKm` of a rim site (pass or wall): there the reef the pass cuts through, or the wall stands on,
+ * runs on inside the outline, and it is the site's own reef, as its rim is. (A wall's lagoon-side rays are its own reef's lee and never get here.)
  */
 function withShadows(
   ray: { swell: number; wind: number; fetchKm: number | null },

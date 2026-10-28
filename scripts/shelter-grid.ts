@@ -3,7 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { readOpenings } from "../lib/openings";
-import { allRims, boxesOverlap, KM_PER_DEG_LAT, outlineKm, padBox, pointInRing, ringBox, type RimRing } from "../lib/rim";
+import { allRims, boxesOverlap, KM_PER_DEG_LAT, padBox, pointInRing, rimEdgeKm, ringBox, type RimRing } from "../lib/rim";
 import { exposureIslands, exposureRings, exposureShoals } from "../lib/sea-state";
 import {
   encodeCells,
@@ -90,7 +90,7 @@ function buildAtoll(wayId: string): ShelterAtollGrid {
         if (fineCells.has(key)) continue;
         const lat = south + (row + 0.5) * SHELTER_FINE_STEP_DEG;
         const lon = west + (column + 0.5) * SHELTER_FINE_STEP_DEG;
-        if (outlineKm(lat, lon, island.ring) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
+        if (rimEdgeKm({ lat, lon }, island.ring) <= SHELTER_FINE_KM || pointInRing(lat, lon, island.ring)) fineCells.add(key);
       }
     }
   }

@@ -176,16 +176,20 @@ export function rimDistanceKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): n
   return rimEdgeKm(site, ring);
 }
 
-/** Km from the pin to the nearest point of the outline, from inside or outside. */
-export function rimEdgeKm(site: Pick<Site, "lat" | "lon">, ring: RimRing): number {
-  const points = ring.map(([lat, lon]) => toKm(lat, lon, site.lat));
-  const pin = toKm(site.lat, site.lon, site.lat);
+/** Km from the pin to the nearest point of the outline, from inside or outside, at the pin's latitude. */
+export function rimEdgeKm({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): number {
+  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
   let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < points.length; index += 1) {
-    const foot = footOnSegment(pin, points[index], points[index + 1]);
-    nearest = Math.min(nearest, Math.hypot(pin[0] - foot[0], pin[1] - foot[1]));
+  for (let index = 0; index + 1 < ring.length; index += 1) {
+    const x0 = (ring[index][1] - lon) * kx;
+    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
+    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
+    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
+    const length = ex * ex + ey * ey;
+    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
+    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
   }
-  return nearest;
+  return Math.sqrt(nearest);
 }
 
 /** Closest point to `pin` on the segment from `from` to `to`, all in km. */
@@ -255,20 +259,4 @@ export function padBox(box: RingBox, by: number): RingBox {
 
 export function boxesOverlap(a: RingBox, b: RingBox): boolean {
   return a.north >= b.south && a.south <= b.north && a.east >= b.west && a.west <= b.east;
-}
-
-/** Km from a point to the nearest edge of an outline, at the point's latitude. */
-export function outlineKm(lat: number, lon: number, ring: RimRing): number {
-  const kx = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
-  let nearest = Number.POSITIVE_INFINITY;
-  for (let index = 0; index + 1 < ring.length; index += 1) {
-    const x0 = (ring[index][1] - lon) * kx;
-    const y0 = (ring[index][0] - lat) * KM_PER_DEG_LAT;
-    const ex = (ring[index + 1][1] - ring[index][1]) * kx;
-    const ey = (ring[index + 1][0] - ring[index][0]) * KM_PER_DEG_LAT;
-    const length = ex * ex + ey * ey;
-    const along = length === 0 ? 0 : Math.max(0, Math.min(1, -(x0 * ex + y0 * ey) / length));
-    nearest = Math.min(nearest, (x0 + along * ex) ** 2 + (y0 + along * ey) ** 2);
-  }
-  return Math.sqrt(nearest);
 }

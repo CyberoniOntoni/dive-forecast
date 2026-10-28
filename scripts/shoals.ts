@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ATLAS_OVERLAYS, decodeRing } from "../lib/atlas-overlays";
-import { allRims, outlineKm, pointInRing, type RimRing } from "../lib/rim";
+import { allRims, pointInRing, rimEdgeKm, type RimRing } from "../lib/rim";
 import type { ShoalKind } from "../lib/shoals";
 
 /**
@@ -45,7 +45,7 @@ function main(): void {
       if (ring.length < 4) continue;
       const owner = rims.find(([, rim]) => ring.every(([lat, lon]) => pointInRing(lat, lon, rim)));
       if (!owner) continue;
-      const partOfRim = ring.some(([lat, lon]) => outlineKm(lat, lon, owner[1]) <= RIM_TOUCH_KM);
+      const partOfRim = ring.some(([lat, lon]) => rimEdgeKm({ lat, lon }, owner[1]) <= RIM_TOUCH_KM);
       candidates.push({ kind, ring, wayId: owner[0], partOfRim });
     }
   }
@@ -97,7 +97,7 @@ function main(): void {
 
 /** Whether some point of either outline comes within JOIN_KM of the other outline. */
 function touches(a: RimRing, b: RimRing): boolean {
-  return a.some(([lat, lon]) => outlineKm(lat, lon, b) <= JOIN_KM) || b.some(([lat, lon]) => outlineKm(lat, lon, a) <= JOIN_KM);
+  return a.some(([lat, lon]) => rimEdgeKm({ lat, lon }, b) <= JOIN_KM) || b.some(([lat, lon]) => rimEdgeKm({ lat, lon }, a) <= JOIN_KM);
 }
 
 function round(value: number): number {
