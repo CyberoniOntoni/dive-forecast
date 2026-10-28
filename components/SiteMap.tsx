@@ -135,7 +135,7 @@ function framePadding(phoneBottom = 88) {
 }
 
 /** The Navigate tab's panel on a phone, with the readouts showing. */
-const NAV_PANEL_PX = 290;
+const NAV_PANEL_PX = 190;
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
 function leafletApi(mod: LeafletLib): LeafletLib {
@@ -145,7 +145,7 @@ function leafletApi(mod: LeafletLib): LeafletLib {
   return mod;
 }
 
-/** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left, folded to one line. */
+/** On a phone the current sheet covers the bottom of the map, so the credits button moves to the top left. */
 const MAP_STYLE = `
 .dive-pin,.dive-boat{background:transparent;border:none}
 .dive-map[data-dim] .dive-pin,.dive-map[data-dim] .dive-cluster{opacity:.35}
@@ -159,6 +159,11 @@ const MAP_STYLE = `
 .dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
 .dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 80%, transparent);backdrop-filter:blur(8px);color:color-mix(in srgb, var(--foam) 85%, transparent);border-bottom-right-radius:10px}
 .dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
+.dive-map.leaflet-container .leaflet-control-attribution{cursor:pointer;margin:6px!important;padding:3px 8px;border-radius:12px}
+.dive-map.leaflet-container .leaflet-control-attribution:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
+.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open){font-size:0;width:28px;max-width:none;height:28px;padding:0;border-radius:999px;display:grid;place-items:center}
+.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)>*{display:none}
+.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)::before{content:"i";font:600 italic 15px/1 Georgia,serif;color:var(--foam)}
 .dive-map.leaflet-container{background:var(--ink)}
 .dive-map .leaflet-control-layers{background:var(--glass);backdrop-filter:blur(10px);color:var(--foam)}
 .dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
@@ -196,8 +201,7 @@ const MAP_STYLE = `
 @media (max-width:1023px){
   .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
   .dive-map .leaflet-bottom.leaflet-right .leaflet-control-attribution{float:left}
-  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 4.5rem);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;line-height:20px;padding:0 6px;cursor:pointer}
-  .dive-map.leaflet-container .leaflet-control-attribution.dive-credit-open{white-space:normal;line-height:16px;padding:2px 6px}
+  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 4.5rem);font-size:11px;line-height:16px}
 }
 `;
 
@@ -241,10 +245,10 @@ function mountDiveMap(
   const saved = loadMapView();
   if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
   else frameSites(L, map, siteGlances);
-  // Layers credit themselves once the map has a view, so this goes after them: the folded phone line starts with the
+  // Layers credit themselves once the map has a view, so this goes after them: the open credits start with the
   // imagery credit.
   map.attributionControl.addAttribution(DATA_CREDIT_HTML);
-  const unfoldCredit = foldCreditOnPhone(map.attributionControl.getContainer());
+  const unfoldCredit = foldCredit(map.attributionControl.getContainer());
 
   // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
   // sea state where the sheltered-water layer is on.
@@ -273,21 +277,45 @@ function mountDiveMap(
   };
 }
 
+/** How long the credits show in full when the map opens, before they fold to the "i" button. */
+const CREDIT_SHOWN_MS = 6000;
+
 /**
- * On a phone the credits are one line that a tap opens in full; a second tap, or a link once open, works as usual.
- * Wide windows always show them in full.
+ * The map and data credits fold to a small "i" button that opens them; they show in full for a few seconds when the
+ * map opens, so they are seen once without covering the map all the time. Open, a link works as usual and a tap
+ * elsewhere on them folds them again.
  */
-function foldCreditOnPhone(credit: HTMLElement | undefined): () => void {
+function foldCredit(credit: HTMLElement | undefined): () => void {
   if (!credit) return () => {};
-  const phone = window.matchMedia("(max-width: 1023px)");
-  credit.title = "Map and data credits";
+  credit.setAttribute("role", "button");
+  credit.tabIndex = 0;
+  credit.setAttribute("aria-label", "Map and data credits");
+  const setOpen = (open: boolean) => {
+    credit.classList.toggle("dive-credit-open", open);
+    credit.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  setOpen(true);
+  const fold = window.setTimeout(() => setOpen(false), CREDIT_SHOWN_MS);
   const onClick = (event: MouseEvent) => {
-    if (!phone.matches || credit.classList.contains("dive-credit-open")) return;
+    window.clearTimeout(fold);
+    const open = credit.classList.contains("dive-credit-open");
+    if (open && event.target instanceof Element && event.target.closest("a")) return;
     event.preventDefault();
-    credit.classList.add("dive-credit-open");
+    setOpen(!open);
+  };
+  const onKey = (event: KeyboardEvent) => {
+    if (event.target !== credit || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    window.clearTimeout(fold);
+    setOpen(!credit.classList.contains("dive-credit-open"));
   };
   credit.addEventListener("click", onClick);
-  return () => credit.removeEventListener("click", onClick);
+  credit.addEventListener("keydown", onKey);
+  return () => {
+    window.clearTimeout(fold);
+    credit.removeEventListener("click", onClick);
+    credit.removeEventListener("keydown", onKey);
+  };
 }
 
 /** Frame bounds in the part of the map the list or panel does not cover, at most `maxZoom` (framePadding's by default). */

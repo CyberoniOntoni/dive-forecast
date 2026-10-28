@@ -8,7 +8,7 @@ import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
 const PANEL_CLASS =
-  "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/15 bg-glass px-4 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] text-foam shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:pt-4 lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
+  "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/15 bg-glass px-4 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foam shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:pt-4 lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
 
 /** The Navigate tab: pick a destination, then follow the boat to it. */
 export function NavigatePanel({
@@ -30,7 +30,7 @@ export function NavigatePanel({
 }) {
   return (
     <aside aria-label="Boat navigation" className={PANEL_CLASS}>
-      <span aria-hidden="true" className="mx-auto mb-2 block h-1 w-9 rounded-full bg-foam/30 lg:hidden" />
+      <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-9 rounded-full bg-foam/30 lg:hidden" />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />
       ) : (
