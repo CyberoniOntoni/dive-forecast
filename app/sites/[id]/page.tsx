@@ -56,6 +56,15 @@ export default async function SitePage({
         <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
         <SiteKind site={site} />
         <PublishedFacts site={site} />
+        <Link
+          href={`/?navigate=${encodeURIComponent(site.id)}`}
+          className="mt-1 inline-flex min-h-11 w-fit items-center gap-2 rounded-md border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        >
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+            <path d="M12 2l7 19-7-4-7 4z" />
+          </svg>
+          Navigate here by boat
+        </Link>
       </header>
       <HourSlider
         key={`forecast-${site.id}`}

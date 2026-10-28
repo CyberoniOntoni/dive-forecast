@@ -3,9 +3,10 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { CircleMarker, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
+import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
+import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
@@ -33,6 +34,8 @@ type MapProps = {
   spotlight: { siteId: string; count: number } | null;
   /** The ring was dismissed on the map (a click): clear the spotlight state. */
   onSpotlightClear: () => void;
+  /** Boat navigation: the boat, its route and the site it goes to. */
+  nav: NavDraw | null;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -382,6 +385,46 @@ function shortSeriesAge(fetchedAt: number | null, maldivesWall: string): string 
   if (hours < 48) return `${hours}h`;
   return `${Math.floor(hours / 24)}d`;
 }
+/** The route (white over a dark casing), the target ring, the GPS accuracy circle and the boat with its heading. */
+function drawNav(L: LeafletLib, map: LeafletMapType, nav: NavDraw): LayerGroup {
+  const group = L.layerGroup();
+  const target = L.latLng(nav.target.lat, nav.target.lon);
+  const line = nav.route
+    ? nav.route.points.map(([lat, lon]) => L.latLng(lat, lon))
+    : nav.boat
+      ? [L.latLng(nav.boat.lat, nav.boat.lon), target]
+      : [];
+  if (line.length > 1) {
+    const dashed = nav.route?.routed === false || nav.route == null;
+    L.polyline(line, { color: "#07151d", weight: 7, opacity: 0.55, interactive: false }).addTo(group);
+    L.polyline(line, { color: "#ffffff", weight: 3.5, dashArray: dashed ? "8 8" : undefined, interactive: false }).addTo(group);
+  }
+  L.circleMarker(target, { radius: 13, color: "#ffffff", weight: 3, fill: false, interactive: false }).addTo(group);
+  if (nav.boat) {
+    const boat = L.latLng(nav.boat.lat, nav.boat.lon);
+    if (nav.boat.accuracyM > 15) {
+      L.circle(boat, { radius: nav.boat.accuracyM, color: "#8ef6e4", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(group);
+    }
+    L.marker(boat, { icon: boatIcon(L, nav.courseDeg), interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(group);
+  }
+  group.addTo(map);
+  return group;
+}
+
+/** A dot for a stopped boat; a pointed hull along the course once it is under way. */
+function boatIcon(L: LeafletLib, courseDeg: number | null) {
+  const body =
+    courseDeg == null
+      ? '<circle cx="14" cy="14" r="7" fill="#8ef6e4" stroke="#07151d" stroke-width="3"/>'
+      : `<g transform="rotate(${courseDeg} 14 14)"><path d="M14 2 L22 24 L14 19 L6 24 Z" fill="#8ef6e4" stroke="#07151d" stroke-width="2.5" stroke-linejoin="round"/></g>`;
+  return L.divIcon({
+    className: "dive-pin",
+    html: `<svg width="28" height="28" viewBox="0 0 28 28" aria-label="Your boat">${body}</svg>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
 /** Leaflet touches window. dynamic() is the only loader; the canvas is created on mount. */
 const LeafletMap = dynamic(
   async () => {
@@ -401,6 +444,7 @@ const LeafletMap = dynamic(
       focus,
       spotlight,
       onSpotlightClear,
+      nav,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -506,6 +550,26 @@ const LeafletMap = dynamic(
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [spotlight, mapEpoch]);
 
+      // Boat navigation: drawn afresh on each fix, above the pins.
+      const navLayerRef = useRef<LayerGroup | null>(null);
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0) return;
+        navLayerRef.current?.remove();
+        navLayerRef.current = nav ? drawNav(L, map, nav) : null;
+      }, [nav, mapEpoch]);
+
+      useEffect(() => {
+        const map = mapRef.current;
+        if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
+        const points = [L.latLng(nav.target.lat, nav.target.lon)];
+        if (nav.boat) points.push(L.latLng(nav.boat.lat, nav.boat.lon));
+        for (const [lat, lon] of nav.route?.points ?? []) points.push(L.latLng(lat, lon));
+        frameOn(map, L.latLngBounds(points), 15, true);
+        // Frame only when asked (first route, "Show route"), not on every fix.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [nav?.frame, mapEpoch]);
+
       return <div ref={containerRef} className="dive-map absolute inset-0" />;
     }
 
@@ -524,12 +588,15 @@ export function SiteMap({
   nowcasts,
   maldivesWall,
   atollNames,
+  navigateTo = null,
 }: {
   sites: Site[];
   nowcasts: SiteNowcast[];
   maldivesWall: string;
   /** Short atoll names by id, shown after site names that more than one site uses. */
   atollNames: Record<string, string>;
+  /** A site to start boat navigation to (the site page's "Navigate by boat"). */
+  navigateTo?: string | null;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<Point | null>(null);
@@ -537,6 +604,12 @@ export function SiteMap({
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
+  const [navSiteId, setNavSiteId] = useState<string | null>(navigateTo);
+  const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
+  const navSite = useMemo<NavSite | null>(() => {
+    const site = sites.find((item) => item.id === navSiteId);
+    return site ? { id: site.id, name: site.name, lat: site.lat, lon: site.lon } : null;
+  }, [sites, navSiteId]);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -582,10 +655,25 @@ export function SiteMap({
             focus={focus}
             spotlight={spotlight}
             onSpotlightClear={() => setSpotlight(null)}
+            nav={navSite ? navDraw : null}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
           />
+          {navSite ? (
+            // Below the attribution row on a phone; clear of the zoom and layer buttons on the right.
+            <div className="pointer-events-none absolute left-2 right-16 top-12 z-[1000] max-w-md lg:left-3 lg:top-3">
+              <BoatNav
+                key={navSite.id}
+                site={navSite}
+                onDraw={setNavDraw}
+                onClose={() => {
+                  setNavSiteId(null);
+                  router.replace("/");
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
