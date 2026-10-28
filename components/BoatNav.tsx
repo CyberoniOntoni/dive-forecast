@@ -139,60 +139,70 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   // Stopped only once the speed is known to be under way-making; until then the ETA waits.
   const stopped = motion != null && eta == null;
 
+  const iconButton =
+    "grid size-11 shrink-0 place-items-center rounded-full bg-foam/10 text-foam ring-1 ring-foam/15 hover:bg-foam/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+
   return (
     <section aria-label={`Boat navigation to ${site.name}`} className="w-full text-foam">
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-wide text-foam/70">Boat to</p>
-          <h2 className="truncate text-base font-semibold">{site.name}</h2>
+          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-incoming/90">Heading to</p>
+          <h2 className="truncate text-lg font-semibold leading-tight">{site.name}</h2>
         </div>
         {boat && route ? (
-          <button
-            type="button"
-            onClick={() => setFrame((count) => count + 1)}
-            className="min-h-11 rounded-xl border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-          >
-            Show route
+          <button type="button" onClick={() => setFrame((count) => count + 1)} aria-label="Show the whole route" title="Show route" className={iconButton}>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />
+              <path d="M8 15c2-1 3-5 5-6s3 1 3 1" />
+            </svg>
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onChange}
-          aria-label="Change destination"
-          className="min-h-11 shrink-0 rounded-xl border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-        >
-          Change
+        <button type="button" onClick={onChange} aria-label="Change destination" title="Change destination" className={iconButton}>
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
         </button>
       </div>
 
       {unsupported || gps.status === "error" ? (
-        <p role="alert" className="mt-2 text-sm text-stop">
+        <p role="alert" className="mt-3 rounded-2xl bg-stop/15 px-3 py-2 text-sm text-stop">
           {unsupported ?? (gps.status === "error" ? gps.message : null)}
         </p>
       ) : !boat ? (
-        <p className="mt-2 text-sm text-foam/80">Waiting for GPS…</p>
+        <p className="mt-3 flex items-center gap-2 text-sm text-foam/80">
+          <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-incoming" />
+          Waiting for GPS…
+        </p>
       ) : (
         <>
-          <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
-            <Stat label={route?.routed ? "To go, by route" : "To go"} value={remainingKm != null ? formatNm(remainingKm) : "…"} />
-            <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : "…"} />
+          <div className="mt-3 flex items-center gap-4">
+            <SteerDial steer={steer} />
+            <div className="min-w-0 flex-1">
+              <p className="text-4xl font-semibold leading-none tracking-tight tabular-nums">
+                {remainingKm != null ? formatNm(remainingKm) : "—"}
+              </p>
+              <p className="mt-1 text-xs text-foam/70">
+                {route?.routed ? "to go, by route" : "to go"}
+                {steer != null ? <> · steer {formatBearing(steer)}</> : null}
+              </p>
+            </div>
+          </div>
+          <dl className="mt-3 grid grid-cols-2 gap-2">
+            <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : null} note={motion?.courseDeg != null ? `course ${formatBearing(motion.courseDeg)}` : null} />
             <Stat
-              label={eta != null ? `ETA ${arrivalClock(eta)}` : "ETA"}
-              value={eta != null ? formatDuration(eta) : stopped ? "Stopped" : "…"}
+              label="Arrive"
+              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : null}
+              note={eta != null ? `in ${formatDuration(eta)}` : null}
             />
           </dl>
-          <p className="mt-2 text-base text-foam/90">
-            {steer != null ? <span className="font-semibold">Steer {formatBearing(steer)}</span> : null}
-            {motion?.courseDeg != null ? <span className="text-foam/70"> · heading {formatBearing(motion.courseDeg)}</span> : null}
-          </p>
           {stopped && remainingKm != null ? (
-            <p className="text-sm text-foam/80">
+            <p className="mt-2 text-xs text-foam/75">
               {REFERENCE_KNOTS.map((knots) => `at ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
             </p>
           ) : null}
           <RouteNote route={route} routeError={routeError} shallow={shallow} />
-          <p className="mt-1 text-xs text-foam/60">
-            GPS ±{Math.round(boat.accuracyM)} m. Route from satellite reef outlines, not a nautical chart: keep a lookout.
+          <p className="mt-2 text-[11px] leading-4 text-foam/55">
+            GPS ±{Math.round(boat.accuracyM)} m · from satellite reef outlines, not a chart. Keep a lookout.
           </p>
         </>
       )}
@@ -200,11 +210,37 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+/** Which way to steer, as an arrow on a small compass rose (north up). */
+function SteerDial({ steer }: { steer: number | null }) {
   return (
-    <div className="min-w-0">
-      <dt className="truncate text-xs text-foam/70">{label}</dt>
-      <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
+    <div className="relative grid size-16 shrink-0 place-items-center rounded-full bg-foam/5 ring-1 ring-foam/15">
+      <span aria-hidden="true" className="absolute top-0.5 left-1/2 -translate-x-1/2 text-[9px] font-semibold text-foam/60">
+        N
+      </span>
+      {steer != null ? (
+        <svg
+          viewBox="0 0 24 24"
+          width="30"
+          height="30"
+          role="img"
+          aria-label={`Steer ${formatBearing(steer)}`}
+          className="text-incoming"
+          style={{ transform: `rotate(${steer}deg)` }}
+        >
+          <path d="M12 2l7 19-7-4-7 4z" fill="currentColor" />
+        </svg>
+      ) : null}
+    </div>
+  );
+}
+
+/** A speed or arrival chip; a dash until it is known. */
+function Stat({ label, value, note }: { label: string; value: string | null; note: string | null }) {
+  return (
+    <div className="min-w-0 rounded-2xl bg-foam/[0.07] px-3 py-2 ring-1 ring-foam/10">
+      <dt className="text-[11px] font-medium uppercase tracking-[0.1em] text-foam/60">{label}</dt>
+      <dd className={`text-xl font-semibold tabular-nums ${value ? "" : "text-foam/40"}`}>{value ?? "—"}</dd>
+      {note ? <dd className="truncate text-xs text-foam/65">{note}</dd> : null}
     </div>
   );
 }
@@ -221,7 +257,7 @@ function RouteNote({ route, routeError, shallow }: { route: BoatRoute | null; ro
   const gaps = route.gaps.length;
   return (
     <>
-      <p className="mt-1 text-sm text-foam/80">
+      <p className="mt-2 text-xs text-foam/75">
         {formatNm(route.lengthKm)} by route ({formatNm(route.directKm)} straight)
         {gaps > 0 ? `, through ${gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`}` : ""}.
       </p>
