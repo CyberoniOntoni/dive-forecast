@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inView, siteCountLabel, SPOTLIGHT_ZOOM, spotlightZoom } from "./map-view";
+import { inView, loadNavSite, navigateHref, saveNavSite, siteCountLabel, SPOTLIGHT_ZOOM, spotlightZoom } from "./map-view";
 
 const vaavu = { south: 3.3, west: 73.3, north: 3.8, east: 73.8 };
 
@@ -27,5 +27,36 @@ describe("spotlightZoom", () => {
     expect(spotlightZoom(SPOTLIGHT_ZOOM)).toBe(SPOTLIGHT_ZOOM);
     expect(spotlightZoom(15)).toBe(15);
     expect(spotlightZoom(Number.NaN)).toBe(SPOTLIGHT_ZOOM);
+  });
+});
+
+describe("navigate tab", () => {
+  it("heads for a site, or opens the destination list", () => {
+    expect(navigateHref("kandooma-thila")).toBe("/?navigate=kandooma-thila");
+    expect(navigateHref("a b&c")).toBe("/?navigate=a%20b%26c");
+    expect(navigateHref(null)).toBe("/?navigate");
+  });
+
+  it("keeps the last destination for the tab, and clears it", () => {
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => void values.set(key, value) };
+    expect(loadNavSite(storage)).toBeNull();
+    saveNavSite("kuda-faru", storage);
+    expect(loadNavSite(storage)).toBe("kuda-faru");
+    saveNavSite(null, storage);
+    expect(loadNavSite(storage)).toBeNull();
+  });
+
+  it("treats blocked storage as no destination", () => {
+    const blocked = {
+      getItem: () => {
+        throw new Error("blocked");
+      },
+      setItem: () => {
+        throw new Error("blocked");
+      },
+    };
+    expect(() => saveNavSite("kuda-faru", blocked)).not.toThrow();
+    expect(loadNavSite(blocked)).toBeNull();
   });
 });

@@ -18,6 +18,9 @@ export type SavedMapView = { lat: number; lon: number; zoom: number };
 
 const VIEW_KEY = "dive-current:map-view";
 const SHEET_KEY = "dive-current:sheet-open";
+const NAV_KEY = "dive-current:nav-site";
+/** Sent on the window when the saved destination changes, so the header's Navigate tab follows it. */
+export const NAV_SITE_EVENT = "dive-current:nav-site";
 
 type SessionLike = Pick<Storage, "getItem" | "setItem">;
 
@@ -75,6 +78,29 @@ export function saveSheetOpen(open: boolean, storage: SessionLike | undefined = 
     storage?.setItem(SHEET_KEY, open ? "true" : "false");
   } catch {
     // Blocked storage: the list starts closed next time.
+  }
+}
+
+/** The Navigate tab's address: headed for a site, or the destination list when there is none. */
+export function navigateHref(siteId: string | null): string {
+  return siteId ? `/?navigate=${encodeURIComponent(siteId)}` : "/?navigate";
+}
+
+/** The site boat navigation last headed for in this tab, so the Navigate tab comes back to it. Null when unknown. */
+export function loadNavSite(storage: SessionLike | undefined = tabStorage()): string | null {
+  try {
+    return storage?.getItem(NAV_KEY) || null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveNavSite(siteId: string | null, storage: SessionLike | undefined = tabStorage()): void {
+  try {
+    storage?.setItem(NAV_KEY, siteId ?? "");
+    if (typeof window !== "undefined") window.dispatchEvent(new Event(NAV_SITE_EVENT));
+  } catch {
+    // Blocked storage: the Navigate tab opens on the destination list next time.
   }
 }
 

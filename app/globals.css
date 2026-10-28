@@ -66,6 +66,7 @@ body {
 }
 
 .chart-bar-top {
+  padding-block: 0.25rem;
   border-bottom: 1px solid color-mix(in srgb, var(--foam) 18%, transparent);
 }
 
@@ -115,6 +116,11 @@ main > .chart-credit {
   text-decoration: underline;
   text-decoration-color: var(--incoming);
   text-underline-offset: 2px;
+}
+
+/* The header's view tabs show which is open by their fill, not an underline. */
+.chart-bar a[data-tab] {
+  text-decoration: none;
 }
 
 .chart-bar a:focus-visible {

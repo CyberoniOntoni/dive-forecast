@@ -2,18 +2,19 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
 import { DATA_CREDIT_HTML } from "@/components/Attribution";
-import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
+import type { NavDraw, NavSite } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
+import { NavigatePanel } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
-import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
+import { loadMapView, navigateHref, saveMapView, saveNavSite, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site, Strength } from "@/lib/types";
@@ -38,6 +39,8 @@ type MapProps = {
   onSpotlightClear: () => void;
   /** Boat navigation: the boat, its route and the site it goes to. */
   nav: NavDraw | null;
+  /** The Navigate tab: site pins fade so the boat and the route stand out. */
+  dim: boolean;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -122,14 +125,17 @@ function arrowPin(spoken: string, arrow: ArrowFields, strengthMark: string): str
   return `<div style="width:${PIN_SIZE}px;height:${PIN_SIZE}px;position:relative;opacity:${arrow.opacity}" aria-label="${spoken}"><div style="position:absolute;left:50%;top:50%;width:${ARROW_WIDTH}px;height:${length}px;margin-left:-${half}px;margin-top:-${length}px;transform:rotate(${arrow.bearing}deg);transform-origin:${half}px ${length}px;color:${arrow.color}"><svg width="${ARROW_WIDTH}" height="${length}" viewBox="0 0 ${ARROW_WIDTH} ${length}" overflow="visible" aria-hidden="true">${arrowSvgBody(arrow.strength, arrow.estimated)}</svg></div><span style="position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:999px;background:${arrow.color};box-shadow:0 0 0 2px var(--ink)"></span>${strengthMark}</div>`;
 }
 
-function framePadding() {
+/** `phoneBottom`: how much of a phone map's bottom edge a panel covers (the closed site sheet by default). */
+function framePadding(phoneBottom = 88) {
   const wide = window.matchMedia("(min-width: 1024px)").matches;
   if (wide) {
     return { paddingTopLeft: [24, 48] as [number, number], paddingBottomRight: [56, 36] as [number, number], maxZoom: 11 };
   }
-  // The sheet covers the bottom of the map on a phone.
-  return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, 88] as [number, number], maxZoom: 11 };
+  return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, phoneBottom] as [number, number], maxZoom: 11 };
 }
+
+/** The Navigate tab's panel on a phone, with the readouts showing. */
+const NAV_PANEL_PX = 290;
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
 function leafletApi(mod: LeafletLib): LeafletLib {
@@ -141,7 +147,8 @@ function leafletApi(mod: LeafletLib): LeafletLib {
 
 /** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left, folded to one line. */
 const MAP_STYLE = `
-.dive-pin{background:transparent;border:none}
+.dive-pin,.dive-boat{background:transparent;border:none}
+.dive-map[data-dim] .dive-pin,.dive-map[data-dim] .dive-cluster{opacity:.35}
 .dive-spotlight{background:transparent;border:none;pointer-events:none}
 .dive-spotlight span{position:absolute;inset:0;border-radius:999px;border:3px solid var(--foam);box-shadow:0 0 0 2px var(--ink),inset 0 0 0 2px var(--ink);animation:dive-spotlight-pulse 1.1s ease-out 3}
 @keyframes dive-spotlight-pulse{0%{transform:scale(.55);opacity:1}70%{transform:scale(1.35);opacity:.3}100%{transform:scale(1);opacity:.9}}
@@ -282,9 +289,16 @@ function foldCreditOnPhone(credit: HTMLElement | undefined): () => void {
   return () => credit.removeEventListener("click", onClick);
 }
 
-/** Frame bounds in the part of the map the list does not cover, at most `maxZoom` (framePadding's by default). */
-function frameOn(map: LeafletMapType, bounds: ReturnType<LeafletLib["latLngBounds"]>, maxZoom?: number, fly = false) {
-  const options = maxZoom == null ? framePadding() : { ...framePadding(), maxZoom };
+/** Frame bounds in the part of the map the list or panel does not cover, at most `maxZoom` (framePadding's by default). */
+function frameOn(
+  map: LeafletMapType,
+  bounds: ReturnType<LeafletLib["latLngBounds"]>,
+  maxZoom?: number,
+  fly = false,
+  phoneBottom?: number,
+) {
+  const padding = framePadding(phoneBottom);
+  const options = maxZoom == null ? padding : { ...padding, maxZoom };
   if (fly) map.flyToBounds(bounds, { ...options, duration: 0.8 });
   else map.fitBounds(bounds, options);
 }
@@ -431,6 +445,7 @@ const LeafletMap = dynamic(
       spotlight,
       onSpotlightClear,
       nav,
+      dim,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -548,12 +563,12 @@ const LeafletMap = dynamic(
       useEffect(() => {
         const map = mapRef.current;
         if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
-        frameOn(map, navBounds(L, nav), 15, true);
+        frameOn(map, navBounds(L, nav), 15, true, NAV_PANEL_PX);
         // Frame only when asked (first route, "Show route"), not on every fix.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [nav?.frame, mapEpoch]);
 
-      return <div ref={containerRef} className="dive-map absolute inset-0" />;
+      return <div ref={containerRef} className="dive-map absolute inset-0" data-dim={dim ? "true" : undefined} />;
     }
 
     return { default: MapCanvas };
@@ -571,32 +586,38 @@ export function SiteMap({
   nowcasts,
   maldivesWall,
   atollNames,
-  navigateTo = null,
 }: {
   sites: Site[];
   nowcasts: SiteNowcast[];
   maldivesWall: string;
   /** Short atoll names by id, shown after site names that more than one site uses. */
   atollNames: Record<string, string>;
-  /** A site to start boat navigation to (the site page's "Navigate by boat"). */
-  navigateTo?: string | null;
 }) {
   const router = useRouter();
+  // The Navigate tab is this map with "?navigate", and "?navigate=<site id>" once a destination is picked.
+  const params = useSearchParams();
+  const navigating = params.has("navigate");
+  const navSiteId = params.get("navigate") || null;
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
-  const [navSiteId, setNavSiteId] = useState<string | null>(navigateTo);
   const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
   const navSite = useMemo<NavSite | null>(() => {
+    if (!navigating) return null;
     const site = sites.find((item) => item.id === navSiteId);
     return site ? { id: site.id, name: site.name, lat: site.lat, lon: site.lon } : null;
-  }, [sites, navSiteId]);
+  }, [sites, navigating, navSiteId]);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
   );
+
+  // Kept for the tab, so the header's Navigate tab comes back to it from the map or a site page.
+  useEffect(() => {
+    if (navSite) saveNavSite(navSite.id);
+  }, [navSite]);
 
   function setAddingMode(open: boolean) {
     setAdding(open);
@@ -613,50 +634,51 @@ export function SiteMap({
     <div className="relative h-full min-h-0 w-full min-w-0 flex-1">
       <style>{MAP_STYLE}</style>
       <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden lg:flex-row">
-        <CurrentOverlay
-          siteGlances={siteGlances}
-          atollNames={atollNames}
-          view={view}
-          maldivesWall={maldivesWall}
-          draft={draft}
-          adding={adding}
-          onAddingChange={setAddingMode}
-          onAdded={finishAdd}
-          onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
-          onSpotlight={(siteId) =>
-            setSpotlight((current) => (siteId ? { siteId, count: (current?.count ?? 0) + 1 } : null))
-          }
-        />
+        {navigating ? (
+          <NavigatePanel
+            sites={sites}
+            atollNames={atollNames}
+            site={navSite}
+            onPick={(siteId) => router.replace(navigateHref(siteId))}
+            onChange={() => {
+              saveNavSite(null);
+              router.replace(navigateHref(null));
+            }}
+            onDraw={setNavDraw}
+          />
+        ) : (
+          <CurrentOverlay
+            siteGlances={siteGlances}
+            atollNames={atollNames}
+            view={view}
+            maldivesWall={maldivesWall}
+            draft={draft}
+            adding={adding}
+            onAddingChange={setAddingMode}
+            onAdded={finishAdd}
+            onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
+            onSpotlight={(siteId) =>
+              setSpotlight((current) => (siteId ? { siteId, count: (current?.count ?? 0) + 1 } : null))
+            }
+          />
+        )}
         {/* h-full: the page body is a 100dvh column. Without it the map collapses on a wide window. */}
         <div className="relative z-0 h-full min-h-0 min-w-0 flex-1">
           <LeafletMap
             siteGlances={siteGlances}
             draft={draft}
-            adding={adding}
+            adding={adding && !navigating}
             onPick={setDraft}
             onView={setView}
             focus={focus}
             spotlight={spotlight}
             onSpotlightClear={() => setSpotlight(null)}
             nav={navSite ? navDraw : null}
+            dim={navigating}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
           />
-          {navSite ? (
-            // Below the one-line attribution on a phone; clear of the zoom and layer buttons on the right.
-            <div className="pointer-events-none absolute left-2 right-16 top-7 z-[1000] max-w-md lg:left-3 lg:top-3">
-              <BoatNav
-                key={navSite.id}
-                site={navSite}
-                onDraw={setNavDraw}
-                onClose={() => {
-                  setNavSiteId(null);
-                  router.replace("/");
-                }}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

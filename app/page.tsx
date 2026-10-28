@@ -7,12 +7,9 @@ import { nowcastSites } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
 import { readCatalog } from "@/lib/store";
 
-type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
-
-async function SiteMapSection({ searchParams }: { searchParams: SearchParams }) {
+async function SiteMapSection() {
   await connection();
   const sites = await listSites();
-  const navigate = (await searchParams).navigate;
   // Nowcasts need each site's atoll. The list also includes pins the user added.
   const atolls = readCatalog().atolls;
   const maldivesWall = toMaldivesWall(new Date().toISOString());
@@ -23,12 +20,11 @@ async function SiteMapSection({ searchParams }: { searchParams: SearchParams }) 
       nowcasts={nowcasts}
       maldivesWall={maldivesWall}
       atollNames={atollNamesById(atolls)}
-      navigateTo={typeof navigate === "string" ? navigate : null}
     />
   );
 }
 
-export default function Home({ searchParams }: { searchParams: SearchParams }) {
+export default function Home() {
   return (
     <main className="flex min-h-0 w-full flex-1 flex-col">
       <Suspense
@@ -36,7 +32,7 @@ export default function Home({ searchParams }: { searchParams: SearchParams }) {
           <div className="flex min-h-[50dvh] flex-1 items-center justify-center text-sm text-foam/80">Loading sites…</div>
         }
       >
-        <SiteMapSection searchParams={searchParams} />
+        <SiteMapSection />
       </Suspense>
     </main>
   );

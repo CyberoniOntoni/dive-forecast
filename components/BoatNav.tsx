@@ -59,7 +59,7 @@ function gpsMessage(error: GeolocationPositionError): string {
  * Boat navigation to one dive site: follows the phone's GPS, works out speed and course over ground, asks the server
  * for a route round the known reef, and shows distance left, speed and ETA. The map draws what `onDraw` hands it.
  */
-export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (draw: NavDraw | null) => void; onClose: () => void }) {
+export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (draw: NavDraw | null) => void; onChange: () => void }) {
   const [fixes, setFixes] = useState<Fix[]>([]);
   const [gps, setGps] = useState<GpsState>({ status: "waiting" });
   const [route, setRoute] = useState<BoatRoute | null>(null);
@@ -140,10 +140,7 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
   const stopped = motion != null && eta == null;
 
   return (
-    <section
-      aria-label={`Boat navigation to ${site.name}`}
-      className="pointer-events-auto w-full rounded-lg border border-foam/20 bg-glass p-3 text-foam shadow-lg backdrop-blur"
-    >
+    <section aria-label={`Boat navigation to ${site.name}`} className="w-full text-foam">
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs uppercase tracking-wide text-foam/70">Boat to</p>
@@ -160,14 +157,11 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
         ) : null}
         <button
           type="button"
-          onClick={onClose}
-          aria-label="Stop navigation"
-          title="Stop navigation"
-          className="grid size-11 shrink-0 place-items-center rounded-md hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          onClick={onChange}
+          aria-label="Change destination"
+          className="min-h-11 shrink-0 rounded-md border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
+          Change
         </button>
       </div>
 
@@ -187,8 +181,8 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
               value={eta != null ? formatDuration(eta) : stopped ? "Stopped" : "…"}
             />
           </dl>
-          <p className="mt-2 text-sm text-foam/90">
-            {steer != null ? <>Steer {formatBearing(steer)}</> : null}
+          <p className="mt-2 text-base text-foam/90">
+            {steer != null ? <span className="font-semibold">Steer {formatBearing(steer)}</span> : null}
             {motion?.courseDeg != null ? <span className="text-foam/70"> · heading {formatBearing(motion.courseDeg)}</span> : null}
           </p>
           {stopped && remainingKm != null ? (
@@ -210,7 +204,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
       <dt className="truncate text-xs text-foam/70">{label}</dt>
-      <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+      <dd className="text-2xl font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }
