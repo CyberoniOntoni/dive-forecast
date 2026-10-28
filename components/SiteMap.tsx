@@ -145,7 +145,7 @@ function leafletApi(mod: LeafletLib): LeafletLib {
   return mod;
 }
 
-/** On a phone the current sheet covers the bottom of the map, so the credits button moves to the top left. */
+/** Map controls, pins and legends. */
 const MAP_STYLE = `
 .dive-pin,.dive-boat{background:transparent;border:none}
 .dive-map[data-dim] .dive-pin,.dive-map[data-dim] .dive-cluster{opacity:.35}
@@ -161,7 +161,7 @@ const MAP_STYLE = `
 .dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
 .dive-map.leaflet-container .leaflet-control-attribution{cursor:pointer;margin:6px!important;padding:3px 8px;border-radius:12px}
 .dive-map.leaflet-container .leaflet-control-attribution:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open){font-size:0;width:28px;max-width:none;height:28px;padding:0;border-radius:999px;display:grid;place-items:center}
+.dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open){font-size:0;width:32px;max-width:none;height:32px;margin:8px 16px 0 0!important;padding:0;border-radius:999px;display:grid;place-items:center}
 .dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)>*{display:none}
 .dive-map.leaflet-container .leaflet-control-attribution:not(.dive-credit-open)::before{content:"i";font:600 italic 15px/1 Georgia,serif;color:var(--foam)}
 .dive-map.leaflet-container{background:var(--ink)}
@@ -199,9 +199,7 @@ const MAP_STYLE = `
 .dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
 .dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
 @media (max-width:1023px){
-  .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
-  .dive-map .leaflet-bottom.leaflet-right .leaflet-control-attribution{float:left}
-  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 4.5rem);font-size:11px;line-height:16px}
+  .dive-map.leaflet-container .leaflet-control-attribution{max-width:calc(100vw - 2rem);font-size:11px;line-height:16px}
 }
 `;
 
@@ -248,6 +246,9 @@ function mountDiveMap(
   // Layers credit themselves once the map has a view, so this goes after them: the open credits start with the
   // imagery credit.
   map.attributionControl.addAttribution(DATA_CREDIT_HTML);
+  // The site sheet and the navigate panel cover a phone map's bottom, so the credits button joins the buttons on the
+  // right, under the layers.
+  if (window.matchMedia("(max-width: 1023px)").matches) map.attributionControl.setPosition("topright");
   const unfoldCredit = foldCredit(map.attributionControl.getContainer());
 
   // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
@@ -491,8 +492,9 @@ const LeafletMap = dynamic(
       // 0 until the map exists, so marker effects wait for mount.
       const [mapEpoch, setMapEpoch] = useState(0);
       const [zoom, setZoom] = useState(0);
-      // Strength word on the pin from zoom 10. The tooltip keeps the full spoken line.
-      const showStrength = zoom >= 10;
+      // Strength word on the pin from zoom 12; any further out the words of a busy rim overlap. The tooltip keeps the
+      // full spoken line.
+      const showStrength = zoom >= 12;
 
       useEffect(() => {
         onPickRef.current = onPick;

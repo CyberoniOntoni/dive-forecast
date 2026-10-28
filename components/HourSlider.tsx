@@ -280,8 +280,9 @@ function SeaStrip({
         {nowIndex > 0 ? <rect x={-0.5} width={nowIndex} y={0} height={10} fill="var(--ink)" fillOpacity={0.55} /> : null}
         <line x1={selected} x2={selected} y1={-2} y2={12} stroke="var(--foam)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
       </svg>
-      <p className="mt-1 flex flex-wrap gap-x-2.5 text-xs text-foam/80">
-        <span>Sea:</span>
+      <p className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-foam/80 min-[400px]:gap-x-2.5 min-[400px]:text-xs">
+        {/* The band names say it is the sea; on a narrow phone the word would push "rough" to a second line. */}
+        <span className="hidden min-[400px]:inline">Sea:</span>
         {(Object.keys(SEA_LABEL) as SeaBand[]).map((band) => (
           <span key={band} className="inline-flex items-center gap-1">
             <span
@@ -465,7 +466,7 @@ function WeekStrip({
               className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
               style={{ left: at((span.start + span.end) / 2) }}
             >
-              {shortDayName(span.date, today)}
+              <DayTick date={span.date} today={today} />
             </span>
           ),
         )}
@@ -569,6 +570,17 @@ function dayName(date: string, today: string): string {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** A week of labels has to fit a phone: "Today", then "Fri 2". */
+/** "Thu 29" under the week strip; just "Thu" on a narrow phone, where the dates would run into each other. */
+function DayTick({ date, today }: { date: string; today: string }) {
+  const [weekday, day] = shortDayName(date, today).split(" ");
+  return (
+    <>
+      {weekday}
+      {day ? <span className="hidden min-[400px]:inline"> {day}</span> : null}
+    </>
+  );
+}
+
 function shortDayName(date: string, today: string): string {
   if (date === today) return "Today";
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);

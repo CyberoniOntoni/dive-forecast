@@ -153,8 +153,8 @@ export function CurrentOverlay({
           {/* The sheet's grab handle: says the bar opens, as on a phone's own sheets. */}
           <span aria-hidden="true" className="absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foam/30" />
           <span className="tabular-nums">{countLabel}</span>
-          <span className="flex items-center gap-2">
-            <span>now</span>
+          <span className="flex items-center gap-2 text-foam/80">
+            <span>{expanded ? "Hide list" : "Show list"}</span>
             <span
               aria-hidden="true"
               className="inline-block h-2 w-2 border-r-2 border-t-2 border-current"
