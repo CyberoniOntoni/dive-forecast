@@ -136,6 +136,8 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
   const steer = boat ? bearingDeg(boat, along?.next ?? site) : null;
   const eta = remainingKm != null && motion ? etaMinutes(remainingKm, motion.knots) : null;
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
+  // Stopped only once the speed is known to be under way-making; until then the ETA waits.
+  const stopped = motion != null && eta == null;
 
   return (
     <section
@@ -182,14 +184,14 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
             <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : "…"} />
             <Stat
               label={eta != null ? `ETA ${arrivalClock(eta)}` : "ETA"}
-              value={eta != null ? formatDuration(eta) : "Stopped"}
+              value={eta != null ? formatDuration(eta) : stopped ? "Stopped" : "…"}
             />
           </dl>
           <p className="mt-2 text-sm text-foam/90">
             {steer != null ? <>Steer {formatBearing(steer)}</> : null}
             {motion?.courseDeg != null ? <span className="text-foam/70"> · heading {formatBearing(motion.courseDeg)}</span> : null}
           </p>
-          {eta == null && remainingKm != null ? (
+          {stopped && remainingKm != null ? (
             <p className="text-sm text-foam/80">
               {REFERENCE_KNOTS.map((knots) => `at ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
             </p>

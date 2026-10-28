@@ -3,6 +3,8 @@
  * a route, and the words the panel shows. No file reads here; the route itself comes from lib/boat-route.ts.
  */
 
+import { alongSegment } from "./segment";
+
 export type LatLon = { lat: number; lon: number };
 
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
@@ -97,17 +99,15 @@ export function alongRoute(boat: LatLon, points: readonly (readonly [number, num
     const km = distanceKm(boat, last);
     return { remainingKm: km, offKm: km, next: last };
   }
-  const kx = Math.cos((boat.lat * Math.PI) / 180);
+  // A degree of longitude is cos(lat) of a degree of latitude, so legs are measured in degrees of latitude.
+  const lonScale = Math.cos((boat.lat * Math.PI) / 180);
   let best = { offKm: Infinity, leg: 0, t: 0 };
   for (let index = 0; index + 1 < points.length; index += 1) {
     const [lat1, lon1] = points[index];
     const [lat2, lon2] = points[index + 1];
-    const ax = (lon1 - boat.lon) * kx;
-    const ay = lat1 - boat.lat;
-    const dx = (lon2 - lon1) * kx;
+    const dx = (lon2 - lon1) * lonScale;
     const dy = lat2 - lat1;
-    const lengthSq = dx * dx + dy * dy;
-    const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
+    const t = alongSegment((boat.lon - lon1) * lonScale, boat.lat - lat1, dx, dy);
     const foot = { lat: lat1 + t * dy, lon: lon1 + t * (lon2 - lon1) };
     const offKm = distanceKm(boat, foot);
     if (offKm < best.offKm) best = { offKm, leg: index, t };

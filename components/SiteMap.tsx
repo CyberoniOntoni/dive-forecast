@@ -402,9 +402,7 @@ function drawNav(L: LeafletLib, map: LeafletMapType, nav: NavDraw): LayerGroup {
   L.circleMarker(target, { radius: 13, color: "#ffffff", weight: 3, fill: false, interactive: false }).addTo(group);
   if (nav.boat) {
     const boat = L.latLng(nav.boat.lat, nav.boat.lon);
-    if (nav.boat.accuracyM > 15) {
-      L.circle(boat, { radius: nav.boat.accuracyM, color: "#8ef6e4", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(group);
-    }
+    L.circle(boat, { radius: nav.boat.accuracyM, color: "#8ef6e4", weight: 1, fillOpacity: 0.1, interactive: false }).addTo(group);
     L.marker(boat, { icon: boatIcon(L, nav.courseDeg), interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(group);
   }
   group.addTo(map);

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { alongSegment } from "./segment";
 import type { Atoll, Site } from "./types";
 
 export type RimRing = readonly (readonly [number, number])[];
@@ -202,12 +203,6 @@ function footOnSegment(
   const dy = to[1] - from[1];
   const along = alongSegment(pin[0] - from[0], pin[1] - from[1], dx, dy);
   return [from[0] + along * dx, from[1] + along * dy];
-}
-
-/** How far along a segment (0 to 1) the foot of a point lies, given the point and the segment's end from its start. */
-function alongSegment(px: number, py: number, dx: number, dy: number): number {
-  const lengthSq = dx * dx + dy * dy;
-  return lengthSq === 0 ? 0 : Math.max(0, Math.min(1, (px * dx + py * dy) / lengthSq));
 }
 
 /** True when the point is inside the ring (ray casting on lat/lon). */

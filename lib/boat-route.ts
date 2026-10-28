@@ -2,6 +2,7 @@ import { distanceKm, polylineKm, type LatLon } from "./boat-nav";
 import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import { allRims, boxesOverlap, KM_PER_DEG_LAT, KM_PER_DEG_LON, padBox, ringBox, type RimRing, type RingBox } from "./rim";
+import { alongSegment } from "./segment";
 import { readShoals } from "./shoals";
 import { listMergedSites } from "./store";
 
@@ -72,7 +73,8 @@ const RIM = 2;
 type Grid = {
   south: number;
   west: number;
-  kx: number;
+  /** Km per degree of longitude at the grid's middle latitude. */
+  kmPerDegLon: number;
   cellKm: number;
   width: number;
   height: number;
@@ -137,23 +139,20 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
 
 function nearestOnRims(pin: LatLon, rims: readonly Boxed[]): { point: LatLon; km: number } | null {
   let best: { point: LatLon; km: number } | null = null;
-  const kx = KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180);
+  const kmPerDegLon = KM_PER_DEG_LON * Math.cos((pin.lat * Math.PI) / 180);
   const near = padBox({ south: pin.lat, north: pin.lat, west: pin.lon, east: pin.lon }, 0.02);
   for (const { ring, box } of rims) {
     if (!boxesOverlap(box, near)) continue;
     for (let index = 0; index + 1 < ring.length; index += 1) {
-      const ax = (ring[index][1] - pin.lon) * kx;
+      const ax = (ring[index][1] - pin.lon) * kmPerDegLon;
       const ay = (ring[index][0] - pin.lat) * KM_PER_DEG_LAT;
-      const bx = (ring[index + 1][1] - pin.lon) * kx;
-      const by = (ring[index + 1][0] - pin.lat) * KM_PER_DEG_LAT;
-      const dx = bx - ax;
-      const dy = by - ay;
-      const lengthSq = dx * dx + dy * dy;
-      const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, -(ax * dx + ay * dy) / lengthSq));
+      const dx = (ring[index + 1][1] - pin.lon) * kmPerDegLon - ax;
+      const dy = (ring[index + 1][0] - pin.lat) * KM_PER_DEG_LAT - ay;
+      const t = alongSegment(-ax, -ay, dx, dy);
       const x = ax + t * dx;
       const y = ay + t * dy;
       const km = Math.hypot(x, y);
-      if (!best || km < best.km) best = { point: { lat: pin.lat + y / KM_PER_DEG_LAT, lon: pin.lon + x / kx }, km };
+      if (!best || km < best.km) best = { point: { lat: pin.lat + y / KM_PER_DEG_LAT, lon: pin.lon + x / kmPerDegLon }, km };
     }
   }
   return best;
@@ -161,12 +160,12 @@ function nearestOnRims(pin: LatLon, rims: readonly Boxed[]): { point: LatLon; km
 
 function buildGrid(from: LatLon, to: LatLon, shapes: RouteShapes, padKm: number, sills: boolean): Grid {
   const midLat = (from.lat + to.lat) / 2;
-  const kx = KM_PER_DEG_LON * Math.cos((midLat * Math.PI) / 180);
+  const kmPerDegLon = KM_PER_DEG_LON * Math.cos((midLat * Math.PI) / 180);
   const south = Math.min(from.lat, to.lat) - padKm / KM_PER_DEG_LAT;
   const north = Math.max(from.lat, to.lat) + padKm / KM_PER_DEG_LAT;
-  const west = Math.min(from.lon, to.lon) - padKm / kx;
-  const east = Math.max(from.lon, to.lon) + padKm / kx;
-  const spanX = (east - west) * kx;
+  const west = Math.min(from.lon, to.lon) - padKm / kmPerDegLon;
+  const east = Math.max(from.lon, to.lon) + padKm / kmPerDegLon;
+  const spanX = (east - west) * kmPerDegLon;
   const spanY = (north - south) * KM_PER_DEG_LAT;
   const cellKm = Math.max(CELL_M / 1000, Math.sqrt((spanX * spanY) / MAX_CELLS));
   const width = Math.ceil(spanX / cellKm);
@@ -174,7 +173,7 @@ function buildGrid(from: LatLon, to: LatLon, shapes: RouteShapes, padKm: number,
   const grid: Grid = {
     south,
     west,
-    kx,
+    kmPerDegLon,
     cellKm,
     width,
     height,
@@ -200,13 +199,13 @@ function buildGrid(from: LatLon, to: LatLon, shapes: RouteShapes, padKm: number,
 }
 
 function toCellXY(grid: Grid, lat: number, lon: number): [number, number] {
-  return [((lon - grid.west) * grid.kx) / grid.cellKm, ((lat - grid.south) * KM_PER_DEG_LAT) / grid.cellKm];
+  return [((lon - grid.west) * grid.kmPerDegLon) / grid.cellKm, ((lat - grid.south) * KM_PER_DEG_LAT) / grid.cellKm];
 }
 
 function cellLatLon(grid: Grid, cell: number): [number, number] {
   const x = cell % grid.width;
   const y = Math.floor(cell / grid.width);
-  return [grid.south + ((y + 0.5) * grid.cellKm) / KM_PER_DEG_LAT, grid.west + ((x + 0.5) * grid.cellKm) / grid.kx];
+  return [grid.south + ((y + 0.5) * grid.cellKm) / KM_PER_DEG_LAT, grid.west + ((x + 0.5) * grid.cellKm) / grid.kmPerDegLon];
 }
 
 /** Every cell whose centre lies inside the ring (even-odd scanlines). */
@@ -254,17 +253,21 @@ function traceRing(grid: Grid, ring: RimRing, flag: number) {
 
 /** Clears the outline across a gap's mouth; a shallow gap stays passable at extra cost. Reef in the gap still blocks. */
 function openGap(grid: Grid, gap: RouteGap, index: number) {
-  const [cx, cy] = toCellXY(grid, gap.lat, gap.lon);
   const radius = gap.widthM / 1000 / 2 / grid.cellKm;
-  for (let y = Math.floor(cy - radius); y <= Math.ceil(cy + radius); y += 1) {
-    for (let x = Math.floor(cx - radius); x <= Math.ceil(cx + radius); x += 1) {
-      if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) continue;
-      if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > radius + 0.5) continue;
-      const cell = y * grid.width + x;
-      if (!(grid.flags[cell] & RIM)) continue;
-      grid.flags[cell] &= ~RIM;
-      grid.gapOf[cell] = index + 1;
-      if (gap.shallow) grid.extra[cell] = Math.max(grid.extra[cell], SHALLOW_GAP_COST);
+  forCellsWithin(grid, gap, radius + 0.5, (cell) => {
+    if (!(grid.flags[cell] & RIM)) return;
+    grid.flags[cell] &= ~RIM;
+    grid.gapOf[cell] = index + 1;
+    if (gap.shallow) grid.extra[cell] = Math.max(grid.extra[cell], SHALLOW_GAP_COST);
+  });
+}
+
+/** Calls `visit` for each grid cell whose centre lies within `reach` cells of the point. */
+function forCellsWithin(grid: Grid, point: LatLon, reach: number, visit: (cell: number) => void) {
+  const [cx, cy] = toCellXY(grid, point.lat, point.lon);
+  for (let y = Math.max(0, Math.floor(cy - reach)); y <= Math.min(grid.height - 1, Math.ceil(cy + reach)); y += 1) {
+    for (let x = Math.max(0, Math.floor(cx - reach)); x <= Math.min(grid.width - 1, Math.ceil(cx + reach)); x += 1) {
+      if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= reach) visit(y * grid.width + x);
     }
   }
 }
@@ -308,18 +311,11 @@ function addMargins(grid: Grid) {
 }
 
 function freeEnd(grid: Grid, end: LatLon) {
-  const [cx, cy] = toCellXY(grid, end.lat, end.lon);
-  const radius = ENDPOINT_FREE_M / 1000 / grid.cellKm;
-  for (let y = Math.floor(cy - radius); y <= Math.ceil(cy + radius); y += 1) {
-    for (let x = Math.floor(cx - radius); x <= Math.ceil(cx + radius); x += 1) {
-      if (x < 0 || y < 0 || x >= grid.width || y >= grid.height) continue;
-      if (Math.hypot(x + 0.5 - cx, y + 0.5 - cy) > Math.max(radius, 1)) continue;
-      const cell = y * grid.width + x;
-      if (!grid.flags[cell]) continue;
-      grid.flags[cell] = 0;
-      grid.extra[cell] = Math.max(grid.extra[cell], ENDPOINT_COST);
-    }
-  }
+  forCellsWithin(grid, end, Math.max(ENDPOINT_FREE_M / 1000 / grid.cellKm, 1), (cell) => {
+    if (!grid.flags[cell]) return;
+    grid.flags[cell] = 0;
+    grid.extra[cell] = Math.max(grid.extra[cell], ENDPOINT_COST);
+  });
 }
 
 function cellAt(grid: Grid, point: LatLon): number {
