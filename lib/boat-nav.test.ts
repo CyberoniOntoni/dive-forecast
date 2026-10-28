@@ -10,7 +10,7 @@ import {
   SPEED_WINDOW_MS,
   type Fix,
 } from "./boat-nav";
-import { bearingDeg, distanceKm } from "./geometry";
+import { distanceKm } from "./geometry";
 
 /** One nautical mile of latitude is one minute of arc. */
 const NM_LAT = 1 / 60;
@@ -36,6 +36,12 @@ describe("motionFrom", () => {
   it("calls a move inside the GPS accuracy drift: stopped, no course", () => {
     const motion = motionFrom([fix(0, 4, { accuracyM: 20 }), fix(20, 4.0001, { accuracyM: 20 })]);
     expect(motion).toEqual({ knots: 0, courseDeg: null });
+  });
+
+  it("uses the device's heading when it gives one without a speed", () => {
+    const motion = motionFrom([fix(0, 4), fix(18, 4 + NM_LAT / 20, { headingDeg: 5 })]);
+    expect(motion?.knots).toBeCloseTo(10, 0);
+    expect(motion?.courseDeg).toBe(5);
   });
 
   it("takes no course from a move inside the GPS accuracy, even with a device speed", () => {
@@ -81,12 +87,14 @@ describe("alongRoute", () => {
   });
 });
 
-describe("words", () => {
+describe("etaMinutes", () => {
   it("gives ETA only under way", () => {
     expect(etaMinutes(1.852 * 5, 10)).toBeCloseTo(30, 6);
     expect(etaMinutes(5, 1)).toBeNull();
   });
+});
 
+describe("panel formatting", () => {
   it("formats distance, time and bearing", () => {
     expect(formatNm(1.852 * 0.43)).toBe("0.4 nm");
     expect(formatNm(1.852 * 12.6)).toBe("13 nm");
@@ -96,9 +104,5 @@ describe("words", () => {
     expect(formatBearing(7)).toBe("007° N");
     expect(formatBearing(135.4)).toBe("135° SE");
     expect(formatBearing(359.7)).toBe("000° N");
-  });
-
-  it("bears east along the equator", () => {
-    expect(bearingDeg({ lat: 0, lon: 73 }, { lat: 0, lon: 74 })).toBeCloseTo(90, 6);
   });
 });

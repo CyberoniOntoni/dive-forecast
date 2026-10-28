@@ -186,6 +186,8 @@ export function rimEdgeKm(pin: Pick<Site, "lat" | "lon">, ring: RimRing): number
 /** The point of the outline nearest the pin, and its distance in km, measured flat at the pin's latitude. */
 export function nearestRimPoint({ lat, lon }: Pick<Site, "lat" | "lon">, ring: RimRing): { lat: number; lon: number; km: number } {
   const kmPerDegLon = KM_PER_DEG_LON * Math.cos((lat * Math.PI) / 180);
+  // Not toKm: that scales then subtracts, this subtracts then scales, and the last bits of rimEdgeKm (and so of every
+  // rim bearing) must stay as they were, or the forecast changes without a version bump.
   const toPinKm = ([pointLat, pointLon]: readonly [number, number]): [number, number] => [
     (pointLon - lon) * kmPerDegLon,
     (pointLat - lat) * KM_PER_DEG_LAT,

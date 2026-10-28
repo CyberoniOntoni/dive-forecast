@@ -36,15 +36,15 @@ export function motionFrom(fixes: readonly Fix[]): Motion | null {
   const driftM = (oldest.accuracyM + latest.accuracyM) / 2;
   // A course from positions only once they are farther apart than the GPS can wander.
   const derivedCourse = span >= SPEED_MIN_SPAN_MS && movedKm * 1000 > driftM ? bearingDeg(oldest, latest) : null;
+  const deviceCourse = latest.headingDeg != null && Number.isFinite(latest.headingDeg) ? latest.headingDeg : null;
   if (latest.speedMs != null && Number.isFinite(latest.speedMs)) {
     const knots = Math.max(0, latest.speedMs) / MS_PER_KNOT;
-    const deviceCourse = latest.headingDeg != null && Number.isFinite(latest.headingDeg) ? latest.headingDeg : null;
     return { knots, courseDeg: knots >= UNDERWAY_KNOTS ? (deviceCourse ?? derivedCourse) : null };
   }
   if (span < SPEED_MIN_SPAN_MS) return null;
   if (movedKm * 1000 <= driftM) return { knots: 0, courseDeg: null };
   const knots = movedKm / KM_PER_NM / (span / 3_600_000);
-  return { knots, courseDeg: knots >= UNDERWAY_KNOTS ? derivedCourse : null };
+  return { knots, courseDeg: knots >= UNDERWAY_KNOTS ? (deviceCourse ?? derivedCourse) : null };
 }
 
 /** Fixes kept for motionFrom: those inside the window, plus the new one. */
