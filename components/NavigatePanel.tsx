@@ -15,10 +15,14 @@ const PANEL_CLASS =
 /**
  * The Navigate tab's state, from the address: the map with "?navigate", and "?navigate=<site id>" once a destination
  * is picked. The destination is kept for the browser tab, so the header's Navigate tab comes back to it.
+ *
+ * `trip` is the destination being followed. It outlasts a switch to the Map tab, so the GPS, the route and the screen
+ * lock keep going while the skipper looks at the map; it ends when the destination list is opened.
  */
 export function useNavigateTab(sites: readonly Site[]): {
   navigating: boolean;
   site: NavSite | null;
+  trip: NavSite | null;
   pick: (siteId: string) => void;
   change: () => void;
 } {
@@ -33,6 +37,9 @@ export function useNavigateTab(sites: readonly Site[]): {
     return found ? { id: found.id, name: found.name, lat: found.lat, lon: found.lon } : null;
   }, [sites, navigating, siteId]);
 
+  const [trip, setTrip] = useState<NavSite | null>(null);
+  if (navigating && site?.id !== trip?.id) setTrip(site);
+
   // A destination that is gone (a removed site, an old link) is forgotten, so the Navigate tab stops coming back to it.
   useEffect(() => {
     if (site) saveNavSite(site.id);
@@ -45,6 +52,7 @@ export function useNavigateTab(sites: readonly Site[]): {
   return {
     navigating,
     site,
+    trip,
     pick: (id) => router.replace(navigateHref(id)),
     change: () => {
       saveNavSite(null);
@@ -58,6 +66,7 @@ export function NavigatePanel({
   sites,
   atollNames,
   site,
+  hidden = false,
   onPick,
   onChange,
   onDraw,
@@ -66,13 +75,15 @@ export function NavigatePanel({
   atollNames: Readonly<Record<string, string>>;
   /** The site the boat is heading for, or null while picking one. */
   site: NavSite | null;
+  /** Kept running out of sight while the Map tab is open. */
+  hidden?: boolean;
   onPick: (siteId: string) => void;
   /** Back to the destination list. */
   onChange: () => void;
   onDraw: (draw: NavDraw | null) => void;
 }) {
   return (
-    <aside aria-label="Boat navigation" data-nav-panel className={PANEL_CLASS}>
+    <aside aria-label="Boat navigation" data-nav-panel hidden={hidden} className={PANEL_CLASS}>
       <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-9 rounded-full bg-foam/30 lg:hidden" />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />

@@ -138,9 +138,11 @@ function framePadding(phoneBottom = 88) {
 const NAV_PANEL_PX = 190;
 
 /** How much of a phone map's bottom edge the Navigate panel covers; measured, since its height follows its lines. */
-function navPanelCover(map: LeafletMapType): number {
-  const panel = document.querySelector("[data-nav-panel]");
+function navPanelCover(map: LeafletMapType): number | undefined {
+  const panel = document.querySelector<HTMLElement>("[data-nav-panel]");
   if (!panel) return NAV_PANEL_PX;
+  // Out of sight on the Map tab: the site sheet is what covers the bottom then.
+  if (panel.hidden) return undefined;
   return Math.max(0, map.getContainer().getBoundingClientRect().bottom - panel.getBoundingClientRect().top) + 12;
 }
 
@@ -578,7 +580,7 @@ export function SiteMap({
   atollNames: Record<string, string>;
 }) {
   const router = useRouter();
-  const { navigating, site: navSite, pick: pickNavSite, change: changeNavSite } = useNavigateTab(sites);
+  const { navigating, site: navSite, trip, pick: pickNavSite, change: changeNavSite } = useNavigateTab(sites);
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
   // Add-site mode belongs to the Map tab: opening Navigate ends it, so it is not waiting there on the way back.
@@ -614,16 +616,18 @@ export function SiteMap({
     <div className="relative h-full min-h-0 w-full min-w-0 flex-1">
       <style>{MAP_STYLE}</style>
       <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden lg:flex-row">
-        {navigating ? (
+        {navigating || trip ? (
           <NavigatePanel
             sites={sites}
             atollNames={atollNames}
-            site={navSite}
+            site={navigating ? navSite : trip}
+            hidden={!navigating}
             onPick={pickNavSite}
             onChange={changeNavSite}
             onDraw={setNavDraw}
           />
-        ) : (
+        ) : null}
+        {navigating ? null : (
           <CurrentOverlay
             siteGlances={siteGlances}
             atollNames={atollNames}
@@ -650,7 +654,7 @@ export function SiteMap({
             focus={focus}
             spotlight={spotlight}
             onSpotlightClear={() => setSpotlight(null)}
-            nav={navSite ? navDraw : null}
+            nav={trip ? navDraw : null}
             dim={navigating}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
