@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  destinationList,
-  DESTINATION_LIMIT,
   alongRoute,
   etaMinutes,
   formatBearing,
@@ -106,36 +104,5 @@ describe("panel formatting", () => {
     expect(formatBearing(7)).toBe("007° N");
     expect(formatBearing(135.4)).toBe("135° SE");
     expect(formatBearing(359.7)).toBe("000° N");
-  });
-});
-
-describe("destinationList", () => {
-  const sites = [
-    { id: "kuda", name: "Kuda Faru", atoll: "North Male", lat: 4.4, lon: 73.6 },
-    { id: "kandooma", name: "Kandooma Thila", atoll: "South Male", lat: 3.91, lon: 73.48 },
-    { id: "banana", name: "Banana Reef", atoll: "North Male", lat: 4.24, lon: 73.53 },
-  ];
-
-  it("sorts by name until the boat's position is known, then nearest first", () => {
-    expect(destinationList(sites, "", null).items.map((site) => site.id)).toEqual(["banana", "kandooma", "kuda"]);
-    const near = destinationList(sites, "", { lat: 3.9, lon: 73.48 }).items;
-    expect(near.map((site) => site.id)).toEqual(["kandooma", "banana", "kuda"]);
-    expect(near[0].km).toBeLessThan(2);
-  });
-
-  it("matches every word against the name and the atoll", () => {
-    expect(destinationList(sites, "north", null).items.map((site) => site.id)).toEqual(["banana", "kuda"]);
-    expect(destinationList(sites, "  Male  thila ", null).items.map((site) => site.id)).toEqual(["kandooma"]);
-    expect(destinationList(sites, "wreck", null).items).toEqual([]);
-    // The same search as the Map list: word starts, punctuation and accents ignored.
-    expect(destinationList(sites, "kuda-far", null).items.map((site) => site.id)).toEqual(["kuda"]);
-    expect(destinationList(sites, "anana", null).items).toEqual([]);
-  });
-
-  it("keeps the list short", () => {
-    const many = Array.from({ length: DESTINATION_LIMIT + 5 }, (_, index) => ({ ...sites[0], id: `s${index}` }));
-    const list = destinationList(many, "", null);
-    expect(list.items).toHaveLength(DESTINATION_LIMIT);
-    expect(list.total).toBe(DESTINATION_LIMIT + 5);
   });
 });

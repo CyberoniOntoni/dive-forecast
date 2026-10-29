@@ -5,9 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
-import { destinationList, formatNm } from "@/lib/boat-nav";
+import { formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { navigateHref, readNavigate, saveNavSite } from "@/lib/navigate-tab";
+import { destinationList, navigateHref, readNavigate, saveNavSite } from "@/lib/navigate-tab";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */

@@ -4,7 +4,6 @@
  */
 
 import { bearingDeg, distanceKm, nearestOnPolyline, polylineKm, type LatLon } from "./geometry";
-import { matchesSearch } from "./site-search";
 
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
@@ -111,23 +110,3 @@ export function formatBearing(deg: number): string {
   return `${String(whole).padStart(3, "0")}° ${COMPASS[Math.round(whole / 45) % 8]}`;
 }
 
-/** A site the Navigate tab can head for, with how far it is when the boat's position is known. */
-export type Destination = LatLon & { id: string; name: string; atoll: string | null; km: number | null };
-
-/** The destination list shows at most this many sites. */
-export const DESTINATION_LIMIT = 40;
-
-/**
- * The Navigate tab's destination list: sites whose name or atoll holds the search, nearest first once the boat's
- * position is known, else by name. Capped at DESTINATION_LIMIT; `total` counts every match.
- */
-export function destinationList(
-  sites: readonly (LatLon & { id: string; name: string; atoll: string | null })[],
-  query: string,
-  from: LatLon | null,
-): { items: Destination[]; total: number } {
-  const matches = sites.filter((site) => matchesSearch(site, site.atoll ?? undefined, query));
-  const withKm = matches.map((site) => ({ ...site, km: from ? distanceKm(from, site) : null }));
-  withKm.sort((a, b) => (a.km != null && b.km != null ? a.km - b.km : a.name.localeCompare(b.name)));
-  return { items: withKm.slice(0, DESTINATION_LIMIT), total: withKm.length };
-}

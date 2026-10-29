@@ -1,6 +1,8 @@
-/** The Navigate tab: its address on the map page and the destination it keeps per browser tab. */
+/** The Navigate tab: its address on the map page, the destination it keeps per browser tab, and the list to pick from. */
 
+import { distanceKm, type LatLon } from "./geometry";
 import { tabStorage } from "./map-view";
+import { matchesSearch } from "./site-search";
 
 const NAV_KEY = "dive-current:nav-site";
 /** Sent on the window when the saved destination changes, so the header's Navigate tab follows it. */
@@ -40,4 +42,25 @@ export function saveNavSite(siteId: string | null, storage: NavStorage | undefin
   } catch {
     // Blocked storage: the Navigate tab opens on the destination list next time.
   }
+}
+
+/** A site the Navigate tab can head for, with how far it is when the boat's position is known. */
+export type Destination = LatLon & { id: string; name: string; atoll: string | null; km: number | null };
+
+/** The destination list shows at most this many sites. */
+export const DESTINATION_LIMIT = 40;
+
+/**
+ * The Navigate tab's destination list: sites whose name or atoll holds the search, nearest first once the boat's
+ * position is known, else by name. Capped at DESTINATION_LIMIT; `total` counts every match.
+ */
+export function destinationList(
+  sites: readonly (LatLon & { id: string; name: string; atoll: string | null })[],
+  query: string,
+  from: LatLon | null,
+): { items: Destination[]; total: number } {
+  const matches = sites.filter((site) => matchesSearch(site, site.atoll ?? undefined, query));
+  const withKm = matches.map((site) => ({ ...site, km: from ? distanceKm(from, site) : null }));
+  withKm.sort((a, b) => (a.km != null && b.km != null ? a.km - b.km : a.name.localeCompare(b.name)));
+  return { items: withKm.slice(0, DESTINATION_LIMIT), total: withKm.length };
 }
