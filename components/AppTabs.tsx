@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
+import { MapPageLink } from "@/components/MapPageLink";
 import { NavigateIcon } from "@/components/site-ui";
 import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/navigate-tab";
 
@@ -33,15 +33,15 @@ export function AppTabs() {
 
   return (
     <nav aria-label="Views" className="flex shrink-0 gap-0.5 rounded-full bg-foam/10 p-0.5 ring-1 ring-foam/15">
-      <Link
+      <MapPageLink
         data-tab
         href="/"
         aria-current={!navigating && pathname === "/" ? "page" : undefined}
         className={`${TAB_CLASS} ${navigating || pathname !== "/" ? OFF : ON}`}
       >
         Map
-      </Link>
-      <Link
+      </MapPageLink>
+      <MapPageLink
         data-tab
         href={navigateHref(navigating ? here.siteId : lastSite)}
         aria-current={navigating ? "page" : undefined}
@@ -49,7 +49,7 @@ export function AppTabs() {
       >
         <NavigateIcon size={16} />
         Navigate
-      </Link>
+      </MapPageLink>
     </nav>
   );
 }

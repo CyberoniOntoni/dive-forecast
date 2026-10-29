@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
@@ -27,7 +27,6 @@ export function useNavigateTab(sites: readonly Site[]): {
   pick: (siteId: string) => void;
   change: () => void;
 } {
-  const router = useRouter();
   const params = useSearchParams();
   const { navigating, siteId } = readNavigate(params);
   const site = useMemo<NavSite | null>(() => {
@@ -44,18 +43,19 @@ export function useNavigateTab(sites: readonly Site[]): {
     if (site) saveNavSite(site.id);
     else if (siteId) {
       saveNavSite(null);
-      router.replace(navigateHref(null));
+      window.history.replaceState(null, "", navigateHref(null));
     }
-  }, [site, siteId, router]);
+  }, [site, siteId]);
 
   return {
     navigating,
     site,
     trip,
-    pick: (id) => router.replace(navigateHref(id)),
+    // The address only: the page is already showing (see MapPageLink).
+    pick: (id) => window.history.replaceState(null, "", navigateHref(id)),
     change: () => {
       saveNavSite(null);
-      router.replace(navigateHref(null));
+      window.history.replaceState(null, "", navigateHref(null));
     },
   };
 }
