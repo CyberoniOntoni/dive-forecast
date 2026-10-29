@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
@@ -69,6 +69,7 @@ export function NavigatePanel({
   onPick,
   onChange,
   onDraw,
+  onHeight,
 }: {
   sites: readonly Site[];
   atollNames: Readonly<Record<string, string>>;
@@ -80,9 +81,26 @@ export function NavigatePanel({
   /** Back to the destination list. */
   onChange: () => void;
   onDraw: (draw: NavDraw | null) => void;
+  /** The panel's height in px as it changes (0 while hidden), so the map can frame the route above it on a phone. */
+  onHeight: (px: number) => void;
 }) {
+  const panelRef = useRef<HTMLElement>(null);
+  const onHeightRef = useRef(onHeight);
+  useEffect(() => {
+    onHeightRef.current = onHeight;
+  }, [onHeight]);
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+    const report = () => onHeightRef.current(panel.getBoundingClientRect().height);
+    report();
+    const observer = new ResizeObserver(report);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <aside aria-label="Boat navigation" data-nav-panel hidden={hidden} className={PANEL_CLASS}>
+    <aside ref={panelRef} aria-label="Boat navigation" hidden={hidden} className={PANEL_CLASS}>
       <span aria-hidden="true" className={`mx-auto mb-1 block lg:hidden ${GRAB_HANDLE_CLASS}`} />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />

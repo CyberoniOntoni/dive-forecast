@@ -262,7 +262,7 @@ function RouteNote({
   const gaps = route?.routed ? route.gaps.length : 0;
   const parts = [
     steer != null ? `Steer ${formatBearing(steer)}` : null,
-    courseDeg != null ? `heading ${formatBearing(courseDeg)}` : null,
+    courseDeg != null ? `course ${formatBearing(courseDeg)}` : null,
     route?.routed ? `${formatNm(route.lengthKm)} by route (${formatNm(route.directKm)} straight)` : null,
     gaps > 0 ? (gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`) : null,
     `GPS ±${Math.round(accuracyM)} m`,

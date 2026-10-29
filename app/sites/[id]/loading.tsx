@@ -18,7 +18,7 @@ export default function Loading() {
       </header>
       <section className="surface p-4 sm:p-6">
         <div className="flex min-w-0 items-center gap-4">
-          <div className="h-28 w-28 shrink-0 animate-pulse rounded-full bg-foam/15" />
+          <div className="h-24 w-24 shrink-0 animate-pulse rounded-full bg-foam/15 sm:h-28 sm:w-28" />
           <div className="flex min-w-0 flex-1 flex-col gap-3">
             <div className="h-12 w-48 max-w-full animate-pulse rounded-xl bg-foam/20 sm:h-16" />
             <div className="h-6 w-24 animate-pulse rounded-xl bg-foam/15" />

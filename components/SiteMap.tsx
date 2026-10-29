@@ -41,6 +41,8 @@ type MapProps = {
   nav: NavDraw | null;
   /** The Navigate tab: site pins fade so the boat and the route stand out. */
   dim: boolean;
+  /** How much of a phone map's bottom edge the Navigate panel covers, in px; 0 when it is not showing. */
+  navCover: number;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -132,18 +134,6 @@ function framePadding(phoneBottom = 88) {
     return { paddingTopLeft: [24, 48] as [number, number], paddingBottomRight: [56, 36] as [number, number], maxZoom: 11 };
   }
   return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, phoneBottom] as [number, number], maxZoom: 11 };
-}
-
-/** The Navigate tab's panel on a phone, with the readouts showing, until it can be measured. */
-const NAV_PANEL_PX = 190;
-
-/** How much of a phone map's bottom edge the Navigate panel covers; measured, since its height follows its lines. */
-function navPanelCover(map: LeafletMapType): number | undefined {
-  const panel = document.querySelector<HTMLElement>("[data-nav-panel]");
-  if (!panel) return NAV_PANEL_PX;
-  // Out of sight on the Map tab: the site sheet is what covers the bottom then.
-  if (panel.hidden) return undefined;
-  return Math.max(0, map.getContainer().getBoundingClientRect().bottom - panel.getBoundingClientRect().top) + 12;
 }
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
@@ -431,6 +421,7 @@ const LeafletMap = dynamic(
       onSpotlightClear,
       nav,
       dim,
+      navCover,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -549,7 +540,8 @@ const LeafletMap = dynamic(
       useEffect(() => {
         const map = mapRef.current;
         if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
-        frameOn(map, navBounds(L, nav), 15, true, navPanelCover(map));
+        // The site sheet covers the bottom instead while the panel is hidden on the Map tab.
+        frameOn(map, navBounds(L, nav), 15, true, navCover > 0 ? navCover + 12 : undefined);
         // Frame only when asked (first route, "Show route"), not on every fix.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [nav?.frame, mapEpoch]);
@@ -596,6 +588,7 @@ export function SiteMap({
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
   const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
+  const [navCover, setNavCover] = useState(0);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -625,6 +618,7 @@ export function SiteMap({
             onPick={pickNavSite}
             onChange={changeNavSite}
             onDraw={setNavDraw}
+            onHeight={setNavCover}
           />
         ) : null}
         {navigating ? null : (
@@ -656,6 +650,7 @@ export function SiteMap({
             onSpotlightClear={() => setSpotlight(null)}
             nav={trip ? navDraw : null}
             dim={navigating}
+            navCover={navCover}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
