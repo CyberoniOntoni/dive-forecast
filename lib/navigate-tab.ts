@@ -19,6 +19,16 @@ export function navigateHref(siteId: string | null): string {
 /** The Navigate tab's state in the address: on the tab or not, and the site it heads for (null on the destination list). */
 export type NavigateState = { navigating: boolean; siteId: string | null };
 
+/**
+ * Moves the map page to `href` by changing only the address: the page is already showing, and a router navigation
+ * would run it on the server again, working out every site's nowcast (seconds). Next keeps useSearchParams in step
+ * with the history API. `replace` swaps the current history entry instead of adding one.
+ */
+export function showOnMapPage(href: string, replace = false): void {
+  if (replace) window.history.replaceState(null, "", href);
+  else window.history.pushState(null, "", href);
+}
+
 /** Reads navigateHref's address back: "?navigate" is the destination list, "?navigate=<id>" a site, no param the map. */
 export function readNavigate(params: { get(name: string): string | null }): NavigateState {
   const value = params.get("navigate");

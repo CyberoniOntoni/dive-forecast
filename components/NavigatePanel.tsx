@@ -7,7 +7,7 @@ import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { destinationList, navigateHref, readNavigate, saveNavSite } from "@/lib/navigate-tab";
+import { destinationList, navigateHref, readNavigate, saveNavSite, showOnMapPage } from "@/lib/navigate-tab";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
@@ -43,7 +43,7 @@ export function useNavigateTab(sites: readonly Site[]): {
     if (site) saveNavSite(site.id);
     else if (siteId) {
       saveNavSite(null);
-      window.history.replaceState(null, "", navigateHref(null));
+      showOnMapPage(navigateHref(null), true);
     }
   }, [site, siteId]);
 
@@ -51,11 +51,10 @@ export function useNavigateTab(sites: readonly Site[]): {
     navigating,
     site,
     trip,
-    // The address only: the page is already showing (see MapPageLink).
-    pick: (id) => window.history.replaceState(null, "", navigateHref(id)),
+    pick: (id) => showOnMapPage(navigateHref(id), true),
     change: () => {
       saveNavSite(null);
-      window.history.replaceState(null, "", navigateHref(null));
+      showOnMapPage(navigateHref(null), true);
     },
   };
 }
