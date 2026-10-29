@@ -6,9 +6,10 @@ import { HourSlider } from "@/components/HourSlider";
 import { RatingForm } from "@/components/RatingForm";
 import { RecentReports } from "@/components/RecentReports";
 import { ReportForm } from "@/components/ReportForm";
+import { NavigateIcon } from "@/components/site-ui";
 import { forecastSite, getRating, getRecentReports, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
-import { navigateHref } from "@/lib/map-view";
+import { navigateHref } from "@/lib/navigate-tab";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
@@ -64,9 +65,7 @@ export default async function SitePage({
           href={navigateHref(site.id)}
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-            <path d="M12 2l7 19-7-4-7 4z" />
-          </svg>
+          <NavigateIcon size={18} />
           Navigate here by boat
         </Link>
       </nav>

@@ -3,6 +3,8 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
+import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
+import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { loadSheetOpen, saveSheetOpen, siteCountLabel, type MapView } from "@/lib/map-view";
 import {
   atollChoices,
@@ -16,7 +18,6 @@ import {
 import { listAtollLabel, repeatedNames } from "@/lib/site-labels";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
-import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 
 export type SiteGlance = {
   site: Site;
@@ -197,7 +198,7 @@ export function CurrentOverlay({
               maxLength={80}
               value={filter.query}
               onChange={(event) => changeFilter({ ...filter, query: event.target.value })}
-              className="field w-full min-w-0 flex-1 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              className={`${SEARCH_FIELD_CLASS} w-full flex-1`}
             />
             {filtered ? (
               <button
@@ -276,10 +277,7 @@ export function SiteRow({
         title={title}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2 pl-3 pr-1 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {site.name}
-          {atoll ? <span className="font-normal text-foam/65"> · {atoll}</span> : null}
-        </span>
+        <SiteName name={site.name} atoll={atoll} />
         <CurrentBits glance={glance} age={age} />
       </Link>
       <button

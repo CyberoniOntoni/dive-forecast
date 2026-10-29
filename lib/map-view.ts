@@ -1,3 +1,8 @@
+/**
+ * The map's view and what the map page keeps per browser tab (where it was, whether the list is open). The Navigate
+ * tab's address and saved destination are in navigate-tab.ts.
+ */
+
 /** The map's visible area, as the site list uses it. */
 export type MapView = { south: number; west: number; north: number; east: number };
 
@@ -18,16 +23,11 @@ export type SavedMapView = { lat: number; lon: number; zoom: number };
 
 const VIEW_KEY = "dive-current:map-view";
 const SHEET_KEY = "dive-current:sheet-open";
-const NAV_KEY = "dive-current:nav-site";
-/** Sent on the window when the saved destination changes, so the header's Navigate tab follows it. */
-export const NAV_SITE_EVENT = "dive-current:nav-site";
 
 type SessionLike = Pick<Storage, "getItem" | "setItem">;
-/** The saved destination is removed when cleared, not stored empty. */
-type NavStorage = SessionLike & Pick<Storage, "removeItem">;
 
 /** The tab's sessionStorage, or undefined where it is missing or blocked (private windows, previews). */
-function tabStorage(): NavStorage | undefined {
+export function tabStorage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | undefined {
   try {
     return typeof window === "undefined" ? undefined : window.sessionStorage;
   } catch {
@@ -80,39 +80,6 @@ export function saveSheetOpen(open: boolean, storage: SessionLike | undefined = 
     storage?.setItem(SHEET_KEY, open ? "true" : "false");
   } catch {
     // Blocked storage: the list starts closed next time.
-  }
-}
-
-/** The Navigate tab's address: headed for a site, or the destination list when there is none. */
-export function navigateHref(siteId: string | null): string {
-  return siteId ? `/?navigate=${encodeURIComponent(siteId)}` : "/?navigate";
-}
-
-/** The Navigate tab's state in the address: on the tab or not, and the site it heads for (null on the destination list). */
-export type NavigateState = { navigating: boolean; siteId: string | null };
-
-/** Reads navigateHref's address back: "?navigate" is the destination list, "?navigate=<id>" a site, no param the map. */
-export function readNavigate(params: { get(name: string): string | null }): NavigateState {
-  const value = params.get("navigate");
-  return { navigating: value != null, siteId: value || null };
-}
-
-/** The site boat navigation last headed for in this tab, so the Navigate tab comes back to it. Null when unknown. */
-export function loadNavSite(storage: NavStorage | undefined = tabStorage()): string | null {
-  try {
-    return storage?.getItem(NAV_KEY) ?? null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveNavSite(siteId: string | null, storage: NavStorage | undefined = tabStorage()): void {
-  try {
-    if (siteId) storage?.setItem(NAV_KEY, siteId);
-    else storage?.removeItem(NAV_KEY);
-    if (typeof window !== "undefined") window.dispatchEvent(new Event(NAV_SITE_EVENT));
-  } catch {
-    // Blocked storage: the Navigate tab opens on the destination list next time.
   }
 }
 

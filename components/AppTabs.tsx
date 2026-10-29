@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
-import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/map-view";
+import { NavigateIcon } from "@/components/site-ui";
+import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/navigate-tab";
 
 function onNavSite(changed: () => void): () => void {
   window.addEventListener(NAV_SITE_EVENT, changed);
@@ -46,9 +47,7 @@ export function AppTabs() {
         aria-current={navigating ? "page" : undefined}
         className={`${TAB_CLASS} ${navigating ? ON : OFF}`}
       >
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-          <path d="M12 2l7 19-7-4-7 4z" />
-        </svg>
+        <NavigateIcon size={16} />
         Navigate
       </Link>
     </nav>

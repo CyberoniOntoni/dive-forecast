@@ -4,9 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
+import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { destinationList, formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { navigateHref, readNavigate, saveNavSite } from "@/lib/map-view";
+import { navigateHref, readNavigate, saveNavSite } from "@/lib/navigate-tab";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
@@ -146,7 +147,7 @@ function DestinationPicker({
         maxLength={80}
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        className="field mt-2 w-full min-w-0 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        className={`${SEARCH_FIELD_CLASS} mt-2 w-full`}
       />
       <ul className="mt-2">
         {list.map((item) => (
@@ -156,10 +157,7 @@ function DestinationPicker({
               onClick={() => onPick(item.id)}
               className="flex min-h-11 w-full min-w-0 items-center gap-2 px-1 text-left text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
             >
-              <span className="min-w-0 flex-1 truncate font-medium">
-                {item.name}
-                {item.atoll ? <span className="font-normal text-foam/65"> · {item.atoll}</span> : null}
-              </span>
+              <SiteName name={item.name} atoll={item.atoll} />
               {item.km != null ? <span className="shrink-0 tabular-nums text-xs text-foam/70">{formatNm(item.km)}</span> : null}
             </button>
           </li>
