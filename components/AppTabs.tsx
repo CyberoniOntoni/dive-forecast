@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
-import { loadNavSite, NAV_SITE_EVENT, navigateHref, navigateParam } from "@/lib/map-view";
+import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/map-view";
 
 function onNavSite(changed: () => void): () => void {
   window.addEventListener(NAV_SITE_EVENT, changed);
@@ -26,8 +26,8 @@ const OFF = "text-foam/80 hover:text-foam";
 export function AppTabs() {
   const pathname = usePathname();
   const params = useSearchParams();
-  const param = pathname === "/" ? navigateParam(params) : null;
-  const navigating = param != null;
+  const here = readNavigate(params);
+  const navigating = pathname === "/" && here.navigating;
   const lastSite = useSyncExternalStore(onNavSite, loadNavSite, noSiteOnServer);
 
   return (
@@ -42,7 +42,7 @@ export function AppTabs() {
       </Link>
       <Link
         data-tab
-        href={navigateHref(navigating ? param || null : lastSite)}
+        href={navigateHref(navigating ? here.siteId : lastSite)}
         aria-current={navigating ? "page" : undefined}
         className={`${TAB_CLASS} ${navigating ? ON : OFF}`}
       >

@@ -16,6 +16,7 @@ import {
 import { listAtollLabel, repeatedNames } from "@/lib/site-labels";
 import { glanceRank, type NowcastGlance } from "@/lib/nowcast-glance";
 import type { Site } from "@/lib/types";
+import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 
 export type SiteGlance = {
   site: Site;
@@ -49,7 +50,7 @@ function maldivesHourTitle(wall: string): string {
 }
 
 /** Phone: bottom sheet. Wide window: a fixed column beside the map, not an overlay. */
-const SHEET_CLASS = "now-sheet absolute inset-x-0 bottom-0 z-[500] max-h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/20 bg-ink pb-[env(safe-area-inset-bottom)] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:pb-0 lg:shadow-none";
+const SHEET_CLASS = `now-sheet ${DOCKED_PANEL_CLASS} max-h-full overflow-x-hidden bg-ink pb-[env(safe-area-inset-bottom)] shadow-lg lg:pb-0`;
 
 /* Open phone sheet stays at most half the viewport so the map stays visible. 50dvh is the fallback when clamp is unavailable. */
 const SHEET_STYLE = `
@@ -151,7 +152,7 @@ export function CurrentOverlay({
           onClick={toggleSheet}
         >
           {/* The sheet's grab handle: says the bar opens, as on a phone's own sheets. */}
-          <span aria-hidden="true" className="absolute top-1.5 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full bg-foam/30" />
+          <span aria-hidden="true" className={`absolute top-1.5 left-1/2 -translate-x-1/2 ${GRAB_HANDLE_CLASS}`} />
           <span className="tabular-nums">{countLabel}</span>
           <span className="flex items-center gap-2 text-foam/80">
             <span>{expanded ? "Hide list" : "Show list"}</span>

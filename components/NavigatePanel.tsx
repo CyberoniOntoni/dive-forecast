@@ -3,14 +3,14 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
+import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { destinationList, formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { navigateHref, navigateParam, saveNavSite } from "@/lib/map-view";
+import { navigateHref, readNavigate, saveNavSite } from "@/lib/map-view";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
-const PANEL_CLASS =
-  "absolute inset-x-0 bottom-0 z-[500] max-h-[60dvh] min-h-0 overflow-y-auto overscroll-contain rounded-t-3xl border border-foam/15 bg-glass px-4 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] text-foam shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:pt-4 lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:shadow-none";
+const PANEL_CLASS = `${DOCKED_PANEL_CLASS} max-h-[60dvh] bg-glass px-4 pt-1.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] backdrop-blur-md lg:pt-4`;
 
 /**
  * The Navigate tab's state, from the address: the map with "?navigate", and "?navigate=<site id>" once a destination
@@ -28,9 +28,7 @@ export function useNavigateTab(sites: readonly Site[]): {
 } {
   const router = useRouter();
   const params = useSearchParams();
-  const param = navigateParam(params);
-  const navigating = param != null;
-  const siteId = param || null;
+  const { navigating, siteId } = readNavigate(params);
   const site = useMemo<NavSite | null>(() => {
     if (!navigating) return null;
     const found = sites.find((item) => item.id === siteId);
@@ -84,7 +82,7 @@ export function NavigatePanel({
 }) {
   return (
     <aside aria-label="Boat navigation" data-nav-panel hidden={hidden} className={PANEL_CLASS}>
-      <span aria-hidden="true" className="mx-auto mb-1 block h-1 w-9 rounded-full bg-foam/30 lg:hidden" />
+      <span aria-hidden="true" className={`mx-auto mb-1 block lg:hidden ${GRAB_HANDLE_CLASS}`} />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />
       ) : (

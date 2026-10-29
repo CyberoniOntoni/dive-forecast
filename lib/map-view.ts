@@ -23,9 +23,11 @@ const NAV_KEY = "dive-current:nav-site";
 export const NAV_SITE_EVENT = "dive-current:nav-site";
 
 type SessionLike = Pick<Storage, "getItem" | "setItem">;
+/** The saved destination is removed when cleared, not stored empty. */
+type NavStorage = SessionLike & Pick<Storage, "removeItem">;
 
 /** The tab's sessionStorage, or undefined where it is missing or blocked (private windows, previews). */
-function tabStorage(): SessionLike | undefined {
+function tabStorage(): NavStorage | undefined {
   try {
     return typeof window === "undefined" ? undefined : window.sessionStorage;
   } catch {
@@ -86,23 +88,28 @@ export function navigateHref(siteId: string | null): string {
   return siteId ? `/?navigate=${encodeURIComponent(siteId)}` : "/?navigate";
 }
 
-/** The Navigate tab's state in the address: null off the tab, "" on the destination list, else the site id. */
-export function navigateParam(params: { get(name: string): string | null }): string | null {
-  return params.get("navigate");
+/** The Navigate tab's state in the address: on the tab or not, and the site it heads for (null on the destination list). */
+export type NavigateState = { navigating: boolean; siteId: string | null };
+
+/** Reads navigateHref's address back: "?navigate" is the destination list, "?navigate=<id>" a site, no param the map. */
+export function readNavigate(params: { get(name: string): string | null }): NavigateState {
+  const value = params.get("navigate");
+  return { navigating: value != null, siteId: value || null };
 }
 
 /** The site boat navigation last headed for in this tab, so the Navigate tab comes back to it. Null when unknown. */
-export function loadNavSite(storage: SessionLike | undefined = tabStorage()): string | null {
+export function loadNavSite(storage: NavStorage | undefined = tabStorage()): string | null {
   try {
-    return storage?.getItem(NAV_KEY) || null;
+    return storage?.getItem(NAV_KEY) ?? null;
   } catch {
     return null;
   }
 }
 
-export function saveNavSite(siteId: string | null, storage: SessionLike | undefined = tabStorage()): void {
+export function saveNavSite(siteId: string | null, storage: NavStorage | undefined = tabStorage()): void {
   try {
-    storage?.setItem(NAV_KEY, siteId ?? "");
+    if (siteId) storage?.setItem(NAV_KEY, siteId);
+    else storage?.removeItem(NAV_KEY);
     if (typeof window !== "undefined") window.dispatchEvent(new Event(NAV_SITE_EVENT));
   } catch {
     // Blocked storage: the Navigate tab opens on the destination list next time.
