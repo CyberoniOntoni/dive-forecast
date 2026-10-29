@@ -3,6 +3,8 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AddSiteForm } from "@/components/AddSiteForm";
+import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
+import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { loadSheetOpen, saveSheetOpen, siteCountLabel, type MapView } from "@/lib/map-view";
 import {
   atollChoices,
@@ -49,7 +51,7 @@ function maldivesHourTitle(wall: string): string {
 }
 
 /** Phone: bottom sheet. Wide window: a fixed column beside the map, not an overlay. */
-const SHEET_CLASS = "now-sheet absolute inset-x-0 bottom-0 z-[500] max-h-full min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain rounded-t-2xl border border-foam/20 bg-ink pb-[env(safe-area-inset-bottom)] text-foam shadow-lg lg:static lg:inset-auto lg:z-auto lg:h-full lg:max-h-full lg:w-[22rem] lg:shrink-0 lg:rounded-none lg:border-y-0 lg:border-l-0 lg:pb-0 lg:shadow-none";
+const SHEET_CLASS = `now-sheet ${DOCKED_PANEL_CLASS} max-h-full overflow-x-hidden bg-ink pb-[env(safe-area-inset-bottom)] shadow-lg lg:pb-0`;
 
 /* Open phone sheet stays at most half the viewport so the map stays visible. 50dvh is the fallback when clamp is unavailable. */
 const SHEET_STYLE = `
@@ -145,14 +147,16 @@ export function CurrentOverlay({
       <div className="sticky top-0 z-10 border-b border-foam/15 bg-ink lg:hidden">
         <button
           type="button"
-          className="flex min-h-14 w-full items-center justify-between gap-3 px-3 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
+          className="relative flex min-h-14 w-full items-center justify-between gap-3 px-4 pt-1 text-left text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
           aria-expanded={expanded}
           aria-controls="now-sheet-body"
           onClick={toggleSheet}
         >
+          {/* The sheet's grab handle: says the bar opens, as on a phone's own sheets. */}
+          <span aria-hidden="true" className={`absolute top-1.5 left-1/2 -translate-x-1/2 ${GRAB_HANDLE_CLASS}`} />
           <span className="tabular-nums">{countLabel}</span>
-          <span className="flex items-center gap-2">
-            <span>now</span>
+          <span className="flex items-center gap-2 text-foam/80">
+            <span>{expanded ? "Hide list" : "Show list"}</span>
             <span
               aria-hidden="true"
               className="inline-block h-2 w-2 border-r-2 border-t-2 border-current"
@@ -172,7 +176,7 @@ export function CurrentOverlay({
         <div className="flex flex-col gap-2 px-3 py-3">
           <button
             type="button"
-            className="min-h-11 w-full rounded-md border border-foam/30 px-3 text-sm font-semibold hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="min-h-11 w-full rounded-xl border border-foam/30 px-3 text-sm font-semibold hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
             aria-expanded={adding}
             aria-controls={adding ? "add-site-form" : undefined}
             onClick={() => onAddingChange(!adding)}
@@ -194,7 +198,7 @@ export function CurrentOverlay({
               maxLength={80}
               value={filter.query}
               onChange={(event) => changeFilter({ ...filter, query: event.target.value })}
-              className="min-h-11 w-full min-w-0 flex-1 rounded-md border border-foam/25 bg-ink px-3 text-base text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              className={`${SEARCH_FIELD_CLASS} w-full flex-1`}
             />
             {filtered ? (
               <button
@@ -203,7 +207,7 @@ export function CurrentOverlay({
                   changeFilter({ query: "", atollId: "" });
                   onSpotlight(null);
                 }}
-                className="min-h-11 shrink-0 rounded-md border border-foam/25 px-3 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+                className="button-quiet shrink-0 px-3 font-normal hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
               >
                 Clear
               </button>
@@ -216,7 +220,7 @@ export function CurrentOverlay({
             id="site-atoll"
             value={filter.atollId}
             onChange={(event) => changeFilter({ ...filter, atollId: event.target.value })}
-            className="min-h-11 w-full min-w-0 rounded-md border border-foam/25 bg-ink px-3 text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             <option value="">All atolls (sites in view)</option>
             {atolls.map((atoll) => (
@@ -273,10 +277,7 @@ export function SiteRow({
         title={title}
         className="flex min-h-11 min-w-0 flex-1 items-center gap-2 pl-3 pr-1 text-sm hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-incoming"
       >
-        <span className="min-w-0 flex-1 truncate font-medium">
-          {site.name}
-          {atoll ? <span className="font-normal text-foam/65"> · {atoll}</span> : null}
-        </span>
+        <SiteName name={site.name} atoll={atoll} />
         <CurrentBits glance={glance} age={age} />
       </Link>
       <button

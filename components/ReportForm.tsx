@@ -8,7 +8,7 @@ import { MALDIVES_TIME, viewerClock, zoneLabel, type SiteTimeZone } from "@/lib/
 import type { ForecastRoute } from "@/lib/types";
 
 const CHOICE =
-  "flex min-h-11 items-center gap-2 rounded-md border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
+  "flex min-h-11 items-center gap-2 rounded-xl border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
 
 const INITIAL: ReportActionState = { success: false, error: null };
 
@@ -73,7 +73,7 @@ export function ReportForm({
 
   return (
     <section
-      className="flex min-w-0 flex-col gap-3 rounded-2xl border border-foam/15 bg-glass p-4 sm:p-5"
+      className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5"
       aria-labelledby="report-heading"
     >
       <h2 id="report-heading" className="text-base font-semibold text-foam">
@@ -98,7 +98,7 @@ export function ReportForm({
             required
             defaultValue={defaultTime}
             onInput={(event) => setTime(event.currentTarget.value)}
-            className="min-h-11 w-full min-w-0 rounded-md border border-foam/20 bg-ink px-3 text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           />
         </label>
         {theirs ? (
@@ -157,7 +157,7 @@ export function ReportForm({
         <button
           type="submit"
           disabled={pending || saved}
-          className="min-h-11 w-full rounded-md bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50 sm:w-auto"
+          className="min-h-11 w-full rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50 sm:w-auto"
         >
           {pending ? "Adding…" : "Add report"}
         </button>

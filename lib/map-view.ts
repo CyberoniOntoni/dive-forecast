@@ -1,3 +1,8 @@
+/**
+ * The map's view and what the map page keeps per browser tab (where it was, whether the list is open). The Navigate
+ * tab's address and saved destination are in navigate-tab.ts.
+ */
+
 /** The map's visible area, as the site list uses it. */
 export type MapView = { south: number; west: number; north: number; east: number };
 
@@ -22,7 +27,7 @@ const SHEET_KEY = "dive-current:sheet-open";
 type SessionLike = Pick<Storage, "getItem" | "setItem">;
 
 /** The tab's sessionStorage, or undefined where it is missing or blocked (private windows, previews). */
-function tabStorage(): SessionLike | undefined {
+export function tabStorage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> | undefined {
   try {
     return typeof window === "undefined" ? undefined : window.sessionStorage;
   } catch {

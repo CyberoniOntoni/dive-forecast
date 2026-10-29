@@ -6,9 +6,12 @@ import { useRouter } from "next/navigation";
 import type { CircleMarker, LayerGroup, LeafletMouseEvent, Map as LeafletMapType, Marker, MarkerClusterGroup } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
-import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
+import type { NavDraw } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
+import { attachCredits } from "@/components/map-credit";
+import { MAP_STYLE } from "@/components/map-style";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
+import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
@@ -37,6 +40,10 @@ type MapProps = {
   onSpotlightClear: () => void;
   /** Boat navigation: the boat, its route and the site it goes to. */
   nav: NavDraw | null;
+  /** The Navigate tab: site pins fade so the boat and the route stand out. */
+  dim: boolean;
+  /** How much of a phone map's bottom edge the Navigate panel covers, in px; 0 when it is not showing. */
+  navCover: number;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -121,13 +128,13 @@ function arrowPin(spoken: string, arrow: ArrowFields, strengthMark: string): str
   return `<div style="width:${PIN_SIZE}px;height:${PIN_SIZE}px;position:relative;opacity:${arrow.opacity}" aria-label="${spoken}"><div style="position:absolute;left:50%;top:50%;width:${ARROW_WIDTH}px;height:${length}px;margin-left:-${half}px;margin-top:-${length}px;transform:rotate(${arrow.bearing}deg);transform-origin:${half}px ${length}px;color:${arrow.color}"><svg width="${ARROW_WIDTH}" height="${length}" viewBox="0 0 ${ARROW_WIDTH} ${length}" overflow="visible" aria-hidden="true">${arrowSvgBody(arrow.strength, arrow.estimated)}</svg></div><span style="position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:999px;background:${arrow.color};box-shadow:0 0 0 2px var(--ink)"></span>${strengthMark}</div>`;
 }
 
-function framePadding() {
+/** `phoneBottom`: how much of a phone map's bottom edge a panel covers (the closed site sheet by default). */
+function framePadding(phoneBottom = 88) {
   const wide = window.matchMedia("(min-width: 1024px)").matches;
   if (wide) {
     return { paddingTopLeft: [24, 48] as [number, number], paddingBottomRight: [56, 36] as [number, number], maxZoom: 11 };
   }
-  // The sheet covers the bottom of the map on a phone.
-  return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, 88] as [number, number], maxZoom: 11 };
+  return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, phoneBottom] as [number, number], maxZoom: 11 };
 }
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
@@ -137,58 +144,6 @@ function leafletApi(mod: LeafletLib): LeafletLib {
   if (fallback && typeof fallback.map === "function") return fallback;
   return mod;
 }
-
-/** On a phone the current sheet covers the bottom of the map, so attribution moves to the top left. */
-const MAP_STYLE = `
-.dive-pin{background:transparent;border:none}
-.dive-spotlight{background:transparent;border:none;pointer-events:none}
-.dive-spotlight span{position:absolute;inset:0;border-radius:999px;border:3px solid var(--foam);box-shadow:0 0 0 2px var(--ink),inset 0 0 0 2px var(--ink);animation:dive-spotlight-pulse 1.1s ease-out 3}
-@keyframes dive-spotlight-pulse{0%{transform:scale(.55);opacity:1}70%{transform:scale(1.35);opacity:.3}100%{transform:scale(1);opacity:.9}}
-@media (prefers-reduced-motion: reduce){.dive-spotlight span{animation:none}}
-.dive-map .leaflet-bar a{width:44px!important;height:44px!important;line-height:44px!important;background:var(--ink);color:var(--foam);border-bottom-color:color-mix(in srgb, var(--foam) 28%, transparent)}
-.dive-map .leaflet-bar a:hover,.dive-map .leaflet-bar a:focus{background:color-mix(in srgb, var(--ink) 78%, var(--foam));color:var(--foam)}
-.dive-map .leaflet-bar a:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map.leaflet-container .leaflet-control-attribution{max-width:min(70%, calc(100% - 4.5rem));white-space:normal;background:color-mix(in srgb, var(--ink) 88%, transparent);color:var(--foam)}
-.dive-map.leaflet-container .leaflet-control-attribution a{color:var(--foam)}
-.dive-map.leaflet-container{background:var(--ink)}
-.dive-map .leaflet-control-layers{background:var(--ink);color:var(--foam);border:2px solid rgba(0,0,0,0.2);border-radius:4px}
-.dive-map .leaflet-control-layers-toggle{width:44px;height:44px;background-size:24px 24px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f5fbfc' stroke-width='1.8' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 8l10 5 10-5z'/%3E%3Cpath d='m2 12 10 5 10-5'/%3E%3Cpath d='m2 16 10 5 10-5'/%3E%3C/svg%3E")}
-.dive-map .leaflet-control-layers-toggle:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map .leaflet-control-layers-expanded{padding:4px 10px 4px 8px;font:500 14px/1.2 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif}
-.dive-map .leaflet-control-layers label{min-height:44px;display:flex;align-items:center;margin:0;cursor:pointer}
-.dive-map .leaflet-control-layers label>span{display:flex;align-items:center;gap:10px}
-.dive-map .leaflet-control-layers input{width:18px;height:18px;margin:0;accent-color:var(--incoming)}
-.dive-map .leaflet-control-layers input:focus-visible{outline:2px solid var(--incoming);outline-offset:2px}
-.dive-map .leaflet-control-layers-separator{border-top-color:color-mix(in srgb, var(--foam) 28%, transparent)}
-.dive-atlas-legend{background:color-mix(in srgb, var(--ink) 90%, transparent);color:var(--foam);border-radius:6px;padding:6px 10px;font:500 12px/1.3 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;max-width:190px}
-.dive-atlas-legend-title{font-weight:600;margin:0 0 2px}
-.dive-atlas-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
-.dive-atlas-legend ul{list-style:none;margin:0;padding:0}
-.dive-atlas-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
-.dive-shelter-legend{min-width:210px;max-width:240px}
-.dive-shelter-time{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
-.dive-shelter-time>span{flex:1;text-align:center}
-.dive-shelter-time button{min-width:28px;height:28px;border-radius:4px;border:1px solid color-mix(in srgb, var(--foam) 35%, transparent);background:transparent;color:var(--foam);font:600 14px/1 inherit;cursor:pointer}
-.dive-shelter-time button.dive-shelter-now{padding:0 6px;font-size:12px}
-.dive-shelter-time button:disabled{opacity:.35;cursor:default}
-.dive-shelter-time button:focus-visible{outline:2px solid var(--incoming);outline-offset:1px}
-.dive-shelter-bar{height:10px;border-radius:3px;opacity:.85}
-.dive-shelter-ticks{position:relative;height:30px;margin:2px 0 2px;font-size:10px;line-height:12px}
-.dive-shelter-ticks span{position:absolute;top:0;width:44px;margin-left:-1px;padding-left:3px;border-left:1px solid color-mix(in srgb, var(--foam) 60%, transparent)}
-.dive-shelter-note{margin:2px 0 0}
-.dive-shelter-ticks small{display:block;font-size:10px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
-@media (max-width:640px){.dive-shelter-legend{min-width:0;width:210px;max-width:210px}.dive-shelter-time{font-size:11px}.dive-shelter-ticks{height:14px}.dive-shelter-ticks small,.dive-shelter-tick-mid,.dive-shelter-note,.dive-shelter-date{display:none}}
-.dive-shelter-popup p{margin:0 0 2px}
-.dive-shelter-popup-head{font-weight:600}
-.dive-atlas-swatch{display:inline-block;width:12px;height:12px;border-radius:2px;flex:none}
-.dive-cluster-icon{background:transparent;border:none}
-.dive-cluster{width:44px;height:44px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:var(--ink);color:var(--foam);border:2px solid color-mix(in srgb, var(--foam) 70%, transparent);box-shadow:0 1px 4px rgba(0,0,0,.45);font:600 15px/1 var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;font-variant-numeric:tabular-nums;cursor:pointer}
-.dive-grid-label{color:#fff;font:600 11px/16px var(--font-geist-sans),ui-sans-serif,system-ui,sans-serif;text-shadow:0 0 3px #000,0 0 2px #000;white-space:nowrap;pointer-events:none}
-@media (max-width:1023px){
-  .dive-map .leaflet-bottom.leaflet-right{top:0;bottom:auto;left:0;right:auto}
-  .dive-map .leaflet-bottom.leaflet-right .leaflet-control-attribution{float:left}
-}
-`;
 
 function mountDiveMap(
   L: LeafletLib,
@@ -230,6 +185,9 @@ function mountDiveMap(
   const saved = loadMapView();
   if (saved) map.setView(L.latLng(saved.lat, saved.lon), saved.zoom);
   else frameSites(L, map, siteGlances);
+  // Layers credit themselves once the map has a view, so this goes after them: the open credits start with the
+  // imagery credit.
+  const detachCredits = attachCredits(map);
 
   // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
   // sea state where the sheltered-water layer is on.
@@ -252,14 +210,22 @@ function mountDiveMap(
     pins,
     destroy: () => {
       resize.disconnect();
+      detachCredits();
       map.remove();
     },
   };
 }
 
-/** Frame bounds in the part of the map the list does not cover, at most `maxZoom` (framePadding's by default). */
-function frameOn(map: LeafletMapType, bounds: ReturnType<LeafletLib["latLngBounds"]>, maxZoom?: number, fly = false) {
-  const options = maxZoom == null ? framePadding() : { ...framePadding(), maxZoom };
+/** Frame bounds in the part of the map the list or panel does not cover, at most `maxZoom` (framePadding's by default). */
+function frameOn(
+  map: LeafletMapType,
+  bounds: ReturnType<LeafletLib["latLngBounds"]>,
+  maxZoom?: number,
+  fly = false,
+  phoneBottom?: number,
+) {
+  const padding = framePadding(phoneBottom);
+  const options = maxZoom == null ? padding : { ...padding, maxZoom };
   if (fly) map.flyToBounds(bounds, { ...options, duration: 0.8 });
   else map.fitBounds(bounds, options);
 }
@@ -406,6 +372,8 @@ const LeafletMap = dynamic(
       spotlight,
       onSpotlightClear,
       nav,
+      dim,
+      navCover,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -422,8 +390,9 @@ const LeafletMap = dynamic(
       // 0 until the map exists, so marker effects wait for mount.
       const [mapEpoch, setMapEpoch] = useState(0);
       const [zoom, setZoom] = useState(0);
-      // Strength word on the pin from zoom 10. The tooltip keeps the full spoken line.
-      const showStrength = zoom >= 10;
+      // Strength word on the pin from zoom 12; any further out the words of a busy rim overlap. The tooltip keeps the
+      // full spoken line.
+      const showStrength = zoom >= 12;
 
       useEffect(() => {
         onPickRef.current = onPick;
@@ -523,12 +492,13 @@ const LeafletMap = dynamic(
       useEffect(() => {
         const map = mapRef.current;
         if (!map || mapEpoch === 0 || !nav || nav.frame === 0) return;
-        frameOn(map, navBounds(L, nav), 15, true);
+        // The site sheet covers the bottom instead while the panel is hidden on the Map tab.
+        frameOn(map, navBounds(L, nav), 15, true, navCover > 0 ? navCover + 12 : undefined);
         // Frame only when asked (first route, "Show route"), not on every fix.
         // eslint-disable-next-line react-hooks/exhaustive-deps
       }, [nav?.frame, mapEpoch]);
 
-      return <div ref={containerRef} className="dive-map absolute inset-0" />;
+      return <div ref={containerRef} className="dive-map absolute inset-0" data-dim={dim ? "true" : undefined} />;
     }
 
     return { default: MapCanvas };
@@ -546,28 +516,31 @@ export function SiteMap({
   nowcasts,
   maldivesWall,
   atollNames,
-  navigateTo = null,
 }: {
   sites: Site[];
   nowcasts: SiteNowcast[];
   maldivesWall: string;
   /** Short atoll names by id, shown after site names that more than one site uses. */
   atollNames: Record<string, string>;
-  /** A site to start boat navigation to (the site page's "Navigate by boat"). */
-  navigateTo?: string | null;
 }) {
   const router = useRouter();
+  const { navigating, site: navSite, trip, pick: pickNavSite, change: changeNavSite } = useNavigateTab(sites);
   const [draft, setDraft] = useState<Point | null>(null);
   const [adding, setAdding] = useState(false);
+  // Add-site mode belongs to the Map tab: opening Navigate ends it, so it is not waiting there on the way back.
+  const [wasNavigating, setWasNavigating] = useState(navigating);
+  if (navigating !== wasNavigating) {
+    setWasNavigating(navigating);
+    if (navigating) {
+      setAdding(false);
+      setDraft(null);
+    }
+  }
   const [view, setView] = useState<MapView | null>(null);
   const [focus, setFocus] = useState<{ atollId: string; count: number } | null>(null);
   const [spotlight, setSpotlight] = useState<{ siteId: string; count: number } | null>(null);
-  const [navSiteId, setNavSiteId] = useState<string | null>(navigateTo);
   const [navDraw, setNavDraw] = useState<NavDraw | null>(null);
-  const navSite = useMemo<NavSite | null>(() => {
-    const site = sites.find((item) => item.id === navSiteId);
-    return site ? { id: site.id, name: site.name, lat: site.lat, lon: site.lon } : null;
-  }, [sites, navSiteId]);
+  const [navCover, setNavCover] = useState(0);
   const siteGlances = useMemo(
     () => glancesFor(sites, nowcasts, maldivesWall),
     [sites, nowcasts, maldivesWall],
@@ -588,20 +561,34 @@ export function SiteMap({
     <div className="relative h-full min-h-0 w-full min-w-0 flex-1">
       <style>{MAP_STYLE}</style>
       <div className="absolute inset-0 flex min-h-0 flex-col overflow-hidden lg:flex-row">
-        <CurrentOverlay
-          siteGlances={siteGlances}
-          atollNames={atollNames}
-          view={view}
-          maldivesWall={maldivesWall}
-          draft={draft}
-          adding={adding}
-          onAddingChange={setAddingMode}
-          onAdded={finishAdd}
-          onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
-          onSpotlight={(siteId) =>
-            setSpotlight((current) => (siteId ? { siteId, count: (current?.count ?? 0) + 1 } : null))
-          }
-        />
+        {navigating || trip ? (
+          <NavigatePanel
+            sites={sites}
+            atollNames={atollNames}
+            site={navigating ? navSite : trip}
+            hidden={!navigating}
+            onPick={pickNavSite}
+            onChange={changeNavSite}
+            onDraw={setNavDraw}
+            onHeight={setNavCover}
+          />
+        ) : null}
+        {navigating ? null : (
+          <CurrentOverlay
+            siteGlances={siteGlances}
+            atollNames={atollNames}
+            view={view}
+            maldivesWall={maldivesWall}
+            draft={draft}
+            adding={adding}
+            onAddingChange={setAddingMode}
+            onAdded={finishAdd}
+            onFocusAtoll={(atollId) => setFocus((current) => ({ atollId, count: (current?.count ?? 0) + 1 }))}
+            onSpotlight={(siteId) =>
+              setSpotlight((current) => (siteId ? { siteId, count: (current?.count ?? 0) + 1 } : null))
+            }
+          />
+        )}
         {/* h-full: the page body is a 100dvh column. Without it the map collapses on a wide window. */}
         <div className="relative z-0 h-full min-h-0 min-w-0 flex-1">
           <LeafletMap
@@ -613,25 +600,13 @@ export function SiteMap({
             focus={focus}
             spotlight={spotlight}
             onSpotlightClear={() => setSpotlight(null)}
-            nav={navSite ? navDraw : null}
+            nav={trip ? navDraw : null}
+            dim={navigating}
+            navCover={navCover}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}
           />
-          {navSite ? (
-            // Below the attribution row on a phone; clear of the zoom and layer buttons on the right.
-            <div className="pointer-events-none absolute left-2 right-16 top-12 z-[1000] max-w-md lg:left-3 lg:top-3">
-              <BoatNav
-                key={navSite.id}
-                site={navSite}
-                onDraw={setNavDraw}
-                onClose={() => {
-                  setNavSiteId(null);
-                  router.replace("/");
-                }}
-              />
-            </div>
-          ) : null}
         </div>
       </div>
     </div>

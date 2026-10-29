@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Attribution } from "@/components/Attribution";
 import { HourSlider } from "@/components/HourSlider";
 import { RatingForm } from "@/components/RatingForm";
 import { RecentReports } from "@/components/RecentReports";
 import { ReportForm } from "@/components/ReportForm";
+import { NavigateIcon } from "@/components/site-ui";
 import { forecastSite, getRating, getRecentReports, getSite } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
+import { navigateHref } from "@/lib/navigate-tab";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
@@ -46,25 +49,29 @@ export default async function SitePage({
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <Link
-        href="/"
-        className="inline-flex min-h-11 w-fit items-center self-start rounded-md border border-foam/25 bg-ink px-4 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-      >
-        Back to map
-      </Link>
-      <header className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
-        <SiteKind site={site} />
-        <PublishedFacts site={site} />
+      {/* One row on a phone, so the forecast starts higher up the screen. */}
+      <nav aria-label="Site" className="flex min-w-0 flex-wrap gap-2">
         <Link
-          href={`/?navigate=${encodeURIComponent(site.id)}`}
-          className="mt-1 inline-flex min-h-11 w-fit items-center gap-2 rounded-md border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          href="/"
+          aria-label="Back to map"
+          className="button-quiet gap-1.5 bg-ink pr-4 pl-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
-            <path d="M12 2l7 19-7-4-7 4z" />
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M15 5l-7 7 7 7" />
           </svg>
+          Map
+        </Link>
+        <Link
+          href={navigateHref(site.id)}
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        >
+          <NavigateIcon size={18} />
           Navigate here by boat
         </Link>
+      </nav>
+      <header className="flex min-w-0 flex-col">
+        <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
+        <SiteFacts site={site} />
       </header>
       <HourSlider
         key={`forecast-${site.id}`}
@@ -97,6 +104,7 @@ export default async function SitePage({
           defaultTime={currentWallHour(zone)}
         />
       </div>
+      <Attribution />
     </main>
   );
 }
@@ -115,45 +123,37 @@ function fetchedStamp(fetchedAt: number | null): { wall: string; iso: string } |
   if (!wall || !iso) return null;
   return { wall, iso };
 }
-/** "Lagoon · North Ari": the site type and its atoll, whichever are known. */
-function SiteKind({ site }: { site: Site }) {
+/** "Channel thila · South Male · 16–30 m · Source": the site type, its atoll and the published facts in one line. */
+function SiteFacts({ site }: { site: Site }) {
   const atoll = atollNamesById(readCatalog().atolls)[site.atollId];
-  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null].filter(Boolean);
+  const line = publishedLine(site);
+  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null, line ? line.text : null].filter(
+    (part): part is string => part != null,
+  );
   if (parts.length === 0) return null;
-  return <p className="text-sm leading-6 text-foam/80">{parts.join(" · ")}</p>;
+
+  return (
+    <p className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm leading-6 text-foam/80">
+      <span>
+        {parts.join(" · ")}
+      </span>
+      {/* Each source stays a 44 px target on a phone. */}
+      {line?.sources.map((source) => (
+        <a
+          key={source.label}
+          href={source.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 min-w-11 items-center whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        >
+          {source.label}
+        </a>
+      ))}
+    </p>
+  );
 }
 
 type SourceLink = { href: string; label: string };
-
-function PublishedFacts({ site }: { site: Site }) {
-  const line = publishedLine(site);
-  if (!line) return null;
-
-  return (
-    <div className="min-w-0 text-sm leading-6 text-foam/90">
-      <p>
-        <span className="sr-only">Published. </span>
-        {line.text}
-      </p>
-      {/* Its own row, so each source is a 44 px target on a phone. */}
-      {line.sources.length > 0 ? (
-        <p className="flex flex-wrap gap-x-4">
-          {line.sources.map((source) => (
-            <a
-              key={source.label}
-              href={source.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 min-w-11 items-center whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-            >
-              {source.label}
-            </a>
-          ))}
-        </p>
-      ) : null}
-    </div>
-  );
-}
 
 function publishedLine(site: Site): { text: string; sources: SourceLink[] } | null {
   const top = positiveMetres(site.diveTopM);

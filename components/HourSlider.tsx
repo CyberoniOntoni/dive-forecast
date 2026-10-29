@@ -69,7 +69,7 @@ export function HourSlider({
 
   if (unavailable || hours.length === 0) {
     return (
-      <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
+      <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
         <h2 id="forecast-heading" className="text-sm font-medium text-foam/80">
           Forecast
         </h2>
@@ -104,17 +104,17 @@ export function HourSlider({
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
-    <section aria-labelledby="forecast-heading" className="rounded-2xl border border-foam/15 bg-glass p-4 sm:p-6">
+    <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
       <h2 id="forecast-heading" className="sr-only">
         Forecast hour
       </h2>
       <div className="flex min-w-0 items-center gap-4">
         {bearing == null ? null : (
-          <div className={`relative grid h-28 w-28 shrink-0 place-items-center rounded-full border border-foam/20 bg-ink/50 ${tone}`}>
+          <div className={`relative grid h-24 w-24 shrink-0 sm:h-28 sm:w-28 place-items-center rounded-full border border-foam/20 bg-ink/50 ${tone}`}>
             <CompassMarks />
             <svg
               viewBox={dialViewBox(hour.strength)}
-              className={`h-20 w-20 ${quiet}`}
+              className={`h-16 w-16 sm:h-20 sm:w-20 ${quiet}`}
               style={{ transform: `rotate(${bearing}deg)` }}
               role="img"
               aria-label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`}
@@ -136,7 +136,7 @@ export function HourSlider({
         )}
         <div className="min-w-0">
           <p className="font-mono text-sm tabular-nums text-foam/80">{hourWhen(hour.time, today)}</p>
-          <p className={`text-4xl font-semibold tracking-tight break-words sm:text-6xl ${tone}`}>
+          <p className={`text-3xl font-semibold tracking-tight break-words min-[400px]:text-4xl sm:text-6xl ${tone}`}>
             {way}
           </p>
           {bearing != null && !compass ? (
@@ -195,14 +195,24 @@ export function HourSlider({
           <button
             type="button"
             onClick={() => setIndex(nowIndex)}
-            className="inline-flex min-h-11 items-center rounded-md border border-foam/25 px-3 text-sm font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="button-quiet px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Back to now
           </button>
         )}
       </div>
-      {siteNote ? <p className="mt-4 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
-      <p className="mt-4 text-sm leading-6 text-foam/80">{notice}</p>
+      {/* Folded so a phone shows the week without scrolling past the method; the confidence above still says how sure. */}
+      {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
+      <details className="group mt-3 text-sm leading-6 text-foam/80">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden="true"
+            className="inline-block h-2 w-2 rotate-45 border-t-2 border-r-2 border-current transition-transform group-open:rotate-135"
+          />
+          How this forecast works
+        </summary>
+        <p className="mt-1">{notice}</p>
+      </details>
     </section>
   );
 }
@@ -270,8 +280,9 @@ function SeaStrip({
         {nowIndex > 0 ? <rect x={-0.5} width={nowIndex} y={0} height={10} fill="var(--ink)" fillOpacity={0.55} /> : null}
         <line x1={selected} x2={selected} y1={-2} y2={12} stroke="var(--foam)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
       </svg>
-      <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-foam/80">
-        <span>Sea:</span>
+      <p className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-foam/80 min-[400px]:gap-x-2.5 min-[400px]:text-xs">
+        {/* The band names say it is the sea; on a narrow phone the word would push "rough" to a second line. */}
+        <span className="hidden min-[400px]:inline">Sea:</span>
         {(Object.keys(SEA_LABEL) as SeaBand[]).map((band) => (
           <span key={band} className="inline-flex items-center gap-1">
             <span
@@ -455,7 +466,7 @@ function WeekStrip({
               className="absolute top-0 -translate-x-1/2 whitespace-nowrap"
               style={{ left: at((span.start + span.end) / 2) }}
             >
-              {shortDayName(span.date, today)}
+              <DayTick date={span.date} today={today} />
             </span>
           ),
         )}
@@ -557,6 +568,17 @@ function dayName(date: string, today: string): string {
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** "Thu 29" under the week strip; just "Thu" on a narrow phone, where the dates would run into each other. */
+function DayTick({ date, today }: { date: string; today: string }) {
+  const [weekday, day] = shortDayName(date, today).split(" ");
+  return (
+    <>
+      {weekday}
+      {day ? <span className="hidden min-[400px]:inline"> {day}</span> : null}
+    </>
+  );
+}
 
 /** A week of labels has to fit a phone: "Today", then "Fri 2". */
 function shortDayName(date: string, today: string): string {

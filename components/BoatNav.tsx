@@ -59,7 +59,7 @@ function gpsMessage(error: GeolocationPositionError): string {
  * Boat navigation to one dive site: follows the phone's GPS, works out speed and course over ground, asks the server
  * for a route round the known reef, and shows distance left, speed and ETA. The map draws what `onDraw` hands it.
  */
-export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (draw: NavDraw | null) => void; onClose: () => void }) {
+export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (draw: NavDraw | null) => void; onChange: () => void }) {
   const [fixes, setFixes] = useState<Fix[]>([]);
   const [gps, setGps] = useState<GpsState>({ status: "waiting" });
   const [route, setRoute] = useState<BoatRoute | null>(null);
@@ -140,99 +140,151 @@ export function BoatNav({ site, onDraw, onClose }: { site: NavSite; onDraw: (dra
   const stopped = motion != null && eta == null;
 
   return (
-    <section
-      aria-label={`Boat navigation to ${site.name}`}
-      className="pointer-events-auto w-full rounded-lg border border-foam/20 bg-glass p-3 text-foam shadow-lg backdrop-blur"
-    >
-      <div className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs uppercase tracking-wide text-foam/70">Boat to</p>
-          <h2 className="truncate text-base font-semibold">{site.name}</h2>
-        </div>
+    <section aria-label={`Boat navigation to ${site.name}`} className="w-full text-foam">
+      <div className="flex items-center gap-2">
+        <h2 className="min-w-0 flex-1 truncate text-base font-semibold">
+          <span className="sr-only">Heading to </span>
+          {site.name}
+        </h2>
         {boat && route ? (
-          <button
-            type="button"
-            onClick={() => setFrame((count) => count + 1)}
-            className="min-h-11 rounded-md border border-foam/25 px-3 text-sm font-medium hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-          >
-            Show route
+          <button type="button" onClick={() => setFrame((count) => count + 1)} aria-label="Show the whole route" title="Show route" className={ICON_BUTTON}>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" />
+              <path d="M8 15c2-1 3-5 5-6s3 1 3 1" />
+            </svg>
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Stop navigation"
-          title="Stop navigation"
-          className="grid size-11 shrink-0 place-items-center rounded-md hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
-        >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M6 6l12 12M18 6L6 18" />
+        <button type="button" onClick={onChange} aria-label="Change destination" title="Change destination" className={ICON_BUTTON}>
+          {/* A list, not an X: this goes back to the destinations; the Map tab ends navigating. */}
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
           </svg>
         </button>
       </div>
 
       {unsupported || gps.status === "error" ? (
-        <p role="alert" className="mt-2 text-sm text-stop">
+        <p role="alert" className="mt-2 rounded-xl bg-stop/15 px-3 py-2 text-sm text-stop">
           {unsupported ?? (gps.status === "error" ? gps.message : null)}
         </p>
       ) : !boat ? (
-        <p className="mt-2 text-sm text-foam/80">Waiting for GPS…</p>
+        <p className="mt-2 flex items-center gap-2 text-sm text-foam/80">
+          <span aria-hidden="true" className="size-2 animate-pulse rounded-full bg-incoming" />
+          Waiting for GPS…
+        </p>
       ) : (
         <>
-          <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
-            <Stat label={route?.routed ? "To go, by route" : "To go"} value={remainingKm != null ? formatNm(remainingKm) : "…"} />
-            <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : "…"} />
+          {/* One row: steer, distance left, speed, arrival. */}
+          <dl className="mt-1.5 flex items-center gap-3">
+            <SteerDial steer={steer} />
             <Stat
-              label={eta != null ? `ETA ${arrivalClock(eta)}` : "ETA"}
-              value={eta != null ? formatDuration(eta) : stopped ? "Stopped" : "…"}
+              big
+              label={route?.routed ? "To go, by route" : "To go"}
+              value={remainingKm != null ? formatNm(remainingKm) : null}
+            />
+            <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : null} />
+            <Stat
+              label={eta != null ? `In ${formatDuration(eta)}` : "Arrive"}
+              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : null}
             />
           </dl>
-          <p className="mt-2 text-sm text-foam/90">
-            {steer != null ? <>Steer {formatBearing(steer)}</> : null}
-            {motion?.courseDeg != null ? <span className="text-foam/70"> · heading {formatBearing(motion.courseDeg)}</span> : null}
-          </p>
           {stopped && remainingKm != null ? (
-            <p className="text-sm text-foam/80">
-              {REFERENCE_KNOTS.map((knots) => `at ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
+            <p className="mt-1 text-xs text-foam/75">
+              {REFERENCE_KNOTS.map((knots) => `At ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
             </p>
           ) : null}
-          <RouteNote route={route} routeError={routeError} shallow={shallow} />
-          <p className="mt-1 text-xs text-foam/60">
-            GPS ±{Math.round(boat.accuracyM)} m. Route from satellite reef outlines, not a nautical chart: keep a lookout.
-          </p>
+          <RouteNote route={route} routeError={routeError} shallow={shallow} steer={steer} courseDeg={motion?.courseDeg ?? null} accuracyM={boat.accuracyM} />
         </>
       )}
     </section>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+const ICON_BUTTON =
+  "grid size-11 shrink-0 place-items-center rounded-full bg-foam/10 text-foam ring-1 ring-foam/15 hover:bg-foam/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+
+/** Which way to steer, as an arrow on a small compass rose (north up). */
+function SteerDial({ steer }: { steer: number | null }) {
   return (
-    <div className="min-w-0">
-      <dt className="truncate text-xs text-foam/70">{label}</dt>
-      <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+    <div className="relative grid size-12 shrink-0 place-items-center rounded-full bg-foam/5 ring-1 ring-foam/15">
+      <span aria-hidden="true" className="absolute top-px left-1/2 -translate-x-1/2 text-[8px] font-semibold text-foam/60">
+        N
+      </span>
+      {steer != null ? (
+        <svg
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          role="img"
+          aria-label={`Steer ${formatBearing(steer)}`}
+          className="text-incoming"
+          style={{ transform: `rotate(${steer}deg)` }}
+        >
+          {/* A shafted arrow, so which end is the point reads at a glance. */}
+          <path d="M12 21V4M5.5 10.5L12 4l6.5 6.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : null}
     </div>
   );
 }
 
-function RouteNote({ route, routeError, shallow }: { route: BoatRoute | null; routeError: boolean; shallow: boolean }) {
-  if (routeError && route) {
-    return <p className="mt-1 text-sm text-outgoing">Could not update the route; showing the last one.</p>;
-  }
-  if (routeError) return <p className="mt-1 text-sm text-outgoing">No route yet; the line is straight to the site. Trying again shortly.</p>;
-  if (!route) return <p className="mt-1 text-sm text-foam/80">Planning the route…</p>;
-  if (!route.routed) {
-    return <p className="mt-1 text-sm text-outgoing">No way round the mapped reef found; the line is straight to the site.</p>;
-  }
-  const gaps = route.gaps.length;
+/** One readout; a dash until it is known. The distance is the big one. */
+function Stat({ label, value, big = false }: { label: string; value: string | null; big?: boolean }) {
+  return (
+    <div className={`min-w-0 ${big ? "flex-[1.4]" : "flex-1"}`}>
+      <dt className="truncate text-[11px] text-foam/60">{label}</dt>
+      <dd className={`truncate font-semibold leading-tight tabular-nums ${big ? "text-2xl" : "text-lg"} ${value ? "" : "text-foam/40"}`}>
+        {value ?? "—"}
+      </dd>
+    </div>
+  );
+}
+
+/**
+ * One small line under the readouts: steer, the route's gaps, GPS accuracy and the not-a-chart warning. Route trouble
+ * and a shallow gap get their own line in amber.
+ */
+function RouteNote({
+  route,
+  routeError,
+  shallow,
+  steer,
+  courseDeg,
+  accuracyM,
+}: {
+  route: BoatRoute | null;
+  routeError: boolean;
+  shallow: boolean;
+  steer: number | null;
+  /** Course over ground, to compare with the steer bearing. */
+  courseDeg: number | null;
+  accuracyM: number;
+}) {
+  const gaps = route?.routed ? route.gaps.length : 0;
+  const parts = [
+    steer != null ? `Steer ${formatBearing(steer)}` : null,
+    courseDeg != null ? `course ${formatBearing(courseDeg)}` : null,
+    route?.routed ? `${formatNm(route.lengthKm)} by route (${formatNm(route.directKm)} straight)` : null,
+    gaps > 0 ? (gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`) : null,
+    `GPS ±${Math.round(accuracyM)} m`,
+    "not a chart, keep a lookout",
+  ].filter((part): part is string => part != null);
+  const trouble =
+    routeError && route
+      ? "Could not update the route; showing the last one."
+      : routeError
+        ? "No route yet; the line is straight to the site. Trying again shortly."
+        : route && !route.routed
+          ? "No way round the mapped reef found; the line is straight to the site."
+          : null;
   return (
     <>
-      <p className="mt-1 text-sm text-foam/80">
-        {formatNm(route.lengthKm)} by route ({formatNm(route.directKm)} straight)
-        {gaps > 0 ? `, through ${gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`}` : ""}.
+      <p className="mt-1.5 text-xs leading-4 text-foam/65">
+        {!route && !routeError ? "Planning the route… · " : null}
+        {parts.join(" · ")}
       </p>
+      {trouble ? <p className="mt-1 text-xs text-outgoing">{trouble}</p> : null}
       {shallow ? (
-        <p className="mt-1 text-sm text-outgoing">The route crosses a shallow reef-flat gap: check the depth before you go through.</p>
+        <p className="mt-1 text-xs text-outgoing">The route crosses a shallow reef-flat gap: check the depth before you go through.</p>
       ) : null}
     </>
   );

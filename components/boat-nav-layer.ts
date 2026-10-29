@@ -36,7 +36,7 @@ function boatIcon(L: LeafletLib, courseDeg: number | null) {
       ? '<circle cx="14" cy="14" r="7" fill="#8ef6e4" stroke="#07151d" stroke-width="3"/>'
       : `<g transform="rotate(${courseDeg} 14 14)"><path d="M14 2 L22 24 L14 19 L6 24 Z" fill="#8ef6e4" stroke="#07151d" stroke-width="2.5" stroke-linejoin="round"/></g>`;
   return L.divIcon({
-    className: "dive-pin",
+    className: "dive-boat",
     html: `<svg width="28" height="28" viewBox="0 0 28 28" aria-label="Your boat">${body}</svg>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],

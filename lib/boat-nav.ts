@@ -109,3 +109,4 @@ export function formatBearing(deg: number): string {
   const whole = Math.round(deg) % 360;
   return `${String(whole).padStart(3, "0")}° ${COMPASS[Math.round(whole / 45) % 8]}`;
 }
+
