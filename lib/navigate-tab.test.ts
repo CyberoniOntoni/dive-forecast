@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { destinationList, DESTINATION_LIMIT, loadNavSite, navigateHref, readNavigate, saveNavSite } from "./navigate-tab";
+import { describe, expect, it, vi } from "vitest";
+import {
+  destinationList,
+  DESTINATION_LIMIT,
+  loadNavSite,
+  navigateHref,
+  readNavigate,
+  saveNavSite,
+  showOnMapPage,
+} from "./navigate-tab";
 
 describe("navigate tab", () => {
   it("heads for a site, or opens the destination list", () => {
@@ -76,5 +84,20 @@ describe("destinationList", () => {
     const list = destinationList(many, "", null);
     expect(list.items).toHaveLength(DESTINATION_LIMIT);
     expect(list.total).toBe(DESTINATION_LIMIT + 5);
+  });
+});
+
+describe("showOnMapPage", () => {
+  it("adds a history entry, or replaces the current one", () => {
+    const history = { pushState: vi.fn(), replaceState: vi.fn() };
+    vi.stubGlobal("window", { history });
+    try {
+      showOnMapPage("/?navigate");
+      showOnMapPage(navigateHref("kuda-faru"), true);
+      expect(history.pushState).toHaveBeenCalledWith(null, "", "/?navigate");
+      expect(history.replaceState).toHaveBeenCalledWith(null, "", "/?navigate=kuda-faru");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

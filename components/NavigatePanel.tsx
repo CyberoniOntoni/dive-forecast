@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { formatNm } from "@/lib/boat-nav";
 import type { LatLon } from "@/lib/geometry";
-import { destinationList, navigateHref, readNavigate, saveNavSite } from "@/lib/navigate-tab";
+import { destinationList, navigateHref, readNavigate, saveNavSite, showOnMapPage } from "@/lib/navigate-tab";
 import type { Site } from "@/lib/types";
 
 /** Phone: docked under the map, at most a bit over half the screen. Wide window: the column the site list uses. */
@@ -27,7 +27,6 @@ export function useNavigateTab(sites: readonly Site[]): {
   pick: (siteId: string) => void;
   change: () => void;
 } {
-  const router = useRouter();
   const params = useSearchParams();
   const { navigating, siteId } = readNavigate(params);
   const site = useMemo<NavSite | null>(() => {
@@ -44,18 +43,18 @@ export function useNavigateTab(sites: readonly Site[]): {
     if (site) saveNavSite(site.id);
     else if (siteId) {
       saveNavSite(null);
-      router.replace(navigateHref(null));
+      showOnMapPage(navigateHref(null), true);
     }
-  }, [site, siteId, router]);
+  }, [site, siteId]);
 
   return {
     navigating,
     site,
     trip,
-    pick: (id) => router.replace(navigateHref(id)),
+    pick: (id) => showOnMapPage(navigateHref(id), true),
     change: () => {
       saveNavSite(null);
-      router.replace(navigateHref(null));
+      showOnMapPage(navigateHref(null), true);
     },
   };
 }

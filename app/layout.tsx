@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense, type ReactNode } from "react";
-import Link from "next/link";
 import { AppTabs } from "@/components/AppTabs";
+import { MapPageLink } from "@/components/MapPageLink";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,7 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     >
       <body className="min-h-full">
         <header className="chart-bar chart-bar-top flex items-center justify-between gap-3">
-          <Link
+          <MapPageLink
             href="/"
             className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl pr-2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               {/* On a phone the map and the forecast need the height more than the tagline. */}
               <span className="chart-line hidden sm:block">Maldives dive sites, incoming or outgoing right now.</span>
             </span>
-          </Link>
+          </MapPageLink>
           <Suspense fallback={null}>
             <AppTabs />
           </Suspense>
