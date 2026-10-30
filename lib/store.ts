@@ -22,21 +22,23 @@ export function readCatalog(): Catalog {
 }
 
 /**
- * On a worker: the store as last read from R2 (refreshStore, run by every server action) or as last written by this
- * isolate. There is no data/ folder there; store.json lives in the DATA bucket under the same name.
+ * On a worker: this request's store, as read from R2 by refreshStore (run by every server action) or as this request
+ * last wrote it. Per request, so another request's refresh never swaps it mid-render. There is no data/ folder there;
+ * store.json lives in the DATA bucket under the same name.
  */
-let workerSnapshot: StoreData | null = null;
+const workerSnapshot = perRequest(() => ({ store: null as StoreData | null }));
 
 /** Reads store.json from R2 so this request's readStore sees other isolates' writes. Does nothing on Node. */
 export async function refreshStore(): Promise<void> {
   const env = workerEnv();
-  if (env) workerSnapshot = (await readWorkerStore(env.DATA)).store;
+  if (env) workerSnapshot().store = (await readWorkerStore(env.DATA)).store;
 }
 
 export function readStore(): StoreData {
   if (workerEnv()) {
-    if (!workerSnapshot) throw new Error("readStore() before refreshStore()");
-    return workerSnapshot;
+    const { store } = workerSnapshot();
+    if (!store) throw new Error("readStore() before refreshStore()");
+    return store;
   }
   const file = path.join(process.cwd(), "data", storeFile);
   try {
@@ -172,17 +174,18 @@ function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
 const WORKER_WRITE_ATTEMPTS = 5;
 
 /**
- * Read, change and write store.json in R2, only if nobody wrote it in between (etag match); otherwise start over from
- * the newer copy. Isolates in other places can write at the same time, so the process-local queue is not enough.
- * The very first write (no object yet) is unconditional.
+ * Read, change and write store.json in R2, only if nobody wrote it in between (etag match, or for the very first
+ * write, only if there is still no object); otherwise start over from the newer copy. Isolates in other places can
+ * write at the same time, so the process-local queue is not enough.
  */
 async function mutateWorkerStore<T>(bucket: R2Bucket, mutate: (store: StoreData) => T): Promise<T> {
   for (let attempt = 0; attempt < WORKER_WRITE_ATTEMPTS; attempt += 1) {
     const { store, etag } = await readWorkerStore(bucket);
     const result = mutate(store);
-    const written = await bucket.put(storeFile, serializeStore(store), etag ? { onlyIf: { etagMatches: etag } } : undefined);
+    const onlyIf = etag ? { etagMatches: etag } : { etagDoesNotMatch: "*" };
+    const written = await bucket.put(storeFile, serializeStore(store), { onlyIf });
     if (written) {
-      workerSnapshot = store;
+      workerSnapshot().store = store;
       return result;
     }
   }

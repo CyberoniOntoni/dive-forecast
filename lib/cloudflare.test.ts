@@ -29,6 +29,8 @@ function fakeBucket(): FakeBucket {
       bucket.beforePut?.();
       const etagMatches = options?.onlyIf?.etagMatches;
       if (etagMatches !== undefined && objects.get(key)?.etag !== etagMatches) return null;
+      // R2's create-only write: "*" matches any existing object.
+      if (options?.onlyIf?.etagDoesNotMatch === "*" && objects.has(key)) return null;
       version += 1;
       const etag = `v${version}`;
       objects.set(key, { text: value, etag });
@@ -115,6 +117,35 @@ describe("on a Cloudflare worker", () => {
     await store.addReport(report("second"));
     const saved = JSON.parse(bucket.objects.get("store.json")!.text);
     expect(saved.reports.map((item: Report) => item.id)).toEqual(["first", "racing", "second"]);
+  });
+
+  it("does not let the very first write overwrite another isolate's first write", async () => {
+    const store = await import("./store");
+    const bucket = fakeBucket();
+    newRequest({ ASSETS: fakeAssets({}), DATA: bucket });
+    let raced = false;
+    bucket.beforePut = () => {
+      if (raced) return;
+      raced = true;
+      bucket.objects.set("store.json", { text: JSON.stringify({ reports: [report("other")] }), etag: "other" });
+    };
+    await store.addReport(report("mine"));
+    const saved = JSON.parse(bucket.objects.get("store.json")!.text);
+    expect(saved.reports.map((item: Report) => item.id)).toEqual(["other", "mine"]);
+  });
+
+  it("keeps each request's store snapshot when another request refreshes", async () => {
+    const store = await import("./store");
+    const bucket = fakeBucket();
+    const env = { ASSETS: fakeAssets({}), DATA: bucket };
+    const first = newRequest(env);
+    await store.refreshStore();
+    await bucket.put("store.json", JSON.stringify({ reports: [report("later")] }));
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["later"]);
+    current = first;
+    expect(store.readStore().reports).toEqual([]);
   });
 
   it("copies a corrupt store aside and reads it as empty", async () => {

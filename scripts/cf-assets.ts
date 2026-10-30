@@ -6,6 +6,7 @@
 import fs from "fs";
 import path from "path";
 import { DATA_FILES } from "../lib/data-files";
+import { SECURITY_HEADERS } from "../lib/security-headers";
 
 const ROOT = process.cwd();
 const ASSETS_DIR = path.join(ROOT, ".open-next", "assets");
@@ -22,14 +23,6 @@ for (const name of DATA_FILES) {
 }
 
 // Static assets skip Next's headers() in next.config.ts; give them the same ones.
-fs.writeFileSync(
-  path.join(ASSETS_DIR, "_headers"),
-  [
-    "/*",
-    "  X-Content-Type-Options: nosniff",
-    "  X-Frame-Options: DENY",
-    "  Referrer-Policy: strict-origin-when-cross-origin",
-    "",
-  ].join("\n"),
-);
+const headerLines = SECURITY_HEADERS.map(({ key, value }) => `  ${key}: ${value}`);
+fs.writeFileSync(path.join(ASSETS_DIR, "_headers"), ["/*", ...headerLines, ""].join("\n"));
 console.log(`Copied ${DATA_FILES.length} data files to .open-next/assets/_data`);

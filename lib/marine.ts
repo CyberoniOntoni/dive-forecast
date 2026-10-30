@@ -14,7 +14,10 @@ const EARTH_RADIUS_KM = 6371;
 /** Where a worker keeps the cache files in its R2 bucket. */
 const WORKER_CACHE_PREFIX = "marine-cache/";
 
-/** Fetched Open-Meteo hours. MARINE_CACHE_DIR points tests at a throwaway directory. On a worker: the R2 key prefix. */
+/**
+ * Fetched Open-Meteo hours on Node. MARINE_CACHE_DIR points tests at a throwaway directory. A worker keeps them in R2
+ * under WORKER_CACHE_PREFIX instead.
+ */
 export function marineCacheDir(): string {
   return process.env.MARINE_CACHE_DIR || DEFAULT_CACHE_DIR;
 }
@@ -243,7 +246,10 @@ export async function fetchOpenMeteoJson(url: string, label: string): Promise<un
   }
 }
 
-/** The request slots. Per request on a worker, where each request's own fetches are what it may wait on. */
+/**
+ * The request slots. Per request on a worker, so each request there has its own MAX_REQUESTS: a request may only wait
+ * on its own fetches.
+ */
 const requestSlots = perRequest(() => ({ active: 0, waiting: [] as (() => void)[] }));
 
 /** Runs an Open-Meteo request once one of the MAX_REQUESTS slots is free. Shared by every pointFetcher. */

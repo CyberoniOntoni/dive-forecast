@@ -8,7 +8,7 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | Data | Docker / `next dev` | Worker |
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`) |
-| Reports, ratings, added pins | `data/store.json` | `store.json` in the R2 bucket `dive-current-data`, read once per request and written with an etag check (`lib/store.ts`) |
+| Reports, ratings, added pins | `data/store.json` | `store.json` in the R2 bucket `dive-current-data`, read once per request and written with an etag check (create-only for the first write) and retry (`lib/store.ts`) |
 | Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus an in-memory copy per isolate (`lib/marine.ts`) |
 
 `lib/cloudflare.ts` tells the two apart: OpenNext's request context exists only on a worker. Two rules come from
@@ -18,7 +18,8 @@ the Workers runtime:
   The data loaders stay synchronous and read from that preload.
 - A request must not wait on a promise that another request's I/O settles, or the runtime cancels it as hung. State
   that holds in-flight promises goes through `perRequest` (marine fetches in flight and request slots, atoll rings,
-  lagoon openings, the store's write queue, the data preload). Memos of plain data stay shared.
+  lagoon openings, the store's write queue, the data preload), and so does the store snapshot a request reads. Memos
+  of plain data stay shared.
 
 Background cache refreshes run under `waitUntil` (`runInBackground`).
 
@@ -27,8 +28,8 @@ Background cache refreshes run under `waitUntil` (`runInBackground`).
 ```bash
 npm run replay        # writes data/replay.json, which the build ships
 npm run cf:build      # OpenNext build + data files into .open-next/assets/_data
-npm run cf:preview    # wrangler dev on http://localhost:8787 with a local R2 bucket (.wrangler/state)
-npm run cf:deploy     # deploys to the account wrangler is logged in to
+npm run cf:preview    # cf:build, then wrangler dev on http://localhost:8787 with a local R2 bucket (.wrangler/state)
+npm run cf:deploy     # cf:build, then deploys to the account wrangler is logged in to
 ```
 
 ## First deploy (Cloudflare dashboard)
