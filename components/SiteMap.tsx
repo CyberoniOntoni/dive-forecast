@@ -17,6 +17,7 @@ import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import { addMapLayers } from "@/lib/map-layers";
 import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
+import { pointDestinationId } from "@/lib/point-destination";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site, Strength } from "@/lib/types";
 
@@ -44,6 +45,8 @@ type MapProps = {
   dim: boolean;
   /** How much of a phone map's bottom edge the Navigate panel covers, in px; 0 when it is not showing. */
   navCover: number;
+  /** Set while the Navigate tab lists destinations: a map click heads for that point. */
+  onNavPoint: ((point: Point) => void) | null;
 };
 
 /** Below this zoom nearby pins merge into a numbered cluster; from it every pin shows with its arrow. */
@@ -152,6 +155,8 @@ function mountDiveMap(
   hooks: {
     isAdding: () => boolean;
     onPick: (point: Point) => void;
+    /** Heads boat navigation for a clicked point; false when the Navigate tab is not picking a destination. */
+    navPoint: (point: Point) => boolean;
     /** Clears the spotlight ring if one is up; true when it did. */
     clearSpotlight: () => boolean;
     onZoom: (zoom: number) => void;
@@ -189,12 +194,12 @@ function mountDiveMap(
   // imagery credit.
   const detachCredits = attachCredits(map);
 
-  // The one owner of a map click: placing a new site's pin, else dismissing the spotlight ring, else reading the
-  // sea state where the sheltered-water layer is on.
+  // The one owner of a map click: placing a new site's pin, else picking a boat destination, else dismissing the
+  // spotlight ring, else reading the sea state where the sheltered-water layer is on.
   map.on("click", (event: LeafletMouseEvent) => {
     const { lat, lng } = event.latlng;
     if (hooks.isAdding()) hooks.onPick({ lat, lon: lng });
-    else if (!hooks.clearSpotlight()) readSea(lat, lng);
+    else if (!hooks.navPoint({ lat, lon: lng }) && !hooks.clearSpotlight()) readSea(lat, lng);
   });
 
   const resize = new ResizeObserver(() => {
@@ -374,6 +379,7 @@ const LeafletMap = dynamic(
       nav,
       dim,
       navCover,
+      onNavPoint,
     }: MapProps) {
       const onSpotlightClearRef = useRef(onSpotlightClear);
       // Set while the spotlight ring is on the map, so a map click knows to clear it.
@@ -387,6 +393,7 @@ const LeafletMap = dynamic(
       const onPickRef = useRef(onPick);
       const onOpenRef = useRef(onOpen);
       const addingRef = useRef(adding);
+      const onNavPointRef = useRef(onNavPoint);
       // 0 until the map exists, so marker effects wait for mount.
       const [mapEpoch, setMapEpoch] = useState(0);
       const [zoom, setZoom] = useState(0);
@@ -400,7 +407,8 @@ const LeafletMap = dynamic(
         onViewRef.current = onView;
         onSpotlightClearRef.current = onSpotlightClear;
         addingRef.current = adding;
-      }, [onPick, onOpen, onView, onSpotlightClear, adding]);
+        onNavPointRef.current = onNavPoint;
+      }, [onPick, onOpen, onView, onSpotlightClear, adding, onNavPoint]);
 
       // W4: one canvas; this effect returns mounted.destroy. Marker updates stay below.
       useEffect(() => {
@@ -409,6 +417,12 @@ const LeafletMap = dynamic(
         const mounted = mountDiveMap(L, container, siteGlances, {
           isAdding: () => addingRef.current,
           onPick: (point) => onPickRef.current(point),
+          navPoint: (point) => {
+            const pick = onNavPointRef.current;
+            if (!pick) return false;
+            pick(point);
+            return true;
+          },
           clearSpotlight: () => {
             if (!spotlightUpRef.current) return false;
             onSpotlightClearRef.current();
@@ -603,6 +617,7 @@ export function SiteMap({
             nav={trip ? navDraw : null}
             dim={navigating}
             navCover={navCover}
+            onNavPoint={navigating && !navSite ? (point) => pickNavSite(pointDestinationId(point)) : null}
             onOpen={(id) => {
               router.push(`/sites/${id}`);
             }}

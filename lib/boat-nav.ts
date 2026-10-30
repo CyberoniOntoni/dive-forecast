@@ -8,15 +8,15 @@ import { bearingDeg, distanceKm, nearestOnPolyline, polylineKm, type LatLon } fr
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
 
-const KM_PER_NM = 1.852;
-const MS_PER_KNOT = KM_PER_NM / 3.6;
+export const KM_PER_NM = 1.852;
+export const MS_PER_KNOT = KM_PER_NM / 3.6;
 
 /** Fixes this old still count toward the speed worked out from positions. */
 export const SPEED_WINDOW_MS = 30_000;
 /** Positions this far apart in time at least, before a speed is worked out from them. */
 const SPEED_MIN_SPAN_MS = 4_000;
 /** Under this the boat counts as stopped: GPS drift, a drifting dhoni, no useful ETA. */
-const UNDERWAY_KNOTS = 2;
+export const UNDERWAY_KNOTS = 2;
 /** Cruising speeds the panel quotes while the boat is stopped: a dhoni and a speedboat. */
 export const REFERENCE_KNOTS = [8, 20] as const;
 

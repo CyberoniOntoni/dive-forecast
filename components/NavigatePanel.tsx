@@ -6,6 +6,7 @@ import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { formatNm } from "@/lib/boat-nav";
+import { pointDestinationName, readPointDestination } from "@/lib/point-destination";
 import type { LatLon } from "@/lib/geometry";
 import { destinationList, navigateHref, readNavigate, saveNavSite, showOnMapPage } from "@/lib/navigate-tab";
 import type { Site } from "@/lib/types";
@@ -15,7 +16,7 @@ const PANEL_CLASS = `${DOCKED_PANEL_CLASS} max-h-[60dvh] bg-glass px-4 pt-1.5 pb
 
 /**
  * The Navigate tab's state, from the address: the map with "?navigate", and "?navigate=<site id>" once a destination
- * is picked. The destination is kept for the browser tab, so the header's Navigate tab comes back to it.
+ * is picked ("?navigate=<lat>,<lon>" for a point picked on the map). The destination is kept for the browser tab, so the header's Navigate tab comes back to it.
  *
  * `trip` is the destination being followed. It outlasts a switch to the Map tab, so the GPS, the route and the screen
  * lock keep going while the skipper looks at the map; it ends when the destination list is opened.
@@ -32,7 +33,9 @@ export function useNavigateTab(sites: readonly Site[]): {
   const site = useMemo<NavSite | null>(() => {
     if (!navigating) return null;
     const found = sites.find((item) => item.id === siteId);
-    return found ? { id: found.id, name: found.name, lat: found.lat, lon: found.lon } : null;
+    if (found) return { id: found.id, name: found.name, lat: found.lat, lon: found.lon };
+    const point = siteId ? readPointDestination(siteId) : null;
+    return point && siteId ? { id: siteId, name: pointDestinationName(point), ...point } : null;
   }, [sites, navigating, siteId]);
 
   const [trip, setTrip] = useState<NavSite | null>(null);
@@ -152,7 +155,9 @@ function DestinationPicker({
       <h2 id="destination-heading" className="text-base font-semibold">
         Where to?
       </h2>
-      <p className="text-xs leading-5 text-foam/70">{from ? "Nearest sites first." : "Pick a dive site to head for."}</p>
+      <p className="text-xs leading-5 text-foam/70">
+        {from ? "Nearest sites first, or tap the map to head for any point." : "Pick a dive site, or tap the map to head for any point."}
+      </p>
       <label className="sr-only" htmlFor="destination-search">
         Search dive sites
       </label>
