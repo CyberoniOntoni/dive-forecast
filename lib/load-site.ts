@@ -1,7 +1,6 @@
-import fs from "fs";
-import path from "path";
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
+import { perRequest } from "./cloudflare";
 import { atollRing, atollRingLevel } from "./atoll-ring";
 import {
   alongReefHours,
@@ -30,8 +29,8 @@ import type {
   Site,
   SiteType,
 } from "./types";
+import { readDataFile } from "./data-files";
 
-const REPLAY_PATH = path.join(process.cwd(), "data", "replay.json");
 
 export type SiteLoad = {
   bearing: number | null;
@@ -72,7 +71,8 @@ function unavailableLoad(
 
 const LAGOON_MEMO_MS = 10 * 60 * 1000;
 const lagoonMemo = new Map<string, { at: number; sources: LagoonSource[] }>();
-const lagoonLoading = new Map<string, Promise<LagoonSource[]>>();
+/** Per request on a worker (perRequest); the memo above holds plain data and is shared. */
+const lagoonLoadingNow = perRequest(() => new Map<string, Promise<LagoonSource[]>>());
 const sinkMemo = new Map<string, LagoonSink>();
 
 /**
@@ -84,6 +84,7 @@ const sinkMemo = new Map<string, LagoonSink>();
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   const kept = lagoonMemo.get(atoll.id);
   if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
+  const lagoonLoading = lagoonLoadingNow();
   const running = lagoonLoading.get(atoll.id);
   if (running) return running;
   const load = (async () => {
@@ -162,7 +163,7 @@ async function ringLevelFor(
 /** Missing, unreadable, or unparseable replay.json or ok true keeps the forecast default. ok false blocks high. */
 function replayAllowsHigh(): boolean {
   try {
-    const parsed: unknown = JSON.parse(fs.readFileSync(REPLAY_PATH, "utf8"));
+    const parsed: unknown = JSON.parse(readDataFile("replay.json"));
     if (!parsed || typeof parsed !== "object") return true;
     return (parsed as { ok?: unknown }).ok !== false;
   } catch {

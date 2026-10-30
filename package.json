@@ -6,6 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "cf:build": "opennextjs-cloudflare build && vite-node scripts/cf-assets.ts",
+    "cf:preview": "wrangler dev",
+    "cf:deploy": "opennextjs-cloudflare deploy",
     "lint": "eslint --ignore-pattern \".agents/**\" --ignore-pattern \"tests/**\"",
     "test": "vitest run",
     "replay": "vite-node scripts/replay-cli.ts",
@@ -32,9 +35,10 @@
     "strait-calibrate": "vite-node scripts/strait-calibrate.ts"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "^1.20.14",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "next": "16.3.6",
+    "next": "16.4.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -47,10 +51,11 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.6",
+    "eslint-config-next": "16.4.3",
     "pbf": "^4.0.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "wrangler": "^4.156.0"
   }
 }

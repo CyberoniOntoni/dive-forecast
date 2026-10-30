@@ -49,7 +49,7 @@ const quantile = (values: number[], q: number) => {
   return sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))] : Number.NaN;
 };
 
-function main(): void {
+async function main(): Promise<void> {
   const catalog = readCatalog();
   const tideTurns: number[] = [];
   const tideFit: number[] = [];
@@ -63,7 +63,7 @@ function main(): void {
     if (!atoll) continue;
     const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
     const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
-    const hours = readCachedHours(point.lat, point.lon)?.hours;
+    const hours = (await readCachedHours(point.lat, point.lon))?.hours;
     if (!hours) continue;
     const heading = alongReefHeading(deg);
     const usable = hours.filter((hour) => alongComponent(hour, heading) != null && hour.seaLevelM != null);
@@ -99,4 +99,4 @@ function main(): void {
   console.log(`  bands: ${STRENGTHS.map((strength) => `${strength} ${Math.round((100 * (bands.get(strength) ?? 0)) / total)} %`).join(", ")}`);
 }
 
-main();
+void main();

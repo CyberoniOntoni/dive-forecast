@@ -1,8 +1,6 @@
-import fs from "fs";
-import path from "path";
 import { DEFAULT_SEAWARD_KM, SEAWARD_STEPS_KM } from "./floor-sample";
+import { readDataFile } from "./data-files";
 
-const FLOOR_PATH = path.join(process.cwd(), "data", "seaward-floor.json");
 
 export type SeawardStep = {
   km: number;
@@ -33,7 +31,7 @@ let cached: SeawardFloor | null | undefined;
 export function readSeawardFloor(): SeawardFloor | null {
   if (cached !== undefined) return cached;
   try {
-    cached = JSON.parse(fs.readFileSync(FLOOR_PATH, "utf8")) as SeawardFloor;
+    cached = JSON.parse(readDataFile("seaward-floor.json")) as SeawardFloor;
   } catch (error) {
     if (isMissing(error)) {
       cached = null;

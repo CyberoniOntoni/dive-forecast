@@ -1,11 +1,9 @@
-import fs from "fs";
-import path from "path";
 import { footOnSegment, nearestOnPolyline } from "./geometry";
 import type { Atoll, Site } from "./types";
+import { readDataFile } from "./data-files";
 
 export type RimRing = readonly (readonly [number, number])[];
 
-const RIMS_PATH = path.join(process.cwd(), "data", "rims.json");
 export const KM_PER_DEG_LAT = 110.57;
 export const KM_PER_DEG_LON = 111.32;
 /** Normals from rim segments this close to the pin are averaged. */
@@ -58,7 +56,7 @@ function readRims(): { present: boolean; rims: Map<string, RimRing> } {
   if (loaded) return loaded;
   let text: string;
   try {
-    text = fs.readFileSync(RIMS_PATH, "utf8");
+    text = readDataFile("rims.json");
   } catch (error) {
     if (!isMissing(error)) throw error;
     loaded = { present: false, rims: new Map() };

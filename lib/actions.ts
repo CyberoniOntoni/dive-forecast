@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { atollForPin } from "./bearing";
 import type { BoatTrip } from "./boat-route-data";
 import { boatRoute } from "./boat-route-data";
@@ -12,6 +13,7 @@ import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./sh
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
+import { preloadDataFiles } from "./data-files";
 import {
   addReport as persistReport,
   addUserSite,
@@ -19,6 +21,7 @@ import {
   listMergedSites,
   ratingForSite,
   readCatalog,
+  refreshStore,
   reportsForSite,
   saveRating,
 } from "./store";
@@ -39,17 +42,29 @@ import {
 
 const REPORT_HOUR_INDEX = 6;
 
+/**
+ * Every action starts here. On Cloudflare the data files come from static assets and the store from R2; both must be
+ * in memory before the synchronous readers run. Once per request (React cache), so a page's several actions read R2
+ * once. Nothing to do on Node.
+ */
+const ready = cache(async (): Promise<void> => {
+  await Promise.all([preloadDataFiles(), refreshStore()]);
+});
+
 export type ReportActionState = { success: boolean; error: string | null };
 
 export async function listSites(): Promise<Site[]> {
+  await ready();
   return listMergedSites();
 }
 
 export async function getSite(id: string): Promise<Site | null> {
+  await ready();
   return findSite(id);
 }
 
 export async function addSite(input: { name: string; lat: number; lon: number }): Promise<Site> {
+  await ready();
   const body = requireSiteInput(input);
   const name = requireSiteName(body.name);
   const lat = requireLatitude(body.lat);
@@ -62,6 +77,7 @@ export async function addSite(input: { name: string; lat: number; lon: number })
 }
 
 export async function rateSite(siteId: string, score: number): Promise<Rating> {
+  await ready();
   requireSiteId(siteId);
   if (!findSite(siteId)) throw new Error("Unknown site");
   requireRatingScore(score);
@@ -69,10 +85,12 @@ export async function rateSite(siteId: string, score: number): Promise<Rating> {
 }
 
 export async function getRating(siteId: string): Promise<Rating | null> {
+  await ready();
   return ratingForSite(siteId);
 }
 
 export async function addReport(input: unknown): Promise<Report> {
+  await ready();
   const body = requireReportInput(input);
   const site = findSite(body.siteId as string);
   if (!site) throw new Error("Unknown site");
@@ -109,6 +127,7 @@ export async function addReport(input: unknown): Promise<Report> {
 }
 
 export async function addReportAction(siteId: string, formData: FormData): Promise<ReportActionState> {
+  await ready();
   try {
     const time = String(formData.get("time") ?? "").trim();
     const direction = String(formData.get("direction") ?? "");
@@ -170,6 +189,7 @@ async function reportTide(site: Site, time: string): Promise<ReportTide | null> 
 }
 
 export async function forecastSite(siteId: string): Promise<SiteForecast> {
+  await ready();
   const site = findSite(siteId);
   if (!site) return unavailableForecast();
 
@@ -203,6 +223,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
  * compass direction, so older in/out reports there are marked.
  */
 export async function getRecentReports(siteId: string, route: ForecastRoute): Promise<RecentReportRow[]> {
+  await ready();
   requireSiteId(siteId);
   return recentReportRows(reportsForSite(siteId), {
     nowWall: toMaldivesWall(new Date().toISOString()),
@@ -361,6 +382,7 @@ export async function getShelter(
   view: { south: number; west: number; north: number; east: number },
   time?: string,
 ): Promise<ShelterView> {
+  await ready();
   const { south, west, north, east } = view ?? {};
   if (![south, west, north, east].every((value) => typeof value === "number" && Number.isFinite(value))) {
     throw new Error("Bad view");
@@ -371,12 +393,14 @@ export async function getShelter(
 
 /** An atoll's outline and the islands in and round it, for the map to cut the shading to water. */
 export async function getShelterShapes(wayId: string): Promise<{ outline: RimRing; islands: RimRing[] } | null> {
+  await ready();
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
   return shelterShapes(wayId);
 }
 
 /** The sea state at one tapped spot of the layer. */
 export async function getShelterPoint(lat: number, lon: number, time: string): Promise<SeaStateHour | "unknown" | null> {
+  await ready();
   if (![lat, lon].every((value) => typeof value === "number" && Number.isFinite(value))) throw new Error("Bad point");
   if (typeof time !== "string" || !WALL_HOUR.test(time)) throw new Error("Bad time");
   return shelterPoint(lat, lon, time);
@@ -389,6 +413,7 @@ export type { BoatTrip } from "./boat-route-data";
  * app knows of. Null for an unknown site.
  */
 export async function getBoatRoute(from: { lat: number; lon: number }, destinationId: string): Promise<BoatTrip | null> {
+  await ready();
   const { lat, lon } = from ?? {};
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
     throw new Error("Bad position");

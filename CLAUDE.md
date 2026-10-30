@@ -18,6 +18,7 @@ npx vitest run lib/forecast.test.ts -t "name" # one test
 npm run lint
 npm run build
 npm run replay               # benchmark replay of past reports; writes data/replay.json
+npm run cf:build             # Cloudflare Workers build (OpenNext); cf:preview runs it locally on :8787
 ```
 
 CI (`.github/workflows/ci.yml`, Node 22) runs `npm test`, `npm run lint`, `npm run build`, `npm run replay` — run all four before pushing.
@@ -55,3 +56,5 @@ Unit tests sit next to modules in `lib/`. `lib/e2e-requirements.test.ts` is a 4-
 ## Deployment
 
 `output: "standalone"`; `Dockerfile` + `docker-compose.yml` bind-mount `./data` for persistence, so the host's `data/` (catalog, rims, store, marine cache) is what the running app reads.
+
+The same code also runs on Cloudflare Workers (`CLOUDFLARE.md`): read-only data files ship as static assets, `store.json` and the marine cache live in R2, picked at run time by `lib/cloudflare.ts`. Every server action must `await ready()` before reading data, and state holding in-flight promises must go through `perRequest`; a new data file the app reads goes in `DATA_FILES` (`lib/data-files.ts`) and is read with `readDataFile`.
