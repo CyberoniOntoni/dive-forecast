@@ -79,7 +79,7 @@ As milestone implementation agents complete their assignments, their changes wil
   - F1: Cross-sectional constriction factor ($C_{\text{constrict}} \in [1.0, 2.5]$)
   - F2: Tidal range amplitude scaling
   - F3: Site channel width/depth ingestion from `data/sites.json`
-  - *Status*: Verified by T1.R1.1–T1.R1.5, T2.R1.1–T2.R1.6, T3.C1, T4.S1. (Currently green on baseline interface fallback, ready for hydrodynamic amplification).
+  - *Status*: Verified by T1.R1.2–T1.R1.5, T2.R1.1–T2.R1.6, T4.S1. (Currently green on baseline interface fallback, ready for hydrodynamic amplification).
 
 - [ ] **Milestone 2 (Monsoon Currents)**:
   - F4: Climatology function `getMaldivesMonsoonDrift(date: Date)`

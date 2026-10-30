@@ -28,7 +28,7 @@ The E2E test suite adheres to an opaque-box, requirement-driven methodology. Tes
 ```
 
 ### Tier 1: Feature Coverage (>= 5 tests per feature group)
-- **R1: Hydrodynamic Pass & Tidal Range Modeling**: Channel constriction velocity amplification, area scaling formula bounds ($[1.0, 2.5]$), backward compatibility with unconstricted sites, spring vs. neap cycle amplitude scaling, and pass geometry integration.
+- **R1: Hydrodynamic Pass & Tidal Range Modeling** (four tests here; the strict amplification check is in `lib/forecast.test.ts`): Channel constriction velocity amplification, area scaling formula bounds ($[1.0, 2.5]$), backward compatibility with unconstricted sites, spring vs. neap cycle amplitude scaling, and pass geometry integration.
 - **R2: Monsoon & Seasonal Current Integration**: Climatological drift vectors (`getMaldivesMonsoonDrift`), seasonal vector reversal (SW eastward vs NE westward), atoll perimeter inward flux projection ($\cos\Delta\theta$), net axial flow superposition, and orthogonal pass flux isolation.
 - **R3: Calibrated Diver Report Learning & Confidence Scoring**: Temporal exponential decay ($t_{1/2} = 90$ days), hard confidence guard (never "high" if recent report within $\le 7$ days contradicts direction), outlier dampening anti-jump regularizer, tidal slope discrepancy penalty, and concordant report confidence elevation.
 - **R4: Automated Backtesting & Reliability Benchmark**: Replay harness outputting `BenchmarkMetrics`, directional accuracy computation, false-high-confidence rate accounting, confidence tier breakdown (high, medium, low), and slack timing deviation quantification.
@@ -40,8 +40,7 @@ The E2E test suite adheres to an opaque-box, requirement-driven methodology. Tes
 - **R4 Boundaries**: Zero reports replay evaluation, out-of-bounds report handling, 100% contradictory replay accuracy (0%), 100% concordant replay accuracy (100%), and exact slack timing evaluations.
 
 ### Tier 3: Cross-Feature Combinations (Pairwise Interactions)
-- **T3.C1**: Constriction + Monsoon Drift: Narrow pass aligned with monsoon flux displays superposed velocity.
-- **T3.C2**: Constriction + Opposing Monsoon: High constriction against counter-drift alters slack water turn.
+- T3.C1 and T3.C2 (constriction with monsoon drift) were removed: they passed with constriction switched off. The strict constriction check is the "constricted channel produces strictly stronger current rating" case in `lib/forecast.test.ts`.
 - **T3.C3**: Constriction + Noisy Diver Reports: Narrow high-energy pass maintains phase stability under noisy reports.
 - **T3.C4**: Monsoon Push + Spring Tide Slope: Aligned peak spring flood and monsoon drift saturate cleanly at `"too_strong"`.
 - **T3.C5**: Monsoon Opposing Ebb + Calibrated Confidence: Opposing hydrodynamic shear depresses confidence rating to `"low"`.
@@ -60,12 +59,12 @@ The E2E test suite adheres to an opaque-box, requirement-driven methodology. Tes
 
 | Req | Feature ID | Feature Description | Target Milestone | Test Coverage |
 |-----|------------|---------------------|------------------|---------------|
-| R1 | F1 | Channel Constriction Factor ($C_{\text{constrict}}$) | M1 | T1.R1.1, T1.R1.2, T1.R1.3, T2.R1.1, T2.R1.2, T2.R1.6, T3.C1, T3.C2, T3.C3, T3.C6 |
+| R1 | F1 | Channel Constriction Factor ($C_{\text{constrict}}$) | M1 | T1.R1.2, T1.R1.3, T2.R1.1, T2.R1.2, T2.R1.6, T3.C3, T3.C6 |
 | R1 | F2 | Tidal Range Amplitude Scaling (Spring vs Neap) | M1 | T1.R1.4, T2.R1.4, T2.R1.5, T3.C4, T3.C6, T4.S1, T4.S5 |
 | R1 | F3 | Pass Geometry Catalog Integration (`data/sites.json`) | M1 | T1.R1.5, T4.S1, T4.S2, T4.S3, T4.S4, T4.S5 |
 | R2 | F4 | Seasonal Monsoon Climatology (`getMaldivesMonsoonDrift`) | M2 | T1.R2.1, T1.R2.2, T2.R2.1, T2.R2.2, T2.R2.3, T2.R2.4 |
-| R2 | F5 | Atoll Perimeter Inward Flux Projection | M2 | T1.R2.3, T1.R2.5, T2.R2.5, T2.R2.6, T3.C1, T3.C2 |
-| R2 | F6 | Net Axial Flow Superposition & Slack Timing Shift | M2 | T1.R2.4, T3.C1, T3.C4, T3.C5, T4.S2, T4.S4 |
+| R2 | F5 | Atoll Perimeter Inward Flux Projection | M2 | T1.R2.3, T1.R2.5, T2.R2.5, T2.R2.6 |
+| R2 | F6 | Net Axial Flow Superposition & Slack Timing Shift | M2 | T1.R2.4, T3.C4, T3.C5, T4.S2, T4.S4 |
 | R3 | F7 | Temporal Decay Report Weighting ($t_{1/2} = 90$ days) | M3 | T1.R3.1, T2.R3.4, T4.S3 |
 | R3 | F8 | Outlier Dampening & Anti-Jump Regularization | M3 | T1.R3.3, T2.R3.6, T3.C3, T4.S3 |
 | R3 | F9 | Calibrated Confidence Scoring & Hard Safety Gates | M3 | T1.R3.2, T1.R3.4, T1.R3.5, T2.R3.1, T2.R3.2, T2.R3.3, T2.R3.5, T3.C5, T3.C6 |

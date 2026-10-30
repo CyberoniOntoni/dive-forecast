@@ -1,13 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it, vi } from "vitest";
-import {
-  constrictionFactor,
-  forecastHours,
-  sectionInput,
-  CONSTRICTION_MIN,
-  CONSTRICTION_MAX,
-} from "../lib/forecast";
+import { forecastHours, sectionInput } from "../lib/forecast";
 import { inwardBearingDeg } from "../lib/bearing";
 import { loadSite, type SiteLoad } from "../lib/load-site";
 import * as Marine from "../lib/marine";
@@ -124,38 +118,49 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
       }
     });
 
-    it("verifies physical dimensions for all 8 published channel sections", () => {
-      const passSiteIds = [
-        "embudhoo-express",
-        "embudhu-thila",
-        "gangehi-kandu",
-        "fushifaru-thila",
-        "fushifaru-corner",
-        "maa-kandu",
-        "maa-kandu-beyru",
-        "vaadhoo-caves",
-      ];
-
-      for (const id of passSiteIds) {
-        const site = sites.find((s) => s.id === id);
-        expect(site, `Site ${id} should exist`).toBeDefined();
-        expect(site?.channelWidthM, `Site ${id} channelWidthM should be positive`).toBeGreaterThan(0);
-        expect(site?.channelDepthM, `Site ${id} channelDepthM should be positive`).toBeGreaterThan(0);
-
-        const c = constrictionFactor(site?.channelWidthM, site?.channelDepthM);
-        expect(c).toBeGreaterThanOrEqual(CONSTRICTION_MIN);
-        expect(c).toBeLessThanOrEqual(CONSTRICTION_MAX);
+    it("sizes the 8 published channel sections only from a mean or typical depth", () => {
+      const site = (id: string) => {
+        const found = sites.find((s) => s.id === id);
+        expect(found, `Site ${id} should exist`).toBeDefined();
+        return found!;
+      };
+      // A typical depth sizes the channel from the published section.
+      for (const id of ["fushifaru-thila", "fushifaru-corner"]) {
+        const s = site(id);
+        expect(s.channelDepthKind).toBe("typical");
+        expect(sectionInput(s)).toEqual({ channelWidthM: s.channelWidthM, channelDepthM: s.channelDepthM });
+      }
+      // A depth range or a maximum never sizes the channel. Where the grid read is good, the grid section does.
+      for (const id of ["embudhoo-express", "embudhu-thila"]) {
+        const s = site(id);
+        expect(s.channelDepthKind).toBe("range");
+        expect(s.gridDepthConfidence).toBe("ok");
+        expect(sectionInput(s)).toEqual({ channelWidthM: s.gridWidthM, channelDepthM: s.gridDepthMeanM });
+      }
+      for (const id of ["gangehi-kandu", "maa-kandu", "maa-kandu-beyru", "vaadhoo-caves"]) {
+        const s = site(id);
+        expect(s.channelDepthKind).toBe("max");
+        expect(s.gridDepthConfidence).not.toBe("ok");
+        expect(sectionInput(s)).toEqual({});
       }
     });
 
-    it("Vaadhoo Caves reference pass evaluates to exact 1.000 unconstricted baseline factor", () => {
-      const vaadhoo = sites.find((s) => s.id === "vaadhoo-caves");
-      expect(vaadhoo).toBeDefined();
-      expect(vaadhoo?.channelWidthM).toBe(5000);
-      expect(vaadhoo?.channelDepthM).toBe(400);
-      // Area = 5000 * 400 = 2,000,000 m2 = REF_CHANNEL_AREA_M2
-      const c = constrictionFactor(vaadhoo?.channelWidthM, vaadhoo?.channelDepthM);
-      expect(c).toBe(1.0);
+    it("Vaadhoo Caves takes the strait route, so its 400 m maximum never reaches the channel model", async () => {
+      const vaadhoo = sites.find((s) => s.id === "vaadhoo-caves")!;
+      expect(vaadhoo.siteType).toBe("strait-wall");
+      expect(vaadhoo.channelDepthM).toBe(400);
+      expect(sectionInput(vaadhoo)).toEqual({});
+
+      const spy = vi.spyOn(Marine, "siteMarineHours").mockResolvedValue({
+        ok: true,
+        hours: syntheticHours,
+        fetchedAt: Date.now(),
+        stale: false,
+      });
+      const load = await loadSite(vaadhoo, sites, atollMap.get(vaadhoo.atollId), []);
+      spy.mockRestore();
+      expect(load.forecastRoute).toBe("strait");
+      expect(load.hours.length).toBeGreaterThan(0);
     });
   });
 

@@ -1,8 +1,6 @@
-import fs from "fs";
-import path from "path";
 import { resolveBearing } from "../lib/bearing";
 import { ALONG_REEF_TIDE_GAIN, alongReefHours } from "../lib/forecast";
-import { marineCacheDir, seawardPoint } from "../lib/marine";
+import { readCachedHours, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
@@ -21,16 +19,6 @@ import { STRENGTHS, type MarineHour } from "../lib/types";
  * - how the forecast's strength bands fall.
  * Reads only the local marine cache.
  */
-function cachedHours(lat: number, lon: number): MarineHour[] | null {
-  const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
-  try {
-    const parsed = JSON.parse(fs.readFileSync(path.join(marineCacheDir(), name), "utf8")) as { hours?: MarineHour[] };
-    return Array.isArray(parsed.hours) && parsed.hours.length > 0 ? parsed.hours : null;
-  } catch {
-    return null;
-  }
-}
-
 function alongComponent(hour: MarineHour, headingDeg: number): number | null {
   const speed = hour.currentVelocityMs;
   const toward = hour.currentDirectionDeg;
@@ -75,7 +63,7 @@ function main(): void {
     if (!atoll) continue;
     const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
     const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
-    const hours = cachedHours(point.lat, point.lon);
+    const hours = readCachedHours(point.lat, point.lon)?.hours;
     if (!hours) continue;
     const heading = alongReefHeading(deg);
     const usable = hours.filter((hour) => alongComponent(hour, heading) != null && hour.seaLevelM != null);
