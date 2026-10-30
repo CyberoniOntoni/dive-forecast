@@ -25,7 +25,7 @@ import {
   routeTime,
   waterKnots,
   type CurrentHere,
-  type StrongPass,
+  type VeryStrongSite,
 } from "@/lib/route-current";
 import { currentWallTime, MALDIVES_TIME } from "@/lib/site-time";
 
@@ -166,7 +166,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
     return walked ? walked.minutes : remainingKm != null ? etaMinutes(remainingKm, knots) : null;
   };
   // Under way but the current ahead is more than the boat makes through the water.
-  const outrun = throughWater != null && timed != null && timed.minutes == null;
+  const currentBeatsBoat = throughWater != null && timed != null && timed.minutes == null;
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
 
   return (
@@ -214,7 +214,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
             <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : null} />
             <Stat
               label={eta != null ? `In ${formatDuration(eta)}` : "Arrive"}
-              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : outrun ? "Current" : null}
+              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : currentBeatsBoat ? "Current" : null}
             />
           </dl>
           {stopped && remainingKm != null ? (
@@ -229,7 +229,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
             steer={steer}
             track={crabbed ? track : null}
             here={here}
-            outrun={outrun}
+            currentBeatsBoat={currentBeatsBoat}
             veryStrong={(timed ?? (stopped ? timeAt(REFERENCE_KNOTS[0]) : null))?.veryStrong ?? []}
             courseDeg={motion?.courseDeg ?? null}
             accuracyM={boat.accuracyM}
@@ -308,7 +308,7 @@ function RouteNote({
   steer,
   track,
   here,
-  outrun,
+  currentBeatsBoat,
   veryStrong,
   courseDeg,
   accuracyM,
@@ -321,8 +321,8 @@ function RouteNote({
   /** The track over the ground, when the steer allows for current; null otherwise. */
   track: number | null;
   here: CurrentHere | null;
-  outrun: boolean;
-  veryStrong: readonly StrongPass[];
+  currentBeatsBoat: boolean;
+  veryStrong: readonly VeryStrongSite[];
   /** Course over ground, to compare with the steer bearing. */
   courseDeg: number | null;
   accuracyM: number;
@@ -356,12 +356,12 @@ function RouteNote({
         {parts.join(" · ")}
       </p>
       {trouble ? <p className="mt-1 text-xs text-outgoing">{trouble}</p> : null}
-      {outrun ? (
+      {currentBeatsBoat ? (
         <p className="mt-1 text-xs text-outgoing">At this speed the current ahead is stronger than the boat makes through the water.</p>
       ) : null}
       {veryStrong.length > 0 ? (
         <p className="mt-1 text-xs text-outgoing">
-          Very strong current forecast at {veryStrong.map((pass) => `${pass.name} around ${clock(pass.timeMs)}`).join(", ")}.
+          Very strong current forecast at {veryStrong.map((site) => `${site.name} around ${clock(site.timeMs)}`).join(", ")}.
         </p>
       ) : null}
       {shallow ? (

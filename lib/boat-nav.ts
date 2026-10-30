@@ -8,8 +8,8 @@ import { bearingDeg, distanceKm, nearestOnPolyline, polylineKm, type LatLon } fr
 /** One browser geolocation fix. `speedMs` and `headingDeg` are null when the device does not give them. */
 export type Fix = LatLon & { timeMs: number; accuracyM: number; speedMs: number | null; headingDeg: number | null };
 
-const KM_PER_NM = 1.852;
-const MS_PER_KNOT = KM_PER_NM / 3.6;
+export const KM_PER_NM = 1.852;
+export const MS_PER_KNOT = KM_PER_NM / 3.6;
 
 /** Fixes this old still count toward the speed worked out from positions. */
 export const SPEED_WINDOW_MS = 30_000;

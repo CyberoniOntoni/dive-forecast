@@ -1,4 +1,4 @@
-import { alongRoute } from "./boat-nav";
+import { alongRoute, MS_PER_KNOT } from "./boat-nav";
 import { parseWall } from "./forecast";
 import { distanceKm, type LatLon } from "./geometry";
 import { loadSite } from "./load-site";
@@ -27,7 +27,6 @@ const MIN_STEP_KM = 0.25;
 const OCEAN_GRID_DEG = 1 / 12;
 /** Forecast hours sent, from an hour before now. Long enough for any trip the boat panel plans. */
 const HOURS_AHEAD = 12;
-const KNOTS_PER_MS = 3600 / 1852;
 const HOUR_MS = 3_600_000;
 
 type Points = readonly (readonly [number, number])[];
@@ -158,7 +157,7 @@ function oceanHour(hour: MarineHour, window: Window): RouteCurrentHour[] {
   const timeMs = wallMs(hour.time);
   if (!(timeMs >= window.fromMs && timeMs <= window.toMs)) return [];
   if (hour.currentVelocityMs == null || hour.currentDirectionDeg == null) return [];
-  return [{ timeMs, strength: null, ...currentVector(hour.currentDirectionDeg, hour.currentVelocityMs * KNOTS_PER_MS) }];
+  return [{ timeMs, strength: null, ...currentVector(hour.currentDirectionDeg, hour.currentVelocityMs / MS_PER_KNOT) }];
 }
 
 function oceanNode(point: LatLon): LatLon {

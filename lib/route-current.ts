@@ -4,6 +4,7 @@
  * heading that holds the boat on its track and how long each stretch takes with the current helping or against it.
  */
 
+import { KM_PER_NM } from "./boat-nav";
 import { bearingDeg, distanceKm, type LatLon } from "./geometry";
 import type { Strength } from "./types";
 
@@ -39,7 +40,6 @@ export const STRENGTH_KNOTS: Record<Strength, number> = { slack: 0, mild: 0.8, s
 const HOUR_REACH_MS = 90 * 60 * 1000;
 /** The ETA walks the route in steps this long at most, km. */
 const ETA_STEP_KM = 0.1;
-const KM_PER_NM = 1.852;
 
 export function currentVector(headingDeg: number, knots: number): CurrentVector {
   const radians = (headingDeg * Math.PI) / 180;
@@ -97,13 +97,14 @@ export function waterKnots(groundKnots: number, courseDeg: number | null, curren
   return Math.hypot(ground.eastKn - current.eastKn, ground.northKn - current.northKn);
 }
 
-export type StrongPass = { name: string; siteId: string | null; timeMs: number };
+/** A site on the route whose forecast is very strong when the boat gets there. */
+export type VeryStrongSite = { name: string; siteId: string | null; timeMs: number };
 
 export type RouteTime = {
   /** Minutes to the end, or null when the current somewhere ahead is too much for the boat at this speed. */
   minutes: number | null;
   /** Sites ahead whose forecast is very strong when the boat gets there, in order, each once. */
-  veryStrong: StrongPass[];
+  veryStrong: VeryStrongSite[];
   /** Km of the remaining route with a current forecast. */
   coveredKm: number;
 };
@@ -123,7 +124,7 @@ export function routeTime(
   let atKm = 0;
   let coveredKm = 0;
   let blocked = false;
-  const veryStrong: StrongPass[] = [];
+  const veryStrong: VeryStrongSite[] = [];
   for (let index = 0; index + 1 < points.length; index += 1) {
     const from: LatLon = { lat: points[index][0], lon: points[index][1] };
     const to: LatLon = { lat: points[index + 1][0], lon: points[index + 1][1] };
@@ -145,7 +146,7 @@ export function routeTime(
         const made = crab(trackDeg, speedKnots, here.current);
         if (made) groundKnots = made.groundKnots;
         else blocked = true;
-        if (here.hour.strength === "too_strong" && !veryStrong.some((pass) => pass.name === here.source.name)) {
+        if (here.hour.strength === "too_strong" && !veryStrong.some((site) => site.name === here.source.name)) {
           veryStrong.push({ name: here.source.name, siteId: here.source.siteId, timeMs: nowMs });
         }
       }
