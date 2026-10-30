@@ -23,6 +23,14 @@ export function marineCacheDir(): string {
 }
 
 /**
+ * A cache file's path on Node. The directory is only known at run time, so the build is told not to trace it: without
+ * the ignore comment Turbopack would bundle the whole project into the server output.
+ */
+function marineCacheFile(name: string): string {
+  return path.join(/*turbopackIgnore: true*/ marineCacheDir(), name);
+}
+
+/**
  * marine-api.open-meteo.com is the live marine host. api.open-meteo.com/v1/marine
  * returns 404 and is the fallback.
  */
@@ -146,7 +154,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
     const env = workerEnv();
     if (!env) {
       try {
-        return parsePointCache(fs.readFileSync(path.join(marineCacheDir(), name), "utf8"), source.readHours);
+        return parsePointCache(fs.readFileSync(/*turbopackIgnore: true*/ marineCacheFile(name), "utf8"), source.readHours);
       } catch {
         return null;
       }
@@ -175,7 +183,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
         return;
       }
       fs.mkdirSync(marineCacheDir(), { recursive: true });
-      fs.writeFileSync(path.join(marineCacheDir(), name), text);
+      fs.writeFileSync(/*turbopackIgnore: true*/ marineCacheFile(name), text);
     } catch (error) {
       console.warn("Failed to write marine cache", error);
     }
