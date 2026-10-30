@@ -1,7 +1,7 @@
 "use server";
 
 import { atollForPin } from "./bearing";
-import type { BoatRoute } from "./boat-route";
+import type { BoatTrip } from "./boat-route-data";
 import { boatRoute } from "./boat-route-data";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
@@ -382,10 +382,10 @@ export async function getShelterPoint(lat: number, lon: number, time: string): P
   return shelterPoint(lat, lon, time);
 }
 
-export type { BoatRoute } from "./boat-route";
+export type { BoatTrip } from "./boat-route-data";
 
 /** A boat route from a GPS position to a site, round the islands and reef the app knows of. Null for an unknown site. */
-export async function getBoatRoute(from: { lat: number; lon: number }, siteId: string): Promise<BoatRoute | null> {
+export async function getBoatRoute(from: { lat: number; lon: number }, siteId: string): Promise<BoatTrip | null> {
   const { lat, lon } = from ?? {};
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
     throw new Error("Bad position");

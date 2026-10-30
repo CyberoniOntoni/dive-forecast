@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { getBoatRoute, type BoatRoute } from "@/lib/actions";
+import { getBoatRoute, type BoatTrip } from "@/lib/actions";
 import {
   alongRoute,
   etaMinutes,
@@ -11,10 +11,22 @@ import {
   keepFixes,
   motionFrom,
   REFERENCE_KNOTS,
+  UNDERWAY_KNOTS,
   type Fix,
   type Motion,
 } from "@/lib/boat-nav";
 import { bearingDeg, distanceKm, type LatLon } from "@/lib/geometry";
+import { compassWord } from "@/lib/nowcast-glance";
+import {
+  crab,
+  currentAt,
+  currentHeading,
+  currentKnots,
+  routeTime,
+  waterKnots,
+  type CurrentHere,
+  type StrongPass,
+} from "@/lib/route-current";
 import { currentWallTime, MALDIVES_TIME } from "@/lib/site-time";
 
 /** What the map draws while navigating. */
@@ -22,7 +34,7 @@ export type NavDraw = {
   target: LatLon;
   boat: Fix | null;
   courseDeg: number | null;
-  route: BoatRoute | null;
+  route: BoatTrip | null;
   /** Bumped to ask the map to frame the boat and the route. */
   frame: number;
 };
@@ -62,7 +74,7 @@ function gpsMessage(error: GeolocationPositionError): string {
 export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (draw: NavDraw | null) => void; onChange: () => void }) {
   const [fixes, setFixes] = useState<Fix[]>([]);
   const [gps, setGps] = useState<GpsState>({ status: "waiting" });
-  const [route, setRoute] = useState<BoatRoute | null>(null);
+  const [route, setRoute] = useState<BoatTrip | null>(null);
   const [routeError, setRouteError] = useState(false);
   const [frame, setFrame] = useState(0);
   const routing = useRef<{ busy: boolean; lastMs: number }>({ busy: false, lastMs: 0 });
@@ -133,11 +145,23 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   useEffect(() => () => onDrawRef.current(null), []);
 
   const remainingKm = along?.remainingKm ?? (boat ? distanceKm(boat, site) : null);
-  const steer = boat ? bearingDeg(boat, along?.next ?? site) : null;
-  const eta = remainingKm != null && motion ? etaMinutes(remainingKm, motion.knots) : null;
+  // How far along the route the boat is, and the forecast current there now.
+  const routeKm = route && along ? Math.max(0, route.lengthKm - along.remainingKm) : 0;
+  const here = boat && route?.current ? currentAt(route.current, routeKm, boat.timeMs) : null;
+  const stopped = motion != null && motion.knots < UNDERWAY_KNOTS;
+  const water = motion && !stopped ? waterKnots(motion.knots, motion.courseDeg, here?.current ?? null) : null;
+  const track = boat ? bearingDeg(boat, along?.next ?? site) : null;
+  // The heading that holds the track against the current under the boat.
+  const crabbed = track != null && here && water != null ? crab(track, water, here.current) : null;
+  const steer = crabbed?.headingDeg ?? track;
+  // The time over the rest of the route, each stretch with the current it has when the boat gets there.
+  const timeAt = (knots: number) =>
+    boat && route && along ? routeTime(route.points, routeKm, route.current, knots, boat.timeMs) : null;
+  const timed = water != null ? timeAt(water) : null;
+  const eta = water == null || remainingKm == null ? null : timed ? timed.minutes : etaMinutes(remainingKm, water);
+  // Under way but the current ahead is more than the boat makes through the water.
+  const outrun = water != null && timed != null && timed.minutes == null;
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
-  // Stopped only once the speed is known to be under way-making; until then the ETA waits.
-  const stopped = motion != null && eta == null;
 
   return (
     <section aria-label={`Boat navigation to ${site.name}`} className="w-full text-foam">
@@ -184,15 +208,26 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
             <Stat label="Speed" value={motion ? `${motion.knots.toFixed(1)} kn` : null} />
             <Stat
               label={eta != null ? `In ${formatDuration(eta)}` : "Arrive"}
-              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : null}
+              value={eta != null ? arrivalClock(eta) : stopped ? "Stopped" : outrun ? "Current" : null}
             />
           </dl>
           {stopped && remainingKm != null ? (
             <p className="mt-1 text-xs text-foam/75">
-              {REFERENCE_KNOTS.map((knots) => `At ${knots} kn about ${formatDuration(etaMinutes(remainingKm, knots) ?? 0)}`).join(", ")}
+              {REFERENCE_KNOTS.map((knots) => referenceTime(knots, timeAt(knots)?.minutes ?? etaMinutes(remainingKm, knots))).join(", ")}
             </p>
           ) : null}
-          <RouteNote route={route} routeError={routeError} shallow={shallow} steer={steer} courseDeg={motion?.courseDeg ?? null} accuracyM={boat.accuracyM} />
+          <RouteNote
+            route={route}
+            routeError={routeError}
+            shallow={shallow}
+            steer={steer}
+            track={crabbed ? track : null}
+            here={here}
+            outrun={outrun}
+            veryStrong={(timed ?? (stopped ? timeAt(REFERENCE_KNOTS[0]) : null))?.veryStrong ?? []}
+            courseDeg={motion?.courseDeg ?? null}
+            accuracyM={boat.accuracyM}
+          />
         </>
       )}
     </section>
@@ -239,29 +274,53 @@ function Stat({ label, value, big = false }: { label: string; value: string | nu
   );
 }
 
+/** "At 8 kn about 25 min", or that the current is too much at that speed. */
+function referenceTime(knots: number, minutes: number | null): string {
+  return minutes == null ? `At ${knots} kn the current is against you` : `At ${knots} kn about ${formatDuration(minutes)}`;
+}
+
+/** Below this the current is not worth a word. */
+const CURRENT_NOTE_KNOTS = 0.2;
+
 /**
- * One small line under the readouts: steer, the route's gaps, GPS accuracy and the not-a-chart warning. Route trouble
- * and a shallow gap get their own line in amber.
+ * One small line under the readouts: steer, the current here, the route's gaps, GPS accuracy and the not-a-chart
+ * warning. Route trouble, a shallow gap, very strong current ahead and a current the boat cannot beat get their own
+ * line in amber.
  */
 function RouteNote({
   route,
   routeError,
   shallow,
   steer,
+  track,
+  here,
+  outrun,
+  veryStrong,
   courseDeg,
   accuracyM,
 }: {
-  route: BoatRoute | null;
+  route: BoatTrip | null;
   routeError: boolean;
   shallow: boolean;
+  /** The heading to steer, allowing for the current when it is known. */
   steer: number | null;
+  /** The track over the ground, when the steer allows for current; null otherwise. */
+  track: number | null;
+  here: CurrentHere | null;
+  outrun: boolean;
+  veryStrong: readonly StrongPass[];
   /** Course over ground, to compare with the steer bearing. */
   courseDeg: number | null;
   accuracyM: number;
 }) {
   const gaps = route?.routed ? route.gaps.length : 0;
+  const knots = here ? currentKnots(here.current) : 0;
+  const allows = steer != null && track != null && Math.abs(((steer - track + 540) % 360) - 180) >= 2;
   const parts = [
-    steer != null ? `Steer ${formatBearing(steer)}` : null,
+    steer != null ? `Steer ${formatBearing(steer)}${allows && track != null ? ` for track ${formatBearing(track)}` : ""}` : null,
+    here && knots >= CURRENT_NOTE_KNOTS
+      ? `current ${knots.toFixed(1)} kn toward ${compassWord(currentHeading(here.current))}${here.source.siteId ? ` (${here.source.name})` : ""}`
+      : null,
     courseDeg != null ? `course ${formatBearing(courseDeg)}` : null,
     route?.routed ? `${formatNm(route.lengthKm)} by route (${formatNm(route.directKm)} straight)` : null,
     gaps > 0 ? (gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`) : null,
@@ -283,6 +342,14 @@ function RouteNote({
         {parts.join(" · ")}
       </p>
       {trouble ? <p className="mt-1 text-xs text-outgoing">{trouble}</p> : null}
+      {outrun ? (
+        <p className="mt-1 text-xs text-outgoing">At this speed the current ahead is stronger than the boat makes through the water.</p>
+      ) : null}
+      {veryStrong.length > 0 ? (
+        <p className="mt-1 text-xs text-outgoing">
+          Very strong current forecast at {veryStrong.map((pass) => `${pass.name} around ${clock(pass.timeMs)}`).join(", ")}.
+        </p>
+      ) : null}
       {shallow ? (
         <p className="mt-1 text-xs text-outgoing">The route crosses a shallow reef-flat gap: check the depth before you go through.</p>
       ) : null}
@@ -292,7 +359,11 @@ function RouteNote({
 
 /** "14:35", Maldives time. */
 function arrivalClock(minutes: number): string {
-  return currentWallTime(MALDIVES_TIME, Date.now() + minutes * 60_000).slice(11, 16);
+  return clock(Date.now() + minutes * 60_000);
+}
+
+function clock(timeMs: number): string {
+  return currentWallTime(MALDIVES_TIME, timeMs).slice(11, 16);
 }
 
 /** Keeps the phone's screen on while the panel is open, where the browser allows it. */
