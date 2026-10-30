@@ -384,7 +384,10 @@ export async function getShelterPoint(lat: number, lon: number, time: string): P
 
 export type { BoatTrip } from "./boat-route-data";
 
-/** A boat route from a GPS position to a site, round the islands and reef the app knows of. Null for an unknown site. */
+/**
+ * A boat route from a GPS position to a site or a point picked on the map ("lat,lon"), round the islands and reef the
+ * app knows of. Null for an unknown site.
+ */
 export async function getBoatRoute(from: { lat: number; lon: number }, siteId: string): Promise<BoatTrip | null> {
   const { lat, lon } = from ?? {};
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {

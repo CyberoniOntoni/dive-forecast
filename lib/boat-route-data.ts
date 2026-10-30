@@ -1,3 +1,4 @@
+import { readPointDestination } from "./boat-nav";
 import { planRoute, type BoatRoute, type RouteGap, type RouteShapes } from "./boat-route";
 import type { LatLon } from "./geometry";
 import { readIslands } from "./islands";
@@ -21,12 +22,15 @@ let shapeCache: { blockers: RimRing[]; rims: RimRing[]; gaps: RouteGap[] } | nul
 /** A planned route with the forecast current along it (null when that could not be read). */
 export type BoatTrip = BoatRoute & { current: RouteCurrent | null };
 
-/** The route from the boat to a catalog site, with the current along it, or null for an unknown site. */
-export async function boatRoute(from: LatLon, siteId: string): Promise<BoatTrip | null> {
+/**
+ * The route from the boat to a catalog site or a point picked on the map (a pointDestinationId), with the current
+ * along it, or null for an unknown site.
+ */
+export async function boatRoute(from: LatLon, destinationId: string): Promise<BoatTrip | null> {
   const sites = await listMergedSites();
-  const site = sites.find((item) => item.id === siteId);
-  if (!site) return null;
-  const route = planRoute(from, site, routeShapes(sites));
+  const target = sites.find((item) => item.id === destinationId) ?? readPointDestination(destinationId);
+  if (!target) return null;
+  const route = planRoute(from, target, routeShapes(sites));
   // The current only adjusts the steer and ETA, so a failure reading it still returns the route.
   const current = await routeCurrent(route.points, sites).catch((error: unknown) => {
     console.error("Route current failed", error);
