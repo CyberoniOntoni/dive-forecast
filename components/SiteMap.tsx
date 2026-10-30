@@ -14,10 +14,10 @@ import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/Curre
 import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
 import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
-import { pointDestinationId } from "@/lib/boat-nav";
 import { addMapLayers } from "@/lib/map-layers";
 import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
+import { pointDestinationId } from "@/lib/point-destination";
 import type { SiteNowcast } from "@/lib/nowcast";
 import type { Site, Strength } from "@/lib/types";
 

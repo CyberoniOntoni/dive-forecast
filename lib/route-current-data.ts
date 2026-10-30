@@ -100,15 +100,15 @@ export function samplePoints(points: Points): { stepKm: number; points: LatLon[]
       legStart += legs[leg].km;
       leg += 1;
     }
-    const current = legs[leg];
-    if (!current) {
+    const onLeg = legs[leg];
+    if (!onLeg) {
       out.push({ lat: points[0][0], lon: points[0][1] });
       continue;
     }
-    const share = current.km === 0 ? 0 : Math.min(1, (km - legStart) / current.km);
+    const share = onLeg.km === 0 ? 0 : Math.min(1, (km - legStart) / onLeg.km);
     out.push({
-      lat: current.from.lat + (current.to.lat - current.from.lat) * share,
-      lon: current.from.lon + (current.to.lon - current.from.lon) * share,
+      lat: onLeg.from.lat + (onLeg.to.lat - onLeg.from.lat) * share,
+      lon: onLeg.from.lon + (onLeg.to.lon - onLeg.from.lon) * share,
     });
   }
   return { stepKm, points: out };

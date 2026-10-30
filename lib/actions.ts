@@ -388,12 +388,12 @@ export type { BoatTrip } from "./boat-route-data";
  * A boat route from a GPS position to a site or a point picked on the map ("lat,lon"), round the islands and reef the
  * app knows of. Null for an unknown site.
  */
-export async function getBoatRoute(from: { lat: number; lon: number }, siteId: string): Promise<BoatTrip | null> {
+export async function getBoatRoute(from: { lat: number; lon: number }, destinationId: string): Promise<BoatTrip | null> {
   const { lat, lon } = from ?? {};
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
     throw new Error("Bad position");
   }
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error("Bad position");
-  if (typeof siteId !== "string" || siteId.length === 0) throw new Error("Bad site");
-  return boatRoute({ lat, lon }, siteId);
+  if (typeof destinationId !== "string" || destinationId.length === 0) throw new Error("Bad destination");
+  return boatRoute({ lat, lon }, destinationId);
 }

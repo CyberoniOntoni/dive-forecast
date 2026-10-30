@@ -1,4 +1,3 @@
-import { readPointDestination } from "./boat-nav";
 import { planRoute, type BoatRoute, type RouteGap, type RouteShapes } from "./boat-route";
 import type { LatLon } from "./geometry";
 import { readIslands } from "./islands";
@@ -6,6 +5,7 @@ import { readOpenings } from "./openings";
 import { allRims, CHANNEL_RIM_REACH_KM, nearestRimWithin, type RimRing } from "./rim";
 import { routeCurrent } from "./route-current-data";
 import type { RouteCurrent } from "./route-current";
+import { readPointDestination } from "./point-destination";
 import { readShoals } from "./shoals";
 import { listMergedSites } from "./store";
 

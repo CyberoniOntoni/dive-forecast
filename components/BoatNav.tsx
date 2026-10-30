@@ -159,6 +159,11 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
     boat && route && along ? routeTime(route.points, routeKm, route.current, knots, boat.timeMs) : null;
   const timed = water != null ? timeAt(water) : null;
   const eta = water == null || remainingKm == null ? null : timed ? timed.minutes : etaMinutes(remainingKm, water);
+  // A stopped boat's time at a reference speed: null from the route walk means the current ahead beats that speed.
+  const referenceMinutes = (knots: number) => {
+    const walked = timeAt(knots);
+    return walked ? walked.minutes : remainingKm != null ? etaMinutes(remainingKm, knots) : null;
+  };
   // Under way but the current ahead is more than the boat makes through the water.
   const outrun = water != null && timed != null && timed.minutes == null;
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
@@ -213,7 +218,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
           </dl>
           {stopped && remainingKm != null ? (
             <p className="mt-1 text-xs text-foam/75">
-              {REFERENCE_KNOTS.map((knots) => referenceTime(knots, timeAt(knots)?.minutes ?? etaMinutes(remainingKm, knots))).join(", ")}
+              {REFERENCE_KNOTS.map((knots) => referenceTime(knots, referenceMinutes(knots))).join(", ")}
             </p>
           ) : null}
           <RouteNote

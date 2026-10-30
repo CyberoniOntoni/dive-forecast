@@ -74,18 +74,18 @@ export function currentAt(route: RouteCurrent, km: number, timeMs: number): Curr
 }
 
 /**
- * The heading to steer so a boat making `waterKnots` through the water holds `trackDeg` over the ground, and its speed
+ * The heading to steer so a boat making `speedKnots` through the water holds `trackDeg` over the ground, and its speed
  * along the track. Null when the current across the track is faster than the boat, or the boat makes almost no way.
  */
-export function crab(trackDeg: number, waterKnots: number, current: CurrentVector): { headingDeg: number; groundKnots: number } | null {
+export function crab(trackDeg: number, speedKnots: number, current: CurrentVector): { headingDeg: number; groundKnots: number } | null {
   const radians = (trackDeg * Math.PI) / 180;
   const along = current.eastKn * Math.sin(radians) + current.northKn * Math.cos(radians);
   // Positive when the current sets the boat to the right of its track.
   const right = current.eastKn * Math.cos(radians) - current.northKn * Math.sin(radians);
-  if (!(waterKnots > 0) || Math.abs(right) >= waterKnots) return null;
-  const groundKnots = along + Math.sqrt(waterKnots ** 2 - right ** 2);
+  if (!(speedKnots > 0) || Math.abs(right) >= speedKnots) return null;
+  const groundKnots = along + Math.sqrt(speedKnots ** 2 - right ** 2);
   if (groundKnots < MIN_GROUND_KNOTS) return null;
-  const headingDeg = trackDeg - (Math.asin(right / waterKnots) * 180) / Math.PI;
+  const headingDeg = trackDeg - (Math.asin(right / speedKnots) * 180) / Math.PI;
   return { headingDeg: ((headingDeg % 360) + 360) % 360, groundKnots };
 }
 
@@ -111,14 +111,14 @@ export type RouteTime = {
 };
 
 /**
- * Time to run the route from `fromKm` to its end at `waterKnots` through the water, starting at `startMs`, with the
+ * Time to run the route from `fromKm` to its end at `speedKnots` through the water, starting at `startMs`, with the
  * current each stretch has when the boat reaches it. A stretch with no forecast is run at the boat's own speed.
  */
 export function routeTime(
   points: readonly (readonly [number, number])[],
   fromKm: number,
   route: RouteCurrent | null,
-  waterKnots: number,
+  speedKnots: number,
   startMs: number,
 ): RouteTime {
   let hours = 0;
@@ -141,10 +141,10 @@ export function routeTime(
       const stepKm = Math.min(ETA_STEP_KM, legEnd - km);
       const nowMs = startMs + hours * 3_600_000;
       const here = route ? currentAt(route, km + stepKm / 2, nowMs) : null;
-      let groundKnots = waterKnots;
+      let groundKnots = speedKnots;
       if (here) {
         coveredKm += stepKm;
-        const made = crab(trackDeg, waterKnots, here.current);
+        const made = crab(trackDeg, speedKnots, here.current);
         if (made) groundKnots = made.groundKnots;
         else blocked = true;
         if (here.hour.strength === "too_strong" && !veryStrong.some((pass) => pass.name === here.source.name)) {
@@ -156,5 +156,5 @@ export function routeTime(
     }
     atKm = legEnd;
   }
-  return { minutes: blocked || !(waterKnots > 0) ? null : hours * 60, veryStrong, coveredKm };
+  return { minutes: blocked || !(speedKnots > 0) ? null : hours * 60, veryStrong, coveredKm };
 }
