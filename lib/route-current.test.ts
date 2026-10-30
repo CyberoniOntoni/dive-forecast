@@ -75,6 +75,11 @@ describe("crab", () => {
     expect(crab(0, 2, currentVector(90, 3))).toBeNull();
     expect(crab(0, 2, currentVector(180, 2.5))).toBeNull();
   });
+
+  it("keeps a slow boat that still makes way against the current", () => {
+    // 8 kn through the water into 7.6 kn: 0.4 kn over the ground, slow but moving.
+    expect(crab(0, 8, currentVector(180, 7.6))?.groundKnots).toBeCloseTo(0.4, 9);
+  });
 });
 
 describe("waterKnots", () => {

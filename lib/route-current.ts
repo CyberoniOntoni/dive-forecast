@@ -39,8 +39,6 @@ export const STRENGTH_KNOTS: Record<Strength, number> = { slack: 0, mild: 0.8, s
 const HOUR_REACH_MS = 90 * 60 * 1000;
 /** The ETA walks the route in steps this long at most, km. */
 const ETA_STEP_KM = 0.1;
-/** A boat making less than this over the ground on a stretch counts as unable to make way against the current. */
-const MIN_GROUND_KNOTS = 0.5;
 const KM_PER_NM = 1.852;
 
 export function currentVector(headingDeg: number, knots: number): CurrentVector {
@@ -75,7 +73,7 @@ export function currentAt(route: RouteCurrent, km: number, timeMs: number): Curr
 
 /**
  * The heading to steer so a boat making `speedKnots` through the water holds `trackDeg` over the ground, and its speed
- * along the track. Null when the current across the track is faster than the boat, or the boat makes almost no way.
+ * along the track. Null when the current across the track is faster than the boat, or the current ahead stops it making way.
  */
 export function crab(trackDeg: number, speedKnots: number, current: CurrentVector): { headingDeg: number; groundKnots: number } | null {
   const radians = (trackDeg * Math.PI) / 180;
@@ -84,7 +82,7 @@ export function crab(trackDeg: number, speedKnots: number, current: CurrentVecto
   const right = current.eastKn * Math.cos(radians) - current.northKn * Math.sin(radians);
   if (!(speedKnots > 0) || Math.abs(right) >= speedKnots) return null;
   const groundKnots = along + Math.sqrt(speedKnots ** 2 - right ** 2);
-  if (groundKnots < MIN_GROUND_KNOTS) return null;
+  if (!(groundKnots > 0)) return null;
   const headingDeg = trackDeg - (Math.asin(right / speedKnots) * 180) / Math.PI;
   return { headingDeg: ((headingDeg % 360) + 360) % 360, groundKnots };
 }

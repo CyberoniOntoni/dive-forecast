@@ -149,23 +149,24 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   const routeKm = route && along ? Math.max(0, route.lengthKm - along.remainingKm) : 0;
   const here = boat && route?.current ? currentAt(route.current, routeKm, boat.timeMs) : null;
   const stopped = motion != null && motion.knots < UNDERWAY_KNOTS;
-  const water = motion && !stopped ? waterKnots(motion.knots, motion.courseDeg, here?.current ?? null) : null;
+  // The boat's speed through the water: its GPS speed and course less the current under it.
+  const throughWater = motion && !stopped ? waterKnots(motion.knots, motion.courseDeg, here?.current ?? null) : null;
   const track = boat ? bearingDeg(boat, along?.next ?? site) : null;
   // The heading that holds the track against the current under the boat.
-  const crabbed = track != null && here && water != null ? crab(track, water, here.current) : null;
+  const crabbed = track != null && here && throughWater != null ? crab(track, throughWater, here.current) : null;
   const steer = crabbed?.headingDeg ?? track;
   // The time over the rest of the route, each stretch with the current it has when the boat gets there.
   const timeAt = (knots: number) =>
     boat && route && along ? routeTime(route.points, routeKm, route.current, knots, boat.timeMs) : null;
-  const timed = water != null ? timeAt(water) : null;
-  const eta = water == null || remainingKm == null ? null : timed ? timed.minutes : etaMinutes(remainingKm, water);
+  const timed = throughWater != null ? timeAt(throughWater) : null;
+  const eta = throughWater == null || remainingKm == null ? null : timed ? timed.minutes : etaMinutes(remainingKm, throughWater);
   // A stopped boat's time at a reference speed: null from the route walk means the current ahead beats that speed.
   const referenceMinutes = (knots: number) => {
     const walked = timeAt(knots);
     return walked ? walked.minutes : remainingKm != null ? etaMinutes(remainingKm, knots) : null;
   };
   // Under way but the current ahead is more than the boat makes through the water.
-  const outrun = water != null && timed != null && timed.minutes == null;
+  const outrun = throughWater != null && timed != null && timed.minutes == null;
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
 
   return (
@@ -284,6 +285,14 @@ function referenceTime(knots: number, minutes: number | null): string {
   return minutes == null ? `At ${knots} kn the current is against you` : `At ${knots} kn about ${formatDuration(minutes)}`;
 }
 
+/** The steer names its track once they differ by this many degrees. */
+const STEER_NOTE_DEG = 2;
+
+/** The smaller angle between two headings, 0 to 180 degrees. */
+function headingGapDeg(a: number, b: number): number {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
+
 /** Below this the current is not worth a word. */
 const CURRENT_NOTE_KNOTS = 0.2;
 
@@ -320,9 +329,9 @@ function RouteNote({
 }) {
   const gaps = route?.routed ? route.gaps.length : 0;
   const knots = here ? currentKnots(here.current) : 0;
-  const allows = steer != null && track != null && Math.abs(((steer - track + 540) % 360) - 180) >= 2;
+  const steerOffTrack = steer != null && track != null && headingGapDeg(steer, track) >= STEER_NOTE_DEG;
   const parts = [
-    steer != null ? `Steer ${formatBearing(steer)}${allows && track != null ? ` for track ${formatBearing(track)}` : ""}` : null,
+    steer != null ? `Steer ${formatBearing(steer)}${steerOffTrack && track != null ? ` for track ${formatBearing(track)}` : ""}` : null,
     here && knots >= CURRENT_NOTE_KNOTS
       ? `current ${knots.toFixed(1)} kn toward ${compassWord(currentHeading(here.current))}${here.source.siteId ? ` (${here.source.name})` : ""}`
       : null,
