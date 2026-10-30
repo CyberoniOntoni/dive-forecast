@@ -129,16 +129,11 @@ export function pointFetcher<T>(source: PointSource<T>) {
   const inFlight = new Map<string, Promise<{ hours: T[]; fetchedAt: number } | null>>();
   /** Points whose last fetch failed, until one succeeds. */
   const failedPoints = new Set<string>();
-  const fileName = (lat: number, lon: number) => `${source.prefix}${cacheName(lat, lon)}`;
+  const fileName = (lat: number, lon: number) => `${source.prefix}${marineCacheName(lat, lon)}`;
 
   function readCached(lat: number, lon: number): { fetchedAt: number; hours: T[] } | null {
     try {
-      const raw = fs.readFileSync(path.join(marineCacheDir(), fileName(lat, lon)), "utf8");
-      const parsed = JSON.parse(raw) as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
-      if (typeof parsed.fetchedAt !== "number") return null;
-      const hours = source.readHours(parsed);
-      if (!hours || hours.length === 0) return null;
-      return { fetchedAt: parsed.fetchedAt, hours };
+      return parsePointCache(fs.readFileSync(path.join(marineCacheDir(), fileName(lat, lon)), "utf8"), source.readHours);
     } catch {
       return null;
     }
@@ -303,16 +298,67 @@ function marineQuery(lat: number, lon: number): string {
   return params.toString();
 }
 
-function cacheName(lat: number, lon: number): string {
+/**
+ * A point's marine cache file name: four decimals, -0 folded to 0. Other series put their prefix before it. The
+ * character filter also strips the letters of ".json", so names end in "."; renaming would orphan every cached file.
+ */
+export function marineCacheName(lat: number, lon: number): string {
   return `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+}
+
+/** A cache file's text read back: null without a numeric fetch time or without hours. */
+function parsePointCache<T>(
+  raw: string,
+  readHours: PointSource<T>["readHours"],
+): { fetchedAt: number; hours: T[] } | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const record = parsed as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
+  if (typeof record.fetchedAt !== "number") return null;
+  const hours = readHours(record);
+  if (!hours || hours.length === 0) return null;
+  return { fetchedAt: record.fetchedAt, hours };
+}
+
+/**
+ * The hours in a marine cache file. Stored hours are checked one by one (string time, finite-or-null numbers); older
+ * files still store the Open-Meteo body, parsed once here.
+ */
+function marineCacheHours(parsed: { hours?: unknown; body?: unknown }): MarineHour[] | null {
+  return storedMarineHours(parsed.hours) ?? ("body" in parsed ? marineHoursFromApi(parsed.body) : null);
+}
+
+function storedMarineHours(value: unknown): MarineHour[] | null {
+  if (!Array.isArray(value)) return null;
+  const hours: MarineHour[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") return null;
+    const hour = item as Partial<MarineHour>;
+    if (typeof hour.time !== "string") return null;
+    hours.push({
+      time: hour.time,
+      seaLevelM: asNumber(hour.seaLevelM),
+      currentVelocityMs: asNumber(hour.currentVelocityMs),
+      currentDirectionDeg: asNumber(hour.currentDirectionDeg),
+    });
+  }
+  return hours.length > 0 ? hours : null;
+}
+
+/** A marine cache file's text, read exactly as the app reads it. For scripts that read the cache directly. */
+export function parseMarineCache(raw: string): { fetchedAt: number; hours: MarineHour[] } | null {
+  return parsePointCache(raw, marineCacheHours);
 }
 
 const marinePoints = pointFetcher<MarineHour>({
   prefix: "",
   request: requestMarine,
-  // Older cache files still store the Open-Meteo body. Parse that once; stored hours are already parsed.
-  readHours: (parsed) =>
-    Array.isArray(parsed.hours) ? (parsed.hours as MarineHour[]) : "body" in parsed ? marineHoursFromApi(parsed.body) : null,
+  readHours: marineCacheHours,
   skipFailedPoints: false,
 });
 

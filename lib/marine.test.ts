@@ -4,9 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchMarine,
   marineCacheDir,
+  marineCacheName,
   marineHoursFromApi,
   marineRequestsInFlight,
   marineSeriesStale,
+  parseMarineCache,
   seawardPoint,
   siteMarineHours,
   wrapLongitude,
@@ -290,6 +292,28 @@ describe("marine cache", () => {
       forgetMarineCache(0, 0);
       forgetMarineCache(-0, -0);
     }
+  });
+});
+
+describe("marine cache file", () => {
+  it("names a point by four decimals with -0 folded to 0", () => {
+    expect(marineCacheName(4.17521, 73.5)).toBe("4.1752_73.5000.");
+    expect(marineCacheName(-0, -0.00001)).toBe("0.0000_-0.0000.");
+  });
+
+  it("reads stored hours, checks each one, and needs a fetch time", () => {
+    const hour = { time: "2026-09-22T00:00", seaLevelM: 0.4, currentVelocityMs: null, currentDirectionDeg: 90 };
+    expect(parseMarineCache(JSON.stringify({ fetchedAt: 5, hours: [hour] }))).toEqual({ fetchedAt: 5, hours: [hour] });
+    expect(parseMarineCache(JSON.stringify({ hours: [hour] }))).toBeNull();
+    expect(parseMarineCache(JSON.stringify({ fetchedAt: 5, hours: [{ ...hour, time: 0 }] }))).toBeNull();
+    expect(parseMarineCache(JSON.stringify({ fetchedAt: 5, hours: [{ ...hour, seaLevelM: "0.4" }] }))?.hours[0].seaLevelM)
+      .toBeNull();
+    expect(parseMarineCache("not json")).toBeNull();
+  });
+
+  it("parses an older file that stored the Open-Meteo body", () => {
+    const body = marineApiBody(["2026-09-22T00:00"], [0.42], [3.6], [10]);
+    expect(parseMarineCache(JSON.stringify({ fetchedAt: 1, body }))?.hours).toEqual(marineHoursFromApi(body));
   });
 });
 

@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "../lib/bearing";
 import { seaLevelSlopeAt, throughflowAt, THROUGHFLOW_SLOPE_PER_MS } from "../lib/forecast";
-import { marineCacheDir, seawardPoint } from "../lib/marine";
+import { marineCacheDir, marineCacheName, parseMarineCache, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { readCatalog } from "../lib/store";
@@ -21,10 +21,8 @@ import type { MarineHour } from "../lib/types";
 const SWEEP = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.5];
 
 function cachedHours(lat: number, lon: number): MarineHour[] | null {
-  const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
   try {
-    const parsed = JSON.parse(fs.readFileSync(path.join(marineCacheDir(), name), "utf8")) as { hours?: MarineHour[] };
-    return Array.isArray(parsed.hours) && parsed.hours.length > 0 ? parsed.hours : null;
+    return parseMarineCache(fs.readFileSync(path.join(marineCacheDir(), marineCacheName(lat, lon)), "utf8"))?.hours ?? null;
   } catch {
     return null;
   }

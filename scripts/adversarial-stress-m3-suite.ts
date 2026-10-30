@@ -86,7 +86,7 @@ assert(CONSTRICTION_MAX === 2.5, "1.1.4 CONSTRICTION_MAX is exactly 2.5");
 
 assert(
   constrictionFactor(5000, 400) === 1.0,
-  "1.1.5 Reference pass (5000m x 400m = 2,000,000 m^2) produces exactly C=1.0",
+  "1.1.5 Wide pass (5000m x 400m = 2,000,000 m^2, far above A_ref) clamps to C_min = 1.0",
   `Received C=${constrictionFactor(5000, 400)}`
 );
 
@@ -146,14 +146,14 @@ for (const [w, d, label] of pathologicalInputs) {
 // 1.3 Peak Current Amplification across varying tidal ranges
 // Moderate tide: amplitude 0.25m -> range 0.50m.
 // Unconstricted (C=1.0): effectiveRange = 0.50m -> "mild"
-// Constricted (C=2.5): effectiveRange = 1.25m -> "too_strong"
+// Constricted 300m x 30m (C = (31,500 / 9,000)^0.35 ~ 1.55): effectiveRange ~ 0.78m
 const modSeries = makeTidalSeries("2026-07-20T00:00", 72, 12, 0.25);
 const openModFc = forecastHours({ hours: modSeries, inwardBearingDeg: 90 });
 const narrowModFc = forecastHours({
   hours: modSeries,
   inwardBearingDeg: 90,
   channelWidthM: 300,
-  channelDepthM: 30, // C=2.5
+  channelDepthM: 30, // C ~ 1.55
 });
 
 assert(narrowModFc.length === openModFc.length, "1.3.1 Forecast lengths match between open and constricted");
@@ -179,6 +179,15 @@ assert(
   "1.3.3 Constricted channel never produces weaker current rating than open site at any hour"
 );
 
+// Spring tide: amplitude 0.5m -> range 1.0m. Constriction must never lower a rating here either.
+const springSeries = makeTidalSeries("2026-07-20T00:00", 72, 12, 0.5);
+const openSpringFc = forecastHours({ hours: springSeries, inwardBearingDeg: 90 });
+const narrowSpringFc = forecastHours({ hours: springSeries, inwardBearingDeg: 90, channelWidthM: 300, channelDepthM: 30 });
+assert(
+  openSpringFc.every((h, i) => rank(narrowSpringFc[i].strength) >= rank(h.strength)),
+  "1.3.4 Constricted channel never produces weaker current rating than open site on a spring tide"
+);
+
 // 1.4 Slack Preservation
 // When slope is 0 (flat series), constriction MUST preserve slack
 const flatSeries: MarineHour[] = Array.from({ length: 48 }, (_, i) => ({
@@ -195,7 +204,7 @@ const flatNarrowFc = forecastHours({
 });
 assert(
   flatNarrowFc.every((h) => h.strength === "slack"),
-  "1.4.1 Zero slope remains 100% 'slack' even under maximal constriction C=2.5"
+  "1.4.1 Zero slope remains 100% 'slack' even under constriction (200m x 20m, C ~ 2.06)"
 );
 
 // =============================================================================
@@ -343,10 +352,12 @@ const testContradictions: { label: string; deltaMs: number; expectHighForbidden:
   { label: "24 hours prior (1 day, delta = -24h, aligned phase)", deltaMs: -24 * 3600 * 1000, expectHighForbidden: true },
   { label: "48 hours prior (2 days, delta = -48h, aligned phase)", deltaMs: -48 * 3600 * 1000, expectHighForbidden: true },
   { label: "72 hours prior (3 days, delta = -72h, aligned phase)", deltaMs: -72 * 3600 * 1000, expectHighForbidden: true },
+  { label: "6 days prior (delta = -6d, aligned phase)", deltaMs: -6 * 24 * 3600 * 1000, expectHighForbidden: true },
   { label: "6.99 days prior (delta = -6.99d, slopeM=0.08)", deltaMs: -Math.floor(6.99 * 24 * 3600 * 1000), expectHighForbidden: true },
   { label: "7 days - 1 second (inside 7d gate)", deltaMs: -(SEVEN_DAYS_MS - 1000), expectHighForbidden: true },
   { label: "Future clock skew (+30 minutes, < 1h rule)", deltaMs: 30 * 60 * 1000, expectHighForbidden: true },
   { label: "Future clock skew (+12 hours, aligned phase)", deltaMs: 12 * 3600 * 1000, expectHighForbidden: true },
+  { label: "Future clock skew (+3 days, aligned phase)", deltaMs: 3 * 24 * 3600 * 1000, expectHighForbidden: true },
   { label: "Boundary at 7.01 days prior (> 7 days)", deltaMs: -Math.ceil(7.01 * 24 * 3600 * 1000), expectHighForbidden: false },
   { label: "Historical 14 days prior (> 7 days)", deltaMs: -14 * 24 * 3600 * 1000, expectHighForbidden: false },
 ];

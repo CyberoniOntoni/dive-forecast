@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { resolveBearing } from "../lib/bearing";
 import { ALONG_REEF_TIDE_GAIN, alongReefHours } from "../lib/forecast";
-import { marineCacheDir, seawardPoint } from "../lib/marine";
+import { marineCacheDir, marineCacheName, parseMarineCache, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
@@ -22,10 +22,8 @@ import { STRENGTHS, type MarineHour } from "../lib/types";
  * Reads only the local marine cache.
  */
 function cachedHours(lat: number, lon: number): MarineHour[] | null {
-  const name = `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
   try {
-    const parsed = JSON.parse(fs.readFileSync(path.join(marineCacheDir(), name), "utf8")) as { hours?: MarineHour[] };
-    return Array.isArray(parsed.hours) && parsed.hours.length > 0 ? parsed.hours : null;
+    return parseMarineCache(fs.readFileSync(path.join(marineCacheDir(), marineCacheName(lat, lon)), "utf8"))?.hours ?? null;
   } catch {
     return null;
   }

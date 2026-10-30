@@ -140,39 +140,6 @@ describe("Tier 1: Feature Coverage", () => {
     // Start series 24h before target day so 2026-07-15 is Day 2 (centered in 72h window)
     const marineHours = makeMarineSeries("2026-07-14T00:00", springLevels);
 
-    it("T1.R1.1: narrow constricted pass produces higher or equal velocity/strength than wide channel under identical tidal slope", () => {
-      // Narrow pass cross-section: 300m x 30m = 9,000 m^2 (strong constriction)
-      const narrowInput: ExtendedForecastInput = {
-        hours: marineHours,
-        inwardBearingDeg: 90,
-        channelWidthM: 300,
-        channelDepthM: 30,
-      };
-      // Wide open channel: 2000m x 80m = 160,000 m^2 (minimal constriction)
-      const wideInput: ExtendedForecastInput = {
-        hours: marineHours,
-        inwardBearingDeg: 90,
-        channelWidthM: 2000,
-        channelDepthM: 80,
-      };
-
-      const narrowForecast = forecastHours(narrowInput as Parameters<typeof forecastHours>[0]);
-      const wideForecast = forecastHours(wideInput as Parameters<typeof forecastHours>[0]);
-
-      // At peak rising tide (e.g. index 3: 03:00)
-      const peakHour = "2026-07-15T03:00";
-      const narrowPeak = findHour(narrowForecast, peakHour);
-      const widePeak = findHour(wideForecast, peakHour);
-
-      expect(narrowPeak).toBeDefined();
-      expect(widePeak).toBeDefined();
-      if (narrowPeak && widePeak) {
-        expect(strengthRank(narrowPeak.strength)).toBeGreaterThanOrEqual(
-          strengthRank(widePeak.strength),
-        );
-      }
-    });
-
     it("T1.R1.2: constriction factor formula clamps between C_min = 1.0 and C_max = 2.5", () => {
       // Very extreme narrow pass: 50m x 10m = 500 m^2 -> (2,000,000 / 500)^0.35 ≈ 18.2 -> clamps to 2.5
       const extremeNarrow: ExtendedForecastInput = {
@@ -970,67 +937,6 @@ describe("Tier 2: Boundary & Corner Cases", () => {
 describe("Tier 3: Cross-Feature Combinations", () => {
   const springLevels = generateSpringLevels(72);
   const hours = makeMarineSeries("2026-07-14T00:00", springLevels);
-
-  it("T3.C1: Constriction + Monsoon Drift: narrow pass aligned with monsoon drift exhibits amplified velocity", () => {
-    // Narrow pass (300m x 30m) facing 90°
-    const narrowPassInput: ExtendedForecastInput = {
-      hours,
-      inwardBearingDeg: 90,
-      channelWidthM: 300,
-      channelDepthM: 30,
-    };
-    // Wide pass (2000m x 80m) facing 90°
-    const widePassInput: ExtendedForecastInput = {
-      hours,
-      inwardBearingDeg: 90,
-      channelWidthM: 2000,
-      channelDepthM: 80,
-    };
-
-    const narrowForecast = forecastHours(narrowPassInput as Parameters<typeof forecastHours>[0]);
-    const wideForecast = forecastHours(widePassInput as Parameters<typeof forecastHours>[0]);
-
-    const peakHour = "2026-07-15T03:00";
-    const narrowPeak = findHour(narrowForecast, peakHour);
-    const widePeak = findHour(wideForecast, peakHour);
-
-    expect(narrowPeak).toBeDefined();
-    expect(widePeak).toBeDefined();
-    if (narrowPeak && widePeak) {
-      expect(strengthRank(narrowPeak.strength)).toBeGreaterThanOrEqual(
-        strengthRank(widePeak.strength),
-      );
-    }
-  });
-
-  it("T3.C2: Constriction + Opposing Monsoon: narrow pass opposing monsoon alters net current compared to open pass", () => {
-    const hoursWithEastwardDrift = makeMarineSeries("2026-07-14T00:00", springLevels).map((h) => ({
-      ...h,
-      currentVelocityMs: 0.5,
-      currentDirectionDeg: 90,
-    }));
-
-    // Inward bearing 270° opposes eastward ocean drift
-    const narrowConstricted: ExtendedForecastInput = {
-      hours: hoursWithEastwardDrift,
-      inwardBearingDeg: 270,
-      channelWidthM: 400,
-      channelDepthM: 25,
-    };
-
-    const openUnconstricted: ExtendedForecastInput = {
-      hours: hoursWithEastwardDrift,
-      inwardBearingDeg: 270,
-      channelWidthM: 3000,
-      channelDepthM: 200,
-    };
-
-    const narrowRes = forecastHours(narrowConstricted as Parameters<typeof forecastHours>[0]);
-    const openRes = forecastHours(openUnconstricted as Parameters<typeof forecastHours>[0]);
-
-    expect(narrowRes.length).toBeGreaterThan(0);
-    expect(openRes.length).toBeGreaterThan(0);
-  });
 
   it("T3.C3: Constriction + Noisy Diver Reports: high-velocity constricted pass maintains stability on conflicting reports", () => {
     const noisyReports: Report[] = [

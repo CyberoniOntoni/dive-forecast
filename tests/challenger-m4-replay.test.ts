@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { forecastHours, parseWall } from "../lib/forecast";
 import { replayReports, type BenchmarkMetrics, type ReplayResult } from "../lib/replay";
 import type { Direction, MarineHour, Report, Strength } from "../lib/types";
+import { combineReplayResults } from "../scripts/replay";
 
 // ── Synthetic Fixture Helpers ────────────────────────────────────────────────
 
@@ -620,60 +621,62 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
   // ── Challenge 9: Constriction Geometry Forwarding ──────────────────────────
   describe("Challenge 9: Constriction Geometry Parameter Forwarding", () => {
     it("forwards channelWidthM and channelDepthM to forecastHours and modulates strength output", () => {
-      // In active forecast window: 2026-09-22T14:00 (index 14, steep incoming slope)
+      // A 0.5 m range: mild in open water, strong once a 150 m x 15 m section lifts it by 2.5.
+      const moderate = createSyntheticMarine(72, 0.25);
+      // 2026-09-24T00:00 (index 48): the sine crosses its mean, the steepest rising hour.
       const report: Report = {
         id: "rep-geometry",
         siteId: "s",
-        time: "2026-09-22T14:00",
+        time: "2026-09-24T00:00",
         direction: "incoming",
         strength: "strong",
       };
+      const replay = (section: { channelWidthM?: number; channelDepthM?: number }) =>
+        replayReports({ hours: moderate, inwardBearingDeg: 0, reports: [report], ...section });
 
-      // Unconstricted (wide pass: 2000m x 50m = 100,000 m2)
-      const wideResult = replayReports({
-        hours,
-        inwardBearingDeg: 0,
-        reports: [report],
-        channelWidthM: 2000,
-        channelDepthM: 50,
-      });
+      const open = replay({});
+      const wide = replay({ channelWidthM: 2000, channelDepthM: 50 });
+      const narrow = replay({ channelWidthM: 150, channelDepthM: 15 });
 
-      // Strongly constricted (narrow pass: 150m x 15m = 2,250 m2 -> 2.5x amplification)
-      const narrowResult = replayReports({
-        hours,
-        inwardBearingDeg: 0,
-        reports: [report],
-        channelWidthM: 150,
-        channelDepthM: 15,
-      });
-
-      expect(wideResult.metrics.totalReports).toBe(1);
-      expect(narrowResult.metrics.totalReports).toBe(1);
-      assertNoNaN(wideResult);
-      assertNoNaN(narrowResult);
+      for (const result of [open, wide, narrow]) {
+        expect(result.metrics.totalReports).toBe(1);
+        assertNoNaN(result);
+      }
+      // Wider than the reference area: no lift, so the strong report reads against a mild hour.
+      expect(open.strengthMismatches).toBe(1);
+      expect(wide.strengthMismatches).toBe(1);
+      // The narrow section reaches the forecast and lifts the hour to strong.
+      expect(narrow.strengthMismatches).toBe(0);
     });
   });
 
   // ── Challenge 10: Multi-Site Aggregation Invariants (CLI runner logic) ──────
   describe("Challenge 10: Multi-Site Aggregation Weighted Integrity", () => {
-    it("preserves exact mathematical aggregation without unweighted averaging bias", () => {
-      const siteAMatches = 9;
-      const siteATotal = 10;
-      const siteADeviations = [20];
+    const siteResult = (totalReports: number, directionalAccuracyPct: number): ReplayResult => ({
+      ok: true,
+      failures: 0,
+      strengthMismatches: 0,
+      metrics: {
+        totalReports,
+        directionalAccuracyPct,
+        slackTimingDeviationMins: 0,
+        slackReports: 0,
+        falseHighConfidenceRatePct: 0,
+        confidenceBreakdown: {
+          high: { count: 0, accuracyPct: 0 },
+          medium: { count: 0, accuracyPct: 0 },
+          low: { count: totalReports, accuracyPct: directionalAccuracyPct },
+        },
+      },
+    });
 
-      const siteBMatches = 81;
-      const siteBTotal = 90;
-      const siteBDeviations = [25, 25, 25, 25];
-
-      const totalMatches = siteAMatches + siteBMatches;
-      const totalReports = siteATotal + siteBTotal;
-      const totalDeviations = [...siteADeviations, ...siteBDeviations];
-
-      const overallAccuracy = (totalMatches / totalReports) * 100;
-      const overallSlackMae = totalDeviations.reduce((a, b) => a + b, 0) / totalDeviations.length;
-
-      expect(overallAccuracy).toBe(90.0);
-      expect(overallSlackMae).toBe(24.0);
+    it("pools directional matches by report, not by averaging site accuracies", () => {
+      // Site A: 1 of 2 right (50%). Site B: 72 of 90 right (80%). By report 73 / 92; a mean of sites would be 65%.
+      const combined = combineReplayResults([siteResult(2, 50), siteResult(90, 80)]);
+      expect(combined.metrics.totalReports).toBe(92);
+      expect(combined.metrics.directionalAccuracyPct).toBeCloseTo((73 / 92) * 100, 2);
+      expect(combined.metrics.confidenceBreakdown.low.count).toBe(92);
+      expect(combined.metrics.confidenceBreakdown.low.accuracyPct).toBeCloseTo((73 / 92) * 100, 2);
     });
   });
 });

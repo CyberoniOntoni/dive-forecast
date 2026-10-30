@@ -4,9 +4,9 @@ import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
 import { sectionInput } from "../lib/forecast";
 import { rimForAtoll } from "../lib/rim";
-import { marineCacheDir, marineHoursFromApi, seawardPoint } from "../lib/marine";
+import { marineCacheDir, marineCacheName, parseMarineCache, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
-import { replayReports, type BenchmarkMetrics } from "../lib/replay";
+import { replayReports, type BenchmarkMetrics, type ReplayResult } from "../lib/replay";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
 import { listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
@@ -153,16 +153,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
   }
 
   const siteResults: SiteBenchmarkResult[] = [];
-
-  let totalReports = 0;
-  let totalDirectionalMatches = 0;
-  let totalFailures = 0;
-  let totalStrengthMismatches = 0;
-  let totalSlackCount = 0;
-  let totalSlackDeviationSumMins = 0;
-
-  const tierCounts = { high: 0, medium: 0, low: 0 };
-  const tierMatches = { high: 0, medium: 0, low: 0 };
+  const replays: ReplayResult[] = [];
 
   for (const [siteId, siteReports] of grouped.entries()) {
     if (options.siteId && siteId !== options.siteId) continue;
@@ -201,41 +192,69 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     });
 
     const m = res.metrics;
-    const siteTotal = m.totalReports;
-    const siteMatches = Math.round((m.directionalAccuracyPct / 100) * siteTotal);
-    const evaluatedSlackCount = m.slackReports;
-    const siteSlackDevSum = m.slackTimingDeviationMins * evaluatedSlackCount;
-
-    totalReports += siteTotal;
-    totalDirectionalMatches += siteMatches;
-    totalFailures += res.failures;
-    totalStrengthMismatches += res.strengthMismatches;
-    totalSlackCount += evaluatedSlackCount;
-    totalSlackDeviationSumMins += siteSlackDevSum;
-
-    // Confidence breakdown tally
-    for (const tier of ["high", "medium", "low"] as const) {
-      const tc = m.confidenceBreakdown[tier].count;
-      const tm = Math.round((m.confidenceBreakdown[tier].accuracyPct / 100) * tc);
-      tierCounts[tier] += tc;
-      tierMatches[tier] += tm;
-    }
-
+    replays.push(res);
     siteResults.push({
       siteId: site.id,
       siteName: site.name,
       atollName: atoll.name,
-      evaluatedReports: siteTotal,
-      slackReports: evaluatedSlackCount,
-      slackDeviationSumMins: siteSlackDevSum,
+      evaluatedReports: m.totalReports,
+      slackReports: m.slackReports,
+      slackDeviationSumMins: m.slackTimingDeviationMins * m.slackReports,
       failures: res.failures,
       strengthMismatches: res.strengthMismatches,
-      directionalMatches: siteMatches,
+      directionalMatches: matchesOf(m.directionalAccuracyPct, m.totalReports),
       directionalAccuracyPct: m.directionalAccuracyPct,
       slackTimingDeviationMins: m.slackTimingDeviationMins,
       falseHighConfidenceRatePct: m.falseHighConfidenceRatePct,
       ok: res.ok,
     });
+  }
+
+  const combined = combineReplayResults(replays);
+  return {
+    ok: combined.failures === 0,
+    failures: combined.failures,
+    strengthMismatches: combined.strengthMismatches,
+    metrics: combined.metrics,
+    datasetName,
+    evaluatedAt: new Date().toISOString(),
+    siteResults,
+  };
+}
+
+/** Reports a percentage of a count stands for: the per-site results carry percentages, not tallies. */
+function matchesOf(pct: number, count: number): number {
+  return Math.round((pct / 100) * count);
+}
+
+/** Pools per-site replays by report: every rate is weighted by its site's report count, never a mean of site rates. */
+export function combineReplayResults(
+  replays: readonly ReplayResult[],
+): { failures: number; strengthMismatches: number; metrics: BenchmarkMetrics } {
+  let totalReports = 0;
+  let totalDirectionalMatches = 0;
+  let totalFailures = 0;
+  let totalStrengthMismatches = 0;
+  let totalSlackCount = 0;
+  let totalSlackDeviationSumMins = 0;
+
+  const tierCounts = { high: 0, medium: 0, low: 0 };
+  const tierMatches = { high: 0, medium: 0, low: 0 };
+
+  for (const res of replays) {
+    const m = res.metrics;
+    totalReports += m.totalReports;
+    totalDirectionalMatches += matchesOf(m.directionalAccuracyPct, m.totalReports);
+    totalFailures += res.failures;
+    totalStrengthMismatches += res.strengthMismatches;
+    totalSlackCount += m.slackReports;
+    totalSlackDeviationSumMins += m.slackTimingDeviationMins * m.slackReports;
+
+    for (const tier of ["high", "medium", "low"] as const) {
+      const tc = m.confidenceBreakdown[tier].count;
+      tierCounts[tier] += tc;
+      tierMatches[tier] += matchesOf(m.confidenceBreakdown[tier].accuracyPct, tc);
+    }
   }
 
   const overallAccuracy =
@@ -267,15 +286,7 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     },
   };
 
-  return {
-    ok: totalFailures === 0,
-    failures: totalFailures,
-    strengthMismatches: totalStrengthMismatches,
-    metrics,
-    datasetName,
-    evaluatedAt: new Date().toISOString(),
-    siteResults,
-  };
+  return { failures: totalFailures, strengthMismatches: totalStrengthMismatches, metrics };
 }
 
 function loadReportsForMode(options: ReplayCliOptions): { reports: Report[]; datasetName: string } {
@@ -412,68 +423,22 @@ function groupBySiteId(reports: readonly Report[]): Map<string, Report[]> {
 
 /** Benchmark mode reads only the pinned fixtures, so a live cache cannot change its numbers. */
 function cachedHoursAt(lat: number, lon: number, benchmarkOnly = false): MarineHour[] | null {
-  const latPart = (lat === 0 ? 0 : lat).toFixed(4);
-  const lonPart = (lon === 0 ? 0 : lon).toFixed(4);
-  // Prefer real .json names. Also accept the old stripped key that ended in ".".
-  const names = [`${latPart}_${lonPart}.json`, `${latPart}_${lonPart}.`];
+  const name = marineCacheName(lat, lon);
+  // The pinned fixtures end in ".json"; the app's own cache files end in "." (see marineCacheName).
+  const names = [`${name}json`, name];
   const dirs = benchmarkOnly ? [BENCHMARK_CACHE_DIR] : [marineCacheDir(), BENCHMARK_CACHE_DIR];
 
   for (const dir of dirs) {
-    for (const name of names) {
-      const filePath = path.join(dir, name);
+    for (const candidate of names) {
       try {
-        if (fs.existsSync(filePath)) {
-          const raw = fs.readFileSync(filePath, "utf8");
-          const parsed = parseCachedHours(raw);
-          if (parsed?.hours && parsed.hours.length > 0) return parsed.hours;
-        }
+        const parsed = parseMarineCache(fs.readFileSync(path.join(dir, candidate), "utf8"));
+        if (parsed) return parsed.hours;
       } catch {
         // Continue to next candidate
       }
     }
   }
   return null;
-}
-
-function parseCachedHours(raw: string): { hours: MarineHour[]; fetchedAt: number } | null {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
-  }
-  if (!parsed || typeof parsed !== "object") return null;
-  const record = parsed as { fetchedAt?: unknown; hours?: unknown; body?: unknown };
-  const fetchedAt =
-    typeof record.fetchedAt === "number" && Number.isFinite(record.fetchedAt) ? record.fetchedAt : 0;
-  const stored = storedHours(record.hours);
-  if (stored) return { hours: stored, fetchedAt };
-  const fromBody = "body" in record ? marineHoursFromApi(record.body) : null;
-  if (fromBody && fromBody.length > 0) return { hours: fromBody, fetchedAt };
-  const direct = marineHoursFromApi(parsed);
-  if (direct && direct.length > 0) return { hours: direct, fetchedAt };
-  return null;
-}
-
-function storedHours(value: unknown): MarineHour[] | null {
-  if (!Array.isArray(value)) return null;
-  const hours: MarineHour[] = [];
-  for (const item of value) {
-    if (!item || typeof item !== "object") return null;
-    const hour = item as Partial<MarineHour>;
-    if (typeof hour.time !== "string") return null;
-    hours.push({
-      time: hour.time,
-      seaLevelM: numberOrNull(hour.seaLevelM),
-      currentVelocityMs: numberOrNull(hour.currentVelocityMs),
-      currentDirectionDeg: numberOrNull(hour.currentDirectionDeg),
-    });
-  }
-  return hours.length > 0 ? hours : null;
-}
-
-function numberOrNull(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function round2(val: number): number {
