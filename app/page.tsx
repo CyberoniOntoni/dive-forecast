@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { SiteMap } from "@/components/SiteMap";
 import { listSites } from "@/lib/actions";
 import { toMaldivesWall } from "@/lib/forecast";
-import { nowcastSites } from "@/lib/nowcast";
+import { mapNowcasts } from "@/lib/nowcast-cache";
 import { atollNamesById } from "@/lib/site-labels";
 import { readCatalog } from "@/lib/store";
 
@@ -13,7 +13,7 @@ async function SiteMapSection() {
   // Nowcasts need each site's atoll. The list also includes pins the user added.
   const atolls = readCatalog().atolls;
   const maldivesWall = toMaldivesWall(new Date().toISOString());
-  const nowcasts = await nowcastSites(sites, atolls, maldivesWall);
+  const nowcasts = await mapNowcasts(sites, atolls, maldivesWall);
   return (
     <SiteMap
       sites={sites}

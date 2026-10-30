@@ -10,6 +10,7 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`) |
 | Reports, ratings, added pins | `data/store.json` | `store.json` in the R2 bucket `dive-current-data`, read once per request and written with an etag check (create-only for the first write) and retry (`lib/store.ts`) |
 | Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus an in-memory copy per isolate (`lib/marine.ts`) |
+| Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: served at once for the same Maldives hour and site list, rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
 
 `lib/cloudflare.ts` tells the two apart: OpenNext's request context exists only on a worker. Two rules come from
 the Workers runtime:
