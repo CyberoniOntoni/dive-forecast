@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { perRequest, runInBackground, workerEnv } from "./cloudflare";
+import { inFlightPerRequest, perRequest, runInBackground, workerEnv } from "./cloudflare";
 import type { MarineHour } from "./types";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
@@ -133,7 +133,7 @@ export type PointSource<T> = {
  */
 export function pointFetcher<T>(source: PointSource<T>) {
   /** Per request on a worker (perRequest). */
-  const inFlightNow = perRequest(() => new Map<string, Promise<{ hours: T[]; fetchedAt: number } | null>>());
+  const fetchesInFlight = inFlightPerRequest<{ hours: T[]; fetchedAt: number } | null>();
   /** Points whose last fetch failed, until one succeeds. */
   const failedPoints = new Set<string>();
   const fileName = (lat: number, lon: number) => `${source.prefix}${marineCacheName(lat, lon)}`;
@@ -187,7 +187,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
    */
   function refresh(lat: number, lon: number): Promise<{ hours: T[]; fetchedAt: number } | null> {
     const key = fileName(lat, lon);
-    const inFlight = inFlightNow();
+    const inFlight = fetchesInFlight();
     const running = inFlight.get(key);
     if (running) return running;
     const request = withRequestSlot(() => source.request(lat, lon))

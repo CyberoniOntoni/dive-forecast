@@ -62,3 +62,8 @@ export function perRequest<T>(make: () => T): () => T {
     return byRequest.get(current) as T;
   };
 }
+
+/** A map of promises in flight by key, per request on a worker (perRequest). Callers asking for the same key share one. */
+export function inFlightPerRequest<V>(): () => Map<string, Promise<V>> {
+  return perRequest(() => new Map<string, Promise<V>>());
+}

@@ -1,6 +1,6 @@
 import { ringProblem, type RimRing } from "./rim";
 import { REEF_TRANSMISSION } from "./wave-exposure";
-import { readDataFile } from "./data-files";
+import { readDataFileIfPresent } from "./data-files";
 
 /**
  * Shoals inside atoll lagoons (data/shoals.json, from the Allen Coral Atlas reef zones; npm run shoals): reef tops
@@ -24,11 +24,8 @@ let loadedShoals: Shoal[] | null = null;
  */
 export function readShoals(): Shoal[] {
   if (loadedShoals) return loadedShoals;
-  let text: string;
-  try {
-    text = readDataFile("shoals.json");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("shoals.json");
+  if (text === null) {
     loadedShoals = [];
     return loadedShoals;
   }

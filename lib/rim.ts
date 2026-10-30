@@ -1,6 +1,6 @@
 import { footOnSegment, nearestOnPolyline } from "./geometry";
 import type { Atoll, Site } from "./types";
-import { readDataFile } from "./data-files";
+import { readDataFileIfPresent } from "./data-files";
 
 export type RimRing = readonly (readonly [number, number])[];
 
@@ -54,11 +54,8 @@ export function rimFilePresent(): boolean {
  */
 function readRims(): { present: boolean; rims: Map<string, RimRing> } {
   if (loaded) return loaded;
-  let text: string;
-  try {
-    text = readDataFile("rims.json");
-  } catch (error) {
-    if (!isMissing(error)) throw error;
+  const text = readDataFileIfPresent("rims.json");
+  if (text === null) {
     loaded = { present: false, rims: new Map() };
     return loaded;
   }
@@ -109,9 +106,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isMissing(error: unknown): boolean {
-  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
-}
 
 /** Mean of the ring's points, closing point left out. */
 function ringMiddle(ring: RimRing): [number, number] {

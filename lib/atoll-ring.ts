@@ -1,5 +1,5 @@
 import { residualLevels } from "./forecast";
-import { perRequest } from "./cloudflare";
+import { inFlightPerRequest } from "./cloudflare";
 import { fetchMarine, seawardPoint, type FetchOptions } from "./marine";
 import { pointInRing, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, MarineHour, RingLevel } from "./types";
@@ -97,7 +97,7 @@ export type AtollRing = { samples: RingSample[]; series: (MarineHour[] | null)[]
 
 const memo = new Map<string, { at: number; ring: AtollRing }>();
 /** Per request on a worker (perRequest); the memo above holds plain data and is shared. */
-const loadingNow = perRequest(() => new Map<string, Promise<AtollRing>>());
+const ringLoadsInFlight = inFlightPerRequest<AtollRing>();
 const EMPTY: AtollRing = { samples: [], series: [], level: [] };
 
 /**
@@ -112,7 +112,7 @@ export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promi
   const key = atoll.rimSourceUrl;
   const kept = memo.get(key);
   if (kept && Date.now() - kept.at < MEMO_MS && kept.ring.level.length > 0) return kept.ring;
-  const loading = loadingNow();
+  const loading = ringLoadsInFlight();
   const running = loading.get(key);
   if (running) return running;
   const samples = ringSamples(rim);
@@ -140,5 +140,5 @@ export async function atollRingLevel(atoll: Atoll, options: FetchOptions = {}): 
 /** For tests. */
 export function clearRingMemo(): void {
   memo.clear();
-  loadingNow().clear();
+  ringLoadsInFlight().clear();
 }

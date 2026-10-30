@@ -22,7 +22,7 @@ export type DataFile = (typeof DATA_FILES)[number];
 /** On a worker: each file's text, or null when the build had no such file. Loaded once per isolate. */
 let preloaded: Map<DataFile, string | null> | null = null;
 /** A preload under way, per request (perRequest): requests arriving together on a cold isolate each fetch. */
-const preloadingNow = perRequest(() => ({ promise: null as Promise<void> | null }));
+const preloadInFlight = perRequest(() => ({ promise: null as Promise<void> | null }));
 
 /**
  * Fetches every data file from the worker's static assets, once per isolate, so the synchronous loaders below can read
@@ -31,7 +31,7 @@ const preloadingNow = perRequest(() => ({ promise: null as Promise<void> | null 
 export function preloadDataFiles(): Promise<void> {
   const env = workerEnv();
   if (!env || preloaded) return Promise.resolve();
-  const preloading = preloadingNow();
+  const preloading = preloadInFlight();
   preloading.promise ??= Promise.all(
     DATA_FILES.map(async (name) => {
       const response = await env.ASSETS.fetch(`https://assets.local/_data/${name}`);
@@ -62,4 +62,14 @@ export function readDataFile(name: DataFile): string {
     throw Object.assign(new Error(`ENOENT: data/${name} is not in this build`), { code: "ENOENT" });
   }
   return text;
+}
+
+/** The text of data/<name>, or null when the file is missing. Any other read error throws. */
+export function readDataFileIfPresent(name: DataFile): string | null {
+  try {
+    return readDataFile(name);
+  } catch (error) {
+    if (error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
 }

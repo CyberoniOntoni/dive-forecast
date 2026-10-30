@@ -1,4 +1,4 @@
-import { readDataFile } from "./data-files";
+import { readDataFileIfPresent } from "./data-files";
 
 /** A shorter break between crest is a map crack, not a channel. */
 export const OPENING_MIN_M = 100;
@@ -121,11 +121,8 @@ let loadedOpenings: ReefOpening[] | null = null;
  */
 export function readOpenings(): ReefOpening[] {
   if (loadedOpenings) return loadedOpenings;
-  let text: string;
-  try {
-    text = readDataFile("openings.json");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("openings.json");
+  if (text === null) {
     loadedOpenings = [];
     return loadedOpenings;
   }

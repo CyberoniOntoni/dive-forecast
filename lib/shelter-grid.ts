@@ -20,7 +20,7 @@ import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, fieldByte } from "./shelter-field";
 import type { Atoll, SeaStateHour } from "./types";
-import { readDataFile } from "./data-files";
+import { readDataFileIfPresent } from "./data-files";
 
 /**
  * The sheltered-water map layer: every atoll's lagoon and the sea for SHELTER_BAND_KM outside its outline, each cell
@@ -169,11 +169,8 @@ function emptyGrid(): ShelterGridFile {
  */
 export function readShelterGrid(): ShelterGridFile {
   if (loadedGrid) return loadedGrid;
-  let text: string;
-  try {
-    text = readDataFile("shelter-grid.json");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("shelter-grid.json");
+  if (text === null) {
     loadedGrid = emptyGrid();
     return loadedGrid;
   }

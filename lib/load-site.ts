@@ -1,6 +1,6 @@
 import { resolveBearing } from "./bearing";
 import { rimForAtoll } from "./rim";
-import { perRequest } from "./cloudflare";
+import { inFlightPerRequest } from "./cloudflare";
 import { atollRing, atollRingLevel } from "./atoll-ring";
 import {
   alongReefHours,
@@ -72,7 +72,7 @@ function unavailableLoad(
 const LAGOON_MEMO_MS = 10 * 60 * 1000;
 const lagoonMemo = new Map<string, { at: number; sources: LagoonSource[] }>();
 /** Per request on a worker (perRequest); the memo above holds plain data and is shared. */
-const lagoonLoadingNow = perRequest(() => new Map<string, Promise<LagoonSource[]>>());
+const lagoonLoadsInFlight = inFlightPerRequest<LagoonSource[]>();
 const sinkMemo = new Map<string, LagoonSink>();
 
 /**
@@ -84,7 +84,7 @@ const sinkMemo = new Map<string, LagoonSink>();
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   const kept = lagoonMemo.get(atoll.id);
   if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
-  const lagoonLoading = lagoonLoadingNow();
+  const lagoonLoading = lagoonLoadsInFlight();
   const running = lagoonLoading.get(atoll.id);
   if (running) return running;
   const load = (async () => {
