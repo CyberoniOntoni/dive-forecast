@@ -24,6 +24,10 @@ the Workers runtime:
 
 Background cache refreshes run under `waitUntil` (`runInBackground`).
 
+The worker's entry is `cloudflare-worker.js`, which wraps OpenNext's `.open-next/worker.js`: it answers 405 to
+anything but GET, HEAD and server-action POSTs (`lib/request-guard.ts`), so bot probes such as WordPress's
+`POST /?rest_route=/batch/v1` never render the map.
+
 ## Commands
 
 ```bash

@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   // Cloudflare Workers deploy (OpenNext). Build with `npm run cf:build`; see CLOUDFLARE.md.
   "name": "dive-forecast",
-  "main": ".open-next/worker.js",
+  "main": "cloudflare-worker.js",
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
