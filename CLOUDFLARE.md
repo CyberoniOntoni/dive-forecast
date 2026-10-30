@@ -38,12 +38,12 @@ npm run cf:deploy     # cf:build, then deploys to the account wrangler is logged
    the free allowance.
 2. **Your current reports:** in that bucket, upload the LXC's `data/store.json` as `store.json`. Without it the worker
    starts with no reports, ratings or added pins. (Or: `npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`.)
-3. **Worker from GitHub:** Workers & Pages → Create → Import a repository → `CyberoniOntoni/dive-forecast`.
+3. **Worker from GitHub:** Workers & Pages → Create → Import a repository → `CyberoniOntoni/dive-forecast` (the worker is named `dive-forecast`, matching `wrangler.jsonc`).
    - Build command: `npm run replay && npm run cf:build`
    - Deploy command: `npx wrangler deploy`
    - Non-production branch deploy command: `npx wrangler versions upload` (each branch gets a preview URL)
    - Production branch: `main`
-4. The worker is then live at `dive-current.<your-subdomain>.workers.dev`. To use your domain, open the worker →
+4. The worker is then live at `dive-forecast.<your-subdomain>.workers.dev`. To use your domain, open the worker →
    Settings → Domains & Routes → Add → Custom domain (for example `cf.50bar.app` to try it, later
    `current.50bar.app`). The domain's DNS must be on Cloudflare.
 

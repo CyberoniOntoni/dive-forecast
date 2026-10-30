@@ -1383,8 +1383,19 @@ function bandIndex(strength: Strength): number {
 }
 
 export function parseWall(value: string): number {
+  const known = parsedWalls.get(value);
+  if (known !== undefined) return known;
   const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(value);
-  if (!match) return Number.NaN;
-  return Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]);
+  const ms = match ? Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]) : Number.NaN;
+  if (parsedWalls.size >= PARSED_WALLS_MAX) parsedWalls.clear();
+  parsedWalls.set(value, ms);
+  return ms;
 }
+
+/**
+ * parseWall's answers by string. The same few hundred hour strings are parsed millions of times on a map load (it
+ * was over half the nowcast's CPU); cleared when full so it cannot grow without bound.
+ */
+const parsedWalls = new Map<string, number>();
+const PARSED_WALLS_MAX = 20_000;
 
