@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { inwardBearingDeg } from "../lib/bearing";
 import { sectionInput } from "../lib/forecast";
 import { rimForAtoll } from "../lib/rim";
-import { marineCacheDir, marineCacheName, parseMarineCache, seawardPoint } from "../lib/marine";
+import { marineCacheDir, marineCacheName, marineFixtureName, parseMarineCache, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { replayReports, type BenchmarkMetrics, type ReplayResult } from "../lib/replay";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
@@ -423,9 +423,7 @@ function groupBySiteId(reports: readonly Report[]): Map<string, Report[]> {
 
 /** Benchmark mode reads only the pinned fixtures, so a live cache cannot change its numbers. */
 function cachedHoursAt(lat: number, lon: number, benchmarkOnly = false): MarineHour[] | null {
-  const name = marineCacheName(lat, lon);
-  // The pinned fixtures end in ".json"; the app's own cache files end in "." (see marineCacheName).
-  const names = [`${name}json`, name];
+  const names = [marineFixtureName(lat, lon), marineCacheName(lat, lon)];
   const dirs = benchmarkOnly ? [BENCHMARK_CACHE_DIR] : [marineCacheDir(), BENCHMARK_CACHE_DIR];
 
   for (const dir of dirs) {

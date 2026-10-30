@@ -1,12 +1,9 @@
-import fs from "fs";
-import path from "path";
 import { resolveBearing } from "../lib/bearing";
 import { seaLevelSlopeAt, throughflowAt, THROUGHFLOW_SLOPE_PER_MS } from "../lib/forecast";
-import { marineCacheDir, marineCacheName, parseMarineCache, seawardPoint } from "../lib/marine";
+import { readCachedHours, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
 import { readCatalog } from "../lib/store";
-import type { MarineHour } from "../lib/types";
 
 /**
  * Calibrates THROUGHFLOW_SLOPE_PER_MS against the owner's description: a channel facing the monsoon current runs in
@@ -20,14 +17,6 @@ import type { MarineHour } from "../lib/types";
  */
 const SWEEP = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.5];
 
-function cachedHours(lat: number, lon: number): MarineHour[] | null {
-  try {
-    return parseMarineCache(fs.readFileSync(path.join(marineCacheDir(), marineCacheName(lat, lon)), "utf8"))?.hours ?? null;
-  } catch {
-    return null;
-  }
-}
-
 type SiteSample = { id: string; flux: number; slopes: number[] };
 
 function main(): void {
@@ -40,7 +29,7 @@ function main(): void {
     if (!atoll) continue;
     const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
     const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
-    const hours = cachedHours(point.lat, point.lon);
+    const hours = readCachedHours(point.lat, point.lon)?.hours;
     if (!hours) {
       missing += 1;
       continue;

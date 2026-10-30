@@ -5,6 +5,7 @@ import {
   fetchMarine,
   marineCacheDir,
   marineCacheName,
+  marineFixtureName,
   marineHoursFromApi,
   marineRequestsInFlight,
   marineSeriesStale,
@@ -299,6 +300,7 @@ describe("marine cache file", () => {
   it("names a point by four decimals with -0 folded to 0", () => {
     expect(marineCacheName(4.17521, 73.5)).toBe("4.1752_73.5000.");
     expect(marineCacheName(-0, -0.00001)).toBe("0.0000_-0.0000.");
+    expect(marineFixtureName(4.17521, 73.5)).toBe("4.1752_73.5000.json");
   });
 
   it("reads stored hours, checks each one, and needs a fetch time", () => {

@@ -298,12 +298,22 @@ function marineQuery(lat: number, lon: number): string {
   return params.toString();
 }
 
+/** A point to four decimals, -0 folded to 0. */
+function pointKey(lat: number, lon: number): string {
+  return `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}`;
+}
+
 /**
- * A point's marine cache file name: four decimals, -0 folded to 0. Other series put their prefix before it. The
- * character filter also strips the letters of ".json", so names end in "."; renaming would orphan every cached file.
+ * A point's marine cache file name. Other series put their prefix before it. The character filter also strips the
+ * letters of ".json", so names end in "."; renaming would orphan every cached file.
  */
 export function marineCacheName(lat: number, lon: number): string {
-  return `${(lat === 0 ? 0 : lat).toFixed(4)}_${(lon === 0 ? 0 : lon).toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+  return `${pointKey(lat, lon)}.json`.replace(/[^0-9.+_-]/g, "");
+}
+
+/** The pinned benchmark fixtures' name for a point: the same key, ending in ".json". */
+export function marineFixtureName(lat: number, lon: number): string {
+  return `${pointKey(lat, lon)}.json`;
 }
 
 /** A cache file's text read back: null without a numeric fetch time or without hours. */
@@ -362,7 +372,8 @@ const marinePoints = pointFetcher<MarineHour>({
   skipFailedPoints: false,
 });
 
-function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
+/** A point's series from the app's marine cache, read as the app reads it; null when there is none. */
+export function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
   return marinePoints.readCached(lat, lon);
 }
 
