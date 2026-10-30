@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { completeSignIn, requestSignIn } from "@/lib/account-actions";
-import { NICKNAME_MAX } from "@/lib/accounts";
+import { LOGIN_CODE_TTL_MS, NICKNAME_MAX } from "@/lib/accounts";
 
 const FIELD =
   "field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
@@ -105,7 +105,7 @@ export function SignInForm({
       ) : (
         <form onSubmit={signIn} className="flex min-w-0 flex-col gap-4">
           <p className="text-sm leading-6 text-foam/80">
-            {sent ? `We sent a 6-digit code to ${email}. It works for 15 minutes.` : `Signing in as ${email}.`}
+            {sent ? `We sent a 6-digit code to ${email}. It works for ${LOGIN_CODE_TTL_MS / 60_000} minutes.` : `Signing in as ${email}.`}
           </p>
           <label className="flex min-w-0 flex-col gap-1 text-sm text-foam" htmlFor="sign-in-code">
             Code

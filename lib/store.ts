@@ -10,7 +10,6 @@ import {
   type Report,
   type Site,
   type StoreData,
-  type User,
 } from "./types";
 
 const DEFAULT_STORE_FILE = "store.json";
@@ -134,10 +133,6 @@ export function reportsForSite(siteId: string): Report[] {
 
 export function ratingsForSite(siteId: string): Rating[] {
   return readStore().ratings.filter((rating) => rating.siteId === siteId);
-}
-
-export function findUser(id: string): User | null {
-  return readStore().users.find((user) => user.id === id) ?? null;
 }
 
 export async function addUserSite(site: Site): Promise<Site> {

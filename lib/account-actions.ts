@@ -15,6 +15,7 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { hashLoginCode, newLoginCode, sameText } from "./session-token";
+import { localPath } from "./sign-in";
 import { listMergedSites, mutateStore, readStore } from "./store";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
@@ -35,7 +36,7 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
     const codeHash = await hashLoginCode(email, code, secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now()));
     const base = await appUrl();
-    const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: safeNext(next) })}` : null;
+    const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
     if (mail) {
       await sendLoginEmail(mail, { to: email, code, link }).catch((error) => {
         console.error("Sign-in email failed", error);
@@ -166,9 +167,4 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
       badges: row.badges.length,
       isMe: row.userId === session?.userId,
     }));
-}
-
-/** Where to go after signing in: a path on this site only. */
-function safeNext(next: unknown): string {
-  return typeof next === "string" && /^\/(?!\/)[^\s\\]*$/.test(next) ? next : "/";
 }

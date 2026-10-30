@@ -2,15 +2,11 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { SignInForm } from "@/components/SignInForm";
 import { currentSession } from "@/lib/auth";
+import { localPath } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Sign in · Dive current" };
-
-/** A path on this site only, so the page cannot send anyone elsewhere after signing in. */
-function localPath(value: string | string[] | undefined): string {
-  return typeof value === "string" && /^\/(?!\/)[^\s\\]*$/.test(value) ? value : "/";
-}
 
 function text(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";

@@ -66,7 +66,7 @@ nickname the first time. Only the nickname is ever shown. Settings, as Worker se
 | `MAILGUN_DOMAIN` | The verified Mailgun sending domain. | `mg.50bar.app` |
 | `MAILGUN_FROM` | Optional sender. Defaults to `Dive current <login@MAILGUN_DOMAIN>`. | `Dive current <login@mg.50bar.app>` |
 | `MAILGUN_REGION` | `eu` for an EU Mailgun account; otherwise leave unset. | |
-| `APP_URL` | The site's address, for the link in the email. Without it the email has the code only. | `https://50bar.app` |
+| `APP_URL` | The site's address, for the link in the email. Without it the email has the code only. | `https://50bar.app` on Cloudflare, `https://current.50bar.app` in the LXC's `.env` |
 
 Mailgun's domain needs its DNS records (SPF TXT, DKIM TXT, MX and the tracking CNAME it lists) added in Cloudflare
 DNS for 50bar.app. Without `AUTH_SECRET` and the Mailgun settings, production says signing in is not set up; `next dev`
