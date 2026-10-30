@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { whoAmI } from "@/lib/account-actions";
 import { addSite } from "@/lib/actions";
+import { signInHref } from "@/lib/sign-in";
 
 type Point = { lat: number; lon: number };
 
@@ -16,6 +19,17 @@ export function AddSiteForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const pinCopy = describePin(point);
+  // Only signed-in divers add sites. Asked when the form opens, so the map page itself stays the same for everyone.
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    whoAmI()
+      .then((me) => live && setSignedIn(me != null))
+      .catch(() => live && setSignedIn(true));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -41,6 +55,20 @@ export function AddSiteForm({
         setError(message || "Could not add that site.");
       }
     });
+  }
+
+  if (signedIn === false) {
+    return (
+      <div id="add-site-form" className="flex flex-col gap-2 pt-3">
+        <p className="text-sm leading-5 text-foam/80">Sign in with your email to add a dive site.</p>
+        <Link
+          href={signInHref("/")}
+          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
+        >
+          Sign in
+        </Link>
+      </div>
+    );
   }
 
   return (

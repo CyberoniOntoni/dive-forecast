@@ -39,6 +39,16 @@ export function workerEnv(): WorkerEnv | null {
 }
 
 /**
+ * A setting or secret by name: the worker's binding (wrangler vars and secrets) when there is one, else the process
+ * environment (Docker, next dev). Empty means unset.
+ */
+export function appSetting(name: string): string | null {
+  const bound = (workerEnv() as Record<string, unknown> | null)?.[name];
+  const value = typeof bound === "string" ? bound : process.env[name];
+  return value ? value : null;
+}
+
+/**
  * Lets work run on after the response is sent. A worker drops unfinished promises when the response is done, so a
  * background cache refresh needs waitUntil there; on Node the promise just runs.
  */

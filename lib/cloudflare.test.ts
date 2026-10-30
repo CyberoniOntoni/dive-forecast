@@ -154,7 +154,7 @@ describe("on a Cloudflare worker", () => {
     await bucket.put("store.json", "{not json");
     newRequest({ ASSETS: fakeAssets({}), DATA: bucket });
     await store.refreshStore();
-    expect(store.readStore()).toEqual({ reports: [], ratings: [], sites: [] });
+    expect(store.readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [] });
     expect([...bucket.objects.keys()].some((key) => key.startsWith("store.json.corrupt."))).toBe(true);
   });
 

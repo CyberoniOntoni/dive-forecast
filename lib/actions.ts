@@ -1,6 +1,5 @@
 "use server";
 
-import { cache } from "react";
 import { atollForPin } from "./bearing";
 import type { BoatTrip } from "./boat-route-data";
 import { boatRoute } from "./boat-route-data";
@@ -13,15 +12,18 @@ import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./sh
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
-import { preloadDataFiles } from "./data-files";
+import { ready } from "./ready";
+import { requireSession } from "./auth";
+import { reportAwards } from "./points";
+import type { ReportAward } from "./points-rules";
 import {
   addReport as persistReport,
   addUserSite,
   findSite,
   listMergedSites,
-  ratingForSite,
+  ratingsForSite,
   readCatalog,
-  refreshStore,
+  readStore,
   reportsForSite,
   saveRating,
 } from "./store";
@@ -42,16 +44,12 @@ import {
 
 const REPORT_HOUR_INDEX = 6;
 
-/**
- * Every action starts here. On Cloudflare the data files come from static assets and the store from R2; both must be
- * in memory before the synchronous readers run. Once per request (React cache), so a page's several actions read R2
- * once. Nothing to do on Node.
- */
-const ready = cache(async (): Promise<void> => {
-  await Promise.all([preloadDataFiles(), refreshStore()]);
-});
-
-export type ReportActionState = { success: boolean; error: string | null };
+export type ReportActionState = {
+  success: boolean;
+  error: string | null;
+  /** What the saved report earned (lib/points.ts). */
+  award?: ReportAward | null;
+};
 
 export async function listSites(): Promise<Site[]> {
   await ready();
@@ -65,6 +63,7 @@ export async function getSite(id: string): Promise<Site | null> {
 
 export async function addSite(input: { name: string; lat: number; lon: number }): Promise<Site> {
   await ready();
+  const session = await requireSession();
   const body = requireSiteInput(input);
   const name = requireSiteName(body.name);
   const lat = requireLatitude(body.lat);
@@ -73,24 +72,37 @@ export async function addSite(input: { name: string; lat: number; lon: number })
   if (atolls.length === 0) throw new Error("No atolls");
 
   const atoll = atollForPin(lat, lon, atolls);
-  return addUserSite(newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID));
+  return addUserSite({ ...newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID), addedBy: session.userId });
 }
 
-export async function rateSite(siteId: string, score: number): Promise<Rating> {
+/** A site's ratings: the mean of every diver's, how many there are, and the signed-in diver's own. */
+export type RatingSummary = { average: number | null; count: number; mine: number | null };
+
+export async function rateSite(siteId: string, score: number): Promise<RatingSummary> {
   await ready();
+  const session = await requireSession();
   requireSiteId(siteId);
   if (!findSite(siteId)) throw new Error("Unknown site");
   requireRatingScore(score);
-  return saveRating({ siteId, score, updatedAt: new Date().toISOString() });
+  await saveRating({ siteId, score, updatedAt: new Date().toISOString(), userId: session.userId });
+  return ratingSummary(ratingsForSite(siteId), session.userId);
 }
 
-export async function getRating(siteId: string): Promise<Rating | null> {
+export async function getRating(siteId: string, userId: string | null): Promise<RatingSummary> {
   await ready();
-  return ratingForSite(siteId);
+  return ratingSummary(ratingsForSite(siteId), userId);
+}
+
+function ratingSummary(ratings: readonly Rating[], userId: string | null): RatingSummary {
+  const count = ratings.length;
+  const average = count ? Math.round((ratings.reduce((sum, item) => sum + item.score, 0) / count) * 10) / 10 : null;
+  const mine = userId ? (ratings.find((item) => item.userId === userId)?.score ?? null) : null;
+  return { average, count, mine };
 }
 
 export async function addReport(input: unknown): Promise<Report> {
   await ready();
+  const session = await requireSession();
   const body = requireReportInput(input);
   const site = findSite(body.siteId as string);
   if (!site) throw new Error("Unknown site");
@@ -113,6 +125,7 @@ export async function addReport(input: unknown): Promise<Report> {
     strength: body.strength as Strength,
     slopeM: tide ? tide.slopeWindowM[REPORT_HOUR_INDEX] : null,
     filedAt: filedAt.toISOString(),
+    userId: session.userId,
   };
   if (tide) {
     report.slopeWindowM = tide.slopeWindowM;
@@ -132,13 +145,13 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
     const time = String(formData.get("time") ?? "").trim();
     const direction = String(formData.get("direction") ?? "");
     const strength = String(formData.get("strength") ?? "");
-    await addReport({
+    const report = await addReport({
       siteId,
       time,
       direction: direction as Direction,
       strength: strength as Strength,
     });
-    return { success: true, error: null };
+    return { success: true, error: null, award: reportAwards(readStore().reports).get(report.id) ?? null };
   } catch (caught) {
     const error = caught instanceof Error ? caught.message : "Could not add that report.";
     return { success: false, error };
@@ -228,6 +241,7 @@ export async function getRecentReports(siteId: string, route: ForecastRoute): Pr
   return recentReportRows(reportsForSite(siteId), {
     nowWall: toMaldivesWall(new Date().toISOString()),
     route,
+    nicknames: new Map(readStore().users.map((user) => [user.id, user.nickname])),
   });
 }
 

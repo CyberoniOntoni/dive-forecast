@@ -27,6 +27,8 @@ export type RecentReportRow = {
   forecast: { way: string; strength: string; match: ReportMatch } | null;
   /** A report on a compass route filed before the site was read along that axis: its in/out cannot be turned. */
   beforeAxis: boolean;
+  /** The reporting diver's nickname; null for reports from before sign-in. */
+  by: string | null;
 };
 
 /**
@@ -35,7 +37,7 @@ export type RecentReportRow = {
  */
 export function recentReportRows(
   reports: readonly Report[],
-  options: { nowWall: string; route: ForecastRoute; limit?: number },
+  options: { nowWall: string; route: ForecastRoute; limit?: number; nicknames?: ReadonlyMap<string, string> },
 ): RecentReportRow[] {
   const siteOnAxis = options.route !== "channel";
   const nowMs = parseWall(options.nowWall);
@@ -57,6 +59,7 @@ export function recentReportRows(
           ? { way: wayOf(shown.direction), strength: strengthLabel(shown.strength), match: matchOf(report, shown) }
           : null,
         beforeAxis: siteOnAxis && heading == null,
+        by: report.userId ? (options.nicknames?.get(report.userId) ?? null) : null,
       };
     });
 }

@@ -53,13 +53,13 @@ function tmpLeftovers() {
 
 describe("readStore", () => {
   it("returns an empty store when the file is missing", () => {
-    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [] });
+    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [] });
   });
 
   it("quarantines truncated JSON and returns an empty store", () => {
     const truncated = '{"reports":[{"id":"r1"';
     fs.writeFileSync(path.join(DATA_DIR, testFile), truncated);
-    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [] });
+    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [] });
     const corrupt = fs.readdirSync(DATA_DIR).filter((name) => name.startsWith(`${testFile}.corrupt.`));
     expect(corrupt).toHaveLength(1);
     expect(fs.readFileSync(path.join(DATA_DIR, corrupt[0]), "utf8")).toBe(truncated);
@@ -75,7 +75,7 @@ describe("readStore", () => {
     });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      expect(readStore()).toEqual({ reports: [], ratings: [], sites: [] });
+      expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [] });
       expect(errorSpy).toHaveBeenCalledWith("Failed to quarantine corrupt store file", renameError);
       expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(true);
     } finally {

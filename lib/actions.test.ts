@@ -1,7 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { addReport, addReportAction, addSite, rateSite } from "./actions";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { addReport, addReportAction, addSite, getRating, rateSite } from "./actions";
+import { authSecret, SESSION_COOKIE } from "./auth";
+import { signSession } from "./session-token";
 import { inwardBearingDeg } from "./bearing";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import { marineCacheDir, seawardPoint } from "./marine";
@@ -13,13 +15,30 @@ import { UNSEEDED_ATOLL_ID } from "./types";
 const DATA_DIR = path.join(process.cwd(), "data");
 const LIVE_STORE = path.join(DATA_DIR, "store.json");
 
+/** The request's cookies, as next/headers would read them. */
+const jar = vi.hoisted(() => new Map<string, string>());
+vi.mock("next/headers", () => ({
+  cookies: async () => ({
+    get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined),
+    set: (name: string, value: string) => jar.set(name, value),
+    delete: (name: string) => jar.delete(name),
+  }),
+  headers: async () => new Headers(),
+}));
+
+async function signInAs(userId: string, nickname = userId) {
+  jar.set(SESSION_COOKIE, await signSession({ userId, nickname, issuedAt: Date.now() }, authSecret()!));
+}
+
 let testFile = "";
 let liveSnapshot = "";
 
-beforeEach(() => {
+beforeEach(async () => {
   liveSnapshot = fs.readFileSync(LIVE_STORE, "utf8");
   testFile = `.store-test-${crypto.randomUUID()}.json`;
   setStorePath(testFile);
+  jar.clear();
+  await signInAs("diver-1");
 });
 
 afterEach(() => {
@@ -172,6 +191,51 @@ describe("addReportAction", () => {
     const state = await addReportAction("", new FormData());
     expect(state).toEqual({ success: false, error: expect.any(String) });
     expect(state.error).toBeTruthy();
+  });
+
+  it("returns the points the report earned", async () => {
+    const form = new FormData();
+    form.set("time", "2026-09-27T08:00");
+    form.set("direction", "incoming");
+    form.set("strength", "mild");
+    const state = await addReportAction("banana-reef", form);
+    expect(state.success).toBe(true);
+    // Filed long after the dive, at a site nobody had reported: no fresh bonus, a pathfinder one.
+    expect(state.award).toMatchObject({ points: 20, reasons: ["report", "pathfinder"] });
+  });
+});
+
+describe("signing in gates writes", () => {
+  it("refuses reports, ratings and new sites from a signed-out visitor", async () => {
+    jar.clear();
+    const report = { siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" };
+    await expect(addReport(report)).rejects.toThrow("Sign in first.");
+    await expect(rateSite("banana-reef", 4)).rejects.toThrow("Sign in first.");
+    await expect(addSite({ name: "Test Reef", lat: 4.2342, lon: 73.534 })).rejects.toThrow("Sign in first.");
+    const state = await addReportAction("banana-reef", new FormData());
+    expect(state.error).toBe("Sign in first.");
+  });
+
+  it("refuses a cookie signed with another secret", async () => {
+    jar.set(SESSION_COOKIE, await signSession({ userId: "x", nickname: "x", issuedAt: Date.now() }, "other-secret"));
+    await expect(rateSite("banana-reef", 4)).rejects.toThrow("Sign in first.");
+  });
+
+  it("stamps reports and added sites with the diver", async () => {
+    const report = await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    expect(report.userId).toBe("diver-1");
+    const site = await addSite({ name: "Test Reef", lat: 4.2342, lon: 73.534 });
+    expect(site.addedBy).toBe("diver-1");
+  });
+
+  it("keeps one rating per diver and averages them", async () => {
+    await rateSite("banana-reef", 4);
+    await rateSite("banana-reef", 2);
+    await signInAs("diver-2");
+    const summary = await rateSite("banana-reef", 5);
+    expect(summary).toEqual({ average: 3.5, count: 2, mine: 5 });
+    expect(await getRating("banana-reef", "diver-1")).toEqual({ average: 3.5, count: 2, mine: 2 });
+    expect(await getRating("banana-reef", null)).toEqual({ average: 3.5, count: 2, mine: null });
   });
 });
 

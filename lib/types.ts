@@ -56,6 +56,8 @@ export type Site = {
   lat: number;
   lon: number;
   sourceUrl: string;
+  /** On a pin added in the app ("user" source): the diver who added it (User.id). */
+  addedBy?: string;
   /** Published dive top, metres. Display only; never a speed input. */
   diveTopM?: number;
   /** Published dive maximum, metres. Display only; never a speed input. */
@@ -166,6 +168,8 @@ export type Report = {
   predicted?: ForecastAtReport;
   /** When the report was filed, ISO UTC. Absent on reports filed before it was recorded (1 Oct 2026). */
   filedAt?: string;
+  /** The signed-in diver who filed it (User.id). Absent on reports filed before sign-in existed (Oct 2026). */
+  userId?: string;
 };
 
 /**
@@ -190,11 +194,35 @@ export type ForecastAtReport = {
   modelOnly: { direction: Direction; strength: Strength } | null;
 };
 
+/** One diver's rating of a site. Ratings from before sign-in have no userId: one anonymous rating per site. */
 export type Rating = {
   siteId: string;
   /** Dive-site quality. Never an input to the current forecast. */
   score: number;
   updatedAt: string;
+  userId?: string;
+};
+
+/** A signed-in diver. The email is private: only the nickname is ever shown. */
+export type User = {
+  id: string;
+  /** Lower-cased. */
+  email: string;
+  /** Shown on reports and the leaderboard. Unique, ignoring case. */
+  nickname: string;
+  createdAt: string;
+};
+
+/** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */
+export type PendingLogin = {
+  email: string;
+  codeHash: string;
+  /** ISO UTC. */
+  sentAt: string;
+  /** ISO UTC. */
+  expiresAt: string;
+  /** Wrong codes tried so far. */
+  attempts: number;
 };
 
 export type MarineHour = {
@@ -307,4 +335,6 @@ export type StoreData = {
   reports: Report[];
   ratings: Rating[];
   sites: Site[];
+  users: User[];
+  logins: PendingLogin[];
 };

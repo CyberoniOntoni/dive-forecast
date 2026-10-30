@@ -65,3 +65,11 @@ export function viewerClock(
   );
   return { clock: viewer.toISOString().slice(11, 16), offset: utcOffsetLabel(viewerOffsetMinutes), dayShift };
 }
+
+/** The wall time `hours` before `wall` ("YYYY-MM-DDTHH:MM"), on the same clock; null when `wall` is not a wall time. */
+export function wallHoursBefore(wall: string, hours: number): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(wall);
+  if (!match) return null;
+  const ms = Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]) - hours * HOUR_MS;
+  return new Date(ms).toISOString().slice(0, 16);
+}
