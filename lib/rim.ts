@@ -1,11 +1,9 @@
-import fs from "fs";
-import path from "path";
 import { footOnSegment, nearestOnPolyline } from "./geometry";
 import type { Atoll, Site } from "./types";
+import { readDataFileIfPresent } from "./data-files";
 
 export type RimRing = readonly (readonly [number, number])[];
 
-const RIMS_PATH = path.join(process.cwd(), "data", "rims.json");
 export const KM_PER_DEG_LAT = 110.57;
 export const KM_PER_DEG_LON = 111.32;
 /** Normals from rim segments this close to the pin are averaged. */
@@ -56,11 +54,8 @@ export function rimFilePresent(): boolean {
  */
 function readRims(): { present: boolean; rims: Map<string, RimRing> } {
   if (loaded) return loaded;
-  let text: string;
-  try {
-    text = fs.readFileSync(RIMS_PATH, "utf8");
-  } catch (error) {
-    if (!isMissing(error)) throw error;
+  const text = readDataFileIfPresent("rims.json");
+  if (text === null) {
     loaded = { present: false, rims: new Map() };
     return loaded;
   }
@@ -111,9 +106,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isMissing(error: unknown): boolean {
-  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
-}
 
 /** Mean of the ring's points, closing point left out. */
 function ringMiddle(ring: RimRing): [number, number] {

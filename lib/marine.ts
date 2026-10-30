@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { inFlightPerRequest, perRequest, runInBackground, workerEnv } from "./cloudflare";
 import type { MarineHour } from "./types";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
@@ -10,8 +11,13 @@ const SEAWARD_KM = 3;
 /** Open-Meteo requests running at once. Hundreds of sites must not fire hundreds of requests together. */
 const MAX_REQUESTS = 4;
 const EARTH_RADIUS_KM = 6371;
+/** Where a worker keeps the cache files in its R2 bucket. */
+const WORKER_CACHE_PREFIX = "marine-cache/";
 
-/** Fetched Open-Meteo hours. MARINE_CACHE_DIR points tests at a throwaway directory. */
+/**
+ * Fetched Open-Meteo hours on Node. MARINE_CACHE_DIR points tests at a throwaway directory. A worker keeps them in R2
+ * under WORKER_CACHE_PREFIX instead.
+ */
 export function marineCacheDir(): string {
   return process.env.MARINE_CACHE_DIR || DEFAULT_CACHE_DIR;
 }
@@ -58,7 +64,7 @@ export async function siteMarineHours(
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
-  const cached = readCachedHours(point.lat, point.lon) ?? readCachedHours(fallbackLat, fallbackLon);
+  const cached = (await readCachedHours(point.lat, point.lon)) ?? (await readCachedHours(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
@@ -126,23 +132,50 @@ export type PointSource<T> = {
  * so their cache and failure rules cannot drift apart.
  */
 export function pointFetcher<T>(source: PointSource<T>) {
-  const inFlight = new Map<string, Promise<{ hours: T[]; fetchedAt: number } | null>>();
+  /** Per request on a worker (perRequest). */
+  const fetchesInFlight = inFlightPerRequest<{ hours: T[]; fetchedAt: number } | null>();
   /** Points whose last fetch failed, until one succeeds. */
   const failedPoints = new Set<string>();
   const fileName = (lat: number, lon: number) => `${source.prefix}${marineCacheName(lat, lon)}`;
 
-  function readCached(lat: number, lon: number): { fetchedAt: number; hours: T[] } | null {
+  /** On a worker: series this isolate read or wrote, so a map load reads each point from R2 once per 6 hours. */
+  const remembered = new Map<string, { fetchedAt: number; hours: T[] }>();
+
+  async function readCached(lat: number, lon: number): Promise<{ fetchedAt: number; hours: T[] } | null> {
+    const name = fileName(lat, lon);
+    const env = workerEnv();
+    if (!env) {
+      try {
+        return parsePointCache(fs.readFileSync(path.join(marineCacheDir(), name), "utf8"), source.readHours);
+      } catch {
+        return null;
+      }
+    }
+    const known = remembered.get(name);
+    // Past the TTL another isolate may have refreshed it already: look in R2 before fetching Open-Meteo again.
+    if (known && Date.now() - known.fetchedAt <= CACHE_TTL_MS) return known;
     try {
-      return parsePointCache(fs.readFileSync(path.join(marineCacheDir(), fileName(lat, lon)), "utf8"), source.readHours);
+      const object = await env.DATA.get(`${WORKER_CACHE_PREFIX}${name}`);
+      const parsed = object ? parsePointCache(await object.text(), source.readHours) : null;
+      if (parsed) remembered.set(name, parsed);
+      return parsed ?? known ?? null;
     } catch {
-      return null;
+      return known ?? null;
     }
   }
 
-  function writeCached(lat: number, lon: number, hours: T[], fetchedAt: number) {
+  async function writeCached(lat: number, lon: number, hours: T[], fetchedAt: number) {
+    const name = fileName(lat, lon);
+    const text = JSON.stringify({ fetchedAt, hours });
     try {
+      const env = workerEnv();
+      if (env) {
+        remembered.set(name, { fetchedAt, hours });
+        await env.DATA.put(`${WORKER_CACHE_PREFIX}${name}`, text);
+        return;
+      }
       fs.mkdirSync(marineCacheDir(), { recursive: true });
-      fs.writeFileSync(path.join(marineCacheDir(), fileName(lat, lon)), JSON.stringify({ fetchedAt, hours }));
+      fs.writeFileSync(path.join(marineCacheDir(), name), text);
     } catch (error) {
       console.warn("Failed to write marine cache", error);
     }
@@ -154,17 +187,18 @@ export function pointFetcher<T>(source: PointSource<T>) {
    */
   function refresh(lat: number, lon: number): Promise<{ hours: T[]; fetchedAt: number } | null> {
     const key = fileName(lat, lon);
+    const inFlight = fetchesInFlight();
     const running = inFlight.get(key);
     if (running) return running;
     const request = withRequestSlot(() => source.request(lat, lon))
-      .then((hours) => {
+      .then(async (hours) => {
         if (!hours || hours.length === 0) {
           failedPoints.add(key);
           return null;
         }
         failedPoints.delete(key);
         const fetchedAt = Date.now();
-        writeCached(lat, lon, hours, fetchedAt);
+        await writeCached(lat, lon, hours, fetchedAt);
         return { hours, fetchedAt };
       })
       .finally(() => inFlight.delete(key));
@@ -173,15 +207,15 @@ export function pointFetcher<T>(source: PointSource<T>) {
   }
 
   async function fetchPoint(lat: number, lon: number, options: FetchOptions = {}): Promise<PointFetch<T>> {
-    const cached = readCached(lat, lon);
+    const cached = await readCached(lat, lon);
     if (cached) {
-      if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) void refresh(lat, lon).catch(() => null);
+      if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) runInBackground(refresh(lat, lon));
       return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
     }
     const failed = failedPoints.has(fileName(lat, lon));
     if (options.wait === false || (failed && source.skipFailedPoints)) {
       // A point whose last fetch failed is not waiting on anything: the caller falls back as when it waits.
-      void refresh(lat, lon).catch(() => null);
+      runInBackground(refresh(lat, lon));
       return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };
     }
     const fetched = await refresh(lat, lon);
@@ -212,24 +246,28 @@ export async function fetchOpenMeteoJson(url: string, label: string): Promise<un
   }
 }
 
-let activeRequests = 0;
-const waitingRequests: (() => void)[] = [];
+/**
+ * The request slots. Per request on a worker, so each request there has its own MAX_REQUESTS: a request may only wait
+ * on its own fetches.
+ */
+const requestSlots = perRequest(() => ({ active: 0, waiting: [] as (() => void)[] }));
 
 /** Runs an Open-Meteo request once one of the MAX_REQUESTS slots is free. Shared by every pointFetcher. */
 async function withRequestSlot<T>(task: () => Promise<T>): Promise<T> {
-  if (activeRequests >= MAX_REQUESTS) await new Promise<void>((resolve) => waitingRequests.push(resolve));
-  activeRequests += 1;
+  const slots = requestSlots();
+  if (slots.active >= MAX_REQUESTS) await new Promise<void>((resolve) => slots.waiting.push(resolve));
+  slots.active += 1;
   try {
     return await task();
   } finally {
-    activeRequests -= 1;
-    waitingRequests.shift()?.();
+    slots.active -= 1;
+    slots.waiting.shift()?.();
   }
 }
 
 /** Open-Meteo requests running now. For tests. */
 export function marineRequestsInFlight(): number {
-  return activeRequests;
+  return requestSlots().active;
 }
 
 export function marineHoursFromApi(body: unknown): MarineHour[] | null {
@@ -373,7 +411,7 @@ const marinePoints = pointFetcher<MarineHour>({
 });
 
 /** A point's series from the app's marine cache, read as the app reads it; null when there is none. */
-export function readCachedHours(lat: number, lon: number): { fetchedAt: number; hours: MarineHour[] } | null {
+export function readCachedHours(lat: number, lon: number): Promise<{ fetchedAt: number; hours: MarineHour[] } | null> {
   return marinePoints.readCached(lat, lon);
 }
 

@@ -1,7 +1,6 @@
-import fs from "fs";
-import path from "path";
 import { ringProblem, type RimRing } from "./rim";
 import { REEF_TRANSMISSION } from "./wave-exposure";
+import { readDataFileIfPresent } from "./data-files";
 
 /**
  * Shoals inside atoll lagoons (data/shoals.json, from the Allen Coral Atlas reef zones; npm run shoals): reef tops
@@ -17,7 +16,6 @@ export type Shoal = { kind: ShoalKind; ring: RimRing };
  */
 export const SHOAL_TRANSMISSION: Record<ShoalKind, number> = { reef: REEF_TRANSMISSION, shallow: 0.5 };
 
-const SHOALS_PATH = path.join(process.cwd(), "data", "shoals.json");
 let loadedShoals: Shoal[] | null = null;
 
 /**
@@ -26,11 +24,8 @@ let loadedShoals: Shoal[] | null = null;
  */
 export function readShoals(): Shoal[] {
   if (loadedShoals) return loadedShoals;
-  let text: string;
-  try {
-    text = fs.readFileSync(SHOALS_PATH, "utf8");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("shoals.json");
+  if (text === null) {
     loadedShoals = [];
     return loadedShoals;
   }

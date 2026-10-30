@@ -1,8 +1,6 @@
-import fs from "fs";
-import path from "path";
 import { DEFAULT_SEAWARD_KM, SEAWARD_STEPS_KM } from "./floor-sample";
+import { readDataFileIfPresent } from "./data-files";
 
-const FLOOR_PATH = path.join(process.cwd(), "data", "seaward-floor.json");
 
 export type SeawardStep = {
   km: number;
@@ -32,15 +30,8 @@ let cached: SeawardFloor | null | undefined;
 
 export function readSeawardFloor(): SeawardFloor | null {
   if (cached !== undefined) return cached;
-  try {
-    cached = JSON.parse(fs.readFileSync(FLOOR_PATH, "utf8")) as SeawardFloor;
-  } catch (error) {
-    if (isMissing(error)) {
-      cached = null;
-      return null;
-    }
-    throw error;
-  }
+  const text = readDataFileIfPresent("seaward-floor.json");
+  cached = text === null ? null : (JSON.parse(text) as SeawardFloor);
   return cached;
 }
 
@@ -50,8 +41,4 @@ export function seawardKmFor(siteId: string): number {
   if (!site?.open) return DEFAULT_SEAWARD_KM;
   const km = site.km;
   return (SEAWARD_STEPS_KM as readonly number[]).includes(km) ? km : DEFAULT_SEAWARD_KM;
-}
-
-function isMissing(error: unknown): boolean {
-  return error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT";
 }

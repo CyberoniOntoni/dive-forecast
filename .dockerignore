@@ -19,3 +19,5 @@ tsconfig.tsbuildinfo
 .env*
 !.env.example
 data/sources
+.open-next
+.wrangler

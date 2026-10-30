@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import zlib from "zlib";
 import { toMaldivesWall } from "./forecast";
 import { readIslands } from "./islands";
@@ -22,6 +20,7 @@ import { readCatalog } from "./store";
 import { siteExposure, type SiteExposure } from "./wave-exposure";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, fieldByte } from "./shelter-field";
 import type { Atoll, SeaStateHour } from "./types";
+import { readDataFileIfPresent } from "./data-files";
 
 /**
  * The sheltered-water map layer: every atoll's lagoon and the sea for SHELTER_BAND_KM outside its outline, each cell
@@ -150,7 +149,6 @@ export function decodeCells(cells: string): Uint8Array {
   return bytes;
 }
 
-const GRID_PATH = path.join(process.cwd(), "data", "shelter-grid.json");
 let loadedGrid: ShelterGridFile | null = null;
 const decoded = new Map<string, Uint8Array>();
 
@@ -171,11 +169,8 @@ function emptyGrid(): ShelterGridFile {
  */
 export function readShelterGrid(): ShelterGridFile {
   if (loadedGrid) return loadedGrid;
-  let text: string;
-  try {
-    text = fs.readFileSync(GRID_PATH, "utf8");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("shelter-grid.json");
+  if (text === null) {
     loadedGrid = emptyGrid();
     return loadedGrid;
   }

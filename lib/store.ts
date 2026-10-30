@@ -1,9 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { atollForPin } from "./bearing";
+import { perRequest, workerEnv, type R2Bucket } from "./cloudflare";
+import { readDataFile } from "./data-files";
 import { UNSEEDED_ATOLL_ID, type Catalog, type Rating, type Report, type Site, type StoreData } from "./types";
 
-const CATALOG_PATH = path.join(process.cwd(), "data", "sites.json");
 const DEFAULT_STORE_FILE = "store.json";
 let storeFile = DEFAULT_STORE_FILE;
 
@@ -16,11 +17,29 @@ export function setStorePath(filePath: string) {
 }
 
 export function readCatalog(): Catalog {
-  const raw = fs.readFileSync(CATALOG_PATH, "utf8");
+  const raw = readDataFile("sites.json");
   return JSON.parse(raw) as Catalog;
 }
 
+/**
+ * On a worker: this request's store, as read from R2 by refreshStore (run by every server action) or as this request
+ * last wrote it. Per request, so another request's refresh never swaps it mid-render. There is no data/ folder there;
+ * store.json lives in the DATA bucket under the same name.
+ */
+const workerSnapshot = perRequest(() => ({ store: null as StoreData | null }));
+
+/** Reads store.json from R2 so this request's readStore sees other isolates' writes. Does nothing on Node. */
+export async function refreshStore(): Promise<void> {
+  const env = workerEnv();
+  if (env) workerSnapshot().store = (await readWorkerStore(env.DATA)).store;
+}
+
 export function readStore(): StoreData {
+  if (workerEnv()) {
+    const { store } = workerSnapshot();
+    if (!store) throw new Error("readStore() before refreshStore()");
+    return store;
+  }
   const file = path.join(process.cwd(), "data", storeFile);
   try {
     const raw = fs.readFileSync(file, "utf8");
@@ -36,6 +55,27 @@ export function readStore(): StoreData {
       return emptyStore();
     }
     throw error;
+  }
+}
+
+/**
+ * store.json from R2 with its etag (null when there is none yet). Corrupt JSON is copied aside as on Node and read as
+ * empty; the etag is kept, so the next write replaces the corrupt object only if nobody changed it meanwhile.
+ */
+async function readWorkerStore(bucket: R2Bucket): Promise<{ store: StoreData; etag: string | null }> {
+  const object = await bucket.get(storeFile);
+  if (!object) return { store: emptyStore(), etag: null };
+  const raw = await object.text();
+  try {
+    return { store: normalizeStore(JSON.parse(raw)), etag: object.etag };
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+    try {
+      await bucket.put(`${storeFile}.corrupt.${Date.now()}`, raw);
+    } catch (copyError) {
+      console.error("Failed to quarantine corrupt store object", copyError);
+    }
+    return { store: emptyStore(), etag: object.etag };
   }
 }
 
@@ -110,21 +150,50 @@ export async function saveRating(rating: Rating): Promise<Rating> {
   });
 }
 
-let mutationChain: Promise<unknown> = Promise.resolve();
+/** Per process on Node, per request on a worker (perRequest). */
+const mutations = perRequest(() => ({ chain: Promise.resolve() as Promise<unknown> }));
 
-/** Process-local: this queue does not coordinate other Node processes. */
+/** Process-local: this queue does not coordinate other Node processes. On a worker, R2's etag check does that. */
 function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
-  const run = mutationChain.then(() => {
+  const queue = mutations();
+  const run = queue.chain.then(() => {
+    const env = workerEnv();
+    if (env) return mutateWorkerStore(env.DATA, mutate);
     const store = readStore();
     const result = mutate(store);
     writeStore(store);
     return result;
   });
-  mutationChain = run.then(
+  queue.chain = run.then(
     () => undefined,
     () => undefined,
   );
   return run;
+}
+
+const WORKER_WRITE_ATTEMPTS = 5;
+
+/**
+ * Read, change and write store.json in R2, only if nobody wrote it in between (etag match, or for the very first
+ * write, only if there is still no object); otherwise start over from the newer copy. Isolates in other places can
+ * write at the same time, so the process-local queue is not enough.
+ */
+async function mutateWorkerStore<T>(bucket: R2Bucket, mutate: (store: StoreData) => T): Promise<T> {
+  for (let attempt = 0; attempt < WORKER_WRITE_ATTEMPTS; attempt += 1) {
+    const { store, etag } = await readWorkerStore(bucket);
+    const result = mutate(store);
+    const onlyIf = etag ? { etagMatches: etag } : { etagDoesNotMatch: "*" };
+    const written = await bucket.put(storeFile, serializeStore(store), { onlyIf });
+    if (written) {
+      workerSnapshot().store = store;
+      return result;
+    }
+  }
+  throw new Error(`store.json changed during ${WORKER_WRITE_ATTEMPTS} write attempts in a row`);
+}
+
+function serializeStore(store: StoreData): string {
+  return `${JSON.stringify(store, null, 2)}\n`;
 }
 
 function writeStore(store: StoreData) {
@@ -133,7 +202,7 @@ function writeStore(store: StoreData) {
   fs.mkdirSync(dir, { recursive: true });
   const tmpPath = path.join(dir, `.store.${process.pid}.${crypto.randomUUID()}.tmp`);
   try {
-    fs.writeFileSync(tmpPath, `${JSON.stringify(store, null, 2)}\n`);
+    fs.writeFileSync(tmpPath, serializeStore(store));
     fs.renameSync(tmpPath, file);
   } catch (error) {
     fs.rmSync(tmpPath, { force: true });

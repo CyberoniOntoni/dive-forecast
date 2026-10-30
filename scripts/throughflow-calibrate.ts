@@ -19,7 +19,7 @@ const SWEEP = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.5];
 
 type SiteSample = { id: string; flux: number; slopes: number[] };
 
-function main(): void {
+async function main(): Promise<void> {
   const catalog = readCatalog();
   const samples: SiteSample[] = [];
   let missing = 0;
@@ -29,7 +29,7 @@ function main(): void {
     if (!atoll) continue;
     const { deg } = resolveBearing(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
     const point = seawardPoint(site.lat, site.lon, deg, seawardKmFor(site.id));
-    const hours = readCachedHours(point.lat, point.lon)?.hours;
+    const hours = (await readCachedHours(point.lat, point.lon))?.hours;
     if (!hours) {
       missing += 1;
       continue;
@@ -75,4 +75,4 @@ function main(): void {
   console.log(`\nCurrent THROUGHFLOW_SLOPE_PER_MS: ${THROUGHFLOW_SLOPE_PER_MS}. Pick the K that gives about 70–80 % on both sides.`);
 }
 
-main();
+void main();

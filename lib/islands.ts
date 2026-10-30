@@ -1,6 +1,5 @@
-import fs from "fs";
-import path from "path";
 import { ringProblem, type RimRing } from "./rim";
+import { readDataFileIfPresent } from "./data-files";
 
 /**
  * Islands (data/islands.json, from OpenStreetMap land polygons; npm run islands). Land stops swell outright, and an
@@ -14,7 +13,6 @@ export type Island = { areaHa: number; ring: RimRing };
  */
 export const WOODED_MIN_HA = 1;
 
-const ISLANDS_PATH = path.join(process.cwd(), "data", "islands.json");
 let loadedIslands: Island[] | null = null;
 
 /**
@@ -23,11 +21,8 @@ let loadedIslands: Island[] | null = null;
  */
 export function readIslands(): Island[] {
   if (loadedIslands) return loadedIslands;
-  let text: string;
-  try {
-    text = fs.readFileSync(ISLANDS_PATH, "utf8");
-  } catch (error) {
-    if (!(error instanceof Error && "code" in error && (error as NodeJS.ErrnoException).code === "ENOENT")) throw error;
+  const text = readDataFileIfPresent("islands.json");
+  if (text === null) {
     loadedIslands = [];
     return loadedIslands;
   }

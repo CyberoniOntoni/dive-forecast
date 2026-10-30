@@ -1,0 +1,26 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Workers deploy (OpenNext). Build with `npm run cf:build`; see CLOUDFLARE.md.
+  "name": "dive-current",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "r2_buckets": [
+    {
+      // store.json (reports, ratings, added pins) and the Open-Meteo cache (marine-cache/...). lib/cloudflare.ts.
+      "binding": "DATA",
+      "bucket_name": "dive-current-data"
+    }
+  ],
+  "limits": {
+    // Workers Paid allows up to 5 minutes; the map's first nowcast of every site is the heaviest request.
+    "cpu_ms": 30000
+  },
+  "observability": {
+    "enabled": true
+  }
+}
