@@ -116,10 +116,10 @@ assert(
   `Received C=${constrictionFactor(1_000_000, 10_000)}`
 );
 
-// Reference channel (5000m x 400m = 2,000,000 m^2)
+// Wide channel (5000m x 400m = 2,000,000 m^2, far above A_ref = 31,500 m^2)
 assert(
   Math.abs(constrictionFactor(5000, 400) - 1.0) < 1e-9,
-  "Reference channel (5000m x 400m = 2,000,000m^2) evaluates to exactly 1.0",
+  "Wide channel (5000m x 400m = 2,000,000m^2) clamps to exactly 1.0",
   `Received C=${constrictionFactor(5000, 400)}`
 );
 
@@ -188,7 +188,7 @@ const channelsGraded: { name: string; w: number; d: number; area: number }[] = [
   { name: "Medium Pass (1200m x 50m)", w: 1200, d: 50, area: 60_000 },
   { name: "Wide Pass (2000m x 80m)", w: 2000, d: 80, area: 160_000 },
   { name: "Hani Kandu (3000m x 160m)", w: 3000, d: 160, area: 480_000 },
-  { name: "Vaadhoo Reference (5000m x 400m)", w: 5000, d: 400, area: 2_000_000 },
+  { name: "Vaadhoo-size (5000m x 400m)", w: 5000, d: 400, area: 2_000_000 },
   { name: "Wide Channel (8000m x 500m)", w: 8000, d: 500, area: 4_000_000 },
   { name: "Gigantic Ocean Cut (20000m x 1000m)", w: 20000, d: 1000, area: 20_000_000 },
   { name: "Open Baseline (unconstricted)", w: 0, d: 0, area: Infinity },

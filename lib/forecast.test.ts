@@ -1093,7 +1093,7 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
     const series = moderateTidalSeries(72);
     const peakHourTime = "2026-09-24T00:00"; // Steepest rising slope
 
-    // Wide pass: Vaadhoo Kandu (5000m x 400m = 2,000,000 m^2, C = 1.0)
+    // Wide pass: 5000m x 400m = 2,000,000 m^2, far above the 31,500 m^2 reference, so C clamps to 1.0
     const wideForecast = forecastHours({
       hours: series,
       inwardBearingDeg: 0,

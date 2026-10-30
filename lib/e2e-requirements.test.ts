@@ -141,14 +141,14 @@ describe("Tier 1: Feature Coverage", () => {
     const marineHours = makeMarineSeries("2026-07-14T00:00", springLevels);
 
     it("T1.R1.2: constriction factor formula clamps between C_min = 1.0 and C_max = 2.5", () => {
-      // Very extreme narrow pass: 50m x 10m = 500 m^2 -> (2,000,000 / 500)^0.35 ≈ 18.2 -> clamps to 2.5
+      // Very extreme narrow pass: 50m x 10m = 500 m^2 -> (31,500 / 500)^0.35 ≈ 4.26 -> clamps to 2.5
       const extremeNarrow: ExtendedForecastInput = {
         hours: marineHours,
         inwardBearingDeg: 90,
         channelWidthM: 50,
         channelDepthM: 10,
       };
-      // Massive open strait: 10,000m x 500m = 5,000,000 m^2 -> (2,000,000 / 5,000,000)^0.35 ≈ 0.72 -> clamps to 1.0
+      // Massive open strait: 10,000m x 500m = 5,000,000 m^2 -> (31,500 / 5,000,000)^0.35 ≈ 0.17 -> clamps to 1.0
       const openStrait: ExtendedForecastInput = {
         hours: marineHours,
         inwardBearingDeg: 90,

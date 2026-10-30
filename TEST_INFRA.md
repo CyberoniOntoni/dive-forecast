@@ -28,7 +28,7 @@ The E2E test suite adheres to an opaque-box, requirement-driven methodology. Tes
 ```
 
 ### Tier 1: Feature Coverage (>= 5 tests per feature group)
-- **R1: Hydrodynamic Pass & Tidal Range Modeling**: Channel constriction velocity amplification, area scaling formula bounds ($[1.0, 2.5]$), backward compatibility with unconstricted sites, spring vs. neap cycle amplitude scaling, and pass geometry integration.
+- **R1: Hydrodynamic Pass & Tidal Range Modeling** (four tests here; the strict amplification check is in `lib/forecast.test.ts`): Channel constriction velocity amplification, area scaling formula bounds ($[1.0, 2.5]$), backward compatibility with unconstricted sites, spring vs. neap cycle amplitude scaling, and pass geometry integration.
 - **R2: Monsoon & Seasonal Current Integration**: Climatological drift vectors (`getMaldivesMonsoonDrift`), seasonal vector reversal (SW eastward vs NE westward), atoll perimeter inward flux projection ($\cos\Delta\theta$), net axial flow superposition, and orthogonal pass flux isolation.
 - **R3: Calibrated Diver Report Learning & Confidence Scoring**: Temporal exponential decay ($t_{1/2} = 90$ days), hard confidence guard (never "high" if recent report within $\le 7$ days contradicts direction), outlier dampening anti-jump regularizer, tidal slope discrepancy penalty, and concordant report confidence elevation.
 - **R4: Automated Backtesting & Reliability Benchmark**: Replay harness outputting `BenchmarkMetrics`, directional accuracy computation, false-high-confidence rate accounting, confidence tier breakdown (high, medium, low), and slack timing deviation quantification.
