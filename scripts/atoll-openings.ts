@@ -128,7 +128,8 @@ function main(): void {
     for (const row of others) for (const id of row.sites) matched.add(id);
   }
   const northMale = openings.filter((row) => row.atollIds.includes("north-male")).length;
-  if (onlyWays.length === 0 && northMale < NORTH_MALE_MIN) {
+  // Counted on the merged file, so a --ways run that re-walks North Malé is held to the same floor.
+  if (northMale < NORTH_MALE_MIN) {
     throw new Error(
       `North Malé has ${northMale} crest mouths, under ${NORTH_MALE_MIN}. data/openings.json was not replaced.`,
     );
