@@ -1,6 +1,6 @@
 import { mailgunConfig } from "./auth";
 import { appSetting, workerEnv, type SendEmail } from "./cloudflare";
-import { loginEmailText, type LoginEmail } from "./login-email";
+import { loginEmailMessage, SENDER_NAME, type LoginEmail } from "./login-email";
 import { sendMailgunEmail } from "./mailgun";
 
 /**
@@ -11,8 +11,6 @@ import { sendMailgunEmail } from "./mailgun";
  */
 
 export type MailRoute = { name: "cloudflare" | "mailgun"; send: (email: LoginEmail) => Promise<void> };
-
-const SENDER_NAME = "Dive current";
 
 export function mailRoutes(): MailRoute[] {
   const routes: MailRoute[] = [];
@@ -40,6 +38,6 @@ export async function sendLoginEmail(routes: MailRoute[], email: LoginEmail): Pr
 }
 
 async function sendCloudflareEmail(binding: SendEmail, from: string, email: LoginEmail): Promise<void> {
-  const { subject, text, html } = loginEmailText(email);
+  const { subject, text, html } = loginEmailMessage(email);
   await binding.send({ from: { email: from, name: SENDER_NAME }, to: email.to, subject, text, html });
 }

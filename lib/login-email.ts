@@ -2,10 +2,14 @@ import { LOGIN_CODE_TTL_MS } from "./accounts";
 
 const MINUTES = LOGIN_CODE_TTL_MS / 60_000;
 
+/** The display name on the sign-in email's From line, whichever service sends it. */
+export const SENDER_NAME = "Dive current";
+
 /** The sign-in email, whichever service sends it (lib/email.ts). */
 export type LoginEmail = { to: string; code: string; link: string | null };
 
-export function loginEmailText(email: LoginEmail): { subject: string; text: string; html: string } {
+/** The whole message: subject, plain-text body and HTML body. */
+export function loginEmailMessage(email: LoginEmail): { subject: string; text: string; html: string } {
   const subject = `${email.code} is your Dive current sign-in code`;
   const linkLine = email.link ? `\n\nOr open this link on the device you are signing in on:\n${email.link}` : "";
   const text =
