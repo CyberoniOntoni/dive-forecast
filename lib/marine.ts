@@ -197,8 +197,9 @@ export function pointFetcher<T>(source: PointSource<T>) {
       const env = workerEnv();
       if (env) {
         remembered.set(name, { fetchedAt, hours });
-        await env.DATA.put(`${WORKER_CACHE_PREFIX}${name}`, text);
-        edgeWrite(`${WORKER_CACHE_PREFIX}${name}`, text, edgeSeconds(fetchedAt));
+        const key = `${WORKER_CACHE_PREFIX}${name}`;
+        await env.DATA.put(key, text);
+        edgeWrite(key, text, edgeSeconds(fetchedAt));
         return;
       }
       fs.mkdirSync(marineCacheDir(), { recursive: true });

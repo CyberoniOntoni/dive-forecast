@@ -283,7 +283,8 @@ describe("on a Cloudflare worker", () => {
       const recent = Date.now() - 60 * 60 * 1000;
       await bucket.put(key, JSON.stringify({ fetchedAt: recent, hours }));
 
-      // A worker that does not know its domain keeps no edge copy.
+      // A worker that does not know its domain keeps no edge copy (appSetting falls back to the process env).
+      vi.stubEnv("APP_URL", "");
       newRequest({ ...env, APP_URL: undefined } as unknown as WorkerEnv);
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
       await Promise.all(background);
@@ -312,6 +313,7 @@ describe("on a Cloudflare worker", () => {
       expect(reads).toEqual([key, key]);
     } finally {
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
     }
   });
 
