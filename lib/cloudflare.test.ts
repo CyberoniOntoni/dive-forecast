@@ -276,18 +276,26 @@ describe("on a Cloudflare worker", () => {
       const reads: string[] = [];
       const get = bucket.get.bind(bucket);
       bucket.get = (key) => (reads.push(key), get(key));
-      const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1() };
+      const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1(), APP_URL: "https://50bar.app" };
       const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
       const { marineCacheName } = await import("./marine");
       const key = `marine-cache/${marineCacheName(4, 73)}`;
       const recent = Date.now() - 60 * 60 * 1000;
       await bucket.put(key, JSON.stringify({ fetchedAt: recent, hours }));
 
+      // A worker that does not know its domain keeps no edge copy.
+      newRequest({ ...env, APP_URL: undefined } as unknown as WorkerEnv);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
+      await Promise.all(background);
+      expect(edge.entries.size).toBe(0);
+      reads.length = 0;
+      vi.resetModules();
+
       newRequest(env);
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
       expect(reads).toEqual([key]);
       await Promise.all(background);
-      expect(edge.entries.size).toBe(1);
+      expect([...edge.entries.keys()]).toEqual([`https://50bar.app/__r2-copy/marine-cache/${encodeURIComponent(marineCacheName(4, 73))}`]);
 
       // A fresh isolate in the same data centre: the edge copy answers, R2 is not read.
       vi.resetModules();

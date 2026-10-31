@@ -14,10 +14,12 @@ type EdgeCache = {
 
 /**
  * Keys sit under the worker's own domain (APP_URL), as the Cache API scopes entries to the zone. The path is never
- * served: requests reach the worker before any cache, and nothing routes /__r2-copy/.
+ * served: requests reach the worker before any cache, and nothing routes /__r2-copy/. Null without APP_URL: a
+ * worker that does not know its domain keeps no edge copy.
  */
-function keyOrigin(): string {
-  return `${(appSetting("APP_URL") ?? "https://50bar.app").replace(/\/+$/, "")}/__r2-copy/`;
+function keyOrigin(): string | null {
+  const app = appSetting("APP_URL");
+  return app ? `${app.replace(/\/+$/, "")}/__r2-copy/` : null;
 }
 
 /** The worker's default cache, or null on Node (and anywhere the Cache API is missing). */
@@ -27,16 +29,18 @@ function edgeCache(): EdgeCache | null {
   return caches?.default ?? null;
 }
 
-function keyUrl(key: string): string {
-  return `${keyOrigin()}${key.split("/").map(encodeURIComponent).join("/")}`;
+function keyUrl(key: string): string | null {
+  const origin = keyOrigin();
+  return origin ? `${origin}${key.split("/").map(encodeURIComponent).join("/")}` : null;
 }
 
 /** The edge copy of an R2 object's text, or null when there is none (or no Cache API, or it failed). */
 export async function edgeRead(key: string): Promise<string | null> {
   const cache = edgeCache();
-  if (!cache) return null;
+  const url = keyUrl(key);
+  if (!cache || !url) return null;
   try {
-    const response = await cache.match(keyUrl(key));
+    const response = await cache.match(url);
     return response ? await response.text() : null;
   } catch {
     return null;
@@ -46,12 +50,13 @@ export async function edgeRead(key: string): Promise<string | null> {
 /** Keeps a copy of an R2 object's text at the edge for up to maxAgeSeconds, after the response is sent. */
 export function edgeWrite(key: string, text: string, maxAgeSeconds: number): void {
   const cache = edgeCache();
-  if (!cache) return;
+  const url = keyUrl(key);
+  if (!cache || !url) return;
   try {
     const response = new Response(text, {
       headers: { "content-type": "application/json", "cache-control": `max-age=${Math.max(1, Math.round(maxAgeSeconds))}` },
     });
-    runInBackground(cache.put(keyUrl(key), response));
+    runInBackground(cache.put(url, response));
   } catch {
     // An edge copy is only a shortcut: R2 stays the store.
   }
