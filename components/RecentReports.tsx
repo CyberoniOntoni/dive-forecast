@@ -49,6 +49,7 @@ function ReportRow({ row }: { row: RecentReportRow }) {
         </p>
         <p className="font-mono text-xs tabular-nums text-foam/70">
           <time dateTime={row.time}>{row.when}</time> · {row.ago}
+          {row.by ? <span className="font-sans"> · {row.by}</span> : null}
         </p>
       </div>
       <p className="shrink-0 text-xs text-foam/75">

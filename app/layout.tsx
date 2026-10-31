@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense, type ReactNode } from "react";
+import { AccountLink } from "@/components/AccountLink";
 import { AppTabs } from "@/components/AppTabs";
 import { MapPageLink } from "@/components/MapPageLink";
 import "./globals.css";
@@ -39,9 +40,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
               <span className="chart-line hidden sm:block">Maldives dive sites, incoming or outgoing right now.</span>
             </span>
           </MapPageLink>
-          <Suspense fallback={null}>
-            <AppTabs />
-          </Suspense>
+          <div className="flex shrink-0 items-center gap-1">
+            <Suspense fallback={null}>
+              <AppTabs />
+            </Suspense>
+            <Suspense fallback={null}>
+              <AccountLink />
+            </Suspense>
+          </div>
         </header>
         <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
       </body>

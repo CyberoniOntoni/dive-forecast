@@ -41,16 +41,37 @@ npm run cf:deploy     # cf:build, then deploys to the account wrangler is logged
 
 1. **R2:** R2 Object Storage → Create bucket → name `dive-current-data`. R2 asks for a payment method even on
    the free allowance.
-2. **Your current reports:** in that bucket, upload the LXC's `data/store.json` as `store.json`. Without it the worker
-   starts with no reports, ratings or added pins. (Or: `npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`.)
+2. **Existing reports (optional):** in that bucket, upload an existing `data/store.json` as `store.json`. Without it
+   the worker starts with no reports, ratings or added pins. (Or: `npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`.)
 3. **Worker from GitHub:** Workers & Pages → Create → Import a repository → `CyberoniOntoni/dive-forecast` (the worker is named `dive-forecast`, matching `wrangler.jsonc`).
    - Build command: `npm run replay && npm run cf:build`
    - Deploy command: `npx wrangler deploy`
    - Non-production branch deploy command: `npx wrangler versions upload` (each branch gets a preview URL)
    - Production branch: `main`
 4. The worker is then live at `dive-forecast.<your-subdomain>.workers.dev`. To use your domain, open the worker →
-   Settings → Domains & Routes → Add → Custom domain (for example `cf.50bar.app` to try it, later
-   `current.50bar.app`). The domain's DNS must be on Cloudflare.
+   Settings → Domains & Routes → Add → Custom domain (the live site is `50bar.app`). The domain's DNS must be on
+   Cloudflare.
+
+## Sign-in (accounts)
+
+Reporting the current, rating a site and adding a site need a signed-in diver; reading stays open to everyone.
+Sign-in is by email code (no passwords): the diver types an email, gets a 6-digit code and a link, and picks a
+nickname the first time. Only the nickname is ever shown. Settings, as Worker secrets/variables (Workers & Pages →
+`dive-forecast` → Settings → Variables and Secrets) or in the Docker host's `.env` next to `docker-compose.yml`:
+
+| Name | What | Example |
+| --- | --- | --- |
+| `AUTH_SECRET` (secret) | Signs the session cookie and code hashes. Any long random string, e.g. `openssl rand -base64 48`. Changing it signs everyone out. | |
+| `MAILGUN_API_KEY` (secret) | Mailgun → Account → API Security → a sending or private API key. | |
+| `MAILGUN_DOMAIN` | The verified Mailgun sending domain. | `mailgun.50bar.app` |
+| `MAILGUN_FROM` | Optional sender. Defaults to `Dive current <login@MAILGUN_DOMAIN>`. | `Dive current <login@mailgun.50bar.app>` |
+| `MAILGUN_REGION` | `eu` for an EU Mailgun account; otherwise leave unset. | |
+| `APP_URL` | The site's address, for the link in the email. Without it the email has the code only. | `https://50bar.app` |
+
+Mailgun's domain needs its DNS records (SPF TXT, DKIM TXT, MX and the tracking CNAME it lists) added in Cloudflare
+DNS for 50bar.app. Without `AUTH_SECRET` and the Mailgun settings, production says signing in is not set up; `next dev`
+needs none of them and prints the code to its own log instead. Users, pending codes (hashed) and ratings per diver live
+in `store.json`; points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
 
 ## Cost
 

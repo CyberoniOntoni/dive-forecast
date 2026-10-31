@@ -3,7 +3,14 @@ import path from "path";
 import { atollForPin } from "./bearing";
 import { perRequest, workerEnv, type R2Bucket } from "./cloudflare";
 import { readDataFile } from "./data-files";
-import { UNSEEDED_ATOLL_ID, type Catalog, type Rating, type Report, type Site, type StoreData } from "./types";
+import {
+  UNSEEDED_ATOLL_ID,
+  type Catalog,
+  type Rating,
+  type Report,
+  type Site,
+  type StoreData,
+} from "./types";
 
 const DEFAULT_STORE_FILE = "store.json";
 let storeFile = DEFAULT_STORE_FILE;
@@ -80,7 +87,7 @@ async function readWorkerStore(bucket: R2Bucket): Promise<{ store: StoreData; et
 }
 
 function emptyStore(): StoreData {
-  return { reports: [], ratings: [], sites: [] };
+  return { reports: [], ratings: [], sites: [], users: [], logins: [] };
 }
 
 function normalizeStore(parsed: unknown): StoreData {
@@ -89,6 +96,8 @@ function normalizeStore(parsed: unknown): StoreData {
     reports: Array.isArray(record.reports) ? record.reports : [],
     ratings: Array.isArray(record.ratings) ? record.ratings : [],
     sites: Array.isArray(record.sites) ? record.sites : [],
+    users: Array.isArray(record.users) ? record.users : [],
+    logins: Array.isArray(record.logins) ? record.logins : [],
   };
 }
 
@@ -122,8 +131,8 @@ export function reportsForSite(siteId: string): Report[] {
   return readStore().reports.filter((report) => report.siteId === siteId);
 }
 
-export function ratingForSite(siteId: string): Rating | null {
-  return readStore().ratings.find((rating) => rating.siteId === siteId) ?? null;
+export function ratingsForSite(siteId: string): Rating[] {
+  return readStore().ratings.filter((rating) => rating.siteId === siteId);
 }
 
 export async function addUserSite(site: Site): Promise<Site> {
@@ -141,9 +150,10 @@ export async function addReport(report: Report): Promise<Report> {
   });
 }
 
+/** One rating per diver per site; a rating with no userId is the site's one anonymous rating from before sign-in. */
 export async function saveRating(rating: Rating): Promise<Rating> {
   return mutateStore((store) => {
-    const index = store.ratings.findIndex((item) => item.siteId === rating.siteId);
+    const index = store.ratings.findIndex((item) => item.siteId === rating.siteId && item.userId === rating.userId);
     if (index >= 0) store.ratings[index] = rating;
     else store.ratings.push(rating);
     return rating;
@@ -153,8 +163,12 @@ export async function saveRating(rating: Rating): Promise<Rating> {
 /** Per process on Node, per request on a worker (perRequest). */
 const mutations = perRequest(() => ({ chain: Promise.resolve() as Promise<unknown> }));
 
-/** Process-local: this queue does not coordinate other Node processes. On a worker, R2's etag check does that. */
-function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
+/**
+ * Changes the store in one read-change-write. `mutate` may run more than once on a worker (a write raced), so it
+ * must only change the store it is given. Process-local: this queue does not coordinate other Node processes. On a
+ * worker, R2's etag check does that.
+ */
+export function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
   const queue = mutations();
   const run = queue.chain.then(() => {
     const env = workerEnv();

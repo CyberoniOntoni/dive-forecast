@@ -8,6 +8,7 @@ import { RecentReports } from "@/components/RecentReports";
 import { ReportForm } from "@/components/ReportForm";
 import { NavigateIcon } from "@/components/site-ui";
 import { forecastSite, getRating, getRecentReports, getSite } from "@/lib/actions";
+import { currentSession } from "@/lib/auth";
 import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
 import { nearestForecastHour } from "@/lib/nowcast";
@@ -40,7 +41,8 @@ export default async function SitePage({
   const site = await getSite(id);
   if (!site) notFound();
 
-  const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id)]);
+  const session = await currentSession();
+  const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id, session?.userId ?? null)]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
   const recent = await getRecentReports(site.id, forecast.forecastRoute);
   // Reports are entered in the site's own country's time, whatever the diver's clock says.
@@ -94,7 +96,6 @@ export default async function SitePage({
       />
       <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">
-        <RatingForm key={`rating-${site.id}`} siteId={site.id} score={rating ? rating.score : null} />
         <ReportForm
           key={`report-${site.id}`}
           siteId={site.id}
@@ -102,7 +103,9 @@ export default async function SitePage({
           alongHeadingDeg={forecast.alongHeadingDeg}
           zone={zone}
           defaultTime={currentWallHour(zone)}
+          nickname={session?.nickname ?? null}
         />
+        <RatingForm key={`rating-${site.id}`} siteId={site.id} summary={rating} signedIn={session != null} />
       </div>
       <Attribution />
     </main>

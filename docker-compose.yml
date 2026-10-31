@@ -21,6 +21,13 @@ services:
       NODE_OPTIONS: ${NODE_OPTIONS:---max-old-space-size=512}
       HOSTNAME: 0.0.0.0
       PORT: "3000"
+      # Sign-in (CLOUDFLARE.md § Sign-in). Put the values in a .env file next to this one.
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      MAILGUN_API_KEY: ${MAILGUN_API_KEY:-}
+      MAILGUN_DOMAIN: ${MAILGUN_DOMAIN:-}
+      MAILGUN_FROM: ${MAILGUN_FROM:-}
+      MAILGUN_REGION: ${MAILGUN_REGION:-}
+      APP_URL: ${APP_URL:-}
     volumes:
       # Persist reports, ratings, user pins, marine cache, replay.json
       - ./data:/app/data
