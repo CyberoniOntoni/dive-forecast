@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AccountControls } from "@/components/AccountControls";
 import { getAccount } from "@/lib/account-actions";
-import { POINTS, FRESH_HOURS, PATHFINDER_DAYS, REPORTS_PER_DAY } from "@/lib/points-rules";
+import { POINTS, FRESH_HOURS, PATHFINDER_DAYS, RATINGS_PER_DAY, REPORTS_PER_DAY } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function AccountPage() {
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Your numbers">
         <Stat label="Points" value={stats.points} />
         <Stat label="This month" value={stats.monthPoints} note={account.monthRank ? `#${account.monthRank}` : null} />
-        <Stat label="Reports" value={stats.reports} />
+        <Stat label="Reports" value={stats.reports} note={stats.ratings ? `${stats.ratings} rating${stats.ratings === 1 ? "" : "s"}` : null} />
         <Stat label="Sites" value={stats.sites} note={stats.atolls ? `${stats.atolls} atoll${stats.atolls === 1 ? "" : "s"}` : null} />
       </section>
       <Link
@@ -70,6 +70,9 @@ export default async function AccountPage() {
           <li>{POINTS.report} points for each current report.</li>
           <li>+{POINTS.fresh} when you file it within {FRESH_HOURS} hours of the dive, while it is fresh.</li>
           <li>+{POINTS.pathfinder} when nobody had reported that site in the {PATHFINDER_DAYS} days before your dive.</li>
+          <li>
+            {POINTS.rating} points for rating a site, once per site, up to {RATINGS_PER_DAY} ratings a day.
+          </li>
           <li>
             Up to {REPORTS_PER_DAY} reports a day count, and one per dive. Agreeing with the forecast earns nothing: report
             what you felt.

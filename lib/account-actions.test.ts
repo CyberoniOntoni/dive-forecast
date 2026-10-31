@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { changeNickname, completeSignIn, getAccount, getLeaderboard, getSiteScouts, requestSignIn, whoAmI } from "./account-actions";
-import { addReport, addSite } from "./actions";
+import { addReport, addSite, rateSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
 import { readStore, setStorePath } from "./store";
 
@@ -67,8 +67,10 @@ describe("sign in by email code", () => {
 
     await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
     const board = await getLeaderboard("all");
-    expect(board).toEqual([{ rank: 1, nickname: "Manta", points: 20, reports: 1, sites: 1, badges: 2, isMe: true }]);
+    expect(board).toEqual([{ rank: 1, nickname: "Manta", points: 20, reports: 1, ratings: 0, sites: 1, badges: 2, isMe: true }]);
     expect(JSON.stringify(board)).not.toContain("example.com");
+    await rateSite("banana-reef", 5);
+    expect((await getLeaderboard("all"))[0]).toMatchObject({ points: 23, ratings: 1 });
     expect(await getAccount()).toMatchObject({ nickname: "Manta", email: "diver@example.com", allRank: 1 });
   });
 

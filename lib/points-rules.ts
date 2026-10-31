@@ -7,12 +7,16 @@ export const POINTS = {
   fresh: 5,
   /** Nobody had reported the site in the PATHFINDER_DAYS before this dive. */
   pathfinder: 10,
+  /** Rating a dive site (one per site; changing it later earns nothing more). */
+  rating: 3,
 } as const;
 
 export const FRESH_HOURS = 3;
 export const PATHFINDER_DAYS = 30;
 /** Counted reports per diver per dive day; more than a day's dives is not more help. */
 export const REPORTS_PER_DAY = 4;
+/** Counted site ratings per diver per day, so rating every pin on the map is not a way up the scoreboard. */
+export const RATINGS_PER_DAY = 4;
 /** A second report at the same site within this many hours of a counted one is the same dive. */
 export const SAME_DIVE_HOURS = 2;
 
@@ -37,7 +41,8 @@ export type BadgeId =
   | "fresh-10"
   | "streak-3"
   | "streak-7"
-  | "site-scout";
+  | "site-scout"
+  | "ratings-10";
 
 export const BADGES: readonly { id: BadgeId; label: string; detail: string }[] = [
   { id: "first-report", label: "First report", detail: "Filed a first current report" },
@@ -51,4 +56,5 @@ export const BADGES: readonly { id: BadgeId; label: string; detail: string }[] =
   { id: "streak-3", label: "Three-day run", detail: "Reported on 3 dive days in a row" },
   { id: "streak-7", label: "Week aboard", detail: "Reported on 7 dive days in a row" },
   { id: "site-scout", label: "Site scout", detail: "Added a site that another diver then reported at" },
+  { id: "ratings-10", label: "Reef critic", detail: "Rated 10 dive sites" },
 ];

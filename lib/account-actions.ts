@@ -117,7 +117,7 @@ export async function getAccount(): Promise<AccountView | null> {
   const store = readStore();
   const user = store.users.find((item) => item.id === session.userId);
   if (!user) return null;
-  const all = diverStats(store.reports, store.users, listMergedSites());
+  const all = diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
   const mine = all.find((item) => item.userId === user.id);
   const earned = new Set(mine?.badges ?? []);
   return {
@@ -128,6 +128,7 @@ export async function getAccount(): Promise<AccountView | null> {
       points: mine?.points ?? 0,
       monthPoints: mine?.monthPoints ?? 0,
       reports: mine?.reports ?? 0,
+      ratings: mine?.ratings ?? 0,
       sites: mine?.sites ?? 0,
       atolls: mine?.atolls ?? 0,
       bestStreak: mine?.bestStreak ?? 0,
@@ -143,6 +144,7 @@ export type LeaderboardRow = {
   nickname: string;
   points: number;
   reports: number;
+  ratings: number;
   sites: number;
   badges: number;
   isMe: boolean;
@@ -156,13 +158,14 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
   const period: LeaderboardPeriod = periodInput === "all" ? "all" : "month";
   const session = await currentSession();
   const store = readStore();
-  return leaderboard(diverStats(store.reports, store.users, listMergedSites()), period)
+  return leaderboard(diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings), period)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       rank: row.rank,
       nickname: row.nickname,
       points: row.periodPoints,
       reports: row.reports,
+      ratings: row.ratings,
       sites: row.sites,
       badges: row.badges.length,
       isMe: row.userId === session?.userId,

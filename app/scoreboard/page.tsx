@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getLeaderboard, getSiteScouts } from "@/lib/account-actions";
+import { getLeaderboard, getSiteScouts, type LeaderboardRow } from "@/lib/account-actions";
 import { currentSession } from "@/lib/auth";
 import { signInHref } from "@/lib/sign-in";
 
@@ -33,7 +33,7 @@ export default async function ScoreboardPage({
         <h1 className="text-2xl font-semibold tracking-tight text-foam">Scoreboard</h1>
         <p className="text-sm leading-6 text-foam/80">
           The divers who make this forecast better: every current report after a dive sharpens the next diver&apos;s
-          forecast, and every new site puts another reef on the map.
+          forecast, every rating helps others pick a site, and every new site puts another reef on the map.
         </p>
       </header>
       <nav aria-label="Board" className="flex gap-0.5 self-start rounded-full bg-foam/10 p-0.5 ring-1 ring-foam/15">
@@ -72,7 +72,8 @@ async function ReportsBoard({ period }: { period: "month" | "all" }) {
         Current reporters
       </h2>
       <p className="text-xs leading-5 text-foam/70">
-        Points for each report, more for reporting soon after the dive and at sites nobody has reported lately.
+        Points for each report, more for reporting soon after the dive and at sites nobody has reported lately, and
+        for rating the sites you dived.
       </p>
       <div className="surface p-2 sm:p-3">
         {rows.length === 0 ? (
@@ -88,7 +89,7 @@ async function ReportsBoard({ period }: { period: "month" | "all" }) {
                 rank={row.rank}
                 nickname={row.nickname}
                 isMe={row.isMe}
-                detail={`${row.reports} ${row.reports === 1 ? "report" : "reports"} · ${row.sites} ${row.sites === 1 ? "site" : "sites"}${row.badges ? ` · ${row.badges} ★` : ""}`}
+                detail={reporterDetail(row)}
                 score={row.points}
               />
             ))}
@@ -149,6 +150,18 @@ async function SitesBoard() {
       ) : null}
     </>
   );
+}
+
+function reporterDetail(row: LeaderboardRow): string {
+  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  return [
+    row.reports ? count(row.reports, "report", "reports") : null,
+    row.reports ? count(row.sites, "site", "sites") : null,
+    row.ratings ? count(row.ratings, "rating", "ratings") : null,
+    row.badges ? `${row.badges} ★` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function Row({

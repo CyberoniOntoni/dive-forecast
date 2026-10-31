@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diverStats, leaderboard, longestDayRun, reportAwards, siteScouts } from "./points";
-import type { Report, User } from "./types";
+import type { Rating, Report, User } from "./types";
 
 function report(id: string, userId: string | undefined, siteId: string, time: string, filedAt?: string): Report {
   return { id, siteId, time, direction: "incoming", strength: "mild", userId, filedAt };
@@ -73,6 +73,21 @@ describe("diverStats and leaderboard", () => {
       ["Bob", 1, 80],
       ["Ann", 2, 60],
     ]);
+  });
+});
+
+describe("rating points", () => {
+  it("gives points for each site rated, four a day, counted in the month they were saved", () => {
+    const rating = (siteId: string, userId: string, updatedAt: string): Rating => ({ siteId, score: 4, updatedAt, userId });
+    const ratings = [
+      ...["s1", "s2", "s3", "s4", "s5"].map((id) => rating(id, "a", "2026-10-10T04:00:00Z")),
+      rating("s6", "a", "2026-09-30T04:00:00Z"),
+      { siteId: "s7", score: 5, updatedAt: "2026-10-10T04:00:00Z" },
+    ];
+    const stats = diverStats([], users, [], Date.parse("2026-10-15T00:00:00Z"), ratings);
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toMatchObject({ userId: "a", ratings: 5, points: 15, monthPoints: 12, reports: 0 });
+    expect(leaderboard(stats, "month").map((row) => [row.nickname, row.periodPoints])).toEqual([["Ann", 12]]);
   });
 });
 
