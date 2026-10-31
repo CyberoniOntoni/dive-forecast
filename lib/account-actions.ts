@@ -11,7 +11,7 @@ import {
   setSessionCookie,
 } from "./auth";
 import { sendLoginEmail } from "./mailgun";
-import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from "./points";
+import { diverStats, leaderboard, siteScouts, type DiverStats, type LeaderboardPeriod } from "./points";
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { hashLoginCode, newLoginCode, sameText } from "./session-token";
@@ -167,4 +167,33 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
       badges: row.badges.length,
       isMe: row.userId === session?.userId,
     }));
+}
+
+export type SiteScoutRow = { rank: number; nickname: string; sites: number; reportedByOthers: number; isMe: boolean };
+export type NewSiteRow = { id: string; name: string; nickname: string };
+
+const NEW_SITES = 8;
+
+/** Divers ranked by the dive sites they added, and the newest sites with who added them. Nicknames only. */
+export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest: NewSiteRow[] }> {
+  await ready();
+  const session = await currentSession();
+  const store = readStore();
+  const nickname = new Map(store.users.map((user) => [user.id, user.nickname]));
+  const scouts = siteScouts(store.sites, store.users, store.reports)
+    .slice(0, LEADERBOARD_SIZE)
+    .map((row) => ({
+      rank: row.rank,
+      nickname: row.nickname,
+      sites: row.sites,
+      reportedByOthers: row.reportedByOthers,
+      isMe: row.userId === session?.userId,
+    }));
+  // Store order is the order sites were added.
+  const newest = store.sites
+    .filter((site) => site.addedBy && nickname.has(site.addedBy))
+    .slice(-NEW_SITES)
+    .reverse()
+    .map((site) => ({ id: site.id, name: site.name, nickname: nickname.get(site.addedBy!)! }));
+  return { scouts, newest };
 }

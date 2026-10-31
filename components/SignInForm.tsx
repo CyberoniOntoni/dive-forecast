@@ -135,7 +135,7 @@ export function SignInForm({
                 className={FIELD}
               />
               <span className="text-xs leading-5 text-foam/70">
-                Shown on your reports and the leaderboard instead of your email. You can change it later.
+                Shown on your reports and the scoreboard instead of your email. You can change it later.
               </span>
             </label>
           ) : null}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { diverStats, leaderboard, longestDayRun, reportAwards } from "./points";
+import { diverStats, leaderboard, longestDayRun, reportAwards, siteScouts } from "./points";
 import type { Report, User } from "./types";
 
 function report(id: string, userId: string | undefined, siteId: string, time: string, filedAt?: string): Report {
@@ -72,6 +72,33 @@ describe("diverStats and leaderboard", () => {
     expect(leaderboard(stats, "all").map((row) => [row.nickname, row.rank, row.periodPoints])).toEqual([
       ["Bob", 1, 80],
       ["Ann", 2, 60],
+    ]);
+  });
+});
+
+describe("siteScouts", () => {
+  it("ranks divers by sites added, then by how many of them others reported at, ties sharing a rank", () => {
+    const sites = [
+      { id: "s1", addedBy: "a" },
+      { id: "s2", addedBy: "a" },
+      { id: "s3", addedBy: "b" },
+      { id: "s4", addedBy: "b" },
+      { id: "s5" },
+      { id: "s6", addedBy: "gone" },
+    ];
+    const reports = [
+      { siteId: "s1", userId: "a" },
+      { siteId: "s3", userId: "a" },
+      { siteId: "s5", userId: "b" },
+    ];
+    expect(siteScouts(sites, users, reports)).toEqual([
+      { userId: "b", nickname: "Bob", rank: 1, sites: 2, reportedByOthers: 1 },
+      { userId: "a", nickname: "Ann", rank: 2, sites: 2, reportedByOthers: 0 },
+    ]);
+    const tied = siteScouts([{ id: "s1", addedBy: "a" }, { id: "s2", addedBy: "b" }], users, []);
+    expect(tied.map((row) => [row.nickname, row.rank])).toEqual([
+      ["Ann", 1],
+      ["Bob", 1],
     ]);
   });
 });

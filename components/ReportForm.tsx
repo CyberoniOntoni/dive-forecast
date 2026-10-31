@@ -110,8 +110,8 @@ export function ReportForm({
       <h2 id="report-heading" className="text-base font-semibold text-foam">
         Report the current
       </h2>
-      <Link href="/leaderboard" className="text-sm text-foam/80 underline decoration-incoming underline-offset-4">
-        Leaderboard
+      <Link href="/scoreboard" className="text-sm text-foam/80 underline decoration-incoming underline-offset-4">
+        Scoreboard
       </Link>
     </div>
   );
@@ -122,7 +122,7 @@ export function ReportForm({
         {heading}
         <p className="text-sm leading-6 text-foam/80">
           Sign in with your email to report what the current did on your dive. Reports sharpen the forecast for
-          everyone, and earn points on the leaderboard.
+          everyone, and earn points on the scoreboard.
         </p>
         <Link
           href={signInHref(`/sites/${siteId}#report`)}

@@ -34,7 +34,8 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl pr-2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             <BrandMark />
-            <span className="min-w-0">
+            {/* Below 420 px the three tabs and the account button need the room: the mark alone stands for the name. */}
+            <span className="min-w-0 max-[419px]:sr-only">
               <span className="chart-name block">Dive current</span>
               {/* On a phone the map and the forecast need the height more than the tagline. */}
               <span className="chart-line hidden sm:block">Maldives dive sites, incoming or outgoing right now.</span>

@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { MapPageLink } from "@/components/MapPageLink";
-import { NavigateIcon } from "@/components/site-ui";
+import { NavigateIcon, TrophyIcon } from "@/components/site-ui";
 import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/navigate-tab";
 
 function onNavSite(changed: () => void): () => void {
@@ -21,14 +22,15 @@ const ON = "bg-foam text-ink shadow-sm";
 const OFF = "text-foam/80 hover:text-foam";
 
 /**
- * Map and Navigate, in the header. Navigate is the boat view on the same map; it comes back to the site it last
- * headed for in this tab, else it opens the destination list.
+ * Map, Navigate and Scoreboard, in the header. Navigate is the boat view on the same map; it comes back to the site it
+ * last headed for in this tab, else it opens the destination list. Scoreboard is the public leaderboard.
  */
 export function AppTabs() {
   const pathname = usePathname();
   const params = useSearchParams();
   const here = readNavigate(params);
   const navigating = pathname === "/" && here.navigating;
+  const scoreboard = pathname.startsWith("/scoreboard");
   const lastSite = useSyncExternalStore(onNavSite, loadNavSite, noSiteOnServer);
 
   return (
@@ -50,6 +52,17 @@ export function AppTabs() {
         <NavigateIcon size={16} />
         Navigate
       </MapPageLink>
+      <Link
+        data-tab
+        href="/scoreboard"
+        aria-current={scoreboard ? "page" : undefined}
+        title="Scoreboard"
+        className={`${TAB_CLASS} ${scoreboard ? ON : OFF} min-w-11 justify-center max-sm:px-2.5`}
+      >
+        <TrophyIcon size={16} />
+        {/* A phone has room for the trophy only. */}
+        <span className="sr-only sm:not-sr-only">Scoreboard</span>
+      </Link>
     </nav>
   );
 }

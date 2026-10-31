@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { changeNickname, completeSignIn, getAccount, getLeaderboard, requestSignIn, whoAmI } from "./account-actions";
-import { addReport } from "./actions";
+import { changeNickname, completeSignIn, getAccount, getLeaderboard, getSiteScouts, requestSignIn, whoAmI } from "./account-actions";
+import { addReport, addSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
 import { readStore, setStorePath } from "./store";
 
@@ -85,6 +85,25 @@ describe("sign in by email code", () => {
     expect(await requestSignIn("a@example.com")).toMatchObject({ ok: true, newUser: false });
     expect(await completeSignIn({ email: "a@example.com", code: codeFromEmail() })).toEqual({ ok: true, error: null });
     expect(await whoAmI()).toEqual({ nickname: "Ann" });
+  });
+
+  it("puts divers who add sites on the public site board, newest site first", async () => {
+    await requestSignIn("a@example.com");
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    const first = await addSite({ name: "Ann Thila", lat: 4.3, lon: 73.5 });
+    const second = await addSite({ name: "Ann Corner", lat: 4.31, lon: 73.51 });
+    await requestSignIn("b@example.com");
+    await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob" });
+    await addReport({ siteId: first.id, time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+
+    jar.clear();
+    const board = await getSiteScouts();
+    expect(board.scouts).toEqual([{ rank: 1, nickname: "Ann", sites: 2, reportedByOthers: 1, isMe: false }]);
+    expect(board.newest).toEqual([
+      { id: second.id, name: "Ann Corner", nickname: "Ann" },
+      { id: first.id, name: "Ann Thila", nickname: "Ann" },
+    ]);
+    expect(JSON.stringify(board)).not.toContain("example.com");
   });
 
   it("says so when the email cannot be sent", async () => {
