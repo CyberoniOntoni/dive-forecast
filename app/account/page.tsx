@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { AboutForm } from "@/components/AboutForm";
 import { AccountControls } from "@/components/AccountControls";
 import { getAccount } from "@/lib/account-actions";
 import { POINTS, FRESH_HOURS, PATHFINDER_DAYS, RATINGS_PER_DAY, REPORTS_PER_DAY } from "@/lib/points-rules";
@@ -80,6 +81,7 @@ export default async function AccountPage() {
         </ul>
       </section>
 
+      <AboutForm about={account.about} userId={account.userId} />
       <AccountControls nickname={account.nickname} />
     </main>
   );

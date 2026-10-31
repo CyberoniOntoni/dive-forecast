@@ -208,9 +208,11 @@ export type User = {
   id: string;
   /** Lower-cased. */
   email: string;
-  /** Shown on reports and the leaderboard. Unique, ignoring case. */
+  /** Shown on reports and the scoreboard. Unique, ignoring case. */
   nickname: string;
   createdAt: string;
+  /** "About me", plain text, shown on the diver's public page. */
+  about?: string;
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */

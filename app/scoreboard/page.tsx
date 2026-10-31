@@ -86,6 +86,7 @@ async function ReportsBoard({ period }: { period: "month" | "all" }) {
             {rows.map((row) => (
               <Row
                 key={row.nickname}
+                userId={row.userId}
                 rank={row.rank}
                 nickname={row.nickname}
                 isMe={row.isMe}
@@ -119,6 +120,7 @@ async function SitesBoard() {
               {scouts.map((row) => (
                 <Row
                   key={row.nickname}
+                  userId={row.userId}
                   rank={row.rank}
                   nickname={row.nickname}
                   isMe={row.isMe}
@@ -142,7 +144,12 @@ async function SitesBoard() {
                 <Link href={`/sites/${site.id}`} className="min-w-0 truncate text-sm font-medium text-foam underline decoration-incoming underline-offset-4">
                   {site.name}
                 </Link>
-                <span className="shrink-0 text-xs text-foam/70">added by {site.nickname}</span>
+                <span className="shrink-0 text-xs text-foam/70">
+                  added by{" "}
+                  <Link href={`/divers/${site.userId}`} className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
+                    {site.nickname}
+                  </Link>
+                </span>
               </li>
             ))}
           </ul>
@@ -165,6 +172,7 @@ function reporterDetail(row: LeaderboardRow): string {
 }
 
 function Row({
+  userId,
   rank,
   nickname,
   isMe,
@@ -172,6 +180,7 @@ function Row({
   score,
   unit,
 }: {
+  userId: string;
   rank: number;
   nickname: string;
   isMe: boolean;
@@ -185,10 +194,10 @@ function Row({
         {rank <= 3 ? ["🥇", "🥈", "🥉"][rank - 1] : rank}
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium text-foam">
+        <Link href={`/divers/${userId}`} className="block truncate text-sm font-medium text-foam underline decoration-foam/30 underline-offset-4 hover:decoration-incoming">
           {nickname}
           {isMe ? <span className="text-foam/70"> (you)</span> : null}
-        </span>
+        </Link>
         <span className="block text-xs text-foam/70">{detail}</span>
       </span>
       <span className="shrink-0 text-right">

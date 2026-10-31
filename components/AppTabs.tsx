@@ -30,7 +30,7 @@ export function AppTabs() {
   const params = useSearchParams();
   const here = readNavigate(params);
   const navigating = pathname === "/" && here.navigating;
-  const scoreboard = pathname.startsWith("/scoreboard");
+  const scoreboard = pathname.startsWith("/scoreboard") || pathname.startsWith("/divers/");
   const lastSite = useSyncExternalStore(onNavSite, loadNavSite, noSiteOnServer);
 
   return (
