@@ -14,6 +14,7 @@
     "replay": "vite-node scripts/replay-cli.ts",
     "benchmark": "vite-node scripts/benchmark.ts",
     "verify": "vite-node scripts/verify-reports.ts",
+    "d1:export": "vite-node scripts/d1-export.ts",
     "bearings": "vite-node scripts/bearings.ts",
     "sample-floors": "vite-node scripts/sample-floors.ts",
     "channel-widths": "vite-node scripts/channel-widths.ts",
