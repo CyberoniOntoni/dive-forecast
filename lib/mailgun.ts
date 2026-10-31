@@ -4,7 +4,7 @@ const MINUTES = LOGIN_CODE_TTL_MS / 60_000;
 
 /**
  * Sends the sign-in email through Mailgun's HTTP API (fetch, so it runs on Node and on a worker). Settings:
- * MAILGUN_API_KEY, MAILGUN_DOMAIN (the sending domain, such as mg.50bar.app), MAILGUN_FROM (optional, defaults to
+ * MAILGUN_API_KEY, MAILGUN_DOMAIN (the sending domain, such as mailgun.50bar.app), MAILGUN_FROM (optional, defaults to
  * "Dive current <login@MAILGUN_DOMAIN>") and MAILGUN_REGION ("eu" for an EU account; US otherwise).
  */
 
