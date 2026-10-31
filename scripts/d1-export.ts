@@ -8,12 +8,10 @@
 import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
-import { storeFromRows } from "../lib/store-d1";
-
-const TABLES = ["reports", "ratings", "sites", "users", "logins"] as const;
+import { STORE_TABLES, storeFromRows } from "../lib/store-d1";
 
 const out = path.resolve(process.argv[2] ?? path.join("data", "store.json"));
-const sql = TABLES.map((table) => `SELECT '${table}' AS list, rowid AS n, data FROM ${table}`).join(" UNION ALL ");
+const sql = STORE_TABLES.map((table) => `SELECT '${table}' AS list, rowid AS n, data FROM ${table}`).join(" UNION ALL ");
 const raw = execFileSync(
   "npx",
   ["wrangler", "d1", "execute", "dive-forecast", "--remote", "--json", "--command", `${sql} ORDER BY list, n`],
@@ -22,4 +20,4 @@ const raw = execFileSync(
 const rows = (JSON.parse(raw) as { results: { list: string; data: string }[] }[]).flatMap((part) => part.results);
 const store = storeFromRows(rows);
 fs.writeFileSync(out, `${JSON.stringify(store, null, 2)}\n`);
-console.log(`${out}: ${TABLES.map((table) => `${store[table].length} ${table}`).join(", ")}`);
+console.log(`${out}: ${STORE_TABLES.map((table) => `${store[table].length} ${table}`).join(", ")}`);

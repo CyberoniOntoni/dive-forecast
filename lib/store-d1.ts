@@ -63,14 +63,14 @@ const logins: Table<PendingLogin> = {
 
 const TABLES = [reports, ratings, sites, users, logins] as Table<unknown>[];
 
-/** Bump with a new step in schemaStatements when the tables change. */
-export const D1_SCHEMA_VERSION = "1";
+/** The table names, which are also the StoreData list names. */
+export const STORE_TABLES = TABLES.map((table) => table.name);
 /** meta row set once store.json from R2 has been copied in. */
 const IMPORTED_KEY = "imported_r2_store";
 const R2_STORE_KEY = "store.json";
 
 function schemaStatements(db: D1Database): D1PreparedStatement[] {
-  const statements = [
+  return [
     "CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     ...TABLES.flatMap((table) => [
       `CREATE TABLE IF NOT EXISTS ${table.name} (key TEXT PRIMARY KEY, data TEXT NOT NULL, ${table.schema.columns.join(", ")})`,
@@ -79,10 +79,6 @@ function schemaStatements(db: D1Database): D1PreparedStatement[] {
       ),
     ]),
   ].map((sql) => db.prepare(sql));
-  statements.push(
-    db.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)").bind(D1_SCHEMA_VERSION),
-  );
-  return statements;
 }
 
 /** Per isolate. A plain flag, not a promise: a worker request must not wait on another request's I/O. */
