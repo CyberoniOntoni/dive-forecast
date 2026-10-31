@@ -1,9 +1,10 @@
-import { runInBackground, workerEnv } from "./cloudflare";
+import { appSetting, runInBackground, workerEnv } from "./cloudflare";
 
 /**
  * A copy of R2 objects in the Cloudflare data centre serving the request (the Workers Cache API). The R2 bucket sits in
  * eastern North America, so from the Maldives every R2 read crosses the world, and a site page reads 10 to 30 of
- * them on a fresh isolate. The edge copy is read in a few milliseconds. It is only ever a copy: callers check the
+ * them on a fresh isolate. The edge copy is read in a few milliseconds. Only the Open-Meteo series use it: the map's
+ * saved nowcasts change every few minutes and stay in R2 alone. It is only ever a copy: callers check the
  * text they get for freshness and go to R2 when it is too old, and the data centre may drop it at any time.
  */
 type EdgeCache = {
@@ -11,8 +12,13 @@ type EdgeCache = {
   put: (key: string, response: Response) => Promise<void>;
 };
 
-/** Never served: the Cache API only needs a URL as the key. */
-const KEY_ORIGIN = "https://r2-copy.50bar.internal/";
+/**
+ * Keys sit under the worker's own domain (APP_URL), as the Cache API scopes entries to the zone. The path is never
+ * served: requests reach the worker before any cache, and nothing routes /__r2-copy/.
+ */
+function keyOrigin(): string {
+  return `${(appSetting("APP_URL") ?? "https://50bar.app").replace(/\/+$/, "")}/__r2-copy/`;
+}
 
 /** The worker's default cache, or null on Node (and anywhere the Cache API is missing). */
 function edgeCache(): EdgeCache | null {
@@ -22,7 +28,7 @@ function edgeCache(): EdgeCache | null {
 }
 
 function keyUrl(key: string): string {
-  return `${KEY_ORIGIN}${key.split("/").map(encodeURIComponent).join("/")}`;
+  return `${keyOrigin()}${key.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /** The edge copy of an R2 object's text, or null when there is none (or no Cache API, or it failed). */

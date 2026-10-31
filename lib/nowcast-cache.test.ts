@@ -74,37 +74,6 @@ describe("mapNowcasts", () => {
     expect(siteIdsKey(sites)).not.toBe(siteIdsKey([{ id: "ab" }] as Site[]));
   });
 
-  it("serves the data centre's fresh copy without reading R2, and keeps it in step with each save", async () => {
-    const edge = new Map<string, string>();
-    vi.stubGlobal("caches", {
-      default: {
-        match: async (url: string) => (edge.has(url) ? new Response(edge.get(url)) : undefined),
-        put: async (url: string, response: Response) => void edge.set(url, await response.text()),
-      },
-    });
-    try {
-      vi.useFakeTimers({ now: Date.parse("2026-10-30T11:00:00Z") });
-      await mapNowcasts(sites, [], WALL);
-      await Promise.all(background);
-      expect(edge.size).toBe(1);
-      // R2 loses the list: the edge copy still answers within FRESH_MS.
-      objects.clear();
-      vi.setSystemTime(Date.parse("2026-10-30T11:04:00Z"));
-      expect((await mapNowcasts(sites, [], WALL)).map((item) => item.siteId)).toEqual(["a", "b"]);
-      expect(nowcastSites).toHaveBeenCalledTimes(1);
-      // Past FRESH_MS with nothing newer in R2, the old copy is served and rebuilt in the background.
-      vi.setSystemTime(Date.parse("2026-10-30T11:06:00Z"));
-      expect((await mapNowcasts(sites, [], WALL)).map((item) => item.siteId)).toEqual(["a", "b"]);
-      await Promise.all(background);
-      // The save's own edge copy is queued while the rebuild runs.
-      await Promise.all(background);
-      expect(nowcastSites).toHaveBeenCalledTimes(2);
-      expect(JSON.parse([...edge.values()][0]).computedAt).toBe(Date.parse("2026-10-30T11:06:00Z"));
-    } finally {
-      vi.unstubAllGlobals();
-    }
-  });
-
   it("always computes on Node", async () => {
     onWorker = false;
     await mapNowcasts(sites, [], WALL);

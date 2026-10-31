@@ -177,14 +177,17 @@ export function pointFetcher<T>(source: PointSource<T>) {
       const object = await env.DATA.get(key);
       const text = object ? await object.text() : null;
       const parsed = text ? parsePointCache(text, source.readHours) : null;
-      if (parsed) {
-        remembered.set(name, parsed);
-        if (fresh(parsed)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
-      }
-      return newest(parsed, edge, known);
+      if (parsed && fresh(parsed)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
+      return remember(name, newest(parsed, edge, known));
     } catch {
-      return newest(edge, known);
+      return remember(name, newest(edge, known));
     }
+  }
+
+  /** Keeps the newest series this isolate has seen, so its memory never goes back to an older one. */
+  function remember(name: string, series: { fetchedAt: number; hours: T[] } | null) {
+    if (series) remembered.set(name, series);
+    return series;
   }
 
   async function writeCached(lat: number, lon: number, hours: T[], fetchedAt: number) {
