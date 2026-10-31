@@ -6,11 +6,10 @@ import {
   authSecret,
   clearSessionCookie,
   currentSession,
-  mailgunConfig,
   requireSession,
   setSessionCookie,
 } from "./auth";
-import { sendLoginEmail } from "./mailgun";
+import { mailRoutes, sendLoginEmail } from "./email";
 import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from "./points";
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
@@ -30,22 +29,21 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
   try {
     const email = normalizeEmail(emailInput);
     const secret = authSecret();
-    const mail = mailgunConfig();
+    const routes = mailRoutes();
     if (!secret) return { ok: false, error: NOT_SET_UP };
-    if (!mail && process.env.NODE_ENV === "production") return { ok: false, error: NOT_SET_UP };
+    if (routes.length === 0 && process.env.NODE_ENV === "production") return { ok: false, error: NOT_SET_UP };
 
     const code = newLoginCode();
     const codeHash = await hashLoginCode(email, code, secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now()));
     const base = await appUrl();
     const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
-    if (mail) {
-      await sendLoginEmail(mail, { to: email, code, link }).catch((error) => {
-        console.error("Sign-in email failed", error);
+    if (routes.length > 0) {
+      await sendLoginEmail(routes, { to: email, code, link }).catch(() => {
         throw new Error("Could not send the email. Try again in a minute.");
       });
     } else {
-      // Development only (production returned above): there is no mail server, so the code goes to the server log.
+      // Development only (production returned above): no email route is set up, so the code goes to the server log.
       console.info(`[sign-in] code for ${email}: ${code}${link ? ` (${link})` : ""}`);
     }
     return { ok: true, error: null, newUser };

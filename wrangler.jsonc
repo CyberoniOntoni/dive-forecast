@@ -25,12 +25,21 @@
       "database_id": "354f2a29-933a-4613-9146-58e02859c51b"
     }
   ],
+  "send_email": [
+    {
+      // Cloudflare Email Sending for the sign-in email (lib/email.ts); Mailgun is the fallback. 50bar.app must be
+      // onboarded in Email Service → Email Sending, or every send falls through to Mailgun.
+      "name": "EMAIL",
+      "allowed_sender_addresses": ["login@50bar.app"]
+    }
+  ],
   // Kept here, not in the dashboard: a deploy replaces dashboard routes and vars with this file's.
   "routes": [{ "pattern": "50bar.app", "custom_domain": true }],
   // Sign-in settings that are not secret (CLOUDFLARE.md § Sign-in). AUTH_SECRET and MAILGUN_API_KEY are Worker
   // secrets, set in the dashboard; deploys keep those.
   "vars": {
     "APP_URL": "https://50bar.app",
+    "EMAIL_FROM": "login@50bar.app",
     "MAILGUN_DOMAIN": "mailgun.50bar.app"
   },
   "limits": {

@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { unstable_rethrow } from "next/navigation";
 import { appSetting } from "./cloudflare";
+import { SENDER_NAME } from "./login-email";
 import type { MailgunConfig } from "./mailgun";
 import { SIGN_IN_FIRST } from "./sign-in";
 import { SESSION_MAX_AGE_S, signSession, verifySession, type Session } from "./session-token";
@@ -31,7 +32,7 @@ export function mailgunConfig(): MailgunConfig | null {
   return {
     apiKey,
     domain,
-    from: appSetting("MAILGUN_FROM") ?? `Dive current <login@${domain}>`,
+    from: appSetting("MAILGUN_FROM") ?? `${SENDER_NAME} <login@${domain}>`,
     region: appSetting("MAILGUN_REGION")?.toLowerCase() === "eu" ? "eu" : "us",
   };
 }
