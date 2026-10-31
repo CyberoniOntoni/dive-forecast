@@ -56,8 +56,10 @@ npm run cf:deploy     # cf:build, then deploys to the account wrangler is logged
 
 Reporting the current, rating a site and adding a site need a signed-in diver; reading stays open to everyone.
 Sign-in is by email code (no passwords): the diver types an email, gets a 6-digit code and a link, and picks a
-nickname the first time. Only the nickname is ever shown. Settings, as Worker secrets/variables (Workers & Pages →
-`dive-forecast` → Settings → Variables and Secrets) or in the Docker host's `.env` next to `docker-compose.yml`:
+nickname the first time. Only the nickname is ever shown. `APP_URL` and `MAILGUN_DOMAIN` are in `wrangler.jsonc`
+`vars` (a deploy replaces variables typed into the dashboard with that file's). The two secrets go in Workers & Pages →
+`dive-forecast` → Settings → Variables and Secrets, as type Secret, which deploys keep. For Docker, all of them go in a
+`.env` next to `docker-compose.yml`:
 
 | Name | What | Example |
 | --- | --- | --- |
