@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import geopackage_wkb
+from atlas_tiles import load_tile_rings, tile_export
 
 ROOT = Path(__file__).resolve().parents[1]
 GPKG = ROOT / "data" / "sources" / "aca" / "Geomorphic-Map" / "geomorphic.gpkg"
@@ -28,7 +29,7 @@ KM_LON = 111.32
 
 
 def main() -> None:
-    tiles = os.environ.get("ATLAS_TILE_POLYGONS")
+    tiles = tile_export()
     if not tiles and not GPKG.exists():
         raise SystemExit(f"No geomorphic map at {GPKG}")
     catalog = json.loads(SITES.read_text(encoding="utf-8"))
@@ -40,7 +41,7 @@ def main() -> None:
         if only and way_id not in only:
             continue
         ways.setdefault(way_id, []).append(atoll["id"])
-    polygons = load_tile_polygons(Path(tiles), "crest") if tiles else load_reef(GPKG)
+    polygons = tile_polygons(tiles) if tiles else load_reef(GPKG)
     rim_points = []
     rim_index: dict[tuple[int, int], list[int]] = {}
     for way_id, atoll_ids in ways.items():
@@ -100,17 +101,13 @@ def load_reef(path: Path) -> list[dict]:
     return polygons
 
 
-def load_tile_polygons(path: Path, kind: str) -> list[dict]:
-    """Outer rings of one kind from the tile export, shaped like load_reef's polygons (no holes)."""
+def tile_polygons(path: Path) -> list[dict]:
+    """Reef-crest rings from the tile export, shaped like load_reef's polygons (outer ring only)."""
     polygons = []
-    for outer in json.loads(path.read_text(encoding="utf-8"))[kind]:
-        if len(outer) < 4:
-            continue
+    for outer in load_tile_rings(path, "crest"):
         lons = [point[0] for point in outer]
         lats = [point[1] for point in outer]
-        polygons.append({"outer": [tuple(point) for point in outer], "holes": [], "bbox": (min(lons), min(lats), max(lons), max(lats))})
-    if not polygons:
-        raise SystemExit(f"no {kind} polygons in {path}")
+        polygons.append({"outer": outer, "holes": [], "bbox": (min(lons), min(lats), max(lons), max(lats))})
     return polygons
 
 

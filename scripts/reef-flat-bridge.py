@@ -5,7 +5,6 @@ reef-zone tiles; see scripts/atoll-openings.py.
 """
 
 import json
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -15,6 +14,7 @@ from shapely.strtree import STRtree
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import geopackage_wkb
+from atlas_tiles import load_tile_rings, tile_export
 
 ROOT = Path(__file__).resolve().parents[1]
 GPKG = ROOT / "data" / "sources" / "aca" / "Geomorphic-Map" / "geomorphic.gpkg"
@@ -29,15 +29,11 @@ def main() -> None:
 
 
 def load_flat() -> list[Polygon]:
-    tiles = os.environ.get("ATLAS_TILE_POLYGONS")
+    tiles = tile_export()
     if tiles:
-        rings = json.loads(Path(tiles).read_text(encoding="utf-8"))["flat"]
-        polygons = [Polygon(ring) for ring in rings if len(ring) >= 4]
+        polygons = [Polygon(ring) for ring in load_tile_rings(tiles, "flat")]
         polygons = [polygon if polygon.is_valid else polygon.buffer(0) for polygon in polygons]
-        polygons = [polygon for polygon in polygons if not polygon.is_empty]
-        if not polygons:
-            raise SystemExit("no reef-flat polygons")
-        return polygons
+        return [polygon for polygon in polygons if not polygon.is_empty]
     conn = sqlite3.connect(GPKG)
     placeholders = ",".join("?" for _ in FLAT)
     query = f'SELECT geom FROM "Central Indian Ocean" WHERE class IN ({placeholders})'

@@ -23,7 +23,8 @@ import type { SiteType } from "../lib/types";
  *                                                            the file's rows for those outlines, the rest are kept
  *
  * The tiles are the same Atlas classes simplified to about 11 m, so a tile-walked mouth can sit a few tens of metres
- * from the GeoPackage one.
+ * from the GeoPackage one, and a narrow mouth can be missed. Its rows carry `fromTiles: true`; the GeoPackage stays the
+ * source of record, so rerun those outlines from it (without --from-tiles) when the download is at hand.
  */
 const SAMPLE_PY = path.join(process.cwd(), "scripts", "atoll-openings.py");
 const BRIDGE_PY = path.join(process.cwd(), "scripts", "reef-flat-bridge.py");
@@ -72,6 +73,7 @@ function main(): void {
           lon,
           widthM: Math.round(mouth.widthM),
           alongM,
+          ...(fromTiles ? { fromTiles: true } : {}),
         });
         continue;
       }
@@ -113,6 +115,9 @@ function main(): void {
       alongM: mouth.alongM,
       reefFlatBridges: bridgeFlags[index],
       sites,
+      // Walked on the simplified map tiles, not the GeoPackage: rerun those outlines without --from-tiles once the
+      // Atlas download is at hand.
+      ...(fromTiles ? { fromTiles: true } : {}),
     });
   }
   if (onlyWays.length > 0) {
@@ -136,7 +141,7 @@ function main(): void {
     source: "Allen Coral Atlas reef crest, walked around each atoll by bearing from the rim centre",
     minM: OPENING_MIN_M,
     maxM: OPENING_MAX_M,
-    note: "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section.",
+    note: "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section. fromTiles marks a mouth walked on the map's simplified reef-zone tiles instead of the GeoPackage (about 11 m simplification); rerun those outlines from the GeoPackage when it is available.",
     openings,
     openCoast,
     unseen,

@@ -68,7 +68,7 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
 
    Store the closed ring as `[lat, lon]` pairs, five decimals. Two atolls can share one way, as North and South Ari do.
 3. The test "has a stored rim for every atoll" fails until this is done. The outline is OpenStreetMap data under ODbL.
-4. Rebuild what reads the outlines: `npm run atoll-openings -- --from-tiles --ways WAY_ID` (reef gaps, from the map's Atlas tiles, for a lagoon atoll only), `npm run shoals`, then `npm run shelter-grid`.
+4. Rebuild what reads the outlines: `npm run atoll-openings -- --from-tiles --ways WAY_ID` (reef gaps for a lagoon atoll only, walked on the map's simplified Atlas tiles and marked `fromTiles`; with the Atlas GeoPackage in `data/sources/aca/`, the source of record, drop `--from-tiles`), `npm run shoals`, then `npm run shelter-grid`.
 
 ## 5. Site type
 

@@ -15,8 +15,9 @@ import { readCatalog } from "../lib/store";
  *
  * Checks: pin on an island; pin inside or near another atoll's outline than its own; pin far from its outline
  * (outside, more than 3 km); seaward sample point inside the outline; a derived type unlike the one position and name
- * suggest; a "Kandu" typed lagoon; fallback bearings outside the lagoon; pins within 150 m of each other; two sites of one atoll with one name.
- * A type set by hand and a lagoon site's fallback bearing are deliberate and not flagged.
+ * suggest; a "Kandu" typed lagoon; a fallback bearing on any site not typed lagoon; pins within 150 m of each other;
+ * two sites of one atoll with one name. A type set by hand and a lagoon-typed site's fallback bearing are deliberate
+ * and not flagged.
  */
 function main(): void {
   const catalog = readCatalog();
