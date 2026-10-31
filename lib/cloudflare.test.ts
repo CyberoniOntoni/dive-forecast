@@ -42,6 +42,21 @@ function fakeAssets(files: Record<string, string>): WorkerEnv["ASSETS"] {
   };
 }
 
+/** The Workers Cache API, in memory: text by key URL. */
+function fakeEdgeCache() {
+  const entries = new Map<string, string>();
+  return {
+    entries,
+    async match(url: string) {
+      const text = entries.get(url);
+      return text === undefined ? undefined : new Response(text);
+    },
+    async put(url: string, response: Response) {
+      entries.set(url, await response.text());
+    },
+  };
+}
+
 const background: Promise<unknown>[] = [];
 
 function newRequest(env: WorkerEnv): Context {
@@ -231,6 +246,62 @@ describe("on a Cloudflare worker", () => {
       expect(background).toHaveLength(1);
       await Promise.all(background);
       expect(fetchSpy).toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("preloads every data file but the shelter grid, which loads only for the actions that name it", async () => {
+    const { preloadDataFiles, readDataFile, CORE_DATA_FILES } = await import("./data-files");
+    const asked: string[] = [];
+    const assets = fakeAssets({ "sites.json": realSites, "shelter-grid.json": "{}" });
+    const env = { ASSETS: { fetch: (url: string) => (asked.push(new URL(url).pathname), assets.fetch(url)) }, DATA: fakeBucket(), DB: fakeD1() };
+    newRequest(env);
+    await preloadDataFiles();
+    expect(asked).not.toContain("/_data/shelter-grid.json");
+    expect(asked).toHaveLength(CORE_DATA_FILES.length);
+    expect(() => readDataFile("shelter-grid.json")).toThrow(/before preloadDataFiles/);
+    await preloadDataFiles([...CORE_DATA_FILES, "shelter-grid.json"]);
+    expect(readDataFile("shelter-grid.json")).toBe("{}");
+    // Files already loaded are not fetched again.
+    expect(asked).toHaveLength(CORE_DATA_FILES.length + 1);
+  });
+
+  it("reads Open-Meteo series from the data centre's copy before R2, and R2 once that copy is past the TTL", async () => {
+    const edge = fakeEdgeCache();
+    vi.stubGlobal("caches", { default: edge });
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    try {
+      const bucket = fakeBucket();
+      const reads: string[] = [];
+      const get = bucket.get.bind(bucket);
+      bucket.get = (key) => (reads.push(key), get(key));
+      const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1() };
+      const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+      const { marineCacheName } = await import("./marine");
+      const key = `marine-cache/${marineCacheName(4, 73)}`;
+      const recent = Date.now() - 60 * 60 * 1000;
+      await bucket.put(key, JSON.stringify({ fetchedAt: recent, hours }));
+
+      newRequest(env);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
+      expect(reads).toEqual([key]);
+      await Promise.all(background);
+      expect(edge.entries.size).toBe(1);
+
+      // A fresh isolate in the same data centre: the edge copy answers, R2 is not read.
+      vi.resetModules();
+      newRequest(env);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
+      expect(reads).toEqual([key]);
+
+      // An edge copy past the TTL: R2 is read again and its newer series wins.
+      const old = Date.now() - 7 * 60 * 60 * 1000;
+      for (const url of edge.entries.keys()) edge.entries.set(url, JSON.stringify({ fetchedAt: old, hours }));
+      vi.resetModules();
+      newRequest(env);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
+      expect(reads).toEqual([key, key]);
     } finally {
       vi.unstubAllGlobals();
     }

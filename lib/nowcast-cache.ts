@@ -1,4 +1,5 @@
 import { runInBackground, workerEnv, type R2Bucket } from "./cloudflare";
+import { edgeRead, edgeWrite } from "./edge-cache";
 import { nowcastSites, type SiteNowcast } from "./nowcast";
 import type { Atoll, Site } from "./types";
 
@@ -28,7 +29,7 @@ export async function mapNowcasts(
     await save(env.DATA, key, { computedAt: Date.now(), sitesKey, nowcasts });
     return nowcasts;
   };
-  const saved = await read(env.DATA, key);
+  const saved = await readNearest(env.DATA, key);
   if (saved && saved.sitesKey === sitesKey) {
     if (Date.now() - saved.computedAt > FRESH_MS) runInBackground(rebuild());
     return saved.nowcasts;
@@ -50,11 +51,39 @@ export function siteIdsKey(sites: readonly Site[]): string {
   return `${sites.length}:${(hash >>> 0).toString(16)}`;
 }
 
-async function read(bucket: R2Bucket, key: string): Promise<SavedNowcasts | null> {
+/**
+ * The saved list: this data centre's copy while it is fresh (lib/edge-cache.ts), else R2's, which is then copied to
+ * the edge while it is fresh. An edge copy past FRESH_MS is used only when R2 has nothing newer.
+ */
+async function readNearest(bucket: R2Bucket, key: string): Promise<SavedNowcasts | null> {
+  const edgeText = await edgeRead(key);
+  const edge = edgeText ? parseSaved(edgeText) : null;
+  if (edge && Date.now() - edge.computedAt <= FRESH_MS) return edge;
+  const saved = await read(bucket, key);
+  if (saved && Date.now() - saved.saved.computedAt <= FRESH_MS) edgeWrite(key, saved.text, EDGE_SECONDS);
+  const r2 = saved?.saved ?? null;
+  if (!r2) return edge;
+  return edge && edge.computedAt > r2.computedAt ? edge : r2;
+}
+
+/** How long a data centre keeps its copy of a saved list: the hour it is for, at most. */
+const EDGE_SECONDS = 60 * 60;
+
+async function read(bucket: R2Bucket, key: string): Promise<{ saved: SavedNowcasts; text: string } | null> {
   try {
     const object = await bucket.get(key);
     if (!object) return null;
-    const parsed = JSON.parse(await object.text()) as Partial<SavedNowcasts>;
+    const text = await object.text();
+    const saved = parseSaved(text);
+    return saved ? { saved, text } : null;
+  } catch {
+    return null;
+  }
+}
+
+function parseSaved(text: string): SavedNowcasts | null {
+  try {
+    const parsed = JSON.parse(text) as Partial<SavedNowcasts>;
     if (typeof parsed.computedAt !== "number" || typeof parsed.sitesKey !== "string" || !Array.isArray(parsed.nowcasts)) {
       return null;
     }
@@ -66,7 +95,9 @@ async function read(bucket: R2Bucket, key: string): Promise<SavedNowcasts | null
 
 async function save(bucket: R2Bucket, key: string, saved: SavedNowcasts): Promise<void> {
   try {
-    await bucket.put(key, JSON.stringify(saved));
+    const text = JSON.stringify(saved);
+    await bucket.put(key, text);
+    edgeWrite(key, text, EDGE_SECONDS);
   } catch (error) {
     console.warn("Failed to save map nowcasts", error);
   }

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { inFlightPerRequest, perRequest, runInBackground, workerEnv } from "./cloudflare";
+import { edgeRead, edgeWrite } from "./edge-cache";
 import type { MarineHour } from "./types";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
@@ -160,15 +161,29 @@ export function pointFetcher<T>(source: PointSource<T>) {
       }
     }
     const known = remembered.get(name);
+    const fresh = (series: { fetchedAt: number } | null | undefined) =>
+      series != null && Date.now() - series.fetchedAt <= CACHE_TTL_MS;
+    if (fresh(known)) return known!;
+    const key = `${WORKER_CACHE_PREFIX}${name}`;
+    // This data centre's copy first: R2 is a long way from the Maldives (lib/edge-cache.ts).
+    const edgeText = await edgeRead(key);
+    const edge = edgeText ? parsePointCache(edgeText, source.readHours) : null;
+    if (edge && fresh(edge)) {
+      remembered.set(name, edge);
+      return edge;
+    }
     // Past the TTL another isolate may have refreshed it already: look in R2 before fetching Open-Meteo again.
-    if (known && Date.now() - known.fetchedAt <= CACHE_TTL_MS) return known;
     try {
-      const object = await env.DATA.get(`${WORKER_CACHE_PREFIX}${name}`);
-      const parsed = object ? parsePointCache(await object.text(), source.readHours) : null;
-      if (parsed) remembered.set(name, parsed);
-      return parsed ?? known ?? null;
+      const object = await env.DATA.get(key);
+      const text = object ? await object.text() : null;
+      const parsed = text ? parsePointCache(text, source.readHours) : null;
+      if (parsed) {
+        remembered.set(name, parsed);
+        if (fresh(parsed)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
+      }
+      return newest(parsed, edge, known);
     } catch {
-      return known ?? null;
+      return newest(edge, known);
     }
   }
 
@@ -180,6 +195,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       if (env) {
         remembered.set(name, { fetchedAt, hours });
         await env.DATA.put(`${WORKER_CACHE_PREFIX}${name}`, text);
+        edgeWrite(`${WORKER_CACHE_PREFIX}${name}`, text, edgeSeconds(fetchedAt));
         return;
       }
       fs.mkdirSync(marineCacheDir(), { recursive: true });
@@ -232,6 +248,18 @@ export function pointFetcher<T>(source: PointSource<T>) {
   }
 
   return { fetch: fetchPoint, readCached };
+}
+
+/** How long an edge copy of a series is worth keeping: until it passes the TTL. */
+function edgeSeconds(fetchedAt: number): number {
+  return (fetchedAt + CACHE_TTL_MS - Date.now()) / 1000;
+}
+
+/** The most recently fetched of the series, or null when there are none. */
+function newest<S extends { fetchedAt: number }>(...series: (S | null | undefined)[]): S | null {
+  let best: S | null = null;
+  for (const item of series) if (item && (!best || item.fetchedAt > best.fetchedAt)) best = item;
+  return best;
 }
 
 /** GETs an Open-Meteo URL and returns its JSON body, or null on an HTTP error, a timeout or bad JSON. */
