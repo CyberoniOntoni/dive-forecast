@@ -2,21 +2,30 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * The bindings in wrangler.jsonc. ASSETS serves the built static files, which include the read-only data files
- * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding store.json and the Open-Meteo cache.
+ * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding the Open-Meteo cache (and the old
+ * store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts.
  */
 export type WorkerEnv = {
   ASSETS: { fetch: (input: string) => Promise<Response> };
   DATA: R2Bucket;
+  DB: D1Database;
+};
+
+/** The subset of Cloudflare's D1 binding this app uses. A batch runs as one transaction. */
+export type D1Database = {
+  prepare: (sql: string) => D1PreparedStatement;
+  batch: (statements: D1PreparedStatement[]) => Promise<unknown[]>;
+};
+
+export type D1PreparedStatement = {
+  bind: (...values: unknown[]) => D1PreparedStatement;
+  first: <T = Record<string, unknown>>() => Promise<T | null>;
 };
 
 /** The subset of Cloudflare's R2 binding this app uses. */
 export type R2Bucket = {
-  get: (key: string) => Promise<{ text: () => Promise<string>; etag: string } | null>;
-  put: (
-    key: string,
-    value: string,
-    options?: { onlyIf?: { etagMatches?: string; etagDoesNotMatch?: string } },
-  ) => Promise<{ etag: string } | null>;
+  get: (key: string) => Promise<{ text: () => Promise<string> } | null>;
+  put: (key: string, value: string) => Promise<unknown>;
 };
 
 type Context = { env: WorkerEnv; ctx: { waitUntil: (promise: Promise<unknown>) => void } };

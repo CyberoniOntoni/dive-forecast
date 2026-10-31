@@ -8,7 +8,7 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | Data | Docker / `next dev` | Worker |
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`) |
-| Reports, ratings, added pins | `data/store.json` | `store.json` in the R2 bucket `dive-current-data`, read once per request and written with an etag check (create-only for the first write) and retry (`lib/store.ts`) |
+| Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list, read once per request; a change writes only the rows it touched, in one transaction (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
 | Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus an in-memory copy per isolate (`lib/marine.ts`) |
 | Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: served at once for the same Maldives hour and site list, rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
 
@@ -33,16 +33,19 @@ anything but GET, HEAD and server-action POSTs (`lib/request-guard.ts`), so bot 
 ```bash
 npm run replay        # writes data/replay.json, which the build ships
 npm run cf:build      # OpenNext build + data files into .open-next/assets/_data
-npm run cf:preview    # cf:build, then wrangler dev on http://localhost:8787 with a local R2 bucket (.wrangler/state)
+npm run cf:preview    # cf:build, then wrangler dev on http://localhost:8787 with a local R2 bucket and D1 database (.wrangler/state)
 npm run cf:deploy     # cf:build, then deploys to the account wrangler is logged in to
+npm run d1:export     # the live D1 store as data/store.json (for verify, replay --store or a Docker host)
 ```
 
 ## First deploy (Cloudflare dashboard)
 
 1. **R2:** R2 Object Storage → Create bucket → name `dive-current-data`. R2 asks for a payment method even on
    the free allowance.
-2. **Existing reports (optional):** in that bucket, upload an existing `data/store.json` as `store.json`. Without it
-   the worker starts with no reports, ratings or added pins. (Or: `npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`.)
+2. **D1:** Storage & Databases → D1 → Create → name `dive-forecast` (location Asia-Pacific); put its id in
+   `wrangler.jsonc` under `d1_databases`. Existing reports (optional): before the first request, upload an existing
+   `data/store.json` to the R2 bucket as `store.json` (`npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`);
+   the worker copies it into D1 once. Without it the worker starts with no reports, ratings or added pins.
 3. **Worker from GitHub:** Workers & Pages → Create → Import a repository → `CyberoniOntoni/dive-forecast` (the worker is named `dive-forecast`, matching `wrangler.jsonc`).
    - Build command: `npm run replay && npm run cf:build`
    - Deploy command: `npx wrangler deploy`
@@ -73,15 +76,17 @@ nickname the first time. Only the nickname is ever shown. `APP_URL` and `MAILGUN
 Mailgun's domain needs its DNS records (SPF TXT, DKIM TXT, MX and the tracking CNAME it lists) added in Cloudflare
 DNS for 50bar.app. Without `AUTH_SECRET` and the Mailgun settings, production says signing in is not set up; `next dev`
 needs none of them and prints the code to its own log instead. Users, pending codes (hashed) and ratings per diver live
-in `store.json`; points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
+in the store (D1 on the worker); points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
 
 ## Cost
 
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over
 the free plan's 10 ms. `limits.cpu_ms` in `wrangler.jsonc` is 30 s. Paid includes 30M CPU-ms a month, about
 10,000 map loads; beyond that it is $0.02 per million CPU-ms (about $0.00005 per map load). R2 (under 20 MB stored, a few
-thousand writes a day) stays inside its free allowance.
+thousand writes a day) stays inside its free allowance. D1 on Workers Paid includes 25 billion rows read and 50 million
+rows written a month and 5 GB stored; every request reads every store row, which is far inside that for now.
 
 ## Moving reports back
 
-Download `store.json` from the bucket and put it in `data/` on the Docker host.
+Run `npm run d1:export` (wrangler signed in) and put the `data/store.json` it writes on the Docker host. D1 also keeps
+30 days of point-in-time restore (Time Travel: `npx wrangler d1 time-travel restore dive-forecast --timestamp=…`).

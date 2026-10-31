@@ -11,9 +11,18 @@
   },
   "r2_buckets": [
     {
-      // store.json (reports, ratings, added pins) and the Open-Meteo cache (marine-cache/...). lib/cloudflare.ts.
+      // The Open-Meteo cache (marine-cache/...) and map nowcasts. Also the old store.json, copied into D1 once and kept
+      // as a backup. lib/cloudflare.ts.
       "binding": "DATA",
       "bucket_name": "dive-current-data"
+    }
+  ],
+  "d1_databases": [
+    {
+      // Reports, ratings, added pins, accounts and sign-in codes (lib/store-d1.ts). Tables are created by the app.
+      "binding": "DB",
+      "database_name": "dive-forecast",
+      "database_id": "354f2a29-933a-4613-9146-58e02859c51b"
     }
   ],
   // Kept here, not in the dashboard: a deploy replaces dashboard routes and vars with this file's.

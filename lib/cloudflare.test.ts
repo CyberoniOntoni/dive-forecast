@@ -2,9 +2,11 @@ import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { R2Bucket, WorkerEnv } from "./cloudflare";
-import type { Report } from "./types";
+import { fakeD1 } from "../tests/fake-d1";
+import type { Report, User } from "./types";
 
-// The worker paths, with OpenNext's request context, the R2 bucket and the static assets faked in memory.
+// The worker paths, with OpenNext's request context, the R2 bucket and the static assets faked in memory, and D1 on
+// Node's SQLite.
 type Context = { env: WorkerEnv; ctx: { waitUntil: (promise: Promise<unknown>) => void } };
 let current: Context | null = null;
 vi.mock("@opennextjs/cloudflare", () => ({
@@ -14,30 +16,21 @@ vi.mock("@opennextjs/cloudflare", () => ({
   },
 }));
 
-type FakeBucket = R2Bucket & { objects: Map<string, { text: string; etag: string }>; beforePut?: () => void };
+type FakeBucket = R2Bucket & { objects: Map<string, { text: string }> };
 
 function fakeBucket(): FakeBucket {
-  const objects = new Map<string, { text: string; etag: string }>();
-  let version = 0;
-  const bucket: FakeBucket = {
+  const objects = new Map<string, { text: string }>();
+  return {
     objects,
     async get(key) {
       const object = objects.get(key);
-      return object ? { text: async () => object.text, etag: object.etag } : null;
+      return object ? { text: async () => object.text } : null;
     },
-    async put(key, value, options) {
-      bucket.beforePut?.();
-      const etagMatches = options?.onlyIf?.etagMatches;
-      if (etagMatches !== undefined && objects.get(key)?.etag !== etagMatches) return null;
-      // R2's create-only write: "*" matches any existing object.
-      if (options?.onlyIf?.etagDoesNotMatch === "*" && objects.has(key)) return null;
-      version += 1;
-      const etag = `v${version}`;
-      objects.set(key, { text: value, etag });
-      return { etag };
+    async put(key, value) {
+      objects.set(key, { text: value });
+      return {};
     },
   };
-  return bucket;
 }
 
 function fakeAssets(files: Record<string, string>): WorkerEnv["ASSETS"] {
@@ -60,6 +53,10 @@ function report(id: string): Report {
   return { id, siteId: "banana-reef", time: "2026-09-23T10:00", direction: "incoming", strength: "mild" };
 }
 
+function user(id: string, email: string, nickname: string): User {
+  return { id, email, nickname, createdAt: "2026-10-30T00:00:00Z" };
+}
+
 const realSites = fs.readFileSync(path.join(process.cwd(), "data", "sites.json"), "utf8");
 
 beforeEach(() => {
@@ -74,94 +71,153 @@ afterEach(() => {
 describe("on a Cloudflare worker", () => {
   it("reads data files from the static assets once preloaded, and a missing one as ENOENT", async () => {
     const { preloadDataFiles, readDataFile } = await import("./data-files");
-    newRequest({ ASSETS: fakeAssets({ "sites.json": realSites }), DATA: fakeBucket() });
+    newRequest({ ASSETS: fakeAssets({ "sites.json": realSites }), DATA: fakeBucket(), DB: fakeD1() });
     expect(() => readDataFile("sites.json")).toThrow(/before preloadDataFiles/);
     await preloadDataFiles();
     expect(readDataFile("sites.json")).toBe(realSites);
     expect(() => readDataFile("rims.json")).toThrow(expect.objectContaining({ code: "ENOENT" }));
   });
 
-  it("keeps the store in R2 and sees another isolate's write on the next request", async () => {
-    const store = await import("./store");
+  it("copies store.json from R2 into D1 once, and keeps the R2 object", async () => {
     const bucket = fakeBucket();
-    const env = { ASSETS: fakeAssets({ "sites.json": realSites }), DATA: bucket };
+    const legacy = { reports: [report("old")], users: [user("u1", "a@x.mv", "Ali")], ratings: [], sites: [], logins: [] };
+    await bucket.put("store.json", JSON.stringify(legacy));
+    const db = fakeD1();
+    const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: db };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["old"]);
+    expect(store.readStore().users.map((item) => item.nickname)).toEqual(["Ali"]);
+    expect(bucket.objects.get("store.json")!.text).toBe(JSON.stringify(legacy));
+
+    // A later change to the R2 copy is not imported again, by this isolate or a new one.
+    await bucket.put("store.json", JSON.stringify({ reports: [report("old"), report("late")] }));
+    vi.resetModules();
+    const fresh = await import("./store");
+    newRequest(env);
+    await fresh.refreshStore();
+    expect(fresh.readStore().reports.map((item) => item.id)).toEqual(["old"]);
+  });
+
+  it("stops on a corrupt store.json in R2 without importing anything, and tries again next time", async () => {
+    const bucket = fakeBucket();
+    await bucket.put("store.json", "{not json");
+    const db = fakeD1();
+    const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: db };
+    const store = await import("./store");
+    newRequest(env);
+    await expect(store.refreshStore()).rejects.toThrow(/not valid JSON/);
+    expect(db.sqlite.prepare("SELECT count(*) AS n FROM meta WHERE key = 'imported_r2_store'").all()[0].n).toBe(0);
+
+    await bucket.put("store.json", JSON.stringify({ reports: [report("fixed")] }));
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["fixed"]);
+  });
+
+  it("keeps the store in D1 and sees another isolate's write on the next request", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
     newRequest(env);
     await store.refreshStore();
     expect(store.readStore().reports).toEqual([]);
     await store.addReport(report("first"));
-    expect(JSON.parse(bucket.objects.get("store.json")!.text).reports.map((item: Report) => item.id)).toEqual(["first"]);
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["first"]);
 
-    // Another isolate writes; this isolate's next request reads it.
-    const other = JSON.parse(bucket.objects.get("store.json")!.text);
-    other.reports.push(report("elsewhere"));
-    await bucket.put("store.json", JSON.stringify(other));
+    vi.resetModules();
+    const other = await import("./store");
+    newRequest(env);
+    await other.addReport(report("elsewhere"));
+
     newRequest(env);
     await store.refreshStore();
     expect(store.readStore().reports.map((item) => item.id)).toEqual(["first", "elsewhere"]);
   });
 
-  it("starts a store write over when another isolate wrote in between", async () => {
+  it("writes only the records a change touched, so a write from an older read keeps newer records", async () => {
+    const { storeChanges, loadD1Store } = await import("./store-d1");
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
     const store = await import("./store");
-    const bucket = fakeBucket();
-    newRequest({ ASSETS: fakeAssets({}), DATA: bucket });
-    await store.addReport(report("first"));
-    let raced = false;
-    bucket.beforePut = () => {
-      if (raced) return;
-      raced = true;
-      const object = bucket.objects.get("store.json")!;
-      const other = JSON.parse(object.text);
-      other.reports.push(report("racing"));
-      bucket.objects.set("store.json", { text: JSON.stringify(other), etag: "raced" });
-    };
-    await store.addReport(report("second"));
-    const saved = JSON.parse(bucket.objects.get("store.json")!.text);
-    expect(saved.reports.map((item: Report) => item.id)).toEqual(["first", "racing", "second"]);
+    newRequest(env);
+    await store.addReport(report("a"));
+    await store.saveRating({ siteId: "banana-reef", score: 3, updatedAt: "2026-10-30T00:00:00Z", userId: "u1" });
+
+    // This isolate read the store, then another wrote a report before this one's batch ran.
+    const before = await loadD1Store(env.DB);
+    await store.addReport(report("b"));
+    const after = structuredClone(before);
+    after.ratings[0].score = 5;
+    after.reports = [];
+    await env.DB.batch(storeChanges(env.DB, before, after));
+
+    const saved = await loadD1Store(env.DB);
+    expect(saved.reports.map((item) => item.id)).toEqual(["b"]);
+    expect(saved.ratings.map((item) => item.score)).toEqual([5]);
   });
 
-  it("does not let the very first write overwrite another isolate's first write", async () => {
+  it("keeps a changed record in its place and drops a removed one", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
     const store = await import("./store");
-    const bucket = fakeBucket();
-    newRequest({ ASSETS: fakeAssets({}), DATA: bucket });
-    let raced = false;
-    bucket.beforePut = () => {
-      if (raced) return;
-      raced = true;
-      bucket.objects.set("store.json", { text: JSON.stringify({ reports: [report("other")] }), etag: "other" });
-    };
-    await store.addReport(report("mine"));
-    const saved = JSON.parse(bucket.objects.get("store.json")!.text);
-    expect(saved.reports.map((item: Report) => item.id)).toEqual(["other", "mine"]);
+    newRequest(env);
+    for (const id of ["u1", "u2", "u3"]) {
+      await store.saveRating({ siteId: "banana-reef", score: 1, updatedAt: "2026-10-30T00:00:00Z", userId: id });
+    }
+    await store.saveRating({ siteId: "banana-reef", score: 4, updatedAt: "2026-10-31T00:00:00Z", userId: "u2" });
+    await store.mutateStore((data) => {
+      data.ratings = data.ratings.filter((item) => item.userId !== "u1");
+    });
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().ratings.map((item) => [item.userId, item.score])).toEqual([
+      ["u2", 4],
+      ["u3", 1],
+    ]);
+  });
+
+  it("turns a second account for the same email into a retry message, keeping the first", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.mutateStore((data) => void data.users.push(user("u1", "a@x.mv", "Ali")));
+    await expect(store.mutateStore((data) => void data.users.push(user("u2", "a@x.mv", "Ali2")))).rejects.toThrow(
+      /just created/,
+    );
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().users.map((item) => item.id)).toEqual(["u1"]);
+  });
+
+  it("writes nothing when a batch fails", async () => {
+    const db = fakeD1();
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: db };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    db.failNextBatch = new Error("D1 down");
+    await expect(store.addReport(report("lost"))).rejects.toThrow("D1 down");
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().reports).toEqual([]);
   });
 
   it("keeps each request's store snapshot when another request refreshes", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
     const store = await import("./store");
-    const bucket = fakeBucket();
-    const env = { ASSETS: fakeAssets({}), DATA: bucket };
     const first = newRequest(env);
     await store.refreshStore();
-    await bucket.put("store.json", JSON.stringify({ reports: [report("later")] }));
     newRequest(env);
+    await store.addReport(report("later"));
     await store.refreshStore();
     expect(store.readStore().reports.map((item) => item.id)).toEqual(["later"]);
     current = first;
     expect(store.readStore().reports).toEqual([]);
   });
 
-  it("copies a corrupt store aside and reads it as empty", async () => {
-    const store = await import("./store");
-    const bucket = fakeBucket();
-    await bucket.put("store.json", "{not json");
-    newRequest({ ASSETS: fakeAssets({}), DATA: bucket });
-    await store.refreshStore();
-    expect(store.readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [] });
-    expect([...bucket.objects.keys()].some((key) => key.startsWith("store.json.corrupt."))).toBe(true);
-  });
-
   it("caches Open-Meteo series in R2 and refreshes a stale one in the background", async () => {
     const { fetchMarine, marineCacheName } = await import("./marine");
     const bucket = fakeBucket();
-    const env = { ASSETS: fakeAssets({}), DATA: bucket };
+    const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1() };
     const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
     const old = Date.now() - 7 * 60 * 60 * 1000;
     await bucket.put(`marine-cache/${marineCacheName(4, 73)}`, JSON.stringify({ fetchedAt: old, hours }));
@@ -182,7 +238,7 @@ describe("on a Cloudflare worker", () => {
 
   it("does not share in-flight promises between requests", async () => {
     const { perRequest } = await import("./cloudflare");
-    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket() };
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
     const state = perRequest(() => new Map<string, number>());
     newRequest(env);
     const first = state();

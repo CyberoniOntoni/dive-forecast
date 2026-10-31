@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { atollForPin } from "./bearing";
-import { perRequest, workerEnv, type R2Bucket } from "./cloudflare";
+import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
+import { emptyStore, loadD1Store, normalizeStore, prepareD1, storeChanges } from "./store-d1";
 import {
   UNSEEDED_ATOLL_ID,
   type Catalog,
@@ -29,16 +30,16 @@ export function readCatalog(): Catalog {
 }
 
 /**
- * On a worker: this request's store, as read from R2 by refreshStore (run by every server action) or as this request
+ * On a worker: this request's store, as read from D1 by refreshStore (run by every server action) or as this request
  * last wrote it. Per request, so another request's refresh never swaps it mid-render. There is no data/ folder there;
- * store.json lives in the DATA bucket under the same name.
+ * the store lives in D1 (lib/store-d1.ts).
  */
 const workerSnapshot = perRequest(() => ({ store: null as StoreData | null }));
 
-/** Reads store.json from R2 so this request's readStore sees other isolates' writes. Does nothing on Node. */
+/** Reads the store from D1 so this request's readStore sees other isolates' writes. Does nothing on Node. */
 export async function refreshStore(): Promise<void> {
   const env = workerEnv();
-  if (env) workerSnapshot().store = (await readWorkerStore(env.DATA)).store;
+  if (env) workerSnapshot().store = await readWorkerStore(env);
 }
 
 export function readStore(): StoreData {
@@ -65,40 +66,9 @@ export function readStore(): StoreData {
   }
 }
 
-/**
- * store.json from R2 with its etag (null when there is none yet). Corrupt JSON is copied aside as on Node and read as
- * empty; the etag is kept, so the next write replaces the corrupt object only if nobody changed it meanwhile.
- */
-async function readWorkerStore(bucket: R2Bucket): Promise<{ store: StoreData; etag: string | null }> {
-  const object = await bucket.get(storeFile);
-  if (!object) return { store: emptyStore(), etag: null };
-  const raw = await object.text();
-  try {
-    return { store: normalizeStore(JSON.parse(raw)), etag: object.etag };
-  } catch (error) {
-    if (!(error instanceof SyntaxError)) throw error;
-    try {
-      await bucket.put(`${storeFile}.corrupt.${Date.now()}`, raw);
-    } catch (copyError) {
-      console.error("Failed to quarantine corrupt store object", copyError);
-    }
-    return { store: emptyStore(), etag: object.etag };
-  }
-}
-
-function emptyStore(): StoreData {
-  return { reports: [], ratings: [], sites: [], users: [], logins: [] };
-}
-
-function normalizeStore(parsed: unknown): StoreData {
-  const record = parsed as Partial<StoreData>;
-  return {
-    reports: Array.isArray(record.reports) ? record.reports : [],
-    ratings: Array.isArray(record.ratings) ? record.ratings : [],
-    sites: Array.isArray(record.sites) ? record.sites : [],
-    users: Array.isArray(record.users) ? record.users : [],
-    logins: Array.isArray(record.logins) ? record.logins : [],
-  };
+async function readWorkerStore(env: WorkerEnv): Promise<StoreData> {
+  await prepareD1(env.DB, env.DATA);
+  return loadD1Store(env.DB);
 }
 
 function isMissingFile(error: unknown): boolean {
@@ -164,15 +134,16 @@ export async function saveRating(rating: Rating): Promise<Rating> {
 const mutations = perRequest(() => ({ chain: Promise.resolve() as Promise<unknown> }));
 
 /**
- * Changes the store in one read-change-write. `mutate` may run more than once on a worker (a write raced), so it
- * must only change the store it is given. Process-local: this queue does not coordinate other Node processes. On a
- * worker, R2's etag check does that.
+ * Changes the store in one read-change-write. `mutate` must only change the store it is given. Process-local on Node:
+ * this queue does not coordinate other Node processes. On a worker the store is read fresh from D1 and only the
+ * records `mutate` changed are written, in one transaction, so isolates writing at the same time do not lose each
+ * other's records.
  */
 export function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
   const queue = mutations();
   const run = queue.chain.then(() => {
     const env = workerEnv();
-    if (env) return mutateWorkerStore(env.DATA, mutate);
+    if (env) return mutateWorkerStore(env, mutate);
     const store = readStore();
     const result = mutate(store);
     writeStore(store);
@@ -185,25 +156,24 @@ export function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
   return run;
 }
 
-const WORKER_WRITE_ATTEMPTS = 5;
-
-/**
- * Read, change and write store.json in R2, only if nobody wrote it in between (etag match, or for the very first
- * write, only if there is still no object); otherwise start over from the newer copy. Isolates in other places can
- * write at the same time, so the process-local queue is not enough.
- */
-async function mutateWorkerStore<T>(bucket: R2Bucket, mutate: (store: StoreData) => T): Promise<T> {
-  for (let attempt = 0; attempt < WORKER_WRITE_ATTEMPTS; attempt += 1) {
-    const { store, etag } = await readWorkerStore(bucket);
-    const result = mutate(store);
-    const onlyIf = etag ? { etagMatches: etag } : { etagDoesNotMatch: "*" };
-    const written = await bucket.put(storeFile, serializeStore(store), { onlyIf });
-    if (written) {
-      workerSnapshot().store = store;
-      return result;
+async function mutateWorkerStore<T>(env: WorkerEnv, mutate: (store: StoreData) => T): Promise<T> {
+  const store = await readWorkerStore(env);
+  const before = structuredClone(store);
+  const result = mutate(store);
+  const changes = storeChanges(env.DB, before, store);
+  if (changes.length > 0) {
+    try {
+      await env.DB.batch(changes);
+    } catch (error) {
+      // Two first sign-ins for one address at once: the database keeps one account; the other is asked to retry.
+      if (/UNIQUE constraint failed: users\.email/.test(String((error as Error)?.message))) {
+        throw new Error("That account was just created. Try again.");
+      }
+      throw error;
     }
   }
-  throw new Error(`store.json changed during ${WORKER_WRITE_ATTEMPTS} write attempts in a row`);
+  workerSnapshot().store = store;
+  return result;
 }
 
 function serializeStore(store: StoreData): string {
