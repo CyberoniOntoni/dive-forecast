@@ -1,13 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  finishLogin,
-  LOGIN_CODE_TTL_MS,
-  LOGIN_MAX_ATTEMPTS,
-  LOGIN_SENDS_PER_EMAIL,
-  normalizeEmail,
-  requireNickname,
-  startLogin,
-} from "./accounts";
+import { ABOUT_MAX, LOGIN_CODE_TTL_MS, LOGIN_MAX_ATTEMPTS, LOGIN_SENDS_PER_EMAIL, finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-10-30T10:00:00Z");
@@ -79,5 +71,15 @@ describe("sign-in codes", () => {
     expect(() => startLogin(store, "a@b.co", "hx", NOW)).toThrow();
     expect(() => startLogin(store, "c@b.co", "hx", NOW)).not.toThrow();
     expect(() => startLogin(store, "a@b.co", "hy", NOW + 61 * 60 * 1000)).not.toThrow();
+  });
+});
+
+describe("requireAbout", () => {
+  it("keeps plain text, trims it, drops control characters and long gaps, and caps the length", () => {
+    expect(requireAbout("  Dive guide in Maafushi.\r\n\n\n\nMantas!\u0007  ")).toBe("Dive guide in Maafushi.\n\nMantas!");
+    expect(requireAbout("")).toBe("");
+    expect(requireAbout(undefined)).toBe("");
+    expect(() => requireAbout("x".repeat(ABOUT_MAX + 1))).toThrow(/characters/);
+    expect(() => requireAbout(42)).toThrow();
   });
 });

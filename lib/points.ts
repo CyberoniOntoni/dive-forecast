@@ -4,18 +4,19 @@ import {
   FRESH_HOURS,
   PATHFINDER_DAYS,
   POINTS,
+  RATINGS_PER_DAY,
   REPORTS_PER_DAY,
   SAME_DIVE_HOURS,
   type AwardReason,
   type BadgeId,
   type ReportAward,
 } from "./points-rules";
-import type { Report, Site, User } from "./types";
+import type { Rating, Report, Site, User } from "./types";
 
 /**
  * Points and badges for signed-in divers' reports, worked out from the reports each time, never stored, so a rule can
  * change without a migration. They reward what makes the forecast better: reporting at all, reporting soon after the
- * dive, and reporting where nobody has lately. Agreement with the forecast earns nothing, so nobody is nudged to
+ * dive, reporting where nobody has lately, and rating the sites. Agreement with the forecast earns nothing, so nobody is nudged to
  * report what the app expects.
  */
 
@@ -30,6 +31,8 @@ export type DiverStats = {
   monthPoints: number;
   /** Reports that earned points. */
   reports: number;
+  /** Sites rated (each site once). */
+  ratings: number;
   sites: number;
   atolls: number;
   /** Longest run of consecutive dive days with a counted report. */
@@ -90,14 +93,37 @@ export function reportAwards(reports: readonly Report[]): Map<string, ReportAwar
   return awards;
 }
 
-/** Each signed-in diver's points, counts and badges. Divers with no reports and no badges are left out. */
+/**
+ * The Maldives day and month of each signed-in diver's site ratings that earn points: one per site (the store keeps one
+ * per diver and site), at most RATINGS_PER_DAY a day by when each was last saved.
+ */
+export function countedRatings(ratings: readonly Rating[]): Map<string, { day: string }[]> {
+  const byUser = new Map<string, { day: string }[]>();
+  const perDay = new Map<string, number>();
+  const ordered = [...ratings]
+    .filter((rating) => rating.userId && !Number.isNaN(Date.parse(rating.updatedAt)))
+    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt) || a.siteId.localeCompare(b.siteId));
+  for (const rating of ordered) {
+    const day = toMaldivesWall(rating.updatedAt).slice(0, 10);
+    const dayKey = `${rating.userId}|${day}`;
+    const today = perDay.get(dayKey) ?? 0;
+    if (today >= RATINGS_PER_DAY) continue;
+    perDay.set(dayKey, today + 1);
+    byUser.set(rating.userId!, [...(byUser.get(rating.userId!) ?? []), { day }]);
+  }
+  return byUser;
+}
+
+/** Each signed-in diver's points, counts and badges. Divers with no reports, ratings or badges are left out. */
 export function diverStats(
   reports: readonly Report[],
   users: readonly User[],
   sites: readonly Pick<Site, "id" | "atollId" | "addedBy">[],
   nowMs: number = Date.now(),
+  ratings: readonly Rating[] = [],
 ): DiverStats[] {
   const awards = reportAwards(reports);
+  const rated = countedRatings(ratings);
   const atollOf = new Map(sites.map((site) => [site.id, site.atollId]));
   const month = toMaldivesWall(new Date(nowMs).toISOString()).slice(0, 7);
   const reportersBySite = new Map<string, Set<string>>();
@@ -112,10 +138,11 @@ export function diverStats(
     .map((user) => {
       const counted = reports.filter((report) => report.userId === user.id && (awards.get(report.id)?.points ?? 0) > 0);
       const mine = counted.map((report) => ({ report, award: awards.get(report.id)! }));
-      const points = mine.reduce((sum, item) => sum + item.award.points, 0);
-      const monthPoints = mine
-        .filter((item) => item.report.time.slice(0, 7) === month)
-        .reduce((sum, item) => sum + item.award.points, 0);
+      const myRatings = rated.get(user.id) ?? [];
+      const points = mine.reduce((sum, item) => sum + item.award.points, 0) + myRatings.length * POINTS.rating;
+      const monthPoints =
+        mine.filter((item) => item.report.time.slice(0, 7) === month).reduce((sum, item) => sum + item.award.points, 0) +
+        myRatings.filter((item) => item.day.slice(0, 7) === month).length * POINTS.rating;
       const siteIds = new Set(counted.map((report) => report.siteId));
       const atollIds = new Set([...siteIds].map((id) => atollOf.get(id)).filter((id): id is string => id != null));
       const bestStreak = longestDayRun(counted.map((report) => report.time.slice(0, 10)));
@@ -136,6 +163,7 @@ export function diverStats(
         "streak-3": bestStreak >= 3,
         "streak-7": bestStreak >= 7,
         "site-scout": scout,
+        "ratings-10": myRatings.length >= 10,
       };
       return {
         userId: user.id,
@@ -143,13 +171,14 @@ export function diverStats(
         points,
         monthPoints,
         reports: counted.length,
+        ratings: myRatings.length,
         sites: siteIds.size,
         atolls: atollIds.size,
         bestStreak,
         badges: BADGES.map((badge) => badge.id).filter((id) => earned[id]),
       };
     })
-    .filter((stats) => stats.reports > 0 || stats.badges.length > 0);
+    .filter((stats) => stats.reports > 0 || stats.ratings > 0 || stats.badges.length > 0);
 }
 
 export type LeaderboardPeriod = "month" | "all";

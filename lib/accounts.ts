@@ -16,11 +16,27 @@ const HOUR_MS = 60 * 60 * 1000;
 
 export const NICKNAME_MIN = 2;
 export const NICKNAME_MAX = 20;
+export const ABOUT_MAX = 300;
 
 export function normalizeEmail(input: unknown): string {
   const email = typeof input === "string" ? input.trim().toLowerCase() : "";
   if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
   return email;
+}
+
+/** "About me": plain text, at most ABOUT_MAX characters and one blank line in a row; empty clears it. */
+export function requireAbout(input: unknown): string {
+  if (input != null && typeof input !== "string") throw new Error("About me must be text.");
+  const about = (typeof input === "string" ? input : "")
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "")
+    .split("\n")
+    .map((line) => line.trimEnd())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  if (Array.from(about).length > ABOUT_MAX) throw new Error(`Keep it to ${ABOUT_MAX} characters.`);
+  return about;
 }
 
 /**

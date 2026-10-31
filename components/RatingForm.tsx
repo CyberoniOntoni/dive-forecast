@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { rateSite, type RatingSummary } from "@/lib/actions";
+import { POINTS } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
 
 const SCORES = [1, 2, 3, 4, 5] as const;
@@ -55,7 +56,10 @@ export function RatingForm({
       </p>
       {signedIn ? (
         <>
-          <p className="text-sm text-foam">Your rating {shown.mine ?? "—"}</p>
+          <p className="text-sm text-foam">
+            Your rating {shown.mine ?? "—"}
+            {shown.mine == null ? <span className="text-foam/70"> · rate it for {POINTS.rating} points</span> : null}
+          </p>
           <div className="flex gap-2" role="group" aria-label="Rate this dive site from 1 to 5">
             {SCORES.map((value) => {
               const selected = shown.mine === value;

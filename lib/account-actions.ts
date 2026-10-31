@@ -1,6 +1,6 @@
 "use server";
 
-import { finishLogin, normalizeEmail, requireNickname, startLogin } from "./accounts";
+import { finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import {
   appUrl,
   authSecret,
@@ -14,9 +14,11 @@ import { sendLoginEmail } from "./mailgun";
 import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from "./points";
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
+import { siteScouts } from "./site-scouts";
 import { hashLoginCode, newLoginCode, sameText } from "./session-token";
 import { localPath } from "./sign-in";
 import { listMergedSites, mutateStore, readStore } from "./store";
+import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
 
@@ -98,12 +100,61 @@ export async function changeNickname(input: unknown): Promise<{ ok: boolean; err
   }
 }
 
+/** Saves the signed-in diver's "About me" (empty clears it). */
+export async function changeAbout(input: unknown): Promise<{ ok: boolean; error: string | null; about?: string }> {
+  await ready();
+  try {
+    const session = await requireSession();
+    const about = requireAbout(input);
+    await mutateStore((store) => {
+      const user = store.users.find((item) => item.id === session.userId);
+      if (!user) throw new Error("This account no longer exists.");
+      if (about) user.about = about;
+      else delete user.about;
+    });
+    return { ok: true, error: null, about };
+  } catch (caught) {
+    return { ok: false, error: caught instanceof Error ? caught.message : "Could not save About me." };
+  }
+}
+
 export type BadgeView = { id: BadgeId; label: string; detail: string; earned: boolean };
 
+/** A diver's numbers, for their own account page and their public page. */
+export type DiverNumbers = Omit<DiverStats, "userId" | "nickname" | "badges">;
+
+function allDiverStats(store: StoreData): DiverStats[] {
+  return diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
+}
+
+/** One diver's numbers, every badge (earned or not) and their ranks, worked out from the whole store. */
+function diverSummary(store: StoreData, userId: string) {
+  const all = allDiverStats(store);
+  const mine = all.find((item) => item.userId === userId);
+  const earned = new Set(mine?.badges ?? []);
+  const stats: DiverNumbers = {
+    points: mine?.points ?? 0,
+    monthPoints: mine?.monthPoints ?? 0,
+    reports: mine?.reports ?? 0,
+    ratings: mine?.ratings ?? 0,
+    sites: mine?.sites ?? 0,
+    atolls: mine?.atolls ?? 0,
+    bestStreak: mine?.bestStreak ?? 0,
+  };
+  return {
+    stats,
+    badges: BADGES.map((badge): BadgeView => ({ ...badge, earned: earned.has(badge.id) })),
+    monthRank: leaderboard(all, "month").find((row) => row.userId === userId)?.rank ?? null,
+    allRank: leaderboard(all, "all").find((row) => row.userId === userId)?.rank ?? null,
+  };
+}
+
 export type AccountView = {
+  userId: string;
   nickname: string;
   email: string;
-  stats: Omit<DiverStats, "userId" | "badges">;
+  about: string;
+  stats: DiverNumbers;
   badges: BadgeView[];
   monthRank: number | null;
   allRank: number | null;
@@ -117,32 +168,16 @@ export async function getAccount(): Promise<AccountView | null> {
   const store = readStore();
   const user = store.users.find((item) => item.id === session.userId);
   if (!user) return null;
-  const all = diverStats(store.reports, store.users, listMergedSites());
-  const mine = all.find((item) => item.userId === user.id);
-  const earned = new Set(mine?.badges ?? []);
-  return {
-    nickname: user.nickname,
-    email: user.email,
-    stats: {
-      nickname: user.nickname,
-      points: mine?.points ?? 0,
-      monthPoints: mine?.monthPoints ?? 0,
-      reports: mine?.reports ?? 0,
-      sites: mine?.sites ?? 0,
-      atolls: mine?.atolls ?? 0,
-      bestStreak: mine?.bestStreak ?? 0,
-    },
-    badges: BADGES.map((badge) => ({ ...badge, earned: earned.has(badge.id) })),
-    monthRank: leaderboard(all, "month").find((row) => row.userId === user.id)?.rank ?? null,
-    allRank: leaderboard(all, "all").find((row) => row.userId === user.id)?.rank ?? null,
-  };
+  return { userId: user.id, nickname: user.nickname, email: user.email, about: user.about ?? "", ...diverSummary(store, user.id) };
 }
 
 export type LeaderboardRow = {
+  userId: string;
   rank: number;
   nickname: string;
   points: number;
   reports: number;
+  ratings: number;
   sites: number;
   badges: number;
   isMe: boolean;
@@ -156,15 +191,81 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
   const period: LeaderboardPeriod = periodInput === "all" ? "all" : "month";
   const session = await currentSession();
   const store = readStore();
-  return leaderboard(diverStats(store.reports, store.users, listMergedSites()), period)
+  return leaderboard(allDiverStats(store), period)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
+      userId: row.userId,
       rank: row.rank,
       nickname: row.nickname,
       points: row.periodPoints,
       reports: row.reports,
+      ratings: row.ratings,
       sites: row.sites,
       badges: row.badges.length,
       isMe: row.userId === session?.userId,
     }));
+}
+
+export type SiteScoutRow = { userId: string; rank: number; nickname: string; sites: number; reportedByOthers: number; isMe: boolean };
+export type NewSiteRow = { id: string; name: string; userId: string; nickname: string };
+
+const NEW_SITES = 8;
+
+/** Divers ranked by the dive sites they added, and the newest sites with who added them. Nicknames only. */
+export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest: NewSiteRow[] }> {
+  await ready();
+  const session = await currentSession();
+  const store = readStore();
+  const nickname = new Map(store.users.map((user) => [user.id, user.nickname]));
+  const scouts = siteScouts(store.sites, store.users, store.reports)
+    .slice(0, LEADERBOARD_SIZE)
+    .map((row) => ({
+      userId: row.userId,
+      rank: row.rank,
+      nickname: row.nickname,
+      sites: row.sites,
+      reportedByOthers: row.reportedByOthers,
+      isMe: row.userId === session?.userId,
+    }));
+  // Store order is the order sites were added.
+  const newest = store.sites
+    .filter((site) => site.addedBy && nickname.has(site.addedBy))
+    .slice(-NEW_SITES)
+    .reverse()
+    .map((site) => ({ id: site.id, name: site.name, userId: site.addedBy!, nickname: nickname.get(site.addedBy!)! }));
+  return { scouts, newest };
+}
+
+export type DiverProfile = {
+  nickname: string;
+  about: string;
+  /** "YYYY-MM" the diver signed up. */
+  since: string;
+  stats: DiverNumbers;
+  sitesAdded: number;
+  allRank: number | null;
+  /** Earned badges only. */
+  badges: BadgeView[];
+  isMe: boolean;
+};
+
+/** A diver's public page: nickname, About me, numbers and earned badges. Never the email. Null for an unknown id. */
+export async function getDiverProfile(userId: unknown): Promise<DiverProfile | null> {
+  await ready();
+  if (typeof userId !== "string" || !userId) return null;
+  const store = readStore();
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) return null;
+  const session = await currentSession();
+  const { stats, badges, allRank } = diverSummary(store, user.id);
+  return {
+    nickname: user.nickname,
+    about: user.about ?? "",
+    since: user.createdAt.slice(0, 7),
+    stats,
+    sitesAdded: store.sites.filter((site) => site.addedBy === user.id).length,
+    allRank,
+    badges: badges.filter((badge) => badge.earned),
+    isMe: session?.userId === user.id,
+  };
 }
