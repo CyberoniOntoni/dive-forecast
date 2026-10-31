@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BadgeGrid, Stat } from "@/components/ProfileParts";
 import { getDiverProfile } from "@/lib/account-actions";
 
 export const dynamic = "force-dynamic";
@@ -57,9 +58,9 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
       ) : null}
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Numbers">
-        <Stat label="Points" value={diver.points} />
-        <Stat label="Reports" value={diver.reports} note={diver.sites ? `at ${diver.sites} site${diver.sites === 1 ? "" : "s"}` : null} />
-        <Stat label="Ratings" value={diver.ratings} />
+        <Stat label="Points" value={diver.stats.points} />
+        <Stat label="Reports" value={diver.stats.reports} note={diver.stats.sites ? `at ${diver.stats.sites} site${diver.stats.sites === 1 ? "" : "s"}` : null} />
+        <Stat label="Ratings" value={diver.stats.ratings} />
         <Stat label="Sites added" value={diver.sitesAdded} />
       </section>
 
@@ -68,33 +69,9 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
           <h2 id="badges-heading" className="text-base font-semibold text-foam">
             Badges
           </h2>
-          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {diver.badges.map((badge) => (
-              <li key={badge.id} className="flex min-w-0 items-start gap-3 rounded-xl border border-incoming/60 bg-incoming/10 px-3 py-2">
-                <span aria-hidden="true" className="pt-0.5 text-base">
-                  ★
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-foam">{badge.label}</span>
-                  <span className="block text-xs leading-5 text-foam/75">{badge.detail}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+          <BadgeGrid badges={diver.badges} />
         </section>
       ) : null}
     </main>
-  );
-}
-
-function Stat({ label, value, note = null }: { label: string; value: number; note?: string | null }) {
-  return (
-    <div className="flex min-w-0 flex-col surface px-4 py-3">
-      <span className="text-xs text-foam/75">{label}</span>
-      <span className="text-2xl font-semibold tabular-nums text-foam">
-        {value}
-        {note ? <span className="ml-2 text-sm font-normal text-foam/75">{note}</span> : null}
-      </span>
-    </div>
   );
 }

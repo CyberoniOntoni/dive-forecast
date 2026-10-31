@@ -29,7 +29,6 @@ export function requireAbout(input: unknown): string {
   if (input != null && typeof input !== "string") throw new Error("About me must be text.");
   const about = (typeof input === "string" ? input : "")
     .replace(/\r\n?/g, "\n")
-    // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "")
     .split("\n")
     .map((line) => line.trimEnd())

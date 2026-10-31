@@ -11,12 +11,14 @@ import {
   setSessionCookie,
 } from "./auth";
 import { sendLoginEmail } from "./mailgun";
-import { diverStats, leaderboard, siteScouts, type DiverStats, type LeaderboardPeriod } from "./points";
+import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from "./points";
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
+import { siteScouts } from "./site-scouts";
 import { hashLoginCode, newLoginCode, sameText } from "./session-token";
 import { localPath } from "./sign-in";
 import { listMergedSites, mutateStore, readStore } from "./store";
+import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
 
@@ -118,12 +120,41 @@ export async function changeAbout(input: unknown): Promise<{ ok: boolean; error:
 
 export type BadgeView = { id: BadgeId; label: string; detail: string; earned: boolean };
 
+/** A diver's numbers, for their own account page and their public page. */
+export type DiverNumbers = Omit<DiverStats, "userId" | "nickname" | "badges">;
+
+function allDiverStats(store: StoreData): DiverStats[] {
+  return diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
+}
+
+/** One diver's numbers, every badge (earned or not) and their ranks, worked out from the whole store. */
+function diverSummary(store: StoreData, userId: string) {
+  const all = allDiverStats(store);
+  const mine = all.find((item) => item.userId === userId);
+  const earned = new Set(mine?.badges ?? []);
+  const stats: DiverNumbers = {
+    points: mine?.points ?? 0,
+    monthPoints: mine?.monthPoints ?? 0,
+    reports: mine?.reports ?? 0,
+    ratings: mine?.ratings ?? 0,
+    sites: mine?.sites ?? 0,
+    atolls: mine?.atolls ?? 0,
+    bestStreak: mine?.bestStreak ?? 0,
+  };
+  return {
+    stats,
+    badges: BADGES.map((badge): BadgeView => ({ ...badge, earned: earned.has(badge.id) })),
+    monthRank: leaderboard(all, "month").find((row) => row.userId === userId)?.rank ?? null,
+    allRank: leaderboard(all, "all").find((row) => row.userId === userId)?.rank ?? null,
+  };
+}
+
 export type AccountView = {
   userId: string;
   nickname: string;
   email: string;
   about: string;
-  stats: Omit<DiverStats, "userId" | "badges">;
+  stats: DiverNumbers;
   badges: BadgeView[];
   monthRank: number | null;
   allRank: number | null;
@@ -137,28 +168,7 @@ export async function getAccount(): Promise<AccountView | null> {
   const store = readStore();
   const user = store.users.find((item) => item.id === session.userId);
   if (!user) return null;
-  const all = diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
-  const mine = all.find((item) => item.userId === user.id);
-  const earned = new Set(mine?.badges ?? []);
-  return {
-    userId: user.id,
-    nickname: user.nickname,
-    email: user.email,
-    about: user.about ?? "",
-    stats: {
-      nickname: user.nickname,
-      points: mine?.points ?? 0,
-      monthPoints: mine?.monthPoints ?? 0,
-      reports: mine?.reports ?? 0,
-      ratings: mine?.ratings ?? 0,
-      sites: mine?.sites ?? 0,
-      atolls: mine?.atolls ?? 0,
-      bestStreak: mine?.bestStreak ?? 0,
-    },
-    badges: BADGES.map((badge) => ({ ...badge, earned: earned.has(badge.id) })),
-    monthRank: leaderboard(all, "month").find((row) => row.userId === user.id)?.rank ?? null,
-    allRank: leaderboard(all, "all").find((row) => row.userId === user.id)?.rank ?? null,
-  };
+  return { userId: user.id, nickname: user.nickname, email: user.email, about: user.about ?? "", ...diverSummary(store, user.id) };
 }
 
 export type LeaderboardRow = {
@@ -181,7 +191,7 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
   const period: LeaderboardPeriod = periodInput === "all" ? "all" : "month";
   const session = await currentSession();
   const store = readStore();
-  return leaderboard(diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings), period)
+  return leaderboard(allDiverStats(store), period)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,
@@ -231,14 +241,11 @@ export type DiverProfile = {
   about: string;
   /** "YYYY-MM" the diver signed up. */
   since: string;
-  points: number;
-  reports: number;
-  ratings: number;
-  sites: number;
-  atolls: number;
+  stats: DiverNumbers;
   sitesAdded: number;
   allRank: number | null;
-  badges: { id: BadgeId; label: string; detail: string }[];
+  /** Earned badges only. */
+  badges: BadgeView[];
   isMe: boolean;
 };
 
@@ -250,21 +257,15 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
   const user = store.users.find((item) => item.id === userId);
   if (!user) return null;
   const session = await currentSession();
-  const all = diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
-  const mine = all.find((item) => item.userId === user.id);
-  const earned = new Set(mine?.badges ?? []);
+  const { stats, badges, allRank } = diverSummary(store, user.id);
   return {
     nickname: user.nickname,
     about: user.about ?? "",
     since: user.createdAt.slice(0, 7),
-    points: mine?.points ?? 0,
-    reports: mine?.reports ?? 0,
-    ratings: mine?.ratings ?? 0,
-    sites: mine?.sites ?? 0,
-    atolls: mine?.atolls ?? 0,
+    stats,
     sitesAdded: store.sites.filter((site) => site.addedBy === user.id).length,
-    allRank: leaderboard(all, "all").find((row) => row.userId === user.id)?.rank ?? null,
-    badges: BADGES.filter((badge) => earned.has(badge.id)),
+    allRank,
+    badges: badges.filter((badge) => badge.earned),
     isMe: session?.userId === user.id,
   };
 }

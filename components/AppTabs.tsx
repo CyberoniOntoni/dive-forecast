@@ -23,7 +23,7 @@ const OFF = "text-foam/80 hover:text-foam";
 
 /**
  * Map, Navigate and Scoreboard, in the header. Navigate is the boat view on the same map; it comes back to the site it
- * last headed for in this tab, else it opens the destination list. Scoreboard is the public leaderboard.
+ * last headed for in this tab, else it opens the destination list. Scoreboard ranks the divers who report and add sites.
  */
 export function AppTabs() {
   const pathname = usePathname();

@@ -135,8 +135,7 @@ describe("sign in by email code", () => {
     expect(profile).toMatchObject({
       nickname: "Ann",
       about: "Guide in Maafushi, mantas please.",
-      reports: 1,
-      points: 20,
+      stats: { reports: 1, points: 20 },
       allRank: 1,
       isMe: false,
     });

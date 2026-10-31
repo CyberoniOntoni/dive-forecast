@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AboutForm } from "@/components/AboutForm";
 import { AccountControls } from "@/components/AccountControls";
+import { BadgeGrid, Stat } from "@/components/ProfileParts";
 import { getAccount } from "@/lib/account-actions";
 import { POINTS, FRESH_HOURS, PATHFINDER_DAYS, RATINGS_PER_DAY, REPORTS_PER_DAY } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
@@ -40,27 +41,7 @@ export default async function AccountPage() {
         <h2 id="badges-heading" className="text-base font-semibold text-foam">
           Badges
         </h2>
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {account.badges.map((badge) => (
-            <li
-              key={badge.id}
-              className={`flex min-w-0 items-start gap-3 rounded-xl border px-3 py-2 ${
-                badge.earned ? "border-incoming/60 bg-incoming/10" : "border-foam/15 opacity-60"
-              }`}
-            >
-              <span aria-hidden="true" className="pt-0.5 text-base">
-                {badge.earned ? "★" : "☆"}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-foam">
-                  {badge.label}
-                  <span className="sr-only">{badge.earned ? " (earned)" : " (not yet)"}</span>
-                </span>
-                <span className="block text-xs leading-5 text-foam/75">{badge.detail}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
+        <BadgeGrid badges={account.badges} />
       </section>
 
       <section className="flex min-w-0 flex-col gap-2 surface p-4 sm:p-5" aria-labelledby="points-heading">
@@ -84,17 +65,5 @@ export default async function AccountPage() {
       <AboutForm about={account.about} userId={account.userId} />
       <AccountControls nickname={account.nickname} />
     </main>
-  );
-}
-
-function Stat({ label, value, note = null }: { label: string; value: number; note?: string | null }) {
-  return (
-    <div className="flex min-w-0 flex-col surface px-4 py-3">
-      <span className="text-xs text-foam/75">{label}</span>
-      <span className="text-2xl font-semibold tabular-nums text-foam">
-        {value}
-        {note ? <span className="ml-2 text-sm font-normal text-foam/75">{note}</span> : null}
-      </span>
-    </div>
   );
 }
