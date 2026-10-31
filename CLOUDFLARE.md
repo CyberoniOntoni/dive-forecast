@@ -7,9 +7,9 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 
 | Data | Docker / `next dev` | Worker |
 | --- | --- | --- |
-| Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`) |
+| Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`); `shelter-grid.json` (8.5 MB) only by the sheltered-water actions, the rest by every action |
 | Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list, read once per request; a change writes only the rows it touched, in one transaction (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
-| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus an in-memory copy per isolate (`lib/marine.ts`) |
+| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus a copy in the serving data centre's Cache API while fresh (the bucket is in eastern North America, far from the Maldives; `lib/edge-cache.ts`) and an in-memory copy per isolate (`lib/marine.ts`) |
 | Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: served at once for the same Maldives hour and site list, rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
 
 `lib/cloudflare.ts` tells the two apart: OpenNext's request context exists only on a worker. Two rules come from
