@@ -148,6 +148,12 @@ What each seeded site resolves to today (`npm run bearings` prints the same). **
 | `kuda-faru` | North Malé | **155°** | override | 160° | `north` | Pinned to the old heuristic output (a rim normal would move it 60°). |
 | `kuda-haa` | North Malé | **41°** | heuristic | 30° | `west` | Heuristic. Open lagoon water 1.8 to 2.3 km inside the North Malé east rim; no pass to measure. |
 | `fish-head` | North Ari | **307°** | heuristic | 315° | `inside` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
+| `moofushi-kandu` | South Ari | **94°** | rim-derived | — | `west` | Set as a pass by hand (31 Oct, model 19); was a lagoon site on a 160° centroid guess. Imagery: W–E channel, ocean west. |
+| `himendhoo-dhekunu-kandu` | North Ari | **90°** | rim-derived | — | `west` | Set as a pass by hand (31 Oct); was 35°. Imagery: W–E channel south of Himandhoo. |
+| `fushifaru-kandu`, `fushifaru-giri` | Lhaviyani | **215°, 217°** | rim-derived | — | `east` | Set as pass / channel thila by hand (31 Oct); were 299°. Imagery: ocean NE, lagoon SW. |
+| `maamigili-kandu` | South Ari | **351°** | rim-derived | — | `south` | Set as a pass by hand (31 Oct); was 346°. |
+| `dhevana-thila` | Gaafu Alif | **90°** | override | — | `inside` | Estimate, low trust. Thila about 10 km inside Huvadhoo's west rim, no pass; this is the rim's inward direction. |
+| `marcs-dream` | Addu | **155°** | override | — | `north` | Estimate, low trust. Lagoon reef about 1.5 km inside the north rim by Maa Kandu (rim-derived 154°), no pass of its own. |
 | `maaya-thila` | North Ari | **200°** | heuristic | 210° | `inside` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
 | `fesdhoo` | North Ari | **90°** | heuristic | 75° | `west` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |
 | `fesdu-wreck` | North Ari | **90°** | heuristic | 75° | `west` | Heuristic. Patch reef or thila in the middle of Ari's lagoon; no pass to measure. |

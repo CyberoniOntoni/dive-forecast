@@ -4353,7 +4353,8 @@
       "lon": 73.10783,
       "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/DhevanaThila/index.html",
       "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 90
     },
     {
       "id": "nilandhoo-kandu",
@@ -4528,7 +4529,8 @@
       "lon": 73.14457,
       "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-marcs-dream",
       "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 155
     },
     {
       "id": "villingili-coral-garden",

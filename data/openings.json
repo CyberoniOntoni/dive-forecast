@@ -2,7 +2,7 @@
   "source": "Allen Coral Atlas reef crest, walked around each atoll by bearing from the rim centre",
   "minM": 100,
   "maxM": 3000,
-  "note": "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section.",
+  "note": "Planform mouths between reef-crest shoulders. The outline only assigns crest to an atoll. reefFlatBridges marks a shallow sill and does not remove the mouth. The lagoon model does not read this file. A mouth has no depth and is not a channel section. fromTiles marks a mouth walked on the map's simplified reef-zone tiles instead of the GeoPackage (about 11 m simplification); rerun those outlines from the GeoPackage when it is available.",
   "openings": [
     {
       "atollIds": [
@@ -4471,7 +4471,8 @@
       "widthM": 2048,
       "alongM": 2520,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4484,7 +4485,8 @@
       "widthM": 293,
       "alongM": 409,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4497,7 +4499,8 @@
       "widthM": 284,
       "alongM": 355,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4510,7 +4513,8 @@
       "widthM": 481,
       "alongM": 524,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4525,7 +4529,8 @@
       "reefFlatBridges": false,
       "sites": [
         "nilandhoo-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4538,7 +4543,8 @@
       "widthM": 747,
       "alongM": 926,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4551,7 +4557,8 @@
       "widthM": 723,
       "alongM": 198,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4564,7 +4571,8 @@
       "widthM": 1532,
       "alongM": 466,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4577,7 +4585,8 @@
       "widthM": 1548,
       "alongM": 1023,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4590,7 +4599,8 @@
       "widthM": 471,
       "alongM": 278,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4603,7 +4613,8 @@
       "widthM": 864,
       "alongM": 575,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4616,7 +4627,8 @@
       "widthM": 1469,
       "alongM": 1819,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4629,7 +4641,8 @@
       "widthM": 261,
       "alongM": 306,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4644,7 +4657,8 @@
       "reefFlatBridges": false,
       "sites": [
         "kooddoo-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4659,7 +4673,8 @@
       "reefFlatBridges": true,
       "sites": [
         "kooddoo-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4674,7 +4689,8 @@
       "reefFlatBridges": true,
       "sites": [
         "vilingili-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4689,7 +4705,8 @@
       "reefFlatBridges": false,
       "sites": [
         "vilingili-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4702,7 +4719,8 @@
       "widthM": 1023,
       "alongM": 317,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4715,7 +4733,8 @@
       "widthM": 390,
       "alongM": 341,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4728,7 +4747,8 @@
       "widthM": 262,
       "alongM": 232,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4741,7 +4761,8 @@
       "widthM": 295,
       "alongM": 163,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4754,7 +4775,8 @@
       "widthM": 605,
       "alongM": 560,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4767,7 +4789,8 @@
       "widthM": 557,
       "alongM": 538,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4780,7 +4803,8 @@
       "widthM": 338,
       "alongM": 310,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4793,7 +4817,8 @@
       "widthM": 1256,
       "alongM": 516,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4806,7 +4831,8 @@
       "widthM": 632,
       "alongM": 670,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4819,7 +4845,8 @@
       "widthM": 411,
       "alongM": 291,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4832,7 +4859,8 @@
       "widthM": 2519,
       "alongM": 2098,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4845,7 +4873,8 @@
       "widthM": 2577,
       "alongM": 2175,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4858,7 +4887,8 @@
       "widthM": 482,
       "alongM": 427,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4871,7 +4901,8 @@
       "widthM": 2457,
       "alongM": 2189,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4884,7 +4915,8 @@
       "widthM": 1735,
       "alongM": 517,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4897,7 +4929,8 @@
       "widthM": 1346,
       "alongM": 1289,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4910,7 +4943,8 @@
       "widthM": 477,
       "alongM": 598,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4923,7 +4957,8 @@
       "widthM": 849,
       "alongM": 1659,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4936,7 +4971,8 @@
       "widthM": 243,
       "alongM": 531,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4949,7 +4985,8 @@
       "widthM": 715,
       "alongM": 1246,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4962,7 +4999,8 @@
       "widthM": 1731,
       "alongM": 721,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4975,7 +5013,8 @@
       "widthM": 861,
       "alongM": 924,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -4988,7 +5027,8 @@
       "widthM": 250,
       "alongM": 229,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5001,7 +5041,8 @@
       "widthM": 166,
       "alongM": 295,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5014,7 +5055,8 @@
       "widthM": 555,
       "alongM": 870,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5027,7 +5069,8 @@
       "widthM": 372,
       "alongM": 605,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5040,7 +5083,8 @@
       "widthM": 1341,
       "alongM": 1597,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5053,7 +5097,8 @@
       "widthM": 1313,
       "alongM": 1439,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5066,7 +5111,8 @@
       "widthM": 1776,
       "alongM": 2061,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5079,7 +5125,8 @@
       "widthM": 277,
       "alongM": 276,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5092,7 +5139,8 @@
       "widthM": 1170,
       "alongM": 376,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5105,7 +5153,8 @@
       "widthM": 1567,
       "alongM": 550,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5118,7 +5167,8 @@
       "widthM": 1268,
       "alongM": 1525,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5131,7 +5181,8 @@
       "widthM": 741,
       "alongM": 755,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5144,7 +5195,8 @@
       "widthM": 328,
       "alongM": 308,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5157,7 +5209,8 @@
       "widthM": 491,
       "alongM": 229,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5170,7 +5223,8 @@
       "widthM": 458,
       "alongM": 517,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5183,7 +5237,8 @@
       "widthM": 295,
       "alongM": 316,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5196,7 +5251,8 @@
       "widthM": 240,
       "alongM": 232,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5209,7 +5265,8 @@
       "widthM": 297,
       "alongM": 260,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5222,7 +5279,8 @@
       "widthM": 470,
       "alongM": 674,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5235,7 +5293,8 @@
       "widthM": 530,
       "alongM": 327,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5248,7 +5307,8 @@
       "widthM": 943,
       "alongM": 654,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5261,7 +5321,8 @@
       "widthM": 1232,
       "alongM": 849,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5274,7 +5335,8 @@
       "widthM": 191,
       "alongM": 177,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5287,7 +5349,8 @@
       "widthM": 584,
       "alongM": 689,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5300,7 +5363,8 @@
       "widthM": 325,
       "alongM": 151,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5313,7 +5377,8 @@
       "widthM": 346,
       "alongM": 268,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5326,7 +5391,8 @@
       "widthM": 346,
       "alongM": 313,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5339,7 +5405,8 @@
       "widthM": 958,
       "alongM": 1181,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5352,7 +5419,8 @@
       "widthM": 338,
       "alongM": 196,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5365,7 +5433,8 @@
       "widthM": 222,
       "alongM": 362,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5378,7 +5447,8 @@
       "widthM": 277,
       "alongM": 337,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5391,7 +5461,8 @@
       "widthM": 1677,
       "alongM": 1536,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5404,7 +5475,8 @@
       "widthM": 517,
       "alongM": 551,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5417,7 +5489,8 @@
       "widthM": 873,
       "alongM": 831,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5430,7 +5503,8 @@
       "widthM": 353,
       "alongM": 216,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5443,7 +5517,8 @@
       "widthM": 366,
       "alongM": 382,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5456,7 +5531,8 @@
       "widthM": 1559,
       "alongM": 1656,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5469,7 +5545,8 @@
       "widthM": 301,
       "alongM": 261,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5482,7 +5559,8 @@
       "widthM": 2036,
       "alongM": 1667,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5495,7 +5573,8 @@
       "widthM": 784,
       "alongM": 543,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5508,7 +5587,8 @@
       "widthM": 382,
       "alongM": 366,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5521,7 +5601,8 @@
       "widthM": 293,
       "alongM": 240,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5534,7 +5615,8 @@
       "widthM": 596,
       "alongM": 437,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5547,7 +5629,8 @@
       "widthM": 241,
       "alongM": 258,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5560,7 +5643,8 @@
       "widthM": 856,
       "alongM": 411,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5573,7 +5657,8 @@
       "widthM": 2657,
       "alongM": 2241,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5586,7 +5671,8 @@
       "widthM": 542,
       "alongM": 474,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5599,7 +5685,8 @@
       "widthM": 2539,
       "alongM": 761,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5612,7 +5699,8 @@
       "widthM": 2742,
       "alongM": 779,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5625,7 +5713,8 @@
       "widthM": 201,
       "alongM": 202,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5638,7 +5727,8 @@
       "widthM": 616,
       "alongM": 427,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5651,7 +5741,8 @@
       "widthM": 451,
       "alongM": 413,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5664,7 +5755,8 @@
       "widthM": 320,
       "alongM": 309,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5677,7 +5769,8 @@
       "widthM": 245,
       "alongM": 305,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5690,7 +5783,8 @@
       "widthM": 301,
       "alongM": 203,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5703,7 +5797,8 @@
       "widthM": 279,
       "alongM": 423,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5716,7 +5811,8 @@
       "widthM": 1091,
       "alongM": 952,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5729,7 +5825,8 @@
       "widthM": 378,
       "alongM": 309,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5742,7 +5839,8 @@
       "widthM": 319,
       "alongM": 437,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5755,7 +5853,8 @@
       "widthM": 2282,
       "alongM": 1780,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5768,7 +5867,8 @@
       "widthM": 225,
       "alongM": 211,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5781,7 +5881,8 @@
       "widthM": 1735,
       "alongM": 944,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5794,7 +5895,8 @@
       "widthM": 716,
       "alongM": 600,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5807,7 +5909,8 @@
       "widthM": 1151,
       "alongM": 1070,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5820,7 +5923,8 @@
       "widthM": 381,
       "alongM": 273,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5835,7 +5939,8 @@
       "reefFlatBridges": false,
       "sites": [
         "kondey-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5848,7 +5953,8 @@
       "widthM": 745,
       "alongM": 753,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5861,7 +5967,8 @@
       "widthM": 372,
       "alongM": 337,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5874,7 +5981,8 @@
       "widthM": 224,
       "alongM": 355,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5887,7 +5995,8 @@
       "widthM": 230,
       "alongM": 197,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5899,7 +6008,8 @@
       "widthM": 669,
       "alongM": 1105,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5911,7 +6021,8 @@
       "widthM": 338,
       "alongM": 235,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5925,7 +6036,8 @@
       "reefFlatBridges": true,
       "sites": [
         "maabaidhoo-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5937,7 +6049,8 @@
       "widthM": 366,
       "alongM": 202,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5951,7 +6064,8 @@
       "reefFlatBridges": false,
       "sites": [
         "fushi-kandu-2"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5963,7 +6077,8 @@
       "widthM": 374,
       "alongM": 455,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5975,7 +6090,8 @@
       "widthM": 1151,
       "alongM": 552,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5987,7 +6103,8 @@
       "widthM": 531,
       "alongM": 216,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -5999,7 +6116,8 @@
       "widthM": 844,
       "alongM": 151,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6011,7 +6129,8 @@
       "widthM": 561,
       "alongM": 262,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6023,7 +6142,8 @@
       "widthM": 1999,
       "alongM": 2009,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6035,7 +6155,8 @@
       "widthM": 380,
       "alongM": 696,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6047,7 +6168,8 @@
       "widthM": 975,
       "alongM": 626,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6059,7 +6181,8 @@
       "widthM": 318,
       "alongM": 198,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6071,7 +6194,8 @@
       "widthM": 431,
       "alongM": 189,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6083,7 +6207,8 @@
       "widthM": 238,
       "alongM": 157,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6095,7 +6220,8 @@
       "widthM": 265,
       "alongM": 344,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6107,7 +6233,8 @@
       "widthM": 908,
       "alongM": 712,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6119,7 +6246,8 @@
       "widthM": 535,
       "alongM": 546,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6131,7 +6259,8 @@
       "widthM": 333,
       "alongM": 311,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6143,7 +6272,8 @@
       "widthM": 1010,
       "alongM": 740,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6155,7 +6285,8 @@
       "widthM": 247,
       "alongM": 190,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6167,7 +6298,8 @@
       "widthM": 1163,
       "alongM": 373,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6179,7 +6311,8 @@
       "widthM": 430,
       "alongM": 293,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6193,7 +6326,8 @@
       "reefFlatBridges": false,
       "sites": [
         "hithadhoo-corner"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6205,7 +6339,8 @@
       "widthM": 610,
       "alongM": 293,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6217,7 +6352,8 @@
       "widthM": 2229,
       "alongM": 2354,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6229,7 +6365,8 @@
       "widthM": 460,
       "alongM": 351,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6241,7 +6378,8 @@
       "widthM": 1077,
       "alongM": 921,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6253,7 +6391,8 @@
       "widthM": 1353,
       "alongM": 1336,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6265,7 +6404,8 @@
       "widthM": 180,
       "alongM": 182,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6277,7 +6417,8 @@
       "widthM": 211,
       "alongM": 221,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6289,7 +6430,8 @@
       "widthM": 747,
       "alongM": 917,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6301,7 +6443,8 @@
       "widthM": 216,
       "alongM": 159,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6313,7 +6456,8 @@
       "widthM": 983,
       "alongM": 1213,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6325,7 +6469,8 @@
       "widthM": 678,
       "alongM": 883,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6337,7 +6482,8 @@
       "widthM": 180,
       "alongM": 425,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6349,7 +6495,8 @@
       "widthM": 259,
       "alongM": 264,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6361,7 +6508,8 @@
       "widthM": 332,
       "alongM": 344,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6373,7 +6521,8 @@
       "widthM": 216,
       "alongM": 173,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6385,7 +6534,8 @@
       "widthM": 950,
       "alongM": 1320,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6397,7 +6547,8 @@
       "widthM": 1066,
       "alongM": 1036,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6409,7 +6560,8 @@
       "widthM": 817,
       "alongM": 757,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6421,7 +6573,8 @@
       "widthM": 243,
       "alongM": 205,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6433,7 +6586,8 @@
       "widthM": 200,
       "alongM": 160,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6445,7 +6599,8 @@
       "widthM": 420,
       "alongM": 373,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6457,7 +6612,8 @@
       "widthM": 387,
       "alongM": 411,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6469,7 +6625,8 @@
       "widthM": 303,
       "alongM": 318,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6481,7 +6638,8 @@
       "widthM": 606,
       "alongM": 447,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6493,7 +6651,8 @@
       "widthM": 1874,
       "alongM": 894,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6505,7 +6664,8 @@
       "widthM": 947,
       "alongM": 600,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6519,7 +6679,8 @@
       "reefFlatBridges": false,
       "sites": [
         "olhugiri-kandu"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6531,7 +6692,8 @@
       "widthM": 636,
       "alongM": 670,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6543,7 +6705,8 @@
       "widthM": 817,
       "alongM": 1165,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6555,7 +6718,8 @@
       "widthM": 1019,
       "alongM": 1523,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6567,7 +6731,8 @@
       "widthM": 2487,
       "alongM": 2813,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6579,7 +6744,8 @@
       "widthM": 459,
       "alongM": 538,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6591,7 +6757,8 @@
       "widthM": 457,
       "alongM": 458,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6603,7 +6770,8 @@
       "widthM": 885,
       "alongM": 1006,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6615,7 +6783,8 @@
       "widthM": 282,
       "alongM": 306,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6627,7 +6796,8 @@
       "widthM": 188,
       "alongM": 196,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6639,7 +6809,8 @@
       "widthM": 258,
       "alongM": 254,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6651,7 +6822,8 @@
       "widthM": 756,
       "alongM": 494,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6663,7 +6835,8 @@
       "widthM": 230,
       "alongM": 181,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6675,7 +6848,8 @@
       "widthM": 2299,
       "alongM": 1843,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6687,7 +6861,8 @@
       "widthM": 1316,
       "alongM": 1057,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6699,7 +6874,8 @@
       "widthM": 554,
       "alongM": 448,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6711,7 +6887,8 @@
       "widthM": 1076,
       "alongM": 887,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6723,7 +6900,8 @@
       "widthM": 1734,
       "alongM": 1098,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6735,7 +6913,8 @@
       "widthM": 192,
       "alongM": 156,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6747,7 +6926,8 @@
       "widthM": 471,
       "alongM": 374,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6759,7 +6939,8 @@
       "widthM": 2128,
       "alongM": 375,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6771,7 +6952,8 @@
       "widthM": 1170,
       "alongM": 275,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6783,7 +6965,8 @@
       "widthM": 2628,
       "alongM": 864,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6795,7 +6978,8 @@
       "widthM": 1199,
       "alongM": 353,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6807,7 +6991,8 @@
       "widthM": 2069,
       "alongM": 713,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6819,7 +7004,8 @@
       "widthM": 395,
       "alongM": 337,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6831,7 +7017,8 @@
       "widthM": 614,
       "alongM": 450,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6843,7 +7030,8 @@
       "widthM": 997,
       "alongM": 732,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6855,7 +7043,8 @@
       "widthM": 476,
       "alongM": 337,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6867,7 +7056,8 @@
       "widthM": 216,
       "alongM": 150,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6879,7 +7069,8 @@
       "widthM": 786,
       "alongM": 771,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6891,7 +7082,8 @@
       "widthM": 600,
       "alongM": 204,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6903,7 +7095,8 @@
       "widthM": 240,
       "alongM": 173,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6915,7 +7108,8 @@
       "widthM": 1505,
       "alongM": 1150,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6927,7 +7121,8 @@
       "widthM": 147,
       "alongM": 414,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6939,7 +7134,8 @@
       "widthM": 1084,
       "alongM": 951,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6951,7 +7147,8 @@
       "widthM": 1030,
       "alongM": 718,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6963,7 +7160,8 @@
       "widthM": 425,
       "alongM": 700,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6975,7 +7173,8 @@
       "widthM": 591,
       "alongM": 674,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6987,7 +7186,8 @@
       "widthM": 296,
       "alongM": 318,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -6999,7 +7199,8 @@
       "widthM": 445,
       "alongM": 456,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7011,7 +7212,8 @@
       "widthM": 211,
       "alongM": 224,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7023,7 +7225,8 @@
       "widthM": 441,
       "alongM": 478,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7035,7 +7238,8 @@
       "widthM": 1184,
       "alongM": 1321,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7047,7 +7251,8 @@
       "widthM": 839,
       "alongM": 972,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7059,7 +7264,8 @@
       "widthM": 1106,
       "alongM": 1247,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7071,7 +7277,8 @@
       "widthM": 891,
       "alongM": 1242,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7083,7 +7290,8 @@
       "widthM": 383,
       "alongM": 577,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7095,7 +7303,8 @@
       "widthM": 137,
       "alongM": 171,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7107,7 +7316,8 @@
       "widthM": 355,
       "alongM": 448,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7119,7 +7329,8 @@
       "widthM": 516,
       "alongM": 466,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7131,7 +7342,8 @@
       "widthM": 229,
       "alongM": 269,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7143,7 +7355,8 @@
       "widthM": 230,
       "alongM": 391,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7155,7 +7368,8 @@
       "widthM": 749,
       "alongM": 835,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7167,7 +7381,8 @@
       "widthM": 150,
       "alongM": 347,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7179,7 +7394,8 @@
       "widthM": 204,
       "alongM": 241,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7191,7 +7407,8 @@
       "widthM": 477,
       "alongM": 488,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7203,7 +7420,8 @@
       "widthM": 394,
       "alongM": 355,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7215,7 +7433,8 @@
       "widthM": 237,
       "alongM": 254,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7227,7 +7446,8 @@
       "widthM": 227,
       "alongM": 240,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7241,7 +7461,8 @@
       "reefFlatBridges": false,
       "sites": [
         "dhiyamigili-corner"
-      ]
+      ],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7253,7 +7474,8 @@
       "widthM": 322,
       "alongM": 248,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7265,7 +7487,8 @@
       "widthM": 370,
       "alongM": 340,
       "reefFlatBridges": false,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7277,7 +7500,8 @@
       "widthM": 277,
       "alongM": 459,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7289,7 +7513,8 @@
       "widthM": 273,
       "alongM": 395,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7301,7 +7526,8 @@
       "widthM": 163,
       "alongM": 150,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7313,7 +7539,8 @@
       "widthM": 331,
       "alongM": 423,
       "reefFlatBridges": true,
-      "sites": []
+      "sites": [],
+      "fromTiles": true
     }
   ],
   "openCoast": [
@@ -7326,7 +7553,8 @@
       "lat": 0.59792,
       "lon": 73.49917,
       "widthM": 3538,
-      "alongM": 3068
+      "alongM": 3068,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7337,7 +7565,8 @@
       "lat": 0.79009,
       "lon": 73.32139,
       "widthM": 27436,
-      "alongM": 2868
+      "alongM": 2868,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7348,7 +7577,8 @@
       "lat": 0.69238,
       "lon": 73.28488,
       "widthM": 4502,
-      "alongM": 945
+      "alongM": 945,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7359,7 +7589,8 @@
       "lat": 0.81021,
       "lon": 73.29693,
       "widthM": 21584,
-      "alongM": 586
+      "alongM": 586,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7370,7 +7601,8 @@
       "lat": 0.82912,
       "lon": 73.27408,
       "widthM": 19297,
-      "alongM": 1643
+      "alongM": 1643,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7381,7 +7613,8 @@
       "lat": 0.78398,
       "lon": 73.25732,
       "widthM": 9228,
-      "alongM": 1207
+      "alongM": 1207,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7392,7 +7625,8 @@
       "lat": 0.84877,
       "lon": 73.2491,
       "widthM": 4859,
-      "alongM": 483
+      "alongM": 483,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7403,7 +7637,8 @@
       "lat": 0.80051,
       "lon": 73.24735,
       "widthM": 15483,
-      "alongM": 643
+      "alongM": 643,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7414,7 +7649,8 @@
       "lat": 0.76319,
       "lon": 73.24337,
       "widthM": 7325,
-      "alongM": 320
+      "alongM": 320,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7425,7 +7661,8 @@
       "lat": 0.83982,
       "lon": 73.20591,
       "widthM": 5881,
-      "alongM": 325
+      "alongM": 325,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7436,7 +7673,8 @@
       "lat": 0.84073,
       "lon": 73.18846,
       "widthM": 3943,
-      "alongM": 570
+      "alongM": 570,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7447,7 +7685,8 @@
       "lat": 0.77646,
       "lon": 73.19803,
       "widthM": 18155,
-      "alongM": 1623
+      "alongM": 1623,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7458,7 +7697,8 @@
       "lat": 0.66738,
       "lon": 73.17703,
       "widthM": 1781,
-      "alongM": 3074
+      "alongM": 3074,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7469,7 +7709,8 @@
       "lat": 0.64677,
       "lon": 73.13991,
       "widthM": 3236,
-      "alongM": 2256
+      "alongM": 2256,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7480,7 +7721,8 @@
       "lat": 0.59523,
       "lon": 73.14032,
       "widthM": 12820,
-      "alongM": 882
+      "alongM": 882,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7491,7 +7733,8 @@
       "lat": 0.58481,
       "lon": 73.12742,
       "widthM": 15028,
-      "alongM": 185
+      "alongM": 185,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7502,7 +7745,8 @@
       "lat": 0.48952,
       "lon": 73.04469,
       "widthM": 11395,
-      "alongM": 786
+      "alongM": 786,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7513,7 +7757,8 @@
       "lat": 0.47784,
       "lon": 73.04435,
       "widthM": 12348,
-      "alongM": 1530
+      "alongM": 1530,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7524,7 +7769,8 @@
       "lat": 0.29941,
       "lon": 73.38814,
       "widthM": 4433,
-      "alongM": 227
+      "alongM": 227,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7535,7 +7781,8 @@
       "lat": 0.34475,
       "lon": 73.38017,
       "widthM": 5293,
-      "alongM": 3041
+      "alongM": 3041,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7546,7 +7793,8 @@
       "lat": 0.32571,
       "lon": 73.41136,
       "widthM": 11813,
-      "alongM": 349
+      "alongM": 349,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7557,7 +7805,8 @@
       "lat": 0.56776,
       "lon": 73.52515,
       "widthM": 3825,
-      "alongM": 4339
+      "alongM": 4339,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7567,7 +7816,8 @@
       "lat": 2.09687,
       "lon": 73.55863,
       "widthM": 4460,
-      "alongM": 239
+      "alongM": 239,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7577,7 +7827,8 @@
       "lat": 2.12018,
       "lon": 73.56827,
       "widthM": 4372,
-      "alongM": 570
+      "alongM": 570,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7587,7 +7838,8 @@
       "lat": 2.08593,
       "lon": 73.48439,
       "widthM": 8854,
-      "alongM": 9241
+      "alongM": 9241,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7597,7 +7849,8 @@
       "lat": 2.04279,
       "lon": 73.40193,
       "widthM": 6923,
-      "alongM": 12883
+      "alongM": 12883,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7607,7 +7860,8 @@
       "lat": 2.00214,
       "lon": 73.32663,
       "widthM": 7180,
-      "alongM": 7916
+      "alongM": 7916,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7617,7 +7871,8 @@
       "lat": 1.95327,
       "lon": 73.2561,
       "widthM": 3589,
-      "alongM": 2133
+      "alongM": 2133,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7627,7 +7882,8 @@
       "lat": 1.89653,
       "lon": 73.54191,
       "widthM": 2871,
-      "alongM": 3697
+      "alongM": 3697,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7637,7 +7893,8 @@
       "lat": 2.53101,
       "lon": 73.20111,
       "widthM": 5908,
-      "alongM": 9013
+      "alongM": 9013,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7647,7 +7904,8 @@
       "lat": 2.54399,
       "lon": 73.16552,
       "widthM": 2363,
-      "alongM": 3524
+      "alongM": 3524,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7657,7 +7915,8 @@
       "lat": 2.55355,
       "lon": 73.12725,
       "widthM": 5923,
-      "alongM": 7885
+      "alongM": 7885,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7667,7 +7926,8 @@
       "lat": 2.32098,
       "lon": 72.93644,
       "widthM": 5339,
-      "alongM": 822
+      "alongM": 822,
+      "fromTiles": true
     },
     {
       "atollIds": [
@@ -7677,7 +7937,8 @@
       "lat": 2.30077,
       "lon": 72.94824,
       "widthM": 3021,
-      "alongM": 1231
+      "alongM": 1231,
+      "fromTiles": true
     }
   ],
   "unseen": [
