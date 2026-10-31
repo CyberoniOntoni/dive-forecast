@@ -110,6 +110,41 @@
       "rimSourceUrl": "https://www.openstreetmap.org/way/671807083",
       "lagoonMeanDepthM": 44.8,
       "lagoonDepthSourceUrl": "https://archive.org/stream/scientificreport1193john/scientificreport1193john_djvu.txt"
+    },
+    {
+      "id": "thaa",
+      "name": "Thaa Atoll",
+      "oceanLat": 2.36,
+      "oceanLon": 73.45,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807129"
+    },
+    {
+      "id": "laamu",
+      "name": "Laamu Atoll",
+      "oceanLat": 1.95,
+      "oceanLon": 73.65,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807128"
+    },
+    {
+      "id": "gaafu-alif",
+      "name": "Gaafu Alif (North Huvadhoo)",
+      "oceanLat": 0.8,
+      "oceanLon": 73.65,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807065"
+    },
+    {
+      "id": "gaafu-dhaalu",
+      "name": "Gaafu Dhaalu (South Huvadhoo)",
+      "oceanLat": 0.12,
+      "oceanLon": 72.92,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807065"
+    },
+    {
+      "id": "fuvahmulah",
+      "name": "Fuvahmulah",
+      "oceanLat": -0.3,
+      "oceanLon": 73.5,
+      "rimSourceUrl": "https://www.openstreetmap.org/way/223971265"
     }
   ],
   "sites": [
@@ -801,7 +836,7 @@
     },
     {
       "id": "kagi-kandu",
-      "name": "Kagi  Kandu",
+      "name": "Kagi Kandu",
       "atollId": "north-male",
       "lat": 4.699475,
       "lon": 73.506711,
@@ -2588,8 +2623,8 @@
       "diveTopM": 5,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "thin-thila",
@@ -2798,8 +2833,8 @@
       "diveTopM": 10,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "fushifaru-thila",
@@ -2855,8 +2890,8 @@
       "diveTopM": 12,
       "diveMaxM": 20,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "channel-thila",
+      "siteTypeSource": "manual"
     },
     {
       "id": "vilamendhoo-thila",
@@ -2962,8 +2997,8 @@
       "lat": 3.483304,
       "lon": 72.845228,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "maamigili-faru",
@@ -3205,8 +3240,8 @@
       "diveTopM": 10,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual"
     },
     {
       "id": "dhigurah-arches",
@@ -4210,6 +4245,299 @@
       "diveMaxM": 14,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "fushi-kandu-2",
+      "name": "Fushi Kandu",
+      "atollId": "laamu",
+      "lat": 2.03953,
+      "lon": 73.53219,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Hadhdhunmathree_Atoll/Fushi_Kandu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "maabaidhoo-kandu",
+      "name": "Maabaidhoo Kandu",
+      "atollId": "laamu",
+      "lat": 2.02145,
+      "lon": 73.53703,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Hadhdhunmathree_Atoll/Maabaidhoo_Kandu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "gaadhoo-faru",
+      "name": "Gaadhoo Faru",
+      "atollId": "laamu",
+      "lat": 1.81199,
+      "lon": 73.46797,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/Hadhdhunmathree_Atoll/Gaardhoo_Faru/index.html",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "hithadhoo-corner",
+      "name": "Hithadhoo Corner (Manta Point)",
+      "atollId": "laamu",
+      "lat": 1.8004,
+      "lon": 73.4057,
+      "sourceUrl": "https://resortlife.travel/dive-sites/hithadhoo-corner-laamu",
+      "pinPlacement": "imagery",
+      "pinNote": "North-east tip of Hithadhoo, on the channel between Hithadhoo and the Olhuveli reef.",
+      "siteType": "corner",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "munnafushi-kandu",
+      "name": "Munnafushi Kandu",
+      "atollId": "laamu",
+      "lat": 1.9983,
+      "lon": 73.3239,
+      "sourceUrl": "https://resortlife.travel/dive-sites/munnafushi-kandu-laamu",
+      "pinPlacement": "imagery",
+      "pinNote": "The gap in the west rim just north-east of Munyafushi.",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "olhugiri-kandu",
+      "name": "Olhugiri Kandu",
+      "atollId": "thaa",
+      "lat": 2.5067,
+      "lon": 73.2648,
+      "sourceUrl": "https://www.dive-the-world.com/diving-sites-maldives-southern-atolls-thaa-atoll.php",
+      "pinPlacement": "imagery",
+      "pinNote": "The gap in the north rim just east of the Olhugiri reef.",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "dhiyamigili-corner",
+      "name": "Dhiyamigili Corner",
+      "atollId": "thaa",
+      "lat": 2.3347,
+      "lon": 73.3347,
+      "sourceUrl": "https://maldives-magazine.com/news/head-underwater-with-como.htm",
+      "pinPlacement": "imagery",
+      "pinNote": "South-west tip of the Dhiyamigili reef, on the channel to Guraidhoo.",
+      "siteType": "corner",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "vilingili-kandu",
+      "name": "Vilingili Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.74473,
+      "lon": 73.4376,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Vilingili_Kandu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kooddoo-kandu",
+      "name": "Kooddoo Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.72571,
+      "lon": 73.43976,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Kooddoo_kndu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "dhevana-thila",
+      "name": "Dhevana Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.5893,
+      "lon": 73.10783,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/DhevanaThila/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "nilandhoo-kandu",
+      "name": "Nilandhoo Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.6297,
+      "lon": 73.4541,
+      "sourceUrl": "https://www.liveaboard.com/diving/maldives/huvadhoo-atoll",
+      "pinPlacement": "imagery",
+      "pinNote": "The gap between Nilandhoo and Dhaandhoo. The gap north of Nilandhoo is the other candidate.",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kondey-kandu",
+      "name": "Kondey Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.488,
+      "lon": 73.5579,
+      "sourceUrl": "https://zentacle.com/loc/mv/gaafu-alif-atoll",
+      "pinPlacement": "imagery",
+      "pinNote": "The gap in the east rim between Kondey and Dhiyadhoo.",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kaadedhdhoo-kandu",
+      "name": "Kaadedhdhoo Kandu",
+      "atollId": "gaafu-dhaalu",
+      "lat": 0.4714,
+      "lon": 72.9989,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/south-huvadhoo-atoll",
+      "pinPlacement": "imagery",
+      "pinNote": "The gap in the west rim south of Kaadedhdhoo. The gap north of it is the other candidate.",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "farikede-faru",
+      "name": "Farikede",
+      "atollId": "fuvahmulah",
+      "lat": -0.32597,
+      "lon": 73.44914,
+      "sourceUrl": "https://www.openstreetmap.org/node/9516447813",
+      "diveMaxM": 40,
+      "depthSourceUrl": "https://www.openstreetmap.org/node/9516447813",
+      "inwardBearingDeg": 245,
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "farikede-plateau",
+      "name": "Farikede Plateau",
+      "atollId": "fuvahmulah",
+      "lat": -0.33286,
+      "lon": 73.4472,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-farikede-plateau",
+      "inwardBearingDeg": 330,
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kudhu-falhagando",
+      "name": "Kudhu Falhagando",
+      "atollId": "fuvahmulah",
+      "lat": -0.31894,
+      "lon": 73.44528,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-kudhu-falhagando",
+      "inwardBearingDeg": 245,
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "tiger-harbour",
+      "name": "Tiger Harbour",
+      "atollId": "fuvahmulah",
+      "lat": -0.30657,
+      "lon": 73.44126,
+      "sourceUrl": "https://www.openstreetmap.org/node/9526089945",
+      "diveMaxM": 25,
+      "depthSourceUrl": "https://www.openstreetmap.org/node/9526089945",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 270
+    },
+    {
+      "id": "seafan",
+      "name": "Seafan",
+      "atollId": "fuvahmulah",
+      "lat": -0.30013,
+      "lon": 73.43652,
+      "sourceUrl": "https://www.openstreetmap.org/node/9521887499",
+      "diveMaxM": 25,
+      "depthSourceUrl": "https://www.openstreetmap.org/node/9521887499",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 240
+    },
+    {
+      "id": "rasgefanno",
+      "name": "Rasgefanno",
+      "atollId": "fuvahmulah",
+      "lat": -0.29121,
+      "lon": 73.42811,
+      "sourceUrl": "https://www.openstreetmap.org/node/9526089944",
+      "diveMaxM": 40,
+      "depthSourceUrl": "https://www.openstreetmap.org/node/9526089944",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 235
+    },
+    {
+      "id": "thundi",
+      "name": "Thundi",
+      "atollId": "fuvahmulah",
+      "lat": -0.28091,
+      "lon": 73.4217,
+      "sourceUrl": "https://www.openstreetmap.org/node/9521898155",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 225
+    },
+    {
+      "id": "gemmiskih-fanno",
+      "name": "Gemmiskih Fanno",
+      "atollId": "fuvahmulah",
+      "lat": -0.2777,
+      "lon": 73.41386,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-genmissikiy-fanno",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 150
+    },
+    {
+      "id": "neregando",
+      "name": "Neregando",
+      "atollId": "fuvahmulah",
+      "lat": -0.29334,
+      "lon": 73.41126,
+      "sourceUrl": "https://www.openstreetmap.org/node/9518535640",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 60
+    },
+    {
+      "id": "maa-neyru",
+      "name": "Maa Neyru",
+      "atollId": "fuvahmulah",
+      "lat": -0.30008,
+      "lon": 73.4205,
+      "sourceUrl": "https://www.openstreetmap.org/node/9524191069",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 50
+    },
+    {
+      "id": "haandhi-elhe",
+      "name": "Haandhi Elhe",
+      "atollId": "fuvahmulah",
+      "lat": -0.308,
+      "lon": 73.42635,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-haandhi-elhe",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived",
+      "inwardBearingDeg": 45
+    },
+    {
+      "id": "marcs-dream",
+      "name": "Marc's Dream",
+      "atollId": "addu",
+      "lat": -0.619,
+      "lon": 73.14457,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-marcs-dream",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "villingili-coral-garden",
+      "name": "Villingili Coral Garden",
+      "atollId": "addu",
+      "lat": -0.67873,
+      "lon": 73.20036,
+      "sourceUrl": "https://diveplannerpro.com/spots/mv/maldives/maldives-villingili-coral-garden",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     }
   ],

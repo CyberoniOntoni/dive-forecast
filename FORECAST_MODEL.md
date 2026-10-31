@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/18`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/19`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
