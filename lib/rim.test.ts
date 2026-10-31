@@ -104,7 +104,9 @@ describe("rimForAtoll", () => {
 });
 
 // The OSM outline is a thin spike at Vaavu's east tip, so no heading from this pin stays inside it.
-const THIN_OUTLINE_SITES = new Set(["fotteyo-kandu"]);
+// Fuvahmulah's outline is the island's coastline; the Farikede sites sit on the reef plateau that runs on 2 km south of
+// it, outside the outline, with bearings measured on imagery.
+const THIN_OUTLINE_SITES = new Set(["fotteyo-kandu", "farikede-faru", "farikede-plateau", "kudhu-falhagando"]);
 
 describe("seeded catalog bearings", () => {
   const catalog = JSON.parse(

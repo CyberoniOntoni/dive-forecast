@@ -45,6 +45,8 @@ The Atlas maps only the shallow reef tops, so it does not decide a site's type (
 
 Channel depths in `data/sites.json` (`gridDepthMeanM`, `gridDepthMaxM`) are measured on the Maldives bathymetry grid by Shuaib Rasheed, Simon C. Warder, Yves Plancherel and Matthew D. Piggott: *An Improved Gridded Bathymetric Data Set and Tidal Model for the Maldives Archipelago*, Earth and Space Science 8 (2021), [doi:10.1029/2020EA001207](https://doi.org/10.1029/2020EA001207). The paper is CC BY-NC 4.0. The forecast uses the crossings marked `ok` to size channels that have no published section.
 
+Dive site positions in `data/sites.json` come mostly from the Maldives dive guide on SeaSketch; others from OpenStreetMap (© OpenStreetMap contributors, ODbL), [Wannadive](https://www.wannadive.net/), [Dive Planner Pro](https://diveplannerpro.com/) and PADI, each named in the site's `sourceUrl`. Sites marked `pinPlacement: "imagery"` are named by their source but placed on the channel by hand from satellite imagery; the site page says "position approximate".
+
 `data/marine-cache` holds fetched Open-Meteo hours and is not part of the repo. `data/store.json` holds reports, ratings, and sites added in the app.
 
 ## Checking the forecast

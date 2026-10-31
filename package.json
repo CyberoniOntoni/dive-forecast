@@ -20,6 +20,7 @@
     "channel-widths": "vite-node scripts/channel-widths.ts",
     "channel-depths": "vite-node scripts/channel-depths.ts",
     "atoll-openings": "vite-node scripts/atoll-openings.ts",
+    "audit-sites": "vite-node scripts/audit-sites.ts",
     "extract-dive-guide": "vite-node scripts/extract-dive-guide.ts",
     "site-types": "vite-node scripts/site-types.ts",
     "import-dive-guide": "vite-node scripts/import-dive-guide.ts",

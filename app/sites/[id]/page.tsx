@@ -130,7 +130,8 @@ function fetchedStamp(fetchedAt: number | null): { wall: string; iso: string } |
 function SiteFacts({ site }: { site: Site }) {
   const atoll = atollNamesById(readCatalog().atolls)[site.atollId];
   const line = publishedLine(site);
-  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null, line ? line.text : null].filter(
+  const placed = site.pinPlacement === "imagery" ? "position approximate" : null;
+  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null, line ? line.text : null, placed].filter(
     (part): part is string => part != null,
   );
   if (parts.length === 0) return null;

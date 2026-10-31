@@ -1,13 +1,20 @@
-"""Project Atlas reef-crest polygons onto each atoll rim. Prints crest arcs. Writes no catalog."""
+"""Project Atlas reef-crest polygons onto each atoll rim. Prints crest arcs. Writes no catalog.
+
+ATLAS_TILE_POLYGONS (a JSON file of {"crest": [[[lon, lat], ...], ...]}) replaces the GeoPackage with the map's reef-zone
+tiles, and OPENINGS_WAYS (comma-separated OSM way ids) limits the walk to those outlines; scripts/atoll-openings.ts
+sets both for --from-tiles.
+"""
 
 import json
 import math
+import os
 import sqlite3
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import geopackage_wkb
+from atlas_tiles import load_tile_rings, tile_export
 
 ROOT = Path(__file__).resolve().parents[1]
 GPKG = ROOT / "data" / "sources" / "aca" / "Geomorphic-Map" / "geomorphic.gpkg"
@@ -22,15 +29,19 @@ KM_LON = 111.32
 
 
 def main() -> None:
-    if not GPKG.exists():
+    tiles = tile_export()
+    if not tiles and not GPKG.exists():
         raise SystemExit(f"No geomorphic map at {GPKG}")
     catalog = json.loads(SITES.read_text(encoding="utf-8"))
     rims = json.loads(RIMS.read_text(encoding="utf-8"))["rims"]
+    only = {way for way in os.environ.get("OPENINGS_WAYS", "").split(",") if way}
     ways: dict[str, list[str]] = {}
     for atoll in catalog["atolls"]:
         way_id = atoll["rimSourceUrl"].rstrip("/").split("/")[-1]
+        if only and way_id not in only:
+            continue
         ways.setdefault(way_id, []).append(atoll["id"])
-    polygons = load_reef(GPKG)
+    polygons = tile_polygons(tiles) if tiles else load_reef(GPKG)
     rim_points = []
     rim_index: dict[tuple[int, int], list[int]] = {}
     for way_id, atoll_ids in ways.items():
@@ -87,6 +98,16 @@ def load_reef(path: Path) -> list[dict]:
                 checked = True
     if not polygons:
         raise SystemExit("no reef-top polygons")
+    return polygons
+
+
+def tile_polygons(path: Path) -> list[dict]:
+    """Reef-crest rings from the tile export, shaped like load_reef's polygons (outer ring only)."""
+    polygons = []
+    for outer in load_tile_rings(path, "crest"):
+        lons = [point[0] for point in outer]
+        lats = [point[1] for point in outer]
+        polygons.append({"outer": outer, "holes": [], "bbox": (min(lons), min(lats), max(lons), max(lats))})
     return polygons
 
 

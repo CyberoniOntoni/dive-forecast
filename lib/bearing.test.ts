@@ -110,11 +110,16 @@ describe("atollForPin", () => {
     expect(atollForPin(3.5955, 72.7189, atolls)?.id).toBe("south-ari");
   });
 
+  it("splits Gaafu Alif and Gaafu Dhaalu, the two halves of Huvadhoo's one outline, by the nearer ocean point", () => {
+    expect(atollForPin(0.73, 73.44, atolls)?.id).toBe("gaafu-alif");
+    expect(atollForPin(0.22, 73.15, atolls)?.id).toBe("gaafu-dhaalu");
+  });
+
   it("returns null for a pin in an unseeded atoll instead of handing it to a far one", () => {
-    // Laamu Atoll, about 90 km south of Meemu, the nearest seeded outline.
-    expect(atollForPin(1.95, 73.45, atolls)).toBeNull();
-    // Huvadhu Atoll, over 100 km north of Addu.
-    expect(atollForPin(0.5, 73.0, atolls)).toBeNull();
+    // Haa Alif Atoll, over 100 km north of Raa, the nearest seeded outline.
+    expect(atollForPin(6.95, 72.95, atolls)).toBeNull();
+    // Haa Dhaalu Atoll, over 60 km north of Raa.
+    expect(atollForPin(6.55, 73.0, atolls)).toBeNull();
   });
 
   it("returns null with no atolls", () => {

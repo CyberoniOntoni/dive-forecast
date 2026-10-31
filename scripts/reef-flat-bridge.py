@@ -1,4 +1,8 @@
-"""Mark a crest-to-crest mouth as bridged when reef flat still crosses it."""
+"""Mark a crest-to-crest mouth as bridged when reef flat still crosses it.
+
+ATLAS_TILE_POLYGONS (a JSON file with a "flat" list of [lon, lat] rings) replaces the GeoPackage with the map's
+reef-zone tiles; see scripts/atoll-openings.py.
+"""
 
 import json
 import sqlite3
@@ -10,6 +14,7 @@ from shapely.strtree import STRtree
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import geopackage_wkb
+from atlas_tiles import load_tile_rings, tile_export
 
 ROOT = Path(__file__).resolve().parents[1]
 GPKG = ROOT / "data" / "sources" / "aca" / "Geomorphic-Map" / "geomorphic.gpkg"
@@ -24,6 +29,11 @@ def main() -> None:
 
 
 def load_flat() -> list[Polygon]:
+    tiles = tile_export()
+    if tiles:
+        polygons = [Polygon(ring) for ring in load_tile_rings(tiles, "flat")]
+        polygons = [polygon if polygon.is_valid else polygon.buffer(0) for polygon in polygons]
+        return [polygon for polygon in polygons if not polygon.is_empty]
     conn = sqlite3.connect(GPKG)
     placeholders = ",".join("?" for _ in FLAT)
     query = f'SELECT geom FROM "Central Indian Ocean" WHERE class IN ({placeholders})'
