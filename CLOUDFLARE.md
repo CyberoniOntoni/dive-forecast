@@ -59,7 +59,7 @@ npm run d1:export     # the live D1 store as data/store.json (for verify, replay
 
 Reporting the current, rating a site and adding a site need a signed-in diver; reading stays open to everyone.
 Sign-in is by email code (no passwords): the diver types an email, gets a 6-digit code and a link, and picks a
-nickname the first time. Only the nickname is ever shown. `APP_URL` and `MAILGUN_DOMAIN` are in `wrangler.jsonc`
+nickname the first time. Only the nickname is ever shown. `APP_URL`, `EMAIL_FROM` and `MAILGUN_DOMAIN` are in `wrangler.jsonc`
 `vars` (a deploy replaces variables typed into the dashboard with that file's). The two secrets go in Workers & Pages →
 `dive-forecast` → Settings → Variables and Secrets, as type Secret, which deploys keep. For Docker, all of them go in a
 `.env` next to `docker-compose.yml`:
@@ -72,9 +72,19 @@ nickname the first time. Only the nickname is ever shown. `APP_URL` and `MAILGUN
 | `MAILGUN_FROM` | Optional sender. Defaults to `Dive current <login@MAILGUN_DOMAIN>`. | `Dive current <login@mailgun.50bar.app>` |
 | `MAILGUN_REGION` | `eu` for an EU Mailgun account; otherwise leave unset. | |
 | `APP_URL` | The site's address, for the link in the email. Without it the email has the code only. | `https://50bar.app` |
+| `EMAIL_FROM` | Sender for Cloudflare Email Sending (worker only, with the `EMAIL` binding). Without it the worker uses Mailgun alone. | `login@50bar.app` |
+
+On the worker the email goes out through Cloudflare Email Sending first (the `EMAIL` `send_email` binding in
+`wrangler.jsonc`, `lib/email.ts`), and through Mailgun when Cloudflare refuses or fails, for example while the domain
+is not onboarded or the beta's daily quota is used up. Docker and `next dev` have no binding and use Mailgun alone.
+To turn on Cloudflare sending, onboard the domain once: Compute → Email Service → Email Sending → Onboard Domain →
+`50bar.app`. Cloudflare adds the SPF, DKIM and bounce MX records on `cf-bounce.50bar.app` and a DMARC record on
+`_dmarc.50bar.app` itself. Sends show up under Email Sending → Activity; refused ones in the worker log as
+"Sign-in email via cloudflare failed". Sending to any address needs Workers Paid: 3,000 emails a month are included,
+then $0.35 per 1,000.
 
 Mailgun's domain needs its DNS records (SPF TXT, DKIM TXT, MX and the tracking CNAME it lists) added in Cloudflare
-DNS for 50bar.app. Without `AUTH_SECRET` and the Mailgun settings, production says signing in is not set up; `next dev`
+DNS for 50bar.app. Without `AUTH_SECRET` and at least one way to send (Cloudflare or Mailgun), production says signing in is not set up; `next dev`
 needs none of them and prints the code to its own log instead. Users, pending codes (hashed) and ratings per diver live
 in the store (D1 on the worker); points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
 

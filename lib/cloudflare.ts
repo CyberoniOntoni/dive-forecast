@@ -3,12 +3,25 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 /**
  * The bindings in wrangler.jsonc. ASSETS serves the built static files, which include the read-only data files
  * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding the Open-Meteo cache (and the old
- * store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts.
+ * store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts. EMAIL is
+ * Cloudflare Email Sending, for the sign-in email (lib/email.ts).
  */
 export type WorkerEnv = {
   ASSETS: { fetch: (input: string) => Promise<Response> };
   DATA: R2Bucket;
   DB: D1Database;
+  EMAIL?: SendEmail;
+};
+
+/** The subset of Cloudflare's send_email binding this app uses. It throws (an Error with a code) when it refuses. */
+export type SendEmail = {
+  send: (message: {
+    from: { email: string; name: string };
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+  }) => Promise<{ messageId: string }>;
 };
 
 /** The subset of Cloudflare's D1 binding this app uses. A batch runs as one transaction. */
