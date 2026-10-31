@@ -155,7 +155,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 - **Openings:**
   - The porous rim: the 12 ring points on the outline plus the midpoints between them, each standing for its share of the perimeter. Each opening's flow `q` is the channel model's `S_net` there, along the outline's inward normal.
   - Each across-rim dive site in the atoll, with its own `S_net` and a weight of `CHANNEL_WEIGHT_KM = 2` km.
-  - `data/openings.json`, when present, is a catalog of mouths walked around the reef crest of each atoll, including mouths with no dive site. The outline is only used to assign crest to an atoll. The width is the straight distance between crest shoulders. A mouth that reef flat still bridges is marked and kept. The lagoon model does not read the file. A mouth has no depth and is not a channel section.
+  - `data/openings.json`, when present, is a catalog of mouths walked around the reef crest of each atoll, including mouths with no dive site. The outline is only used to assign crest to an atoll. The width is the straight distance between crest shoulders, measured on the Atlas GeoPackage, except rows tagged `fromTiles` (Thaa, Laamu, Huvadhoo), which were walked on the map's simplified Atlas tiles and are coarser until the GeoPackage walk is rerun. A mouth that reef flat still bridges is marked and kept. The lagoon model does not read the file. A mouth has no depth and is not a channel section.
 - **The current at a site** is each opening's exchange spreading from it (running in) or drawing toward it (running out), as a 2-D source:
 
       u = Σ q · w · (site − opening) / (2π |site − opening|²)  +  sink
@@ -276,7 +276,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/16` | 4 Oct | Channel sections only from sources that state them. |
 | `…/17` | 6 Oct | Pending samples, null-slope reports and lagoon fallback reports no longer skew the forecast. |
 | `…/18` | 13 Oct | Channels with no published section sized from `ok` grid crossings. |
-| `…/19` | 31 Oct | Catalog: Moofushi, Himendhoo Dhekunu, Fushifaru and Maamigili Kandu set as passes and Fushifaru Giri as a channel thila by hand, so they take the rim's direction and the across-rim model (they were lagoon sites on a centroid bearing up to 80° off), and they now count as channel openings in their atolls' lagoon flow. New atolls and sites are new inputs, not a change. |
+| `…/19` | 31 Oct | Catalog: Moofushi, Himendhoo Dhekunu, Fushifaru and Maamigili Kandu set as passes and Fushifaru Giri as a channel thila by hand, so they take the rim's direction and the across-rim model (they were lagoon sites on a centroid bearing up to 84° off), and they now count as channel openings in their atolls' lagoon flow. New atolls and sites are new inputs, not a change. |
 
 ## Known limits
 
