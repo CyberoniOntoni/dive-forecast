@@ -1,17 +1,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// What the mocked cookies() does on the next call.
+// What the mocked cookies() and headers() do on the next call.
 let cookiesBehaviour: () => unknown = () => ({ get: () => undefined });
+let headersBehaviour: () => unknown = () => new Headers();
 
 vi.mock("next/headers", () => ({
   cookies: async () => cookiesBehaviour(),
-  headers: async () => new Headers(),
+  headers: async () => headersBehaviour(),
 }));
 
-const { currentSession } = await import("./auth");
+const { appUrl, currentSession } = await import("./auth");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
+  headersBehaviour = () => new Headers();
   vi.unstubAllEnvs();
 });
 
@@ -42,5 +44,30 @@ describe("currentSession", () => {
       throw new Error("`cookies` was called outside a request scope.");
     };
     expect(await currentSession()).toBeNull();
+  });
+});
+
+describe("appUrl outside production, with no APP_URL", () => {
+  it("is the request's own host", async () => {
+    vi.stubEnv("APP_URL", "");
+    headersBehaviour = () => new Headers({ host: "localhost:3000" });
+    expect(await appUrl()).toBe("http://localhost:3000");
+  });
+
+  it("lets through Next's own errors", async () => {
+    vi.stubEnv("APP_URL", "");
+    const dynamicUsage = Object.assign(new Error("Dynamic server usage: headers"), { digest: "DYNAMIC_SERVER_USAGE" });
+    headersBehaviour = () => {
+      throw dynamicUsage;
+    };
+    await expect(appUrl()).rejects.toBe(dynamicUsage);
+  });
+
+  it("is null outside a request", async () => {
+    vi.stubEnv("APP_URL", "");
+    headersBehaviour = () => {
+      throw new Error("`headers` was called outside a request scope.");
+    };
+    expect(await appUrl()).toBeNull();
   });
 });
