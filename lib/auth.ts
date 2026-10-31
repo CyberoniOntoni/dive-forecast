@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 import { appSetting } from "./cloudflare";
 import type { MailgunConfig } from "./mailgun";
 import { SIGN_IN_FIRST } from "./sign-in";
@@ -36,6 +37,19 @@ export function mailgunConfig(): MailgunConfig | null {
 }
 
 /**
+ * A request-time API (cookies, headers), or null outside a request (scripts). Next's own errors are let through:
+ * swallowing the one it throws while prerendering would leave a page static that reads the request at run time.
+ */
+async function fromRequest<T>(read: () => Promise<T>): Promise<T | null> {
+  try {
+    return await read();
+  } catch (error) {
+    unstable_rethrow(error);
+    return null;
+  }
+}
+
+/**
  * The site's own address for the emailed link. In production only APP_URL is trusted (a request's Host header could
  * point the link at another site); without it the email carries the code alone.
  */
@@ -43,25 +57,24 @@ export async function appUrl(): Promise<string | null> {
   const configured = appSetting("APP_URL");
   if (configured) return configured.replace(/\/+$/, "");
   if (isProduction()) return null;
-  try {
-    const list = await headers();
-    const host = list.get("host");
-    return host ? `${list.get("x-forwarded-proto") ?? "http"}://${host}` : null;
-  } catch {
-    return null;
-  }
+  const list = await fromRequest(headers);
+  const host = list?.get("host");
+  return list && host ? `${list.get("x-forwarded-proto") ?? "http"}://${host}` : null;
 }
 
-/** This request's signed-in diver, or null. Null too outside a request (scripts) or when sign-in is not set up. */
+/**
+ * This request's signed-in diver, or null. Null too outside a request (scripts) or when sign-in is not set up.
+ *
+ * The cookie is read even when sign-in is not set up, and Next's own errors are let through: the build has no
+ * AUTH_SECRET, so a page that skipped the read (or swallowed the error Next throws to mark it per-request) was
+ * prerendered as static, and then failed with a 500 on the worker, where the secret is set and the cookie is read.
+ */
 export async function currentSession(): Promise<Session | null> {
+  const jar = await fromRequest(cookies);
+  if (!jar) return null;
+  const token = jar.get(SESSION_COOKIE)?.value;
   const secret = authSecret();
   if (!secret) return null;
-  let token: string | undefined;
-  try {
-    token = (await cookies()).get(SESSION_COOKIE)?.value;
-  } catch {
-    return null;
-  }
   return token ? verifySession(token, secret) : null;
 }
 
