@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { unstable_rethrow } from "next/navigation";
 import { appSetting } from "./cloudflare";
 import type { MailgunConfig } from "./mailgun";
 import { SIGN_IN_FIRST } from "./sign-in";
@@ -47,21 +48,29 @@ export async function appUrl(): Promise<string | null> {
     const list = await headers();
     const host = list.get("host");
     return host ? `${list.get("x-forwarded-proto") ?? "http"}://${host}` : null;
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     return null;
   }
 }
 
-/** This request's signed-in diver, or null. Null too outside a request (scripts) or when sign-in is not set up. */
+/**
+ * This request's signed-in diver, or null. Null too outside a request (scripts) or when sign-in is not set up.
+ *
+ * The cookie is read even when sign-in is not set up, and Next's own errors are let through: the build has no
+ * AUTH_SECRET, so a page that skipped the read (or swallowed the error Next throws to mark it per-request) was
+ * prerendered as static, and then failed with a 500 on the worker, where the secret is set and the cookie is read.
+ */
 export async function currentSession(): Promise<Session | null> {
-  const secret = authSecret();
-  if (!secret) return null;
   let token: string | undefined;
   try {
     token = (await cookies()).get(SESSION_COOKIE)?.value;
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     return null;
   }
+  const secret = authSecret();
+  if (!secret) return null;
   return token ? verifySession(token, secret) : null;
 }
 
