@@ -1,6 +1,11 @@
-"""Mark a crest-to-crest mouth as bridged when reef flat still crosses it."""
+"""Mark a crest-to-crest mouth as bridged when reef flat still crosses it.
+
+ATLAS_TILE_POLYGONS (a JSON file with a "flat" list of [lon, lat] rings) replaces the GeoPackage with the map's
+reef-zone tiles; see scripts/atoll-openings.py.
+"""
 
 import json
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -24,6 +29,15 @@ def main() -> None:
 
 
 def load_flat() -> list[Polygon]:
+    tiles = os.environ.get("ATLAS_TILE_POLYGONS")
+    if tiles:
+        rings = json.loads(Path(tiles).read_text(encoding="utf-8"))["flat"]
+        polygons = [Polygon(ring) for ring in rings if len(ring) >= 4]
+        polygons = [polygon if polygon.is_valid else polygon.buffer(0) for polygon in polygons]
+        polygons = [polygon for polygon in polygons if not polygon.is_empty]
+        if not polygons:
+            raise SystemExit("no reef-flat polygons")
+        return polygons
     conn = sqlite3.connect(GPKG)
     placeholders = ",".join("?" for _ in FLAT)
     query = f'SELECT geom FROM "Central Indian Ocean" WHERE class IN ({placeholders})'

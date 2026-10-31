@@ -1,7 +1,13 @@
-"""Project Atlas reef-crest polygons onto each atoll rim. Prints crest arcs. Writes no catalog."""
+"""Project Atlas reef-crest polygons onto each atoll rim. Prints crest arcs. Writes no catalog.
+
+ATLAS_TILE_POLYGONS (a JSON file of {"crest": [[[lon, lat], ...], ...]}) replaces the GeoPackage with the map's reef-zone
+tiles, and OPENINGS_WAYS (comma-separated OSM way ids) limits the walk to those outlines; scripts/atoll-openings.ts
+sets both for --from-tiles.
+"""
 
 import json
 import math
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -22,15 +28,19 @@ KM_LON = 111.32
 
 
 def main() -> None:
-    if not GPKG.exists():
+    tiles = os.environ.get("ATLAS_TILE_POLYGONS")
+    if not tiles and not GPKG.exists():
         raise SystemExit(f"No geomorphic map at {GPKG}")
     catalog = json.loads(SITES.read_text(encoding="utf-8"))
     rims = json.loads(RIMS.read_text(encoding="utf-8"))["rims"]
+    only = {way for way in os.environ.get("OPENINGS_WAYS", "").split(",") if way}
     ways: dict[str, list[str]] = {}
     for atoll in catalog["atolls"]:
         way_id = atoll["rimSourceUrl"].rstrip("/").split("/")[-1]
+        if only and way_id not in only:
+            continue
         ways.setdefault(way_id, []).append(atoll["id"])
-    polygons = load_reef(GPKG)
+    polygons = load_tile_polygons(Path(tiles), "crest") if tiles else load_reef(GPKG)
     rim_points = []
     rim_index: dict[tuple[int, int], list[int]] = {}
     for way_id, atoll_ids in ways.items():
@@ -87,6 +97,20 @@ def load_reef(path: Path) -> list[dict]:
                 checked = True
     if not polygons:
         raise SystemExit("no reef-top polygons")
+    return polygons
+
+
+def load_tile_polygons(path: Path, kind: str) -> list[dict]:
+    """Outer rings of one kind from the tile export, shaped like load_reef's polygons (no holes)."""
+    polygons = []
+    for outer in json.loads(path.read_text(encoding="utf-8"))[kind]:
+        if len(outer) < 4:
+            continue
+        lons = [point[0] for point in outer]
+        lats = [point[1] for point in outer]
+        polygons.append({"outer": [tuple(point) for point in outer], "holes": [], "bbox": (min(lons), min(lats), max(lons), max(lats))})
+    if not polygons:
+        raise SystemExit(f"no {kind} polygons in {path}")
     return polygons
 
 

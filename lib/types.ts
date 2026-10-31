@@ -104,6 +104,14 @@ export type Site = {
   siteType?: SiteType;
   /** "manual" when someone who knows the site set it; a derived type never overwrites it. */
   siteTypeSource?: "derived" | "manual";
+  /**
+   * "imagery": sourceUrl names the site but gives no usable coordinate, so the pin was put on the named channel or reef
+   * from satellite imagery (pinNote says where). The site page says the position is approximate. Absent: the
+   * coordinate came from sourceUrl.
+   */
+  pinPlacement?: "imagery";
+  /** Where an imagery-placed pin was put, and any other spot it could be. */
+  pinNote?: string;
 };
 
 /** Where a resolved bearing came from. */

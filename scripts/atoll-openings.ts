@@ -1,6 +1,8 @@
 import { spawnSync } from "child_process";
 import fs from "fs";
+import os from "os";
 import path from "path";
+import { ATLAS_OVERLAYS, decodeRing } from "../lib/atlas-overlays";
 import {
   isCountedMouth,
   OPENING_MAX_M,
@@ -14,6 +16,14 @@ import type { SiteType } from "../lib/types";
 /**
  * Mouths walked around the reef crest of every atoll. A mouth that reef flat still bridges is marked and kept.
  * Writes data/openings.json only when North Malé has at least 35 mouths. The lagoon model does not read the file.
+ *
+ *   npm run atoll-openings                                   every outline, from the Atlas GeoPackage in data/sources/aca
+ *   npm run atoll-openings -- --from-tiles --ways ID,ID      only those outlines, from the map's reef-zone tiles in
+ *                                                            public/overlays (no Atlas download); their rows replace
+ *                                                            the file's rows for those outlines, the rest are kept
+ *
+ * The tiles are the same Atlas classes simplified to about 11 m, so a tile-walked mouth can sit a few tens of metres
+ * from the GeoPackage one.
  */
 const SAMPLE_PY = path.join(process.cwd(), "scripts", "atoll-openings.py");
 const BRIDGE_PY = path.join(process.cwd(), "scripts", "reef-flat-bridge.py");
@@ -28,6 +38,14 @@ type Crest = { startM: number; endM: number; points: [number, number][] };
 type WayCrests = { wayId: string; atollIds: string[]; perimeterM: number; crests: Crest[] };
 
 function main(): void {
+  const args = process.argv.slice(2);
+  const fromTiles = args.includes("--from-tiles");
+  const waysAt = args.indexOf("--ways");
+  const onlyWays = waysAt >= 0 ? (args[waysAt + 1] ?? "").split(",").filter(Boolean) : [];
+  if (waysAt >= 0 && onlyWays.length === 0) throw new Error("--ways needs a comma-separated list of OSM way ids");
+  if (fromTiles && onlyWays.length === 0) throw new Error("--from-tiles needs --ways: it only adds outlines");
+  if (fromTiles) process.env.ATLAS_TILE_POLYGONS = writeTilePolygons();
+  if (onlyWays.length > 0) process.env.OPENINGS_WAYS = onlyWays.join(",");
   const result = spawnSync("python", [SAMPLE_PY], { encoding: "utf8", maxBuffer: 256 * 1024 * 1024 });
   if (result.status !== 0) throw new Error(result.stderr || "crest projection failed");
   const measured = JSON.parse(result.stdout) as { ways: WayCrests[] };
@@ -97,8 +115,15 @@ function main(): void {
       sites,
     });
   }
+  if (onlyWays.length > 0) {
+    const kept = JSON.parse(fs.readFileSync(OUT, "utf8")) as { openings: typeof openings; openCoast: OpenCoast[] };
+    const others = kept.openings.filter((row) => !onlyWays.includes(row.wayId));
+    openings.unshift(...others);
+    openCoast.unshift(...kept.openCoast.filter((row) => !onlyWays.includes(row.wayId)));
+    for (const row of others) for (const id of row.sites) matched.add(id);
+  }
   const northMale = openings.filter((row) => row.atollIds.includes("north-male")).length;
-  if (northMale < NORTH_MALE_MIN) {
+  if (onlyWays.length === 0 && northMale < NORTH_MALE_MIN) {
     throw new Error(
       `North Malé has ${northMale} crest mouths, under ${NORTH_MALE_MIN}. data/openings.json was not replaced.`,
     );
@@ -139,6 +164,27 @@ type Candidate = MeasuredMouth & {
 };
 
 type OpenCoast = MeasuredMouth;
+
+/** Reef crest and reef flat rings ([lon, lat]) from the reef-zone map tiles, written to a temp file for the Python steps. */
+function writeTilePolygons(): string {
+  const overlay = ATLAS_OVERLAYS.reefZones;
+  const dir = path.join(process.cwd(), "public", overlay.path);
+  const crest: [number, number][][] = [];
+  const flat: [number, number][][] = [];
+  for (const file of fs.readdirSync(dir)) {
+    if (file === "index.json") continue;
+    const tile = JSON.parse(fs.readFileSync(path.join(dir, file), "utf8")) as [number, ...number[][]][];
+    for (const [classIndex, outer] of tile) {
+      const name = overlay.classes[classIndex].name;
+      const ring = decodeRing(outer).map(([lat, lon]) => [lon, lat] as [number, number]);
+      if (name === "Reef Crest") crest.push(ring);
+      else if (name === "Outer Reef Flat" || name === "Inner Reef Flat") flat.push(ring);
+    }
+  }
+  const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "atoll-openings-")), "tile-polygons.json");
+  fs.writeFileSync(file, JSON.stringify({ crest, flat }));
+  return file;
+}
 
 function reefFlatBridges(mouths: readonly Candidate[]): boolean[] {
   if (mouths.length === 0) return [];

@@ -14,6 +14,7 @@ Append to `sites` in `data/sites.json`:
 | `name` | As the dive guides print it. |
 | `atollId` | An existing atoll `id`. A new atoll is step 4. |
 | `lat`, `lon` | On the reef cut, thila, or wreck, not the nearest island. |
+| `pinPlacement`, `pinNote` | `"imagery"` when the source names the site but gives no usable coordinate and you put the pin on the named channel from imagery (step 3's image); `pinNote` says where, and any other gap it could be. The site page then says "position approximate". |
 | `sourceUrl` | The page the coordinate came from. Never `"user"`, which marks an app-added pin and excludes it from atoll mates. |
 | `diveTopM`, `diveMaxM`, `depthSourceUrl` | Only when a page printed them. |
 | `channelWidthM`, `channelDepthM`, `channelSourceUrl` | Only for a named channel with a printed measurement. They drive the constriction factor, so a guess changes strength. |
@@ -58,7 +59,7 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
 
 ## 4. A new atoll
 
-1. Add to `atolls`: `id`, `name`, `oceanLat`, `oceanLon` (an open-ocean point off the atoll), and `rimSourceUrl` (the OpenStreetMap way of the atoll outline).
+1. Add to `atolls`: `id`, `name`, `oceanLat`, `oceanLon` (an open-ocean point off the atoll), and `rimSourceUrl` (the OpenStreetMap way of the atoll outline). An island with no lagoon (Fuvahmulah) uses its coastline way; a narrow island's rim normals cancel across it, so give its pins measured bearings.
 2. Add its outline to `data/rims.json`, keyed by the way id at the end of `rimSourceUrl`:
 
    ```bash
@@ -67,6 +68,7 @@ Interior wrecks and thilas with no pass have no channel axis. Set the direction 
 
    Store the closed ring as `[lat, lon]` pairs, five decimals. Two atolls can share one way, as North and South Ari do.
 3. The test "has a stored rim for every atoll" fails until this is done. The outline is OpenStreetMap data under ODbL.
+4. Rebuild what reads the outlines: `npm run atoll-openings -- --from-tiles --ways WAY_ID` (reef gaps, from the map's Atlas tiles, for a lagoon atoll only), `npm run shoals`, then `npm run shelter-grid`.
 
 ## 5. Site type
 
@@ -103,6 +105,7 @@ Each guide site is matched against the seeded ones: `add`, `match:<id>` (same si
 ## 6. Check
 
 ```bash
+npm run audit-sites   # pins on islands or in the wrong atoll, inverted sample points, a "Kandu" typed lagoon, near-duplicates
 npm test
 npm run lint
 npm run build
