@@ -12,7 +12,7 @@ import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./sh
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
-import { ready } from "./ready";
+import { ready, readyWith } from "./ready";
 import { requireSession } from "./auth";
 import { reportAwards } from "./points";
 import type { ReportAward } from "./points-rules";
@@ -396,7 +396,7 @@ export async function getShelter(
   view: { south: number; west: number; north: number; east: number },
   time?: string,
 ): Promise<ShelterView> {
-  await ready();
+  await readyWith("shelter-grid.json");
   const { south, west, north, east } = view ?? {};
   if (![south, west, north, east].every((value) => typeof value === "number" && Number.isFinite(value))) {
     throw new Error("Bad view");
@@ -414,7 +414,7 @@ export async function getShelterShapes(wayId: string): Promise<{ outline: RimRin
 
 /** The sea state at one tapped spot of the layer. */
 export async function getShelterPoint(lat: number, lon: number, time: string): Promise<SeaStateHour | "unknown" | null> {
-  await ready();
+  await readyWith("shelter-grid.json");
   if (![lat, lon].every((value) => typeof value === "number" && Number.isFinite(value))) throw new Error("Bad point");
   if (typeof time !== "string" || !WALL_HOUR.test(time)) throw new Error("Bad time");
   return shelterPoint(lat, lon, time);
