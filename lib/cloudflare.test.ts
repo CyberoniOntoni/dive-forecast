@@ -317,6 +317,31 @@ describe("on a Cloudflare worker", () => {
     }
   });
 
+  it("stops using the edge copy once a request has spent its Cache API budget", async () => {
+    const edge = fakeEdgeCache();
+    let calls = 0;
+    const counted = {
+      match: (url: string) => (calls++, edge.match(url)),
+      put: (url: string, response: Response) => (calls++, edge.put(url, response)),
+    };
+    vi.stubGlobal("caches", { default: counted });
+    try {
+      const { edgeRead, edgeWrite, EDGE_CALLS_PER_REQUEST } = await import("./edge-cache");
+      const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1(), APP_URL: "https://50bar.app" };
+      newRequest(env);
+      edgeWrite("marine-cache/a", "{}", 60);
+      await Promise.all(background);
+      for (let at = 0; at < EDGE_CALLS_PER_REQUEST + 50; at += 1) await edgeRead("marine-cache/a");
+      expect(calls).toBe(EDGE_CALLS_PER_REQUEST);
+      // A new request has its own budget.
+      newRequest(env);
+      expect(await edgeRead("marine-cache/a")).toBe("{}");
+      expect(calls).toBe(EDGE_CALLS_PER_REQUEST + 1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("does not share in-flight promises between requests", async () => {
     const { perRequest } = await import("./cloudflare");
     const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };

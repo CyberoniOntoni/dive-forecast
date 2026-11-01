@@ -1,4 +1,4 @@
-import { appSetting, runInBackground, workerEnv } from "./cloudflare";
+import { appSetting, perRequest, runInBackground, workerEnv } from "./cloudflare";
 
 /**
  * A copy of R2 objects in the Cloudflare data centre serving the request (the Workers Cache API). The R2 bucket sits in
@@ -22,11 +22,25 @@ function keyOrigin(): string | null {
   return app ? `${app.replace(/\/+$/, "")}/__r2-copy/` : null;
 }
 
-/** The worker's default cache, or null on Node (and anywhere the Cache API is missing). */
+/**
+ * Cache API calls one request may make. Workers Paid allows 1,000 match/put calls per invocation; the map's rebuild of
+ * every site's nowcast reads about 550 series in one request, so past this budget it goes straight to R2 as before.
+ */
+export const EDGE_CALLS_PER_REQUEST = 400;
+const callsThisRequest = perRequest(() => ({ count: 0 }));
+
+/**
+ * The worker's default cache, or null on Node, anywhere the Cache API is missing, and once this request has spent its
+ * EDGE_CALLS_PER_REQUEST. Each non-null answer counts one call.
+ */
 function edgeCache(): EdgeCache | null {
   if (!workerEnv()) return null;
   const caches = (globalThis as { caches?: { default?: EdgeCache } }).caches;
-  return caches?.default ?? null;
+  if (!caches?.default) return null;
+  const calls = callsThisRequest();
+  if (calls.count >= EDGE_CALLS_PER_REQUEST) return null;
+  calls.count += 1;
+  return caches.default;
 }
 
 function keyUrl(key: string): string | null {
@@ -36,8 +50,8 @@ function keyUrl(key: string): string | null {
 
 /** The edge copy of an R2 object's text, or null when there is none (or no Cache API, or it failed). */
 export async function edgeRead(key: string): Promise<string | null> {
-  const cache = edgeCache();
   const url = keyUrl(key);
+  const cache = url ? edgeCache() : null;
   if (!cache || !url) return null;
   try {
     const response = await cache.match(url);
@@ -49,8 +63,8 @@ export async function edgeRead(key: string): Promise<string | null> {
 
 /** Keeps a copy of an R2 object's text at the edge for up to maxAgeSeconds, after the response is sent. */
 export function edgeWrite(key: string, text: string, maxAgeSeconds: number): void {
-  const cache = edgeCache();
   const url = keyUrl(key);
+  const cache = url ? edgeCache() : null;
   if (!cache || !url) return;
   try {
     const response = new Response(text, {
