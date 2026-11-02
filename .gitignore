@@ -61,3 +61,6 @@ next-env.d.ts
 /.open-next/
 /.wrangler/
 .dev.vars*
+
+# site photos added in the app (R2 on Cloudflare)
+/data/photos

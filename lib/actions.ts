@@ -14,10 +14,14 @@ import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { ready, readyWith } from "./ready";
 import { requireSession } from "./auth";
+import { requireSiteDetails, type SiteDetailsInput } from "./site-details";
+import { cleanJpeg, deletePhotoBytes, MAX_PHOTO_BYTES, MAX_PHOTOS_PER_SITE, photoUrl, savePhotoBytes } from "./site-photos";
+import { unstable_rethrow as rethrowIfNextError } from "next/navigation";
 import { reportAwards } from "./points";
 import type { ReportAward } from "./points-rules";
 import {
   addReport as persistReport,
+  addSitePhotoRecord,
   addUserSite,
   findSite,
   listMergedSites,
@@ -39,6 +43,7 @@ import {
   type SeaStateHour,
   type Site,
   type SiteForecast,
+  type SitePhoto,
   type Strength,
 } from "./types";
 
@@ -61,18 +66,91 @@ export async function getSite(id: string): Promise<Site | null> {
   return findSite(id);
 }
 
-export async function addSite(input: { name: string; lat: number; lon: number }): Promise<Site> {
+export type AddSiteInput = SiteDetailsInput & { name: string; lat: number; lon: number; rating?: unknown };
+
+export async function addSite(input: AddSiteInput): Promise<Site> {
   await ready();
   const session = await requireSession();
   const body = requireSiteInput(input);
   const name = requireSiteName(body.name);
   const lat = requireLatitude(body.lat);
   const lon = requireLongitude(body.lon);
+  const details = requireSiteDetails(body);
+  const rating = body.rating == null || body.rating === "" ? null : body.rating;
+  if (rating != null) requireRatingScore(rating as number);
   const atolls = readCatalog().atolls;
   if (atolls.length === 0) throw new Error("No atolls");
 
   const atoll = atollForPin(lat, lon, atolls);
-  return addUserSite({ ...newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID), addedBy: session.userId });
+  const site = await addUserSite({
+    ...newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID),
+    ...details,
+    addedBy: session.userId,
+  });
+  if (rating != null) {
+    await saveRating({ siteId: site.id, score: rating as number, updatedAt: new Date().toISOString(), userId: session.userId });
+  }
+  return site;
+}
+
+export type SiteActionResult = { ok: true; site: Site } | { ok: false; error: string };
+
+/**
+ * addSite for the form: the reason comes back as a value, because a production build hides a thrown action's message.
+ */
+export async function submitSite(input: AddSiteInput): Promise<SiteActionResult> {
+  try {
+    return { ok: true, site: await addSite(input) };
+  } catch (error) {
+    rethrowIfNextError(error);
+    return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not add that site." };
+  }
+}
+
+export type PhotoActionResult = { ok: true; photo: SitePhoto; url: string } | { ok: false; error: string };
+
+/**
+ * Adds one photo (form field "photo", a JPEG the browser already shrank) to a site the signed-in diver added. Only
+ * the adder adds photos for now, up to MAX_PHOTOS_PER_SITE. Camera data (EXIF with GPS) is stripped before saving.
+ */
+export async function addSitePhoto(siteId: string, formData: FormData): Promise<PhotoActionResult> {
+  await ready();
+  try {
+    const session = await requireSession();
+    requireSiteId(siteId);
+    const site = readStore().sites.find((item) => item.id === siteId);
+    if (!site) return { ok: false, error: "Photos can only be added to sites added in the app." };
+    if (site.addedBy !== session.userId) return { ok: false, error: "Only the diver who added this site can add photos." };
+    if ((site.photos?.length ?? 0) >= MAX_PHOTOS_PER_SITE) {
+      return { ok: false, error: `A site can have at most ${MAX_PHOTOS_PER_SITE} photos.` };
+    }
+    const file = formData.get("photo");
+    if (!(file instanceof Blob) || file.size === 0) return { ok: false, error: "Pick a photo." };
+    if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: "That photo is too large." };
+    const clean = cleanJpeg(new Uint8Array(await file.arrayBuffer()));
+    if (!clean) return { ok: false, error: "That photo is not a JPEG." };
+
+    const photo: SitePhoto = { id: crypto.randomUUID(), addedBy: session.userId, addedAt: new Date().toISOString() };
+    await savePhotoBytes(siteId, photo.id, clean);
+    let saved = false;
+    try {
+      saved = await addSitePhotoRecord(siteId, photo, MAX_PHOTOS_PER_SITE);
+    } finally {
+      if (!saved) await deletePhotoBytes(siteId, photo.id);
+    }
+    if (!saved) return { ok: false, error: `A site can have at most ${MAX_PHOTOS_PER_SITE} photos.` };
+    return { ok: true, photo, url: photoUrl(siteId, photo.id) };
+  } catch (error) {
+    rethrowIfNextError(error);
+    return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not save the photo." };
+  }
+}
+
+/** The nickname of the diver who added a site, or null. */
+export async function siteAdderNickname(site: Site): Promise<string | null> {
+  await ready();
+  if (!site.addedBy) return null;
+  return readStore().users.find((user) => user.id === site.addedBy)?.nickname ?? null;
 }
 
 /** A site's ratings: the mean of every diver's, how many there are, and the signed-in diver's own. */
@@ -299,9 +377,9 @@ function newUserSite(name: string, lat: number, lon: number, atollId: string): S
   };
 }
 
-function requireSiteInput(input: unknown): { name: unknown; lat: unknown; lon: unknown } {
+function requireSiteInput(input: unknown): SiteDetailsInput & { name: unknown; lat: unknown; lon: unknown; rating?: unknown } {
   if (input === null || typeof input !== "object") throw new Error("Site is required");
-  return input as { name: unknown; lat: unknown; lon: unknown };
+  return input as SiteDetailsInput & { name: unknown; lat: unknown; lon: unknown; rating?: unknown };
 }
 
 function requireReportInput(input: unknown): {

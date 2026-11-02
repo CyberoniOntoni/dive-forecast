@@ -5,14 +5,16 @@ import { Attribution } from "@/components/Attribution";
 import { HourSlider } from "@/components/HourSlider";
 import { RatingForm } from "@/components/RatingForm";
 import { RecentReports } from "@/components/RecentReports";
+import { SiteAbout } from "@/components/SiteAbout";
 import { ReportForm } from "@/components/ReportForm";
 import { NavigateIcon } from "@/components/site-ui";
-import { forecastSite, getRating, getRecentReports, getSite } from "@/lib/actions";
+import { forecastSite, getRating, getRecentReports, getSite, siteAdderNickname } from "@/lib/actions";
 import { currentSession } from "@/lib/auth";
 import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
+import { DIVER_SITE_TYPE_LABEL } from "@/lib/site-details";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
 import { currentWallHour, timeZoneForSite } from "@/lib/site-time";
 import { readCatalog } from "@/lib/store";
@@ -42,7 +44,11 @@ export default async function SitePage({
   if (!site) notFound();
 
   const session = await currentSession();
-  const [forecast, rating] = await Promise.all([forecastSite(site.id), getRating(site.id, session?.userId ?? null)]);
+  const [forecast, rating, adderNickname] = await Promise.all([
+    forecastSite(site.id),
+    getRating(site.id, session?.userId ?? null),
+    siteAdderNickname(site),
+  ]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
   const recent = await getRecentReports(site.id, forecast.forecastRoute);
   // Reports are entered in the site's own country's time, whatever the diver's clock says.
@@ -94,6 +100,11 @@ export default async function SitePage({
         seaState={forecast.seaState}
         seaStale={forecast.seaStale}
       />
+      <SiteAbout
+        site={site}
+        adderNickname={adderNickname}
+        isAdder={session != null && site.sourceUrl === "user" && site.addedBy === session.userId}
+      />
       <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">
         <ReportForm
@@ -131,7 +142,7 @@ function SiteFacts({ site }: { site: Site }) {
   const atoll = atollNamesById(readCatalog().atolls)[site.atollId];
   const line = publishedLine(site);
   const placed = site.pinPlacement === "imagery" ? "position approximate" : null;
-  const parts = [site.siteType ? SITE_TYPE_LABEL[site.siteType] : null, atoll ?? null, line ? line.text : null, placed].filter(
+  const parts = [kindLabel(site), atoll ?? null, line ? line.text : null, placed].filter(
     (part): part is string => part != null,
   );
   if (parts.length === 0) return null;
@@ -155,6 +166,13 @@ function SiteFacts({ site }: { site: Site }) {
       ))}
     </p>
   );
+}
+
+/** The forecast's site type; on an app-added pin with none, the kind its diver picked, marked as theirs. */
+function kindLabel(site: Site): string | null {
+  if (site.siteType) return SITE_TYPE_LABEL[site.siteType];
+  if (site.diverSiteType) return `${DIVER_SITE_TYPE_LABEL[site.diverSiteType]} (diver's pick)`;
+  return null;
 }
 
 type SourceLink = { href: string; label: string };

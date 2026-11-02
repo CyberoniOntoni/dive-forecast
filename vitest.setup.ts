@@ -7,6 +7,7 @@ import { afterAll } from "vitest";
 // Each test file gets its own empty cache directory and a fetch that fails unless a test replaces it.
 const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "dive-marine-"));
 process.env.MARINE_CACHE_DIR = cacheDir;
+process.env.SITE_PHOTO_DIR = path.join(cacheDir, "photos");
 
 globalThis.fetch = (() => Promise.reject(new Error("Network is disabled in tests"))) as typeof fetch;
 

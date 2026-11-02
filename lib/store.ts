@@ -10,6 +10,7 @@ import {
   type Rating,
   type Report,
   type Site,
+  type SitePhoto,
   type StoreData,
 } from "./types";
 
@@ -110,6 +111,21 @@ export async function addUserSite(site: Site): Promise<Site> {
     if (store.sites.some((existing) => existing.id === site.id)) return site;
     store.sites.push(site);
     return site;
+  });
+}
+
+/**
+ * Adds a photo record to an app-added site, if the site still has room. Returns false (nothing changed) when the
+ * site is not an app-added pin or already has `max` photos.
+ */
+export async function addSitePhotoRecord(siteId: string, photo: SitePhoto, max: number): Promise<boolean> {
+  return mutateStore((store) => {
+    const site = store.sites.find((item) => item.id === siteId);
+    if (!site) return false;
+    const photos = site.photos ?? [];
+    if (photos.length >= max) return false;
+    site.photos = [...photos, photo];
+    return true;
   });
 }
 
