@@ -178,8 +178,9 @@ function kindLabel(site: Site): string | null {
 type SourceLink = { href: string; label: string };
 
 function publishedLine(site: Site): { text: string; sources: SourceLink[] } | null {
-  const top = positiveMetres(site.diveTopM);
-  const max = positiveMetres(site.diveMaxM);
+  // A dive can start at the surface, so 0 m is a depth here; a channel cannot be 0 m wide or deep.
+  const top = nonNegativeMetres(site.diveTopM);
+  const max = nonNegativeMetres(site.diveMaxM);
   const width = positiveMetres(site.channelWidthM);
   const channelDepth = positiveMetres(site.channelDepthM);
   const phrases = [depthPhrase(top, max), channelPhrase(width, channelDepth, site.channelDepthKind)].filter(
@@ -236,6 +237,11 @@ function publishedSources(hasDiveDepth: boolean, hasChannel: boolean, site: Site
     { href: channelHref, label: "Channel" },
   ];
 }
+function nonNegativeMetres(value: number | undefined): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  return value;
+}
+
 function positiveMetres(value: number | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   return value;

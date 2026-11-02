@@ -23,14 +23,11 @@ export const DIVER_SITE_TYPES: readonly { type: SiteType; label: string; hint: s
   { type: "lagoon", label: "Inside the lagoon", hint: "A thila, giri or reef inside the atoll" },
 ];
 
-export const DIVER_SITE_TYPE_LABEL: Record<SiteType, string> = {
-  pass: "Channel (kandu)",
-  "channel-thila": "Thila in a channel",
-  corner: "Channel corner",
-  "outer-reef": "Outer reef wall",
-  lagoon: "Inside the lagoon",
+/** Every site type in divers' words: the form's own labels, plus the owner-set strait wall. */
+export const DIVER_SITE_TYPE_LABEL = {
+  ...Object.fromEntries(DIVER_SITE_TYPES.map((option) => [option.type, option.label])),
   "strait-wall": "Strait wall",
-};
+} as Record<SiteType, string>;
 
 /** Deeper than any recreational or technical site in the catalog; a typo, not a dive. */
 export const MAX_DIVE_DEPTH_M = 100;

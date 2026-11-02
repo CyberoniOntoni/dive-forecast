@@ -24,10 +24,16 @@ function fakeBucket(): FakeBucket {
     objects,
     async get(key) {
       const object = objects.get(key);
-      return object ? { text: async () => object.text } : null;
+      return object
+        ? { text: async () => object.text, arrayBuffer: async () => new TextEncoder().encode(object.text).buffer }
+        : null;
     },
     async put(key, value) {
-      objects.set(key, { text: value });
+      objects.set(key, { text: typeof value === "string" ? value : new TextDecoder().decode(value) });
+      return {};
+    },
+    async delete(key) {
+      objects.delete(key);
       return {};
     },
   };

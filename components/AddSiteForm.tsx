@@ -7,6 +7,7 @@ import { submitSite } from "@/lib/actions";
 import { DIVER_SITE_TYPES, HOW_TO_DIVE_MAX, MAX_DIVE_DEPTH_M } from "@/lib/site-details";
 import { MAX_PHOTOS_PER_SITE } from "@/lib/site-photos-limits";
 import { signInHref } from "@/lib/sign-in";
+import { ScoreButtons } from "./ScoreButtons";
 import { PhotoPicker, uploadPhotos, type PickedPhoto } from "./PhotoPicker";
 
 type Point = { lat: number; lon: number };
@@ -214,24 +215,11 @@ export function AddSiteForm({
         <span className="text-sm font-medium" id="site-rating-label">
           Your rating <span className="font-normal text-foam/70">· optional</span>
         </span>
-        <div className="flex gap-2" role="group" aria-labelledby="site-rating-label">
-          {[1, 2, 3, 4, 5].map((value) => {
-            const selected = rating === value;
-            return (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => setRating(selected ? null : value)}
-                className={`min-h-11 flex-1 rounded-xl border text-base font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming ${
-                  selected ? "border-foam bg-foam text-ink" : "border-foam/20 bg-ink text-foam"
-                }`}
-              >
-                {value}
-              </button>
-            );
-          })}
-        </div>
+        <ScoreButtons
+          selected={rating}
+          onPick={(value) => setRating(rating === value ? null : value)}
+          labelledBy="site-rating-label"
+        />
       </div>
       <PhotoPicker photos={photos} onChange={setPhotos} max={MAX_PHOTOS_PER_SITE} disabled={pending} />
       {error ? <p className="text-sm text-outgoing">{error}</p> : null}

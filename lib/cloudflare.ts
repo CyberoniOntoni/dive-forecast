@@ -2,8 +2,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * The bindings in wrangler.jsonc. ASSETS serves the built static files, which include the read-only data files
- * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding the Open-Meteo cache (and the old
- * store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts. EMAIL is
+ * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding the Open-Meteo cache, map nowcasts and
+ * site photos (and the old store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts. EMAIL is
  * Cloudflare Email Sending, for the sign-in email (lib/email.ts).
  */
 export type WorkerEnv = {
@@ -35,11 +35,18 @@ export type D1PreparedStatement = {
   first: <T = Record<string, unknown>>() => Promise<T | null>;
 };
 
-/** The subset of Cloudflare's R2 binding this app uses. */
+/** The subset of Cloudflare's R2 binding this app uses: text objects (caches) and binary ones (site photos). */
 export type R2Bucket = {
-  get: (key: string) => Promise<{ text: () => Promise<string> } | null>;
-  put: (key: string, value: string) => Promise<unknown>;
+  get: (key: string) => Promise<R2ObjectBody | null>;
+  put: (
+    key: string,
+    value: string | Uint8Array,
+    options?: { httpMetadata?: { contentType?: string } },
+  ) => Promise<unknown>;
+  delete: (key: string) => Promise<unknown>;
 };
+
+export type R2ObjectBody = { text: () => Promise<string>; arrayBuffer: () => Promise<ArrayBuffer> };
 
 type Context = { env: WorkerEnv; ctx: { waitUntil: (promise: Promise<unknown>) => void } };
 

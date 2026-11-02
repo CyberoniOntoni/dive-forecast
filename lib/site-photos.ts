@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
-import { workerEnv } from "./cloudflare";
+import { workerEnv, type R2Bucket } from "./cloudflare";
 
 /**
  * Dive-site photos. The browser shrinks each picked photo to PHOTO_LONG_EDGE_PX and re-encodes it as JPEG before it
@@ -33,16 +33,8 @@ function photoDir(): string {
   return process.env.SITE_PHOTO_DIR || path.join(process.cwd(), "data", "photos");
 }
 
-/** The slice of R2 this module needs; lib/cloudflare.ts's R2Bucket only carries text. */
-type BinaryBucket = {
-  get: (key: string) => Promise<{ arrayBuffer: () => Promise<ArrayBuffer> } | null>;
-  put: (key: string, value: Uint8Array, options?: { httpMetadata?: { contentType?: string } }) => Promise<unknown>;
-  delete?: (key: string) => Promise<unknown>;
-};
-
-function bucket(): BinaryBucket | null {
-  const env = workerEnv();
-  return env ? (env.DATA as unknown as BinaryBucket) : null;
+function bucket(): R2Bucket | null {
+  return workerEnv()?.DATA ?? null;
 }
 
 export async function savePhotoBytes(siteId: string, photoId: string, bytes: Uint8Array): Promise<void> {
@@ -79,7 +71,7 @@ export async function deletePhotoBytes(siteId: string, photoId: string): Promise
   const key = objectKey(siteId, photoId);
   const r2 = bucket();
   try {
-    if (r2) await r2.delete?.(key);
+    if (r2) await r2.delete(key);
     else await fs.rm(path.join(photoDir(), siteId, `${photoId}.jpg`), { force: true });
   } catch {
     // Left behind; nothing links to it.

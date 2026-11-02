@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { requireSiteDetails } from "./site-details";
+import { DIVER_SITE_TYPES, DIVER_SITE_TYPE_LABEL, requireSiteDetails } from "./site-details";
+import { SITE_TYPES } from "./types";
 
 describe("requireSiteDetails", () => {
   it("keeps a picked type, depths and notes", () => {
@@ -29,4 +30,15 @@ describe("requireSiteDetails", () => {
     expect(requireSiteDetails({ howToDive: "a\u0000b\u0007c" }).howToDive).toBe("abc");
     expect(() => requireSiteDetails({ howToDive: 12 })).toThrow(/text/);
   });
+});
+
+describe("DIVER_SITE_TYPE_LABEL", () => {
+  it("has a label for every site type, the form's own for the ones it offers", () => {
+    for (const type of SITE_TYPES) expect(DIVER_SITE_TYPE_LABEL[type]).toBeTruthy();
+    for (const option of DIVER_SITE_TYPES) expect(DIVER_SITE_TYPE_LABEL[option.type]).toBe(option.label);
+  });
+});
+
+it("keeps a dive that starts at the surface", () => {
+  expect(requireSiteDetails({ diveTopM: 0, diveMaxM: 12 })).toEqual({ diveTopM: 0, diveMaxM: 12 });
 });
