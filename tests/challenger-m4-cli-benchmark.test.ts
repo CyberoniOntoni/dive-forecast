@@ -12,10 +12,10 @@ import {
 import { replayReports } from "../lib/replay";
 import type { Report, MarineHour } from "../lib/types";
 
-const VITE_NODE_BIN = path.resolve(process.cwd(), "node_modules", "vite-node", "vite-node.mjs");
+const TSX_BIN = path.resolve(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
 
 function runCliSubprocess(scriptPath: string, args: string[]) {
-  return cp.spawnSync(process.execPath, [VITE_NODE_BIN, scriptPath, ...args], {
+  return cp.spawnSync(process.execPath, [TSX_BIN, scriptPath, ...args], {
     cwd: process.cwd(),
     encoding: "utf8",
     timeout: 15000,

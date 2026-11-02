@@ -49,7 +49,10 @@ npm run d1:export     # the live D1 store as data/store.json (for verify, replay
 3. **Worker from GitHub:** Workers & Pages → Create → Import a repository → `CyberoniOntoni/dive-forecast` (the worker is named `dive-forecast`, matching `wrangler.jsonc`).
    - Build command: `npm run replay && npm run cf:build`
    - Deploy command: `npx wrangler deploy`
-   - Non-production branch deploy command: `npx wrangler versions upload` (each branch gets a preview URL)
+   - Non-production branch deploy command: `npx wrangler preview` (each PR branch gets a preview URL). It reads only
+     the `previews` block in `wrangler.jsonc`, which points at a separate D1 database `dive-forecast-preview` and R2
+     bucket `dive-current-data-preview`, so previews start empty and never write to the live data. Without that block
+     the command fails at the end of every PR build. A binding added at the top level needs a preview copy there too.
    - Production branch: `main`
 4. The worker is then live at `dive-forecast.<your-subdomain>.workers.dev`. To use your domain, open the worker →
    Settings → Domains & Routes → Add → Custom domain (the live site is `50bar.app`). The domain's DNS must be on

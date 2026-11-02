@@ -48,5 +48,26 @@
   },
   "observability": {
     "enabled": true
+  },
+  // PR branch builds run `wrangler preview` (Workers Builds' non-production deploy command), which uses only this block
+  // for bindings and settings. Previews get their own empty database and bucket so test reports, sign-ins and cache
+  // writes never reach the live site. No APP_URL (a preview has no fixed address) and no AUTH_SECRET, so signing in
+  // says it is not set up there; reading works.
+  "previews": {
+    "r2_buckets": [{ "binding": "DATA", "bucket_name": "dive-current-data-preview" }],
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "dive-forecast-preview",
+        "database_id": "edae9e32-8eec-4ae0-9307-f666f2b9718f"
+      }
+    ],
+    "send_email": [{ "name": "EMAIL", "allowed_sender_addresses": ["login@50bar.app"] }],
+    "vars": {
+      "EMAIL_FROM": "login@50bar.app",
+      "MAILGUN_DOMAIN": "mailgun.50bar.app"
+    },
+    "limits": { "cpu_ms": 30000 },
+    "observability": { "enabled": true }
   }
 }
