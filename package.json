@@ -2,6 +2,9 @@
   "name": "dive-current",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -57,6 +60,7 @@
     "pbf": "^4.0.2",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vite": "^7.3.7",
     "vite-node": "^3.2.4",
     "vitest": "^5.0.5",
     "wrangler": "^4.156.0"
