@@ -58,9 +58,9 @@ export type Site = {
   sourceUrl: string;
   /** On a pin added in the app ("user" source): the diver who added it (User.id). */
   addedBy?: string;
-  /** Published dive top, metres. Display only; never a speed input. */
+  /** Dive top, metres: published, or set by the diver who added the pin (no depthSourceUrl). Display only; never a speed input. */
   diveTopM?: number;
-  /** Published dive maximum, metres. Display only; never a speed input. */
+  /** Dive maximum, metres: published, or set by the diver who added the pin. Display only; never a speed input. */
   diveMaxM?: number;
   /** Source for the published dive top and maximum. */
   depthSourceUrl?: string;
@@ -112,7 +112,19 @@ export type Site = {
   pinPlacement?: "imagery";
   /** Where an imagery-placed pin was put, and any other spot it could be. */
   pinNote?: string;
+  /**
+   * On a pin added in the app: the kind of site the diver who added it said it is. Display only: the forecast routes
+   * on siteType, which a diver's pick never sets (lib/site-details.ts).
+   */
+  diverSiteType?: SiteType;
+  /** On a pin added in the app: the adder's plain-text notes on how to dive it (entry, route, hazards). */
+  howToDive?: string;
+  /** Photos of the site, oldest first (lib/site-photos.ts). */
+  photos?: SitePhoto[];
 };
+
+/** A photo of a dive site. The JPEG itself is in R2 (or data/photos on Node) under the site and photo ids. */
+export type SitePhoto = { id: string; addedBy: string; addedAt: string };
 
 /** Where a resolved bearing came from. */
 export type BearingSource = "override" | "rim-derived" | "fallback";

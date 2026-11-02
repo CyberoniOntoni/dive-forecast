@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addReportAction, addSite, getRating, rateSite } from "./actions";
+import { addReport, addReportAction, addSite, addSitePhoto, getRating, rateSite, submitSite } from "./actions";
 import { authSecret, SESSION_COOKIE } from "./auth";
 import { signSession } from "./session-token";
 import { inwardBearingDeg } from "./bearing";
@@ -9,7 +9,8 @@ import { FORECAST_MODEL_VERSION } from "./forecast";
 import { marineCacheDir, seawardPoint } from "./marine";
 import { seawardKmFor } from "./seaward-floor";
 import { rimForAtoll } from "./rim";
-import { readCatalog, setStorePath } from "./store";
+import { findSite, readCatalog, setStorePath } from "./store";
+import { readPhotoBytes } from "./site-photos";
 import { UNSEEDED_ATOLL_ID } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -97,6 +98,83 @@ describe("addSite atoll matching", () => {
     // Haa Alif Atoll: over 100 km from Raa, the nearest seeded atoll.
     const site = await addSite({ name: "Haa Alif Test", lat: 6.95, lon: 72.95 });
     expect(site.atollId).toBe(UNSEEDED_ATOLL_ID);
+  });
+});
+
+/** The smallest byte string cleanJpeg takes, with an EXIF segment for it to drop. */
+function tinyJpeg(): Uint8Array {
+  return new Uint8Array([
+    0xff, 0xd8,
+    0xff, 0xe1, 0x00, 0x06, 0x45, 0x78, 0x69, 0x66,
+    0xff, 0xc0, 0x00, 0x0b, 8, 0, 1, 0, 1, 1, 1, 0x11, 0,
+    0xff, 0xda, 0x00, 0x08, 1, 1, 0, 0, 0x3f, 0,
+    0x12, 0x34,
+    0xff, 0xd9,
+  ]);
+}
+
+function photoForm(bytes: Uint8Array = tinyJpeg()): FormData {
+  const form = new FormData();
+  form.append("photo", new Blob([bytes as BlobPart], { type: "image/jpeg" }), "photo.jpg");
+  return form;
+}
+
+describe("addSite details", () => {
+  it("saves the diver's kind, depths and notes on the pin, and their rating, without setting the forecast's type", async () => {
+    const site = await addSite({
+      name: "Detail Thila",
+      lat: 4.2342,
+      lon: 73.534,
+      diverSiteType: "lagoon",
+      diveTopM: "8",
+      diveMaxM: "24",
+      howToDive: "Drop on the north side.",
+      rating: 4,
+    });
+    expect(site).toMatchObject({ diverSiteType: "lagoon", diveTopM: 8, diveMaxM: 24, howToDive: "Drop on the north side." });
+    expect(site.siteType).toBeUndefined();
+    expect(findSite(site.id)?.howToDive).toBe("Drop on the north side.");
+    expect(await getRating(site.id, "diver-1")).toEqual({ average: 4, count: 1, mine: 4 });
+  });
+
+  it("saves nothing when a detail or the rating is bad, and submitSite says why", async () => {
+    const result = await submitSite({ name: "Bad Depth", lat: 4.2342, lon: 73.534, diveTopM: 30, diveMaxM: 10 });
+    expect(result).toEqual({ ok: false, error: expect.stringMatching(/shallowest/) });
+    await expect(addSite({ name: "Bad Rating", lat: 4.2342, lon: 73.534, rating: 6 })).rejects.toThrow(/Rating/);
+    expect(readStoreSites()).toEqual([]);
+  });
+});
+
+function readStoreSites(): unknown[] {
+  const file = path.join(DATA_DIR, testFile);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")).sites : [];
+}
+
+describe("addSitePhoto", () => {
+  it("saves a JPEG for the adder without its EXIF, and lists it on the site", async () => {
+    const site = await addSite({ name: "Photo Reef", lat: 4.2342, lon: 73.534 });
+    const result = await addSitePhoto(site.id, photoForm());
+    if (!result.ok) throw new Error(result.error);
+    expect(result.url).toBe(`/site-photos/${site.id}/${result.photo.id}.jpg`);
+    expect(findSite(site.id)?.photos).toEqual([result.photo]);
+    const saved = await readPhotoBytes(site.id, result.photo.id);
+    expect(saved?.length).toBe(tinyJpeg().length - 8);
+  });
+
+  it("refuses another diver, a catalog site, a non-JPEG and a seventh photo", async () => {
+    const site = await addSite({ name: "Busy Reef", lat: 4.2342, lon: 73.534 });
+    expect(await addSitePhoto(site.id, photoForm(new Uint8Array([0x89, 0x50, 0x4e, 0x47])))).toEqual({
+      ok: false,
+      error: "That photo is not a JPEG.",
+    });
+    const catalogId = readCatalog().sites[0].id;
+    expect((await addSitePhoto(catalogId, photoForm())).ok).toBe(false);
+    for (let index = 0; index < 6; index += 1) expect((await addSitePhoto(site.id, photoForm())).ok).toBe(true);
+    expect(await addSitePhoto(site.id, photoForm())).toEqual({ ok: false, error: "A site can have at most 6 photos." });
+
+    await signInAs("diver-2");
+    const other = await addSitePhoto(site.id, photoForm());
+    expect(other).toEqual({ ok: false, error: "Only the diver who added this site can add photos." });
   });
 });
 

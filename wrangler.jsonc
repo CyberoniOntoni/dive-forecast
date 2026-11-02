@@ -11,7 +11,7 @@
   },
   "r2_buckets": [
     {
-      // The Open-Meteo cache (marine-cache/...) and map nowcasts. Also the old store.json, copied into D1 once and kept
+      // The Open-Meteo cache (marine-cache/...), map nowcasts and divers' site photos (site-photos/...). Also the old store.json, copied into D1 once and kept
       // as a backup. lib/cloudflare.ts.
       "binding": "DATA",
       "bucket_name": "dive-current-data"
