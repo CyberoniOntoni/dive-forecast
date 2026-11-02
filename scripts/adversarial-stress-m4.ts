@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import cp from "child_process";
 
-const VITE_NODE = path.resolve(process.cwd(), "node_modules", "vite-node", "vite-node.mjs");
+const TSX = path.resolve(process.cwd(), "node_modules", "tsx", "dist", "cli.mjs");
 const REPLAY_JSON = path.resolve(process.cwd(), "data", "replay.json");
 const BENCH_JSON = path.resolve(process.cwd(), "data", "benchmark-results.json");
 
@@ -23,7 +23,7 @@ console.log("===================================================================
 
 // 1. Prime canonical artifacts
 console.log("\n[Setup] Priming canonical benchmark artifacts via scripts/benchmark.ts...");
-const primeRes = cp.spawnSync(process.execPath, [VITE_NODE, "scripts/benchmark.ts"], {
+const primeRes = cp.spawnSync(process.execPath, [TSX, "scripts/benchmark.ts"], {
   cwd: process.cwd(),
   encoding: "utf8",
   timeout: 15000,
@@ -210,7 +210,7 @@ for (const tc of testCases) {
   const preBenchMtime = mtime(BENCH_JSON);
 
   const tStart = Date.now();
-  const res = cp.spawnSync(process.execPath, [VITE_NODE, tc.script, ...tc.args], {
+  const res = cp.spawnSync(process.execPath, [TSX, tc.script, ...tc.args], {
     cwd: process.cwd(),
     encoding: "utf8",
     timeout: 15000,
@@ -278,7 +278,7 @@ for (const tc of testCases) {
   const statusLabel = passed ? "PASS" : "FAIL";
   const summaryLine = `[${statusLabel}] #${tc.id.toString().padStart(2, "0")} ${tc.name} (${durationMs}ms)`;
   console.log(`\n${summaryLine}`);
-  console.log(`  Command: vite-node ${tc.script} ${tc.args.join(" ")}`);
+  console.log(`  Command: tsx ${tc.script} ${tc.args.join(" ")}`);
   console.log(`  Exit code: ${res.status} (expected ${tc.expectedCode}) -> ${codeMatch ? "OK" : "FAILED"}`);
   if (tc.expectedStderr) {
     console.log(`  Stderr check: ${stderrMatch ? "OK" : "FAILED"} -> "${res.stderr.trim()}"`);
@@ -313,7 +313,7 @@ for (const tc of testCases) {
   }
 
   testDetails.push(
-    `| ${tc.id} | ${tc.name} | vite-node ${tc.script} ${tc.args.join(" ")} | ${tc.expectedCode} | ${res.status} | ${passed ? "PASS" : "FAIL"} |`,
+    `| ${tc.id} | ${tc.name} | tsx ${tc.script} ${tc.args.join(" ")} | ${tc.expectedCode} | ${res.status} | ${passed ? "PASS" : "FAIL"} |`,
   );
 }
 
@@ -324,7 +324,7 @@ if (fs.existsSync(emptyDatasetPath)) {
 
 // Restore canonical benchmark artifacts
 console.log("\n[Teardown] Re-running canonical benchmark to ensure pristine artifacts...");
-const restoreRes = cp.spawnSync(process.execPath, [VITE_NODE, "scripts/benchmark.ts"], {
+const restoreRes = cp.spawnSync(process.execPath, [TSX, "scripts/benchmark.ts"], {
   cwd: process.cwd(),
   encoding: "utf8",
   timeout: 15000,

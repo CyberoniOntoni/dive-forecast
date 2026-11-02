@@ -162,7 +162,7 @@ function cellCount(layer: ShelterLayerGrid): number {
 /** Builds one atoll in a child process, writing its grid to `out`. */
 function runChild(wayId: string, out: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [process.argv[1], __filename, "--atoll", wayId, "--out", out], {
+    const child = spawn(process.execPath, [...process.execArgv, __filename, "--atoll", wayId, "--out", out], {
       stdio: "inherit",
     });
     child.on("error", reject);
