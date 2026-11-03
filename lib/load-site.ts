@@ -14,7 +14,8 @@ import {
   sectionInput,
   throughflowAt,
 } from "./forecast";
-import { channelSource, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
+import { applyAxisReports } from "./axis-reports";
+import { channelSource, channelWeights, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
 import { crossesRim, siteRoute } from "./site-type";
 import { marineSeriesStale, siteMarineHours, type FetchOptions } from "./marine";
 import { seawardKmFor } from "./seaward-floor";
@@ -96,14 +97,16 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
     const channels = mates.filter(
       (mate) => mate.atollId === atoll.id && crossesRim(mate, mates),
     );
+    // Dive sites in one channel share its weight, so a channel counts once however many pins it has.
+    const weights = channelWeights(channels);
     const fetched = await Promise.all(
-      channels.map(async (channel) => {
+      channels.map(async (channel, index) => {
         const { deg } = resolveBearing(channel, mates, outside, rim);
         const marine = await siteMarineHours(channel.lat, channel.lon, deg, outside.lat, outside.lon, {
           ...options,
           seawardKm: seawardKmFor(channel.id),
         });
-        if (marine.ok) return channelSource(channel, marine.hours, deg, ring.level);
+        if (marine.ok) return channelSource(channel, marine.hours, deg, ring.level, weights[index]);
         if (marine.pending) pending = true;
         return null;
       }),
@@ -234,16 +237,20 @@ export async function loadSite(
     fetchedAt: marine.fetchedAt,
   });
   const axis = route.axisDeg;
+  // Reports pull the stream at walls, the strait and lagoon sites too (lib/axis-reports.ts), read along today's axis.
+  // A strait or lagoon report is read only by the heading saved with it; a wall's can also fall back on its bearing.
+  const onAxis = (hours: HourForecast[], axisDeg: number, kind: "wall" | "lagoon") =>
+    applyAxisReports(hours, reports, (report) => alongReportDirection(report, axisDeg, kind));
   if (route.route === "strait" && axis != null) {
-    return loaded("strait", axis, straitHours({ hours: marine.hours, axisDeg: axis }));
+    return loaded("strait", axis, onAxis(straitHours({ hours: marine.hours, axisDeg: axis }), axis, "lagoon"));
   }
-  // Along the reef the stream comes from the ocean model alone: no reports, no channel section.
+  // Along the reef the stream comes from the ocean model alone: no channel section.
   if (route.route === "along-reef" && axis != null) {
-    return loaded("along-reef", axis, alongReefHours({ hours: marine.hours, alongHeadingDeg: axis }));
+    return loaded("along-reef", axis, onAxis(alongReefHours({ hours: marine.hours, alongHeadingDeg: axis }), axis, "wall"));
   }
   if (route.route === "lagoon" && atoll) {
     const lagoon = await lagoonLoad(site, mates, atoll, marine.hours, options);
-    if (lagoon) return loaded("lagoon", lagoon.axisDeg, lagoon.hours);
+    if (lagoon) return loaded("lagoon", lagoon.axisDeg, onAxis(lagoon.hours, lagoon.axisDeg, "lagoon"));
   }
   // A channel, or a lagoon site whose atoll has no outline or ring yet. Inside the lagoon it is never that sure.
   const allowHigh = replayAllowsHigh() && route.route !== "lagoon";

@@ -115,7 +115,7 @@ Over 99 days of ocean data (1 Jul – 7 Oct 2026):
   | very strong | 1.3 and above |
 
   Very strong is reached on 4 % of wall-days.
-- **Confidence** is always low, and reports do not pull it yet.
+- **Confidence** is low, or medium with reports (see "Reports at walls, the strait and the lagoon").
 
 ## Through the strait: Vaadhoo Kandu walls
 
@@ -150,7 +150,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
   - The walls run east 93 % of hours, and west on 23 % of mid-ebb hours.
   - Neap days peak at about 0.76 m/s and spring days at 1.19 m/s (p90 1.39).
   - 16 % of days reach very strong.
-- **Confidence** is always low.
+- **Confidence** is low, or medium with reports (see "Reports at walls, the strait and the lagoon").
 
 ## Lagoon flow
 
@@ -158,7 +158,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 
 - **Openings:**
   - The porous rim: the 12 ring points on the outline plus the midpoints between them, each standing for its share of the perimeter. Each opening's flow `q` is the channel model's `S_net` there, along the outline's inward normal.
-  - Each across-rim dive site in the atoll, with its own `S_net` and a weight of `CHANNEL_WEIGHT_KM = 2` km.
+  - Each across-rim dive site in the atoll, with its own `S_net` and a weight of `CHANNEL_WEIGHT_KM = 2` km per channel. Dive sites chained within `SAME_CHANNEL_KM = 0.5` km of each other are one channel and split its 2 km evenly (`channelWeights`, since model 22), so a channel with a pass, a thila and a corner pinned in it counts once. In the catalog that is 14 pins in 6 channels: Kandooma (Thila, Caves, Cocoa Corner), Embudhoo (Express, Thila), Guraidhoo (Lhosfushi Kandu, Medhu Faru, Guraidhoo Corner), Furana (North, Thila) and the Fushifaru pairs. Every catalog pair within 0.5 km is in one channel; from about 0.8 km neighbouring kandus start to pair up (Felidhoo and Keyodhoo, 0.99 km).
   - `data/openings.json`, when present, is a catalog of mouths walked around the reef crest of each atoll, including mouths with no dive site. The outline is only used to assign crest to an atoll. The width is the straight distance between crest shoulders, measured on the Atlas GeoPackage, except rows tagged `fromTiles` (Thaa, Laamu, Huvadhoo), which were walked on the map's simplified Atlas tiles and are coarser until the GeoPackage walk is rerun. A mouth that reef flat still bridges is marked and kept. The lagoon model does not read the file. A mouth has no depth and is not a channel section.
 - **The current at a site** is each opening's exchange spreading from it (running in) or drawing toward it (running out), as a 2-D source:
 
@@ -180,7 +180,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
   | very strong | 0.55 and above |
 
   Lagoon hours are 18 % strong, against 44 % for channels, and 2 % of lagoon-days reach very strong.
-- **Confidence** is always low.
+- **Confidence** is low, or medium with reports (see "Reports at walls, the strait and the lagoon").
 - **Fallback:** an atoll with no outline or ring data keeps the channel model. On the fallback, a report filed on the lagoon axis is read against the inward bearing: kept, or flipped when its axis pointed more than 90° from it.
 
 ## Sea state
@@ -214,7 +214,13 @@ At channels, reports teach the forecast (`lib/forecast.ts`):
 - **Decay.** Every report is weighted by 2^(−age / 90 days). A slack report says how strong but casts no direction vote.
 - **No saved tide.** A report whose tide could not be fetched when it was filed has no slopes. Inside the current series it still pulls and can block high confidence, but it never trains the phase lag or speed factor. Outside the series it is ignored.
 
-**Confidence** (`confidenceFor`):
+**Reports at walls, the strait and the lagoon** (`lib/axis-reports.ts`, since model 22). These forecasts are a signed stream along an axis, not the channel's tide slope, so the channel's phase and speed fits, which read stored slope windows, do not apply. Each report is read along today's axis (`alongReportDirection`: a wall's by its saved heading or, failing that, its saved bearing; a strait or lagoon report by its saved heading only). Only reports inside the current series count, since the stream at a report's hour is not saved with it.
+
+- **Pull.** As at channels: the next 6 hours, fading, 60 % of the weight for direction, stopping where the model turns; strength moves by how far the report was from the model's band at its own hour, so a report that agrees changes nothing. A slack report pulls strength but casts no direction vote.
+- **Confidence.** Never high. Medium when at least two reports fall on hours the model ran the same way as this hour, at least 80 % of their weight saw the direction the model gave at their own hour, and no report within 3 hours says otherwise.
+- The replay reads wall reports the same way, each against the earlier ones.
+
+**Confidence** at channels (`confidenceFor`):
 
 | Confidence | Requires |
 |---|---|
@@ -223,7 +229,7 @@ At channels, reports teach the forecast (`lib/forecast.ts`):
 | low | anything else |
 
 High is also blocked:
-- inside the lagoon and at walls;
+- inside the lagoon, at walls and at strait walls;
 - while the benchmark replay fails (`data/replay.json` `ok: false`).
 
 **Scoring.** `npm run verify` scores saved predictions against reports, grouped by model version. Past predictions are never recomputed. `npm run replay` replays the curated fixtures in `data/benchmark-reports.json` as a regression check: currently 30 reports at 86.7 % direction. It is not an accuracy measure, because the fixtures are scenarios, not dives. Walls are replayed with the along-reef model. Lagoon sites and pre-axis reports are left out.
@@ -283,6 +289,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/19` | 31 Oct | Catalog: Moofushi, Himendhoo Dhekunu, Fushifaru and Maamigili Kandu set as passes and Fushifaru Giri as a channel thila by hand, so they take the rim's direction and the across-rim model (they were lagoon sites on a centroid bearing up to 84° off), and they now count as channel openings in their atolls' lagoon flow. New atolls and sites are new inputs, not a change. |
 | `…/20` | 3 Nov | Pins added in the app get a site type from their position (lagoon well inside the outline, pass in an open reef gap, else outer wall) or, on the rim band, from the kind their diver picked, instead of none (which ran every one as a channel). Thila and giri names no longer make a rim site a channel thila away from a pass. Catalog sites are unchanged. |
 | `…/21` | 3 Nov | The tide slope is the change from the hour before instead of the hour after, and the head is moved half an hour later, so the tide matches the Malé, Gan and Hanimaadhoo gauges at the same hour. Turns and slack at channels, strait walls and in the lagoon come about an hour later than in model 20. Replay: 26 of 30 (was 24 of 30). |
+| `…/22` | 4 Nov | Reports pull walls, strait walls and lagoon sites and can lift them to medium confidence (`lib/axis-reports.ts`). Dive sites within 0.5 km of each other count as one channel opening in the lagoon flow and split its weight, instead of counting once per pin (South Malé, North Malé and Lhaviyani lagoon sites). |
 
 ## Known limits
 

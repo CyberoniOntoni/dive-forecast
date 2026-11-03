@@ -3,6 +3,8 @@ import { ringSamples, type AtollRing } from "./atoll-ring";
 import { alongReportDirection } from "./forecast";
 import { nowcastGlance } from "./nowcast-glance";
 import {
+  CHANNEL_WEIGHT_KM,
+  channelWeights,
   lagoonHours,
   lagoonSink,
   lagoonStrength,
@@ -178,5 +180,21 @@ describe("lagoon glance", () => {
     );
     expect(glance.spoken).toBe("Thila, running E, mild, low");
     expect(glance.arrowBearing).toBe(90);
+  });
+});
+
+describe("channelWeights", () => {
+  it("splits a channel's weight between pins within 0.5 km of each other, chained, and leaves lone pins whole", () => {
+    // Three pins 0.3 km apart in a row (0.6 km end to end) are one channel; one 5 km off is its own.
+    const step = 0.3 / 111.2;
+    const weights = channelWeights([
+      { lat: 4, lon: 73.5 },
+      { lat: 4 + step, lon: 73.5 },
+      { lat: 4 + 2 * step, lon: 73.5 },
+      { lat: 4.045, lon: 73.5 },
+    ]);
+    for (const weight of weights.slice(0, 3)) expect(weight).toBeCloseTo(CHANNEL_WEIGHT_KM / 3);
+    expect(weights[3]).toBe(CHANNEL_WEIGHT_KM);
+    expect(channelWeights([])).toEqual([]);
   });
 });

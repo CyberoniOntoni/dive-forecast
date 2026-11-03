@@ -1,6 +1,7 @@
 import type { AtollRing } from "./atoll-ring";
 import { pointInRing, type RimRing } from "./rim";
 import { netFlowSeries } from "./forecast";
+import { distanceKm } from "./geometry";
 import { STRENGTHS, type HourForecast, type MarineHour, type Strength } from "./types";
 
 /**
@@ -80,6 +81,32 @@ export function rimSources(ring: AtollRing, headTauHours?: number): LagoonSource
     sources.push({ lat: (point.lat + nextPoint.lat) / 2, lon: (point.lon + nextPoint.lon) / 2, weightKm, flow: mean });
   }
   return sources;
+}
+
+/**
+ * Channel pins this close together are dives in one channel (a pass and its thila or corner), not two openings.
+ * Checked on the catalog: every pair within 0.5 km sits in one channel (Embudhoo Express and Thila 0.08 km, Kandooma
+ * Thila, Caves and Cocoa Corner, Fushifaru Kandu and Giri); from about 0.8 km neighbouring kandus start to pair up
+ * (Felidhoo and Keyodhoo, 0.99 km).
+ */
+export const SAME_CHANNEL_KM = 0.5;
+
+/**
+ * Each channel pin's share of CHANNEL_WEIGHT_KM: pins chained within SAME_CHANNEL_KM of each other are one channel
+ * and split its weight evenly, so a channel with three dive sites counts once, not three times. Each pin keeps its
+ * own net flow. Returned in the order given.
+ */
+export function channelWeights(points: readonly Point[]): number[] {
+  const group = points.map((_, index) => index);
+  const root = (index: number): number => (group[index] === index ? index : (group[index] = root(group[index])));
+  for (let left = 0; left < points.length; left += 1) {
+    for (let right = left + 1; right < points.length; right += 1) {
+      if (distanceKm(points[left], points[right]) <= SAME_CHANNEL_KM) group[root(right)] = root(left);
+    }
+  }
+  const sizes = new Map<number, number>();
+  points.forEach((_, index) => sizes.set(root(index), (sizes.get(root(index)) ?? 0) + 1));
+  return points.map((_, index) => CHANNEL_WEIGHT_KM / (sizes.get(root(index)) ?? 1));
 }
 
 /** A known channel as an opening: its own net flow from the channel model, weighted CHANNEL_WEIGHT_KM. */

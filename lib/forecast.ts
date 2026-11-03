@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/21";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/22";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -244,7 +244,7 @@ export type AlongReefInput = {
  * Outer walls with land or unbroken reef behind them: the water runs along the reef, not into the atoll.
  * The hourly current projected on the reef line, with its tidal part (the hour less the 25-hour drift) scaled by
  * ALONG_REEF_TIDE_GAIN. "incoming" means toward alongHeadingDeg, "outgoing" the opposite way along the reef.
- * Reports do not pull it yet, and its confidence is always low.
+ * Before reports: lib/axis-reports.ts pulls it and sets its confidence (never high) in lib/load-site.ts.
  */
 export function alongReefHours(input: AlongReefInput): HourForecast[] {
   const hours = input.hours;
@@ -321,7 +321,7 @@ export function straitFlow(
   return flow;
 }
 
-/** Hour by hour flow through a strait at one of its walls; "incoming" runs toward axisDeg (eastward). Always low. */
+/** Hour by hour flow through a strait at one of its walls; "incoming" runs toward axisDeg (eastward). Low before reports (lib/axis-reports.ts). */
 export function straitHours(input: StraitInput): HourForecast[] {
   return straitFlow(input).map((hour) => ({
     time: hour.time,
