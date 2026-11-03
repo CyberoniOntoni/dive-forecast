@@ -184,8 +184,9 @@ function tidalCheck(channels: readonly Channel[]): void {
 /** The steepest-quarter hours of each channel's own tide: its mid-tide hours. */
 function midTideHours(item: Channel): Set<string> {
   const residual = residualLevels(item.hours);
+  // The change from the hour before, as the forecast takes it since model 21 (it matches the tide gauges' timing).
   const slopes = item.hours.map((_, i) =>
-    residual[i] != null && residual[i + 1] != null ? (residual[i + 1] as number) - (residual[i] as number) : null,
+    residual[i] != null && residual[i - 1] != null ? (residual[i] as number) - (residual[i - 1] as number) : null,
   );
   const peak = Math.max(...slopes.map((s) => (s == null ? 0 : Math.abs(s))));
   return new Set(

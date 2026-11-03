@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/20";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/21";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -206,12 +206,14 @@ function headSeries(
 ): number[] {
   if (!ring || ring.length === 0 || !(tauHours > 0) || !Number.isFinite(tauHours)) return hours.map(() => 0);
   const byTime = new Map(ring.map((item) => [item.time, item.levelM]));
-  return hours.map((hour, index) => {
+  // Site and ring levels both run half an hour ahead of the real tide; their difference is moved onto real time.
+  const difference = hours.map((hour, index) => {
     const level = residual[index];
     const lagoon = byTime.get(hour.time);
-    if (level == null || lagoon == null || !Number.isFinite(lagoon)) return 0;
-    return (level - lagoon) / tauHours;
+    if (level == null || lagoon == null || !Number.isFinite(lagoon)) return null;
+    return level - lagoon;
   });
+  return onRealTime(difference).map((value) => (value == null ? 0 : value / tauHours));
 }
 
 function addSeries(left: readonly number[], right: readonly number[]): number[] {
@@ -1160,11 +1162,12 @@ function throughflowSeries(hours: readonly MarineHour[], inwardBearingDeg: numbe
  * hour's through-flow: the net flow. It has a value exactly where the residual does. Only its slopes mean anything.
  */
 function flowSeries(residual: readonly (number | null)[], through: readonly number[]): (number | null)[] {
+  // Each hour's extra slope is added from that hour on, so the change from the hour before (slopeFromResidual)
+  // carries this hour's own through-flow and head.
   let added = 0;
   return residual.map((level, index) => {
-    const value = level == null ? null : level + added;
     added += through[index] ?? 0;
-    return value;
+    return level == null ? null : level + added;
   });
 }
 
@@ -1278,18 +1281,35 @@ function reachesMeanSpan(times: readonly number[]): boolean {
 }
 
 /**
- * Residual change over the hour after this one. The forward difference is kept on purpose: a centred one moves
- * turns half an hour earlier and scored worse on the replay benchmark (direction 91.3% to 89.1%, slack 20 to
- * 30 minutes). The half-hour lead likely stands in for the pass lagging the ocean. Revisit with real reports.
+ * The rate of change of a residual (or flow) series at this hour, in metres per hour, on real Maldives time.
+ *
+ * Open-Meteo's sea level runs about half an hour ahead of the real tide: against the UHSLC tide gauges at Malé (108),
+ * Gan (109) and Hanimaadhoo (117), August to September 2026, its levels match the gauges 30 to 40 minutes later, at
+ * the same size. So the change from the hour before to this one, which the feed labels half an hour late, is the real
+ * slope centred on this hour. The forward difference used up to model 20 described the half hour after the feed's
+ * label, so the forecast ran about an hour early: its slope at hour t matched the gauges' at t + 1 (r 0.99) and only
+ * loosely at t (r 0.86). The first hour of a series, with nothing before it, takes the change over the next hour.
  */
 function slopeFromResidual(residual: readonly (number | null)[], index: number): number | null {
   const level = residual[index];
   if (level == null) return null;
+  if (index - 1 >= 0 && residual[index - 1] != null) return level - (residual[index - 1] as number);
   if (index + 1 < residual.length && residual[index + 1] != null) {
     return (residual[index + 1] as number) - level;
   }
-  if (index - 1 >= 0 && residual[index - 1] != null) return level - (residual[index - 1] as number);
   return null;
+}
+
+/**
+ * A level series moved onto real time: the mean of this hour and the one before, since the feed's level runs about
+ * half an hour ahead (see slopeFromResidual). The first hour, or one after a gap, keeps its own value.
+ */
+function onRealTime(series: readonly (number | null)[]): (number | null)[] {
+  return series.map((value, index) => {
+    if (value == null) return null;
+    const before = index > 0 ? series[index - 1] : null;
+    return before == null ? value : (value + before) / 2;
+  });
 }
 
 /** Positive lag reads a later residual. Outside the series returns -1, not this hour. */

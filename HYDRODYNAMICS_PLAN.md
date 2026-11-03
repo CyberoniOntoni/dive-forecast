@@ -489,6 +489,18 @@ The corner review and the Vaadhoo Kandu work showed that site names and distance
 - **HP Reef:** a curved channel, in toward 10 o'clock and out toward 5 (`outgoingBearingDeg`).
 - **Confirmed lagoon:** Kings Corner and Kudadhoo Etheru Faru. Both respond unevenly to their channels, which the lagoon model does not represent.
 
+### 4.13 Tide timing checked against gauges (2026-11-03, model 21)
+
+The first check against measured water, not the ocean model or fixtures. UHSLC hourly gauges at Malé (108), Gan (109) and Hanimaadhoo (117), against Open-Meteo sea level at each gauge, 3 Aug to 30 Sep 2026 (584, 1,396 and 1,393 hours):
+
+- Size: gauge ÷ model 1.02, 1.00, 0.97. The feed gets the tide's size right.
+- Timing: the feed's levels match the gauges 30 to 40 minutes later at all three, most likely a time-stamp convention.
+- The forward-difference slope (model 20 and before) at hour t matched the gauges' centred slope at t + 1 (r 0.991, 0.994, 0.992; same direction in 99 to 100 % of hours where the gauge moved at least 0.02 m/h) and only loosely at t (r 0.86, 0.85, 0.87; 86 to 88 %). The forecast ran about an hour early.
+- Model 21 takes the change from the hour before, which on the feed's clock is the real slope centred on the hour (r 0.991, 0.995, 0.992; 99.4 to 100 %), and moves the head term half an hour to match.
+- The forward difference had been kept because a centred one scored worse on the replay, but the replay is fixture scenarios, not dives. Model 21 scores 26 of 30 there (was 24).
+- Malé and Gan show the same size and timing as the open-sea model, so there is no sign of a lagoon that lags the ocean much; τ stays at 0.25 h.
+- Not checked: the ocean current's own timing (no current gauge), and whether a pass's current lags its sea-level slope. Reports will tell.
+
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
 ### 5.1 The Opposite Neighbor Challenge

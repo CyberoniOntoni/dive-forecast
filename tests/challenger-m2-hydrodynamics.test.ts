@@ -374,8 +374,9 @@ describe("Adversarial Verification of Milestone 2: Hydrodynamics & Invariant Pre
       });
 
       for (const h of slackForecast) {
+        // Each hour's slope is the change from the hour before, so the flat hour is the plateau's second hour.
         const phase = (parseInt(h.time.slice(11, 13), 10) + 0) % 12;
-        if (phase === 3 || phase === 9) {
+        if (phase === 4 || phase === 10) {
           expect(h.strength).toBe("slack");
         }
       }

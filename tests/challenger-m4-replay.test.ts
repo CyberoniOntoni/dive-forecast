@@ -142,15 +142,15 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
     });
 
     it("calculates exact slackTimingDeviationMins against zero-crossings and slack hours", () => {
-      // In createSyntheticMarine:
-      // index 14 (14:00): incoming slope (+0.047m)
-      // index 15 (15:00): crest / turn, outgoing slope (-0.047m)
-      // Midpoint between index 14 and 15 is 14:30 (zero-crossing slack turn).
+      // In createSyntheticMarine (each hour's slope is the change from the hour before):
+      // index 15 (15:00): incoming slope (+0.047m), the rise into the crest
+      // index 16 (16:00): outgoing slope (-0.047m)
+      // Midpoint between index 15 and 16 is 15:30 (zero-crossing slack turn).
       
       const exactMidpointReport: Report = {
         id: "slack-exact",
         siteId: "test-site",
-        time: "2026-09-22T14:30",
+        time: "2026-09-22T15:30",
         direction: "incoming",
         strength: "slack",
       };
@@ -162,14 +162,14 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
       });
 
       expect(resultExact.metrics.totalReports).toBe(1);
-      // Midpoint slack turn is at 14:30 -> deviation must be exactly 0 minutes
+      // Midpoint slack turn is at 15:30 -> deviation must be exactly 0 minutes
       expect(resultExact.metrics.slackTimingDeviationMins).toBe(0);
 
-      // Report 15 minutes after turn: 14:45
+      // Report 15 minutes after turn: 15:45
       const offsetReport: Report = {
         id: "slack-offset",
         siteId: "test-site",
-        time: "2026-09-22T14:45",
+        time: "2026-09-22T15:45",
         direction: "outgoing",
         strength: "slack",
       };
@@ -186,15 +186,15 @@ describe("Adversarial Challenge: BenchmarkMetrics & replayReports (Milestone 4)"
 
     it("computes accurate MAE across multiple slack reports with varying offsets", () => {
       // 3 separate tidal cycles (12 hours apart, beyond 6h fade horizon)
-      // Cycle 1: Day 1 14:30 midpoint -> report at 14:30 (deviation = 0 min)
-      // Cycle 2: Day 2 02:30 midpoint -> report at 02:45 (deviation = 15 min)
-      // Cycle 3: Day 2 14:30 midpoint -> report at 15:00 (deviation = 30 min)
+      // Cycle 1: Day 1 15:30 midpoint -> report at 15:30 (deviation = 0 min)
+      // Cycle 2: Day 2 03:30 midpoint -> report at 03:45 (deviation = 15 min)
+      // Cycle 3: Day 2 15:30 midpoint -> report at 16:00 (deviation = 30 min)
       // slopeM: null keeps these reports from training the speed factor, which would otherwise learn that the
       // site is weak from three slack calls and add slack hours. This test measures timing only.
       const multiSlack: Report[] = [
-        { id: "s-c1", siteId: "s", time: "2026-09-22T14:30", direction: "incoming", strength: "slack", slopeM: null },
-        { id: "s-c2", siteId: "s", time: "2026-09-23T02:45", direction: "incoming", strength: "slack", slopeM: null },
-        { id: "s-c3", siteId: "s", time: "2026-09-23T15:00", direction: "incoming", strength: "slack", slopeM: null },
+        { id: "s-c1", siteId: "s", time: "2026-09-22T15:30", direction: "incoming", strength: "slack", slopeM: null },
+        { id: "s-c2", siteId: "s", time: "2026-09-23T03:45", direction: "incoming", strength: "slack", slopeM: null },
+        { id: "s-c3", siteId: "s", time: "2026-09-23T16:00", direction: "incoming", strength: "slack", slopeM: null },
       ];
 
       const result = replayReports({

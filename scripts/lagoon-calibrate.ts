@@ -82,7 +82,8 @@ async function loadAtolls(): Promise<Atoll[]> {
 /** Hours where the ring level rises fastest: the top quarter of its rising slopes. */
 function floodHours(ring: AtollRing): Set<string> {
   const level = ring.level;
-  const slopes = level.slice(1).map((item, index) => ({ time: level[index].time, slope: item.levelM - level[index].levelM }));
+  // Each slope is the change into its hour, as the forecast takes it since model 21 (it matches the tide gauges' timing).
+  const slopes = level.slice(1).map((item, index) => ({ time: item.time, slope: item.levelM - level[index].levelM }));
   const rising = slopes.filter((item) => item.slope > 0);
   const cut = quantile(rising.map((item) => item.slope), 0.75);
   return new Set(rising.filter((item) => item.slope >= cut).map((item) => item.time));
