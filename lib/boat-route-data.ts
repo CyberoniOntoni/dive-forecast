@@ -39,7 +39,7 @@ export async function boatRoute(from: LatLon, destinationId: string): Promise<Bo
   return { ...route, current };
 }
 
-function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string }[]): RouteShapes {
+function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string; sourceUrl?: string }[]): RouteShapes {
   if (!shapeCache) {
     shapeCache = {
       blockers: [...readIslands().map((island) => island.ring), ...readShoals().map((shoal) => shoal.ring)],
@@ -55,8 +55,9 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
   const { blockers, rims, gaps } = shapeCache;
   // A pass dive site is a way through its outline even where the crest map shows no gap. The reach is the one the
   // forecast uses to tie a pass to its outline, so a pass the coarse outline puts inside the lagoon still opens it.
+  // Only catalog passes: a diver's pick on an app-added pin never opens the reef to the route.
   const passes = sites
-    .filter((site) => site.siteType === "pass")
+    .filter((site) => site.siteType === "pass" && site.sourceUrl !== "user")
     .flatMap((site) => {
       const foot = nearestRimWithin(site, rims, CHANNEL_RIM_REACH_KM);
       return foot ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];

@@ -168,11 +168,12 @@ function SiteFacts({ site }: { site: Site }) {
   );
 }
 
-/** The forecast's site type; on an app-added pin with none, the kind its diver picked, marked as theirs. */
+/** The site type the forecast runs on; on an app-added pin, said whether its diver picked it or its position did. */
 function kindLabel(site: Site): string | null {
-  if (site.siteType) return SITE_TYPE_LABEL[site.siteType];
-  if (site.diverSiteType) return `${DIVER_SITE_TYPE_LABEL[site.diverSiteType]} (diver's pick)`;
-  return null;
+  if (!site.siteType) return null;
+  if (site.siteTypeSource === "diver") return `${DIVER_SITE_TYPE_LABEL[site.siteType]} (diver's pick)`;
+  if (site.sourceUrl === "user") return `${DIVER_SITE_TYPE_LABEL[site.siteType]} (from the pin's position)`;
+  return SITE_TYPE_LABEL[site.siteType];
 }
 
 type SourceLink = { href: string; label: string };

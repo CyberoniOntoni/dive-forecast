@@ -230,7 +230,7 @@ export function AddSiteForm({
       >
         {pending ? (progress ?? "Adding…") : "Add site"}
       </button>
-      <p className="text-xs leading-5 text-foam/70">Everything but the name is optional. The forecast does not read these details.</p>
+      <p className="text-xs leading-5 text-foam/70">Everything but the name is optional. The kind of site picks the forecast; with Not sure, the pin&apos;s position decides.</p>
     </form>
   );
 }

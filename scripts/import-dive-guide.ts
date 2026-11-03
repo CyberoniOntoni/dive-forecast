@@ -85,7 +85,8 @@ function propose(atollCode: string, separate: ReadonlySet<string>): void {
       ...depth,
       ...(depth.diveTopM != null || depth.diveMaxM != null ? { depthSourceUrl: guide.sourceUrl } : {}),
     };
-    const siteType = deriveSiteType(site, ring);
+    const passes = catalog.sites.filter((mate) => mate.atollId === atoll.id && mate.siteType === "pass");
+    const siteType = deriveSiteType(site, ring, passes);
     if (siteType) Object.assign(site, { siteType, siteTypeSource: "derived" as const });
     candidates.push({ ...base, decision: "add", reason: "new", site });
   }

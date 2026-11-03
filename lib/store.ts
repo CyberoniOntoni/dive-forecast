@@ -1,6 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { atollForPin } from "./bearing";
+import { readOpenings } from "./openings";
+import { rimForAtoll, rimWayId } from "./rim";
+import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
 import { emptyStore, loadD1Store, normalizeStore, prepareD1, storeChanges } from "./store-d1";
@@ -83,15 +86,42 @@ export function listMergedSites(): Site[] {
   const publishedIds = new Set(published.map((site) => site.id));
   const onlyAdded = added
     .filter((site) => !publishedIds.has(site.id))
-    .map((site) => withCurrentAtoll(site, catalog.atolls));
+    .map((site) => withCurrentPlace(site, catalog));
   return [...published, ...onlyAdded];
 }
 
-/** An app-added pin's atoll is worked out from where it sits now, not from what was stored when it was added. */
-function withCurrentAtoll(site: Site, atolls: Catalog["atolls"]): Site {
+/**
+ * An app-added pin's atoll and site type are worked out from where it sits now, not stored when it was added, so a
+ * better outline, a new pass or a new reef gap reaches old pins too. The pin's position decides (deriveSiteType, with
+ * the catalog's passes and the atoll's open reef gaps): well inside the outline is lagoon, outside it the ocean wall,
+ * and on the rim a pin in a gap is a pass. On the rim band, where that cannot be sure, the adder's pick
+ * (diverSiteType) wins. No type in an unseeded atoll. Catalog sites never see these pins as mates, so a pick or a
+ * position changes only the pin's own forecast.
+ */
+export function withCurrentPlace(site: Site, catalog: Pick<Catalog, "atolls" | "sites">): Site {
   if (site.sourceUrl !== "user") return site;
-  const atollId = atollForPin(site.lat, site.lon, atolls)?.id ?? UNSEEDED_ATOLL_ID;
-  return atollId === site.atollId ? site : { ...site, atollId };
+  const atoll = atollForPin(site.lat, site.lon, catalog.atolls);
+  const atollId = atoll?.id ?? UNSEEDED_ATOLL_ID;
+  const placed: Site = { ...site, atollId };
+  delete placed.siteType;
+  delete placed.siteTypeSource;
+  if (!atoll) return placed;
+  const ring = rimForAtoll(atoll);
+  if (site.diverSiteType && (!ring || onRimBand(site, ring))) {
+    placed.siteType = site.diverSiteType;
+    placed.siteTypeSource = "diver";
+    return placed;
+  }
+  const passes = catalog.sites.filter((mate) => mate.atollId === atollId && mate.siteType === "pass");
+  const wayId = rimWayId(atoll);
+  // A gap a reef flat bridges is a shallow sill, not a channel divers drop into.
+  const channels = readOpenings().filter((gap) => gap.wayId === wayId && !gap.reefFlatBridges);
+  const derived = deriveSiteType(site, ring, passes, channels);
+  if (derived) {
+    placed.siteType = derived;
+    placed.siteTypeSource = "derived";
+  }
+  return placed;
 }
 
 export function findSite(id: string): Site | null {
