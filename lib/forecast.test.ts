@@ -150,15 +150,16 @@ describe("forecastHours", () => {
   });
 
   it("judges strength agreement at each report's own hour, not the hour being scored", () => {
-    // 12-hour sine: 00:00 to 02:00 on the second day rise toward the 03:00 crest, easing off as the turn nears.
+    // 12-hour sine: the hours to 01:00, 02:00 and 03:00 on the second day rise toward the 03:00 crest, easing off as
+    // the turn nears (each hour's slope is the change from the hour before).
     const hours = marineFromLevels(
       "2026-07-14T00:00",
       Array.from({ length: 72 }, (_, index) => 0.8 + 0.5 * Math.sin((2 * Math.PI * index) / 12)),
     );
     const plain = forecastHours({ hours, inwardBearingDeg: 90 });
     const bandAt = (time: string) => plain.find((hour) => hour.time === time)!.strength;
-    const times = ["2026-07-15T00:00", "2026-07-15T01:00", "2026-07-15T02:00", "2026-07-15T00:00", "2026-07-15T01:00"];
-    const target = "2026-07-15T02:00";
+    const times = ["2026-07-15T01:00", "2026-07-15T02:00", "2026-07-15T03:00", "2026-07-15T01:00", "2026-07-15T02:00"];
+    const target = "2026-07-15T03:00";
     // The run peaks early and eases off, so most reports sit at a different band from the target hour.
     expect(times.filter((time) => bandAt(time) !== bandAt(target)).length).toBeGreaterThanOrEqual(3);
 
@@ -249,10 +250,10 @@ describe("forecastHours", () => {
     ];
     const prior = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
     const learned = forecastHours({ hours, inwardBearingDeg: 0, reports: contradicting });
-    expect(directionAt(prior, "2026-09-23T06:00")).toBe("incoming");
-    expect(directionAt(prior, "2026-09-23T15:00")).toBe("outgoing");
-    const morning = directionAt(learned, "2026-09-23T06:00");
-    const afternoon = directionAt(learned, "2026-09-23T15:00");
+    expect(directionAt(prior, "2026-09-23T07:00")).toBe("incoming");
+    expect(directionAt(prior, "2026-09-23T16:00")).toBe("outgoing");
+    const morning = directionAt(learned, "2026-09-23T07:00");
+    const afternoon = directionAt(learned, "2026-09-23T16:00");
     const moved =
       (morning === "outgoing" && afternoon === "outgoing") ||
       (morning === "incoming" && afternoon === "incoming");
@@ -260,8 +261,8 @@ describe("forecastHours", () => {
 
     const blank = contradicting.map((report) => ({ ...report, slopeM: null }));
     const ignored = forecastHours({ hours, inwardBearingDeg: 0, reports: blank });
-    expect(directionAt(ignored, "2026-09-23T06:00")).toBe("incoming");
-    expect(directionAt(ignored, "2026-09-23T15:00")).toBe("outgoing");
+    expect(directionAt(ignored, "2026-09-23T07:00")).toBe("incoming");
+    expect(directionAt(ignored, "2026-09-23T16:00")).toBe("outgoing");
     expect(ignored.every((hour) => hour.confidence === "low")).toBe(true);
 
     const remembered: Report[] = [0, 1, 2, 3].map((id) => ({
@@ -273,7 +274,7 @@ describe("forecastHours", () => {
       slopeM: 0.08,
     }));
     const confident = forecastHours({ hours, inwardBearingDeg: 0, reports: remembered });
-    expect(confident.find((hour) => hour.time.startsWith("2026-09-23T06:00"))?.confidence).not.toBe("low");
+    expect(confident.find((hour) => hour.time.startsWith("2026-09-23T07:00"))?.confidence).not.toBe("low");
   });
 
   it("historical-report speed factor compares abs(slopeM) with the slack threshold", () => {
@@ -305,29 +306,32 @@ describe("forecastHours", () => {
   it("hourly-strength follows the slope up to the day's range envelope", () => {
     const spring = marineFromLevels("2026-09-22T00:00", [...springDay(), ...springDay(), ...springDay()]);
     const forecast = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [] });
-    // The rise steepens 0.01, 0.05, 0.11, 0.2 m/hour, so the band climbs with it. A 1 m spring tops out strong.
-    expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("slack");
-    expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("mild");
-    expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("strong");
+    // The rise steepens 0.01, 0.05, 0.11, 0.2 m/hour into 01:00 to 04:00 (each hour's slope is the change from the
+    // hour before), so the band climbs with it. A 1 m spring tops out strong.
+    expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("slack");
+    expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("mild");
     expect(strengthAt(forecast, "2026-09-23T03:00")).toBe("strong");
     expect(strengthAt(forecast, "2026-09-23T04:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-23T05:00")).toBe("strong");
     // Through a narrow channel the same tide climbs all four bands.
     const narrow = forecastHours({ hours: spring, inwardBearingDeg: 0, reports: [], channelWidthM: 50, channelDepthM: 10 });
-    expect(strengthAt(narrow, "2026-09-23T00:00")).toBe("slack");
-    expect(strengthAt(narrow, "2026-09-23T01:00")).toBe("mild");
-    expect(strengthAt(narrow, "2026-09-23T02:00")).toBe("strong");
-    expect(strengthAt(narrow, "2026-09-23T03:00")).toBe("too_strong");
+    expect(strengthAt(narrow, "2026-09-23T01:00")).toBe("slack");
+    expect(strengthAt(narrow, "2026-09-23T02:00")).toBe("mild");
+    expect(strengthAt(narrow, "2026-09-23T03:00")).toBe("strong");
+    expect(strengthAt(narrow, "2026-09-23T04:00")).toBe("too_strong");
 
     const neap = marineFromLevels("2026-09-23T00:00", [0, 0.05, 0.1, 0.15, 0.2, 0.2]);
     const neapForecast = forecastHours({ hours: neap, inwardBearingDeg: 0, reports: [] });
     expect(neapForecast.length).toBeGreaterThan(0);
     expect(neapForecast.every((hour) => hour.strength === "slack")).toBe(true);
-    expect(directionAt(neapForecast, "2026-09-23T03:00")).toBe("incoming");
-    expect(neapForecast.find((hour) => hour.time.startsWith("2026-09-23T04:00"))).toBeUndefined();
+    expect(directionAt(neapForecast, "2026-09-23T04:00")).toBe("incoming");
+    expect(neapForecast.find((hour) => hour.time.startsWith("2026-09-23T05:00"))).toBeUndefined();
   });
 
   it("turn-of-tide pull crosses midnight, fades after six hours, and does not force a flipped slope", () => {
-    const hours = marineFromLevels("2026-09-23T20:00", [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 0.8, 0.7, 0.8]);
+    // The tide rises into 02:00, falls into 03:00 and 04:00, then rises again (each hour's slope is the change from the
+    // hour before).
+    const hours = marineFromLevels("2026-09-23T19:00", [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 0.8, 0.7, 0.8]);
     const against: Report = {
       id: "p1",
       siteId: "s",
@@ -390,9 +394,9 @@ describe("forecastHours", () => {
   it("a near-zero residual is slack and does not copy the previous direction", () => {
     const hours = marineFromLevels("2026-09-23T00:00", [0, 0.4, 0.4 - 0.001]);
     const forecast = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
-    expect(directionAt(forecast, "2026-09-23T00:00")).toBe("incoming");
-    expect(directionAt(forecast, "2026-09-23T01:00")).toBe("outgoing");
-    expect(strengthAt(forecast, "2026-09-23T01:00")).toBe("slack");
+    expect(directionAt(forecast, "2026-09-23T01:00")).toBe("incoming");
+    expect(directionAt(forecast, "2026-09-23T02:00")).toBe("outgoing");
+    expect(strengthAt(forecast, "2026-09-23T02:00")).toBe("slack");
   });
 
   it("with a flat tide, the drift along the channel sets direction and strength", () => {
@@ -439,13 +443,13 @@ describe("forecastHours", () => {
 
   it("reads residual slopes from six hours before through six hours after", () => {
     const hours = marineFromLevels("2026-09-23T00:00", lagLevels);
-    const window = residualSlopeWindow(hours, "2026-09-23T06:00");
+    const window = residualSlopeWindow(hours, "2026-09-23T07:00");
     expect(window).toHaveLength(13);
     expect(window?.[6]).toBeCloseTo(-0.1);
     expect(window?.[0]).toBeCloseTo(0.1);
     const gapped = residualSlopeWindow(
-      hours.filter((hour) => !hour.time.endsWith("T03:00")),
-      "2026-09-23T06:00",
+      hours.filter((hour) => !hour.time.endsWith("T04:00")),
+      "2026-09-23T07:00",
     );
     expect(gapped?.[3]).toBeNull();
     expect(gapped?.[6]).toBeCloseTo(-0.1);
@@ -454,9 +458,9 @@ describe("forecastHours", () => {
   it("two stored slope windows pick a non-zero lag when both match it", () => {
     const hours = marineFromLevels("2026-09-23T00:00", lagLevels);
     const prior = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
-    expect(directionAt(prior, "2026-09-23T00:00")).toBe("incoming");
-    expect(directionAt(prior, "2026-09-23T04:00")).toBe("incoming");
-    expect(directionAt(prior, "2026-09-23T06:00")).toBe("outgoing");
+    expect(directionAt(prior, "2026-09-23T01:00")).toBe("incoming");
+    expect(directionAt(prior, "2026-09-23T05:00")).toBe("incoming");
+    expect(directionAt(prior, "2026-09-23T07:00")).toBe("outgoing");
 
     const lag2 = Array<number | null>(13).fill(null);
     lag2[4] = 0.05;
@@ -467,8 +471,8 @@ describe("forecastHours", () => {
       inwardBearingDeg: 0,
       reports: [outsideWindow("a", lag2), outsideWindow("b", lag2)],
     });
-    expect(directionAt(learned, "2026-09-23T00:00")).toBe("incoming");
-    expect(directionAt(learned, "2026-09-23T04:00")).toBe("outgoing");
+    expect(directionAt(learned, "2026-09-23T01:00")).toBe("incoming");
+    expect(directionAt(learned, "2026-09-23T05:00")).toBe("outgoing");
   });
 
   it("one stored slope window does not pick a non-zero lag", () => {
@@ -575,7 +579,8 @@ describe("forecastHours", () => {
   });
 
   it("does not let a missing in-series lag break a tie and move the phase offset", () => {
-    const hours = marineFromLevels("2026-09-23T00:00", lagLevels);
+    // Starts an hour early so each hour's slope (the change from the hour before) lines up with the tide shape.
+    const hours = marineFromLevels("2026-09-22T23:00", lagLevels);
     const flip = Array<number | null>(13).fill(null);
     flip[6] = 0.08;
     const edges: Report[] = [
@@ -602,11 +607,12 @@ describe("forecastHours", () => {
     let falling = 0;
     for (let index = 0; index < forecast.length - 1; index += 1) {
       const step = forecast[index + 1].levelM - forecast[index].levelM;
+      // A rise into an hour runs in at that hour.
       if (step > 0.02) {
-        expect(forecast[index].direction).toBe("incoming");
+        expect(forecast[index + 1].direction).toBe("incoming");
         rising += 1;
       } else if (step < -0.02) {
-        expect(forecast[index].direction).toBe("outgoing");
+        expect(forecast[index + 1].direction).toBe("outgoing");
         falling += 1;
       }
     }
@@ -641,8 +647,8 @@ describe("forecastHours", () => {
       inwardBearingDeg: 0,
       reports: [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))],
     });
-    const clock = "2026-09-23T19:00";
-    const later = "2026-09-23T21:00";
+    const clock = "2026-09-23T21:00";
+    const later = "2026-09-23T23:00";
     const clockLevel = levelAt(plain, clock);
     const laterLevel = levelAt(plain, later);
     expect(directionAt(plain, clock)).toBe("outgoing");
@@ -673,7 +679,8 @@ describe("forecastHours", () => {
   });
 
   it("two reports that match the lagged band leave the speed factor at 1", () => {
-    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    // Starts an hour early so each hour's slope (the change from the hour before) lines up with the tide shape.
+    const hours = marineFromLevels("2026-09-22T23:00", sineTide(72));
     const windows = [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))];
     const control = forecastHours({ hours, inwardBearingDeg: 0, reports: windows });
     const fitted = forecastHours({
@@ -700,7 +707,8 @@ describe("forecastHours", () => {
   });
 
   it("keeps an outgoing report when only the unshifted slope has turned, then drops it once the lagged slope turns", () => {
-    const hours = marineFromLevels("2026-09-23T00:00", sineTide(72));
+    // Starts an hour early so each hour's slope (the change from the hour before) lines up with the tide shape.
+    const hours = marineFromLevels("2026-09-22T23:00", sineTide(72));
     const windows = [outsideWindow("a", outgoingAtLag(2)), outsideWindow("b", outgoingAtLag(2))];
     const clock = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
     const lagged = forecastHours({ hours, inwardBearingDeg: 0, reports: windows });
@@ -734,18 +742,19 @@ describe("forecastHours", () => {
       inwardBearingDeg: 0,
       reports: [],
     });
-    expect(directionAt(forecast, "2026-09-24T01:00")).toBe("incoming");
+    expect(directionAt(forecast, "2026-09-24T02:00")).toBe("incoming");
     // The flood peaks either side of midnight and tapers after: the bands follow one tide, not the calendar day.
-    expect(strengthAt(forecast, "2026-09-23T23:00")).toBe("strong");
     expect(strengthAt(forecast, "2026-09-24T00:00")).toBe("strong");
-    expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("mild");
+    expect(strengthAt(forecast, "2026-09-24T01:00")).toBe("strong");
+    expect(strengthAt(forecast, "2026-09-24T02:00")).toBe("mild");
   });
 
   it("a report is judged against the model's band at its own hour: agreeing changes nothing, stronger raises later hours", () => {
     const slopes = [0.03, 0.11, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08, 0.08];
     const levels = [0];
     for (const slope of slopes) levels.push(levels[levels.length - 1] + slope);
-    const hours = marineFromLevels("2026-09-23T00:00", levels);
+    // Starts an hour early so each slope above is the change into 00:00, 01:00, and so on.
+    const hours = marineFromLevels("2026-09-22T23:00", levels);
     const shoulder = "2026-09-23T00:00";
     const peak = "2026-09-23T01:00";
     const later = "2026-09-23T08:00";

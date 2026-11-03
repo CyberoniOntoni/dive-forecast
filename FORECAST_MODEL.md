@@ -13,7 +13,9 @@ For every point it needs, the app fetches hourly **sea level** and **ocean curre
 - **Where a site samples:** seaward of the pin, opposite its inward bearing (`seawardPoint`). The usual distance is 3 km. GEBCO 2026 (`data/seaward-floor.json`) checks the cell under that point. Open water is an elevation of −50 m or deeper. A shallower cell, including land, steps out to the first open cell at 6, 9, 12, or 15 km. If none of those is open, the sample stays at 3 km. The 15-arc-second grid is not a channel cross-section. Its type-identifier value is stored so a gravity-predicted cell is not later treated as a sounding. Ring points stay at 3 km outside the outline. The 8 km ocean grid cannot see a channel, so the point has to be in open water outside it.
 - **Ring points:** for each atoll, 12 points spaced evenly round its outline (`data/rims.json`, from OpenStreetMap), each 3 km outside it (`lib/atoll-ring.ts`). Their mean level stands for the lagoon level.
 
-**Residual sea level** is the level less its 25-hour mean (`residualLevels`). The mean removes the daily average and the slow non-tidal changes, and leaves the tide. A **slope** is the change in residual over the next hour, in metres per hour. It is a forward difference on purpose: centred differences scored worse on the benchmark.
+**Residual sea level** is the level less its 25-hour mean (`residualLevels`). The mean removes the daily average and the slow non-tidal changes, and leaves the tide. A **slope** is the change in residual from the hour before to this one, in metres per hour.
+
+**Timing against tide gauges (model 21).** Open-Meteo's sea level runs about half an hour ahead of the real tide. Against the UHSLC tide gauges at Malé (station 108), Gan (109) and Hanimaadhoo (117), August to September 2026, its levels match the gauges 30 to 40 minutes later, at the same size (gauge ÷ model 0.97 to 1.02). So the change from the hour before to this one is the real slope centred on this hour. Up to model 20 the slope was the change over the next hour, and the forecast ran about an hour early: its slope at hour t matched the gauges' slope at t + 1 (r 0.99, the same direction in 99 % of moving hours) and only loosely at t (r 0.86, 86 to 88 %). Model 21 matches the gauges at the same hour (r 0.99 to 1.00, 99 to 100 %). The head across the atoll is moved the same half hour (the mean of this hour's and the last hour's level difference). The ocean current is not shifted: no gauge measures it, so walls along the reef keep the feed's hours.
 
 **Drift** is the 25-hour vector mean of the current, which removes the tidal stream. At the series ends the window slides inward so it always covers a full tidal cycle. An hour with too few current samples takes the drift of the nearest hour that has one. Only a series with no current at all falls back to the monsoon climatology (`lib/seasonal.ts`), scaled by 0.4 to the measured drift (`SEASONAL_DRIFT_SCALE`).
 
@@ -224,7 +226,7 @@ High is also blocked:
 - inside the lagoon and at walls;
 - while the benchmark replay fails (`data/replay.json` `ok: false`).
 
-**Scoring.** `npm run verify` scores saved predictions against reports, grouped by model version. Past predictions are never recomputed. `npm run replay` replays the curated fixtures in `data/benchmark-reports.json` as a regression check: currently 30 reports at 80 % direction. It is not an accuracy measure, because the fixtures are scenarios, not dives. Walls are replayed with the along-reef model. Lagoon sites and pre-axis reports are left out.
+**Scoring.** `npm run verify` scores saved predictions against reports, grouped by model version. Past predictions are never recomputed. `npm run replay` replays the curated fixtures in `data/benchmark-reports.json` as a regression check: currently 30 reports at 86.7 % direction. It is not an accuracy measure, because the fixtures are scenarios, not dives. Walls are replayed with the along-reef model. Lagoon sites and pre-axis reports are left out.
 
 Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says for the same inputs.
 
@@ -280,6 +282,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/18` | 13 Oct | Channels with no published section sized from `ok` grid crossings. |
 | `…/19` | 31 Oct | Catalog: Moofushi, Himendhoo Dhekunu, Fushifaru and Maamigili Kandu set as passes and Fushifaru Giri as a channel thila by hand, so they take the rim's direction and the across-rim model (they were lagoon sites on a centroid bearing up to 84° off), and they now count as channel openings in their atolls' lagoon flow. New atolls and sites are new inputs, not a change. |
 | `…/20` | 3 Nov | Pins added in the app get a site type from their position (lagoon well inside the outline, pass in an open reef gap, else outer wall) or, on the rim band, from the kind their diver picked, instead of none (which ran every one as a channel). Thila and giri names no longer make a rim site a channel thila away from a pass. Catalog sites are unchanged. |
+| `…/21` | 3 Nov | The tide slope is the change from the hour before instead of the hour after, and the head is moved half an hour later, so the tide matches the Malé, Gan and Hanimaadhoo gauges at the same hour. Turns and slack at channels, strait walls and in the lagoon come about an hour later than in model 20. Replay: 26 of 30 (was 24 of 30). |
 
 ## Known limits
 

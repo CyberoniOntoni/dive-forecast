@@ -53,8 +53,9 @@ describe("Milestone 4 Adversarial Challenge: Benchmark CLI & Data Artifacts", ()
       // from the lagoon's flow. Their sixteen fixture reports were written as into and out of the atoll, so they have
       // no reading along those axes and are left out.
       expect(result.metrics.totalReports).toBe(30);
-      // 24 of 30. Alimatha's six fixture reports, all called right, left with it, so this fell from 30 of 36.
-      expect(result.metrics.directionalAccuracyPct).toBe(80);
+      // 26 of 30 since model 21 (24 of 30 before the tide moved an hour later). Alimatha's six fixture reports, all
+      // called right, left with it, so this fell from 30 of 36 before that.
+      expect(result.metrics.directionalAccuracyPct).toBe(86.67);
       expect(result.metrics.slackTimingDeviationMins).toBeGreaterThanOrEqual(0);
       expect(result.datasetName).toContain("benchmark-reports.json");
     });
