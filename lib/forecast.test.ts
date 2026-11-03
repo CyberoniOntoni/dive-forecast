@@ -386,7 +386,8 @@ describe("forecastHours", () => {
     }
     // A 12 hour sine sampled hourly only lands in two bands; the spring-day test above covers the full climb.
     expect(new Set(stretch.map((hour) => hour.strength)).size).toBeGreaterThanOrEqual(2);
-    // The steepest hour (the sine crosses zero at 00:00) carries the top band, and the crest hour is weaker.
+    // The steepest hour (the rise into 00:00, where the sine crosses zero) carries the top band, and the last rise
+    // into the 03:00 crest is weaker; the turn after the crest falls at 04:00.
     expect(strengthAt(forecast, "2026-09-23T00:00")).toBe("strong");
     expect(band(strengthAt(forecast, "2026-09-23T03:00")!)).toBeLessThan(band("strong"));
   });
