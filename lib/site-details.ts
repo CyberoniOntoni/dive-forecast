@@ -2,8 +2,7 @@ import type { Site, SiteType } from "./types";
 
 /**
  * What a diver adding a site can say about it: what kind of site it is, how deep it is dived, and how to dive it.
- * Display only: the forecast never reads any of it (`diverSiteType` is not `siteType`, and the dive depths were never
- * a speed input).
+ * The kind picks the pin's forecast model (lib/store.ts withCurrentPlace); depths and notes are display only.
  */
 export type SiteDetailsInput = {
   diverSiteType?: unknown;
@@ -16,16 +15,16 @@ export type SiteDetails = Pick<Site, "diverSiteType" | "diveTopM" | "diveMaxM" |
 
 /** The kinds a diver picks from, in the words divers use, mapped to the site types the forecast knows. */
 export const DIVER_SITE_TYPES: readonly { type: SiteType; label: string; hint: string }[] = [
-  { type: "pass", label: "Channel (kandu)", hint: "A gap through the atoll rim" },
-  { type: "channel-thila", label: "Thila in a channel", hint: "A pinnacle in or at the mouth of a channel" },
+  { type: "pass", label: "Channel (kandu)", hint: "A gap through the atoll rim, or a thila in one" },
   { type: "corner", label: "Channel corner", hint: "The reef corner where a channel meets the ocean" },
-  { type: "outer-reef", label: "Outer reef wall", hint: "The ocean side of the rim, away from a channel" },
   { type: "lagoon", label: "Inside the lagoon", hint: "A thila, giri or reef inside the atoll" },
+  { type: "outer-reef", label: "Wall outside the atoll", hint: "The ocean side of the rim, away from a channel" },
 ];
 
-/** Every site type in divers' words: the form's own labels, plus the owner-set strait wall. */
+/** Every site type in divers' words: the form's own labels, plus the types only the catalog sets. */
 export const DIVER_SITE_TYPE_LABEL = {
   ...Object.fromEntries(DIVER_SITE_TYPES.map((option) => [option.type, option.label])),
+  "channel-thila": "Thila in a channel",
   "strait-wall": "Strait wall",
 } as Record<SiteType, string>;
 

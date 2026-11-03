@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/19`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/20`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -36,6 +36,8 @@ A site's **inward bearing** comes from, in order:
 The fallback heuristic draws a dashed arrow and an estimate note. See `lib/bearing.ts` and `lib/rim.ts`.
 
 **Sites set by hand as channels.** A site typed by hand (`siteTypeSource: "manual"`) as a pass, channel thila or corner takes the outline's normal from up to 3 km away. That covers channel pins the coarse outline places inside the lagoon, such as Cave Corner, Sundune and Maaddoo Giri.
+
+**Pins added in the app.** Their site type is worked out each time the store is read (`withCurrentPlace` in `lib/store.ts`), from where the pin sits: more than 0.8 km inside the outline is lagoon; on or outside the rim, a pin within 0.3 km of an open reef gap in `data/openings.json` (not one a reef flat bridges) is a pass, a name with "kandu" or "express" is a pass, and anything else is an outer wall. Within 0.8 km of the rim, where that is unsure, the kind the diver picked wins. A thila or giri (an underwater pinnacle or shoal) counts as a channel thila only within 0.8 km of a catalog pass. Checked against the catalog's own pins, the reef gaps find under half of the channel sites and flag about one wall in five as a channel, which is why the diver's pick wins on the rim. Catalog sites never take app-added pins as mates, so a pin changes only its own forecast, and the boat route opens the reef only at catalog passes.
 
 **Curved channels.** A channel that bends can set `outgoingBearingDeg`, so the outgoing arrow points where the water actually leaves. HP Reef runs in toward 10 o'clock and out toward 5. The model itself keeps the inward axis.
 
@@ -277,6 +279,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/17` | 6 Oct | Pending samples, null-slope reports and lagoon fallback reports no longer skew the forecast. |
 | `…/18` | 13 Oct | Channels with no published section sized from `ok` grid crossings. |
 | `…/19` | 31 Oct | Catalog: Moofushi, Himendhoo Dhekunu, Fushifaru and Maamigili Kandu set as passes and Fushifaru Giri as a channel thila by hand, so they take the rim's direction and the across-rim model (they were lagoon sites on a centroid bearing up to 84° off), and they now count as channel openings in their atolls' lagoon flow. New atolls and sites are new inputs, not a change. |
+| `…/20` | 3 Nov | Pins added in the app get a site type from their position (lagoon well inside the outline, pass in an open reef gap, else outer wall) or, on the rim band, from the kind their diver picked, instead of none (which ran every one as a channel). Thila and giri names no longer make a rim site a channel thila away from a pass. Catalog sites are unchanged. |
 
 ## Known limits
 

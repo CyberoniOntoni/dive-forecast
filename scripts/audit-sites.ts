@@ -68,7 +68,8 @@ function main(): void {
     if (/\bkandu\b|\bkandoo\b|\bexpress\b/i.test(site.name) && site.siteType === "lagoon") {
       flag(site.id, `named as a channel but typed lagoon (${edgeKm.toFixed(2)} km inside); set "pass" by hand if it cuts the rim`);
     }
-    const derived = deriveSiteType(site, ring);
+    const passes = catalog.sites.filter((mate) => mate.id !== site.id && mate.atollId === site.atollId && mate.siteType === "pass");
+    const derived = deriveSiteType(site, ring, passes);
     if (derived && site.siteType && derived !== site.siteType && site.siteTypeSource !== "manual") {
       flag(site.id, `type ${site.siteType} (${site.siteTypeSource}), position/name suggest ${derived}; ${inside ? "inside" : "outside"} ${edgeKm.toFixed(2)} km from rim`);
     }

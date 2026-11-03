@@ -102,8 +102,11 @@ export type Site = {
   outgoingBearingDeg?: number;
   /** Where the site sits: pass, channel thila, outer reef or lagoon. Absent until classified. */
   siteType?: SiteType;
-  /** "manual" when someone who knows the site set it; a derived type never overwrites it. */
-  siteTypeSource?: "derived" | "manual";
+  /**
+   * "manual" when someone who knows the site set it; a derived type never overwrites it. "diver": an app-added pin
+   * whose adder picked its kind (diverSiteType); "derived" there means the pin's position decided (lib/store.ts).
+   */
+  siteTypeSource?: "derived" | "manual" | "diver";
   /**
    * "imagery": sourceUrl names the site but gives no usable coordinate, so the pin was put on the named channel or reef
    * from satellite imagery (pinNote says where). The site page says the position is approximate. Absent: the
@@ -113,8 +116,8 @@ export type Site = {
   /** Where an imagery-placed pin was put, and any other spot it could be. */
   pinNote?: string;
   /**
-   * On a pin added in the app: the kind of site the diver who added it said it is. Display only: the forecast routes
-   * on siteType, which a diver's pick never sets (lib/site-details.ts).
+   * On a pin added in the app: the kind of site the diver who added it said it is. It becomes the pin's siteType when
+   * the store is read (lib/store.ts), so it picks the forecast model; catalog sites never read it.
    */
   diverSiteType?: SiteType;
   /** On a pin added in the app: the adder's plain-text notes on how to dive it (entry, route, hazards). */

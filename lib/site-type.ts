@@ -20,18 +20,48 @@ const CORNER_NAME = /\bcorner\b/i;
  * The type a site's position and name suggest. Null when the atoll has no stored outline.
  * Allen Coral Atlas reef zones were tried and dropped: they map only the shallow reef tops, and dive pins sit on
  * the walls below, so neither the zone under a pin nor the zones inward from it separated passes from outer reef.
+ * In Dhivehi a thila is an underwater pinnacle and a giri an underwater shoal, wherever they are, so the name makes a
+ * site a channel thila only within CHANNEL_FUNNEL_KM of a known pass (`passes`); otherwise its position decides.
+ * With `channels` (open reef gaps from data/openings.json), a rim pin in one is a pass whatever its name: how an
+ * app-added pin is placed (lib/store.ts). The catalog scripts pass none, so names still decide there.
  */
-export function deriveSiteType(site: Pick<Site, "name" | "lat" | "lon">, ring: RimRing | null): SiteType | null {
+export function deriveSiteType(
+  site: Pick<Site, "name" | "lat" | "lon">,
+  ring: RimRing | null,
+  passes: readonly Pick<Site, "lat" | "lon">[] = [],
+  channels: readonly ChannelGap[] = [],
+): SiteType | null {
   if (!ring) return null;
   const inside = pointInRing(site.lat, site.lon, ring);
   const edgeKm = rimEdgeKm(site, ring);
   if (inside && edgeKm > RIM_NEAR_KM) return "lagoon";
 
   if (PASS_NAME.test(site.name)) return "pass";
-  if (THILA_NAME.test(site.name)) return "channel-thila";
+  const nearPass = passes.some((pass) => distanceKm(site, pass) <= CHANNEL_FUNNEL_KM);
+  if (THILA_NAME.test(site.name) && nearPass) return "channel-thila";
   // A corner at a channel mouth follows the channel; the owner sets corners named otherwise ("Faru") by hand.
   if (CORNER_NAME.test(site.name)) return "corner";
+  if (inChannelGap(site, channels)) return "pass";
   return "outer-reef";
+}
+
+/** An open gap in the reef crest: its middle and its width across, metres. */
+export type ChannelGap = { lat: number; lon: number; widthM: number };
+
+/** Pins this far beyond a gap's edge still dive its channel: the mouth and its walls. */
+export const CHANNEL_GAP_MARGIN_KM = 0.3;
+
+function inChannelGap(site: Pick<Site, "lat" | "lon">, channels: readonly ChannelGap[]): boolean {
+  return channels.some((gap) => distanceKm(site, gap) <= gap.widthM / 2000 + CHANNEL_GAP_MARGIN_KM);
+}
+
+/**
+ * True when a pin is on the rim band (within RIM_NEAR_KM of the outline, either side), where position cannot tell a
+ * channel from a corner, a wall or a thila just inside: an app-added pin there takes its diver's pick. Away from the
+ * rim the position decides: inside is lagoon, outside is the ocean wall.
+ */
+export function onRimBand(site: Pick<Site, "lat" | "lon">, ring: RimRing): boolean {
+  return rimEdgeKm(site, ring) <= RIM_NEAR_KM;
 }
 
 /** Within this of a pass pin, a wall is in the channel's funnel: the flood is drawn round into the pass. */

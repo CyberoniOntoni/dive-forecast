@@ -23,7 +23,8 @@ function main(): void {
   console.log("site".padEnd(34), "where".padEnd(16), "reef zone".padEnd(22), "derived".padEnd(14), "stored");
   for (const site of catalog.sites) {
     const ring = rimForAtoll(catalog.atolls.find((atoll) => atoll.id === site.atollId));
-    const derived = deriveSiteType(site, ring);
+    const passes = catalog.sites.filter((mate) => mate.id !== site.id && mate.atollId === site.atollId && mate.siteType === "pass");
+    const derived = deriveSiteType(site, ring, passes);
     const where = ring
       ? `${pointInRing(site.lat, site.lon, ring) ? "inside" : "outside"} ${rimEdgeKm(site, ring).toFixed(2)} km`
       : "no outline";
