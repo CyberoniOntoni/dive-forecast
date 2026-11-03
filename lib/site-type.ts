@@ -1,3 +1,4 @@
+import { distanceKm } from "./geometry";
 import { RIM_NEAR_KM, pointInRing, rimEdgeKm, type RimRing } from "./rim";
 import type { ForecastRoute, Site, SiteType } from "./types";
 
@@ -113,11 +114,6 @@ export function alongReefHeading(inwardBearingDeg: number): number {
   return (((inwardBearingDeg + 90) % 360) + 360) % 360;
 }
 
-function distanceKm(a: Pick<Site, "lat" | "lon">, b: Pick<Site, "lat" | "lon">): number {
-  const north = (b.lat - a.lat) * 111.32;
-  const east = (b.lon - a.lon) * 111.32 * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180);
-  return Math.hypot(north, east);
-}
 
 /** Walls of an ocean strait between atolls (Vaadhoo Kandu): the flow runs through the strait, east or west. */
 export const STRAIT_NOTE =
