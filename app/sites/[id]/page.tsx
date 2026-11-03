@@ -16,7 +16,7 @@ import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
 import { DIVER_SITE_TYPE_LABEL } from "@/lib/site-details";
 import { SITE_TYPE_LABEL } from "@/lib/site-type";
-import { currentWallHour, timeZoneForSite } from "@/lib/site-time";
+import { currentWallHour, MALDIVES_TIME, timeZoneForSite } from "@/lib/site-time";
 import { readCatalog } from "@/lib/store";
 import { UNSEEDED_ATOLL_ID, type DepthKind, type HourForecast, type Site } from "@/lib/types";
 
@@ -115,6 +115,8 @@ export default async function SitePage({
           zone={zone}
           defaultTime={currentWallHour(zone)}
           nickname={session?.nickname ?? null}
+          // Forecast hours are Maldives wall time; offer the one-tap report only where the site's clock is the same.
+          forecast={zone.id === MALDIVES_TIME.id ? forecast.hours : []}
         />
         <RatingForm key={`rating-${site.id}`} siteId={site.id} summary={rating} signedIn={session != null} />
       </div>

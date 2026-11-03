@@ -3,12 +3,12 @@
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { compassWord, onCompass, routeDirectionLegend } from "@/lib/nowcast-glance";
+import { compassWord, onCompass, routeDirectionLegend, strengthLabel } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
 import { POINTS, type AwardReason, type ReportAward } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
 import { MALDIVES_TIME, viewerClock, wallHoursBefore, zoneLabel, type SiteTimeZone } from "@/lib/site-time";
-import type { ForecastRoute } from "@/lib/types";
+import type { Direction, ForecastRoute, Strength } from "@/lib/types";
 
 const CHOICE =
   "flex min-h-11 items-center gap-2 rounded-xl border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
@@ -67,6 +67,7 @@ export function ReportForm({
   zone = MALDIVES_TIME,
   defaultTime,
   nickname,
+  forecast = [],
 }: {
   siteId: string;
   /** The signed-in diver; null shows a sign-in button instead of the form. */
@@ -76,6 +77,11 @@ export function ReportForm({
   zone?: SiteTimeZone;
   /** The site's current hour, "YYYY-MM-DDTHH:00", so most reports need no typing. */
   defaultTime?: string;
+  /**
+   * The forecast hours shown on the page, on the same clock as `zone`. When the chosen time has one, a single tap
+   * reports that the current ran as forecast.
+   */
+  forecast?: readonly { time: string; direction: Direction; strength: Strength }[];
 }) {
   const along = onCompass(forecastRoute, alongHeadingDeg)
     ? [compassWord(alongHeadingDeg), compassWord(alongHeadingDeg + 180)]
@@ -89,6 +95,23 @@ export function ReportForm({
   const [saved, setSaved] = useState(false);
   const viewer = useSyncExternalStore(noSubscription, viewerOffset, noViewerOnServer);
   const theirs = viewer == null || !time ? null : viewerClock(time, zone, viewer);
+  // The forecast for the chosen hour, for the one-tap "as forecast" report. Only whole hours match.
+  const shown = time ? forecast.find((hour) => hour.time.slice(0, 16) === time.slice(0, 16)) : undefined;
+  const directionWord = (direction: Direction) =>
+    along ? `running ${direction === "incoming" ? along[0] : along[1]}` : direction;
+  /** Ticks the forecast's direction and strength and sends the form: one tap when the dive matched it. */
+  const reportAsForecast = () => {
+    const form = formRef.current;
+    if (!form || !shown) return;
+    for (const [name, value] of [
+      ["direction", shown.direction],
+      ["strength", shown.strength],
+    ] as const) {
+      const choice = form.querySelector<HTMLInputElement>(`input[name="${name}"][value="${value}"]`);
+      if (choice) choice.checked = true;
+    }
+    form.requestSubmit();
+  };
   const [state, formAction, pending] = useActionState(
     async (_prev: ReportActionState, formData: FormData) => {
       const next = await addReportAction(siteId, formData);
@@ -142,7 +165,8 @@ export function ReportForm({
     >
       {heading}
       <p className="text-sm leading-6 text-foam/80">
-        Three taps: when, which way, how strong. Times are {zoneLabel(zone)}. Reporting as {nickname}.
+        Pick when, then one tap if it ran as forecast, or which way and how strong. Times are {zoneLabel(zone)}.
+        Reporting as {nickname}.
       </p>
       <form
         ref={formRef}
@@ -200,8 +224,19 @@ export function ReportForm({
             {theirs.offset}).
           </p>
         ) : null}
+        {shown ? (
+          <button
+            type="button"
+            onClick={reportAsForecast}
+            disabled={pending || saved}
+            className="min-h-11 w-full rounded-xl border border-foam/40 px-4 text-left text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+          >
+            As forecast: {directionWord(shown.direction)}, {strengthLabel(shown.strength)}
+          </button>
+        ) : null}
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
           <legend className="text-sm font-medium text-foam">
+            {shown ? "Or say how it was: " : ""}
             {routeDirectionLegend(forecastRoute, alongHeadingDeg)}
           </legend>
           <div className="grid grid-cols-2 gap-2">
