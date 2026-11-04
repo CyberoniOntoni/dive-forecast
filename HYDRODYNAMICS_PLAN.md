@@ -500,6 +500,7 @@ The first check against measured water, not the ocean model or fixtures. UHSLC h
 - The forward difference had been kept because a centred one scored worse on the replay, but the replay is fixture scenarios, not dives. Model 21 scores 26 of 30 there (was 24).
 - Malé and Gan show the same size and timing as the open-sea model, so there is no sign of a lagoon that lags the ocean much; τ stays at 0.25 h.
 - Not checked: the ocean current's own timing (no current gauge), and whether a pass's current lags its sea-level slope. Reports will tell.
+- `npm run tide-check` repeats this with the latest 92 days and the model's own slope (`netFlowSeries` with no drift or head), and exits 1 if any gauge's best lag isn't 0 or r drops under 0.95. On 4 Nov 2026 (model 22, gauge data to about mid-September): best lag 0 at all three, r 0.991 / 0.989 / 0.994, sign 99.5 / 98.4 / 99.9 %, size 1.05 / 1.00 / 1.03 (Hanimaadhoo / Malé / Gan). Rerun after any change to the slope or when the feed changes.
 
 ## 5. Stage C: Empirical Diver Calibration & Local Quirks (Long-Term)
 
