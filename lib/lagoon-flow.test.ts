@@ -209,4 +209,15 @@ describe("channelWeights", () => {
     expect(weights).toEqual([CHANNEL_WEIGHT_KM / 2, CHANNEL_WEIGHT_KM / 2, CHANNEL_WEIGHT_KM]);
     expect(channelWeights([{ lat: 4, lon: 73.5 }], 3)).toEqual([3]);
   });
+
+  it("groups the same whatever order the pins are listed in", () => {
+    // 0, 0.3 and 0.6 km in a row: one channel, even when both ends come before the middle pin.
+    const step = 0.3 / 111.2;
+    const weights = channelWeights([
+      { lat: 4, lon: 73.5 },
+      { lat: 4 + 2 * step, lon: 73.5 },
+      { lat: 4 + step, lon: 73.5 },
+    ]);
+    for (const weight of weights) expect(weight).toBeCloseTo(CHANNEL_WEIGHT_KM / 3);
+  });
 });

@@ -95,7 +95,19 @@ const CHANNEL_SPAN_KM = 0.8;
 export function channelWeights(points: readonly Point[], weightKm: number = CHANNEL_WEIGHT_KM): number[] {
   const groups: number[][] = [];
   const groupOf: number[] = [];
-  points.forEach((point, index) => {
+  // Pins with the most neighbours go first, then by position, so a pin between two others seeds their group and the
+  // result does not depend on the order the pins are listed in.
+  const neighbours = points.map(
+    (point) => points.filter((other) => other !== point && distanceKm(other, point) <= SAME_CHANNEL_KM).length,
+  );
+  const order = points
+    .map((_, index) => index)
+    .sort(
+      (a, b) =>
+        neighbours[b] - neighbours[a] || points[a].lat - points[b].lat || points[a].lon - points[b].lon || a - b,
+    );
+  order.forEach((index) => {
+    const point = points[index];
     const found = groups.findIndex(
       (members) =>
         members.some((member) => distanceKm(points[member], point) <= SAME_CHANNEL_KM) &&
