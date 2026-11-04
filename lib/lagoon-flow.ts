@@ -36,13 +36,6 @@ function flowByTime(hours: readonly MarineHour[], flow: readonly (number | null)
   return byTime;
 }
 
-function kmBetween(a: Point, b: Point): number {
-  return Math.hypot(
-    (b.lat - a.lat) * KM_PER_DEG_LAT,
-    (b.lon - a.lon) * KM_PER_DEG_LON * Math.cos((((a.lat + b.lat) / 2) * Math.PI) / 180),
-  );
-}
-
 /**
  * The porous rim: each ring sample on the outline and a midpoint between each pair of neighbours, so 24 openings
  * for 12 samples, each standing for its share of the perimeter. A sample's flow is the channel model's net flow at
@@ -61,7 +54,7 @@ export function rimSources(ring: AtollRing, headTauHours?: number): LagoonSource
     );
   });
   let perimeter = 0;
-  for (let index = 0; index < count; index += 1) perimeter += kmBetween(ring.samples[index].on, ring.samples[(index + 1) % count].on);
+  for (let index = 0; index < count; index += 1) perimeter += distanceKm(ring.samples[index].on, ring.samples[(index + 1) % count].on);
   const weightKm = perimeter / (2 * count);
   const sources: LagoonSource[] = [];
   for (let index = 0; index < count; index += 1) {

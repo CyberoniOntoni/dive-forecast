@@ -19,7 +19,7 @@ const MEDIUM_AGREEMENT = 0.8;
  *   channels. Strength moves by how far the report was from the model at its own hour, so a report that agrees
  *   changes nothing.
  * - **Confidence.** Never high. Medium where at least two reports fall on hours the model ran the same way as this
- *   hour, at least 80 % of them (by weight) saw the direction the model gave at their own hour, and no report within
+ *   hour (slack reports do not count), at least 80 % of them (by weight) saw the direction the model gave at their own hour, and no report within
  *   three hours says otherwise. Otherwise low.
  *
  * Only reports inside the series count: the stream at a report's hour is not saved with it, so an older report has
@@ -134,9 +134,9 @@ function axisConfidence(
   );
   if (near) return "low";
   // Reports from the same phase of the stream: the model ran the same way at their hour as at this one.
-  const samePhase = read.filter((item) => hours[item.index].direction === modelDirection);
-  if (samePhase.length < 2) return "low";
-  const voting = samePhase.filter((item) => !item.slack);
+  // Slack reports cast no direction vote, so they do not count toward the two.
+  const voting = read.filter((item) => !item.slack && hours[item.index].direction === modelDirection);
+  if (voting.length < 2) return "low";
   const weight = voting.reduce((sum, item) => sum + item.weight, 0);
   if (weight === 0) return "low";
   const agree = voting

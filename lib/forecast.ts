@@ -351,10 +351,11 @@ const FIRST_ALONG_REEF_VERSION = 8;
 export function alongReportDirection(
   report: Report,
   alongHeadingDeg: number,
-  kind: "wall" | "lagoon" = "wall",
+  kind: "wall" | "strait" | "lagoon" = "wall",
 ): Direction | null {
   let saved: number | null = typeof report.alongHeadingDeg === "number" ? report.alongHeadingDeg : null;
-  // A lagoon site's axis comes from its flow, not its bearing, so only a saved heading can read its report.
+  // A lagoon site's axis comes from its flow and a strait's from the strait, not the bearing, so only a saved
+  // heading can read their reports.
   const fromBearing = kind === "wall";
   if (
     saved == null &&

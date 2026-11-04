@@ -85,6 +85,14 @@ describe("applyAxisReports", () => {
     expect(flipped[3].direction).toBe("incoming");
   });
 
+  it("needs two directional reports for medium: a slack report does not count toward them", () => {
+    const one = [
+      report("a", "2026-11-03T00:00", "incoming", "mild"),
+      report("b", "2026-11-03T01:00", "incoming", "slack"),
+    ];
+    expect(applyAxisReports(stream(), one, asFiled)[4].confidence).toBe("low");
+  });
+
   it("lets a slack report pull strength but not direction", () => {
     const slack = applyAxisReports(stream(), [report("a", "2026-11-03T02:00", "outgoing", "slack")], asFiled);
     expect(slack[3].direction).toBe("incoming");

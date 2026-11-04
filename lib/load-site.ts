@@ -239,10 +239,10 @@ export async function loadSite(
   const axis = route.axisDeg;
   // Reports pull the stream at walls, the strait and lagoon sites too (lib/axis-reports.ts), read along today's axis.
   // A strait or lagoon report is read only by the heading saved with it; a wall's can also fall back on its bearing.
-  const onAxis = (hours: HourForecast[], axisDeg: number, kind: "wall" | "lagoon") =>
+  const onAxis = (hours: HourForecast[], axisDeg: number, kind: "wall" | "strait" | "lagoon") =>
     applyAxisReports(hours, reports, (report) => alongReportDirection(report, axisDeg, kind));
   if (route.route === "strait" && axis != null) {
-    return loaded("strait", axis, onAxis(straitHours({ hours: marine.hours, axisDeg: axis }), axis, "lagoon"));
+    return loaded("strait", axis, onAxis(straitHours({ hours: marine.hours, axisDeg: axis }), axis, "strait"));
   }
   // Along the reef the stream comes from the ocean model alone: no channel section.
   if (route.route === "along-reef" && axis != null) {
