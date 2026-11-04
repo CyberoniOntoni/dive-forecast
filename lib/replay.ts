@@ -1,3 +1,4 @@
+import { applyAxisReports } from "./axis-reports";
 import { alongReefHours, alongReportDirection, forecastHours, parseWall } from "./forecast";
 import type { HourForecast, MarineHour, Report } from "./types";
 
@@ -53,8 +54,8 @@ export function replayReports(input: ReplayInput): ReplayResult {
   const tierMatches = { high: 0, medium: 0, low: 0 };
 
   const along = input.alongHeadingDeg;
-  // Reports do not move the along-reef forecast, so one series serves every report.
-  const alongForecast = along == null ? null : alongReefHours({ hours: [...input.hours], alongHeadingDeg: along });
+  // The along-reef stream before reports; earlier reports pull it as on the site page (lib/axis-reports.ts).
+  const alongStream = along == null ? null : { along, model: alongReefHours({ hours: [...input.hours], alongHeadingDeg: along }) };
 
   for (const original of reports) {
     if (!inSeries(input.hours, original.time)) continue;
@@ -66,15 +67,16 @@ export function replayReports(input: ReplayInput): ReplayResult {
     }
     const earlier = reports.filter((item) => isEarlier(item.time, report.time));
     const forecast =
-      alongForecast ??
-      forecastHours({
-        hours: [...input.hours],
-        inwardBearingDeg: input.inwardBearingDeg,
-        reports: earlier,
-        channelWidthM: input.channelWidthM,
-        channelDepthM: input.channelDepthM,
-        allowHighConfidence: input.allowHighConfidence,
-      });
+      alongStream != null
+        ? applyAxisReports(alongStream.model, earlier, (item) => alongReportDirection(item, alongStream.along))
+        : forecastHours({
+            hours: [...input.hours],
+            inwardBearingDeg: input.inwardBearingDeg,
+            reports: earlier,
+            channelWidthM: input.channelWidthM,
+            channelDepthM: input.channelDepthM,
+            allowHighConfidence: input.allowHighConfidence,
+          });
     const hour = nearestForecast(forecast, report.time);
     if (!hour) continue;
 
