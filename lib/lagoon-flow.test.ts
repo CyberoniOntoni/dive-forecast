@@ -197,4 +197,16 @@ describe("channelWeights", () => {
     expect(weights[3]).toBe(CHANNEL_WEIGHT_KM);
     expect(channelWeights([])).toEqual([]);
   });
+
+  it("does not chain two neighbouring kandus into one through a pin between them", () => {
+    // 0.45 km steps: the middle pin is close to both ends, but the ends are 0.9 km apart, wider than one channel.
+    const step = 0.45 / 111.2;
+    const weights = channelWeights([
+      { lat: 4, lon: 73.5 },
+      { lat: 4 + step, lon: 73.5 },
+      { lat: 4 + 2 * step, lon: 73.5 },
+    ]);
+    expect(weights).toEqual([CHANNEL_WEIGHT_KM / 2, CHANNEL_WEIGHT_KM / 2, CHANNEL_WEIGHT_KM]);
+    expect(channelWeights([{ lat: 4, lon: 73.5 }], 3)).toEqual([3]);
+  });
 });

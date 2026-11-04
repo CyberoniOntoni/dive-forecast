@@ -55,7 +55,7 @@ export function replayReports(input: ReplayInput): ReplayResult {
 
   const along = input.alongHeadingDeg;
   // The along-reef stream before reports; earlier reports pull it as on the site page (lib/axis-reports.ts).
-  const alongModel = along == null ? null : alongReefHours({ hours: [...input.hours], alongHeadingDeg: along });
+  const alongStream = along == null ? null : { along, model: alongReefHours({ hours: [...input.hours], alongHeadingDeg: along }) };
 
   for (const original of reports) {
     if (!inSeries(input.hours, original.time)) continue;
@@ -67,8 +67,8 @@ export function replayReports(input: ReplayInput): ReplayResult {
     }
     const earlier = reports.filter((item) => isEarlier(item.time, report.time));
     const forecast =
-      alongModel != null && along != null
-        ? applyAxisReports(alongModel, earlier, (item) => alongReportDirection(item, along))
+      alongStream != null
+        ? applyAxisReports(alongStream.model, earlier, (item) => alongReportDirection(item, alongStream.along))
         : forecastHours({
             hours: [...input.hours],
             inwardBearingDeg: input.inwardBearingDeg,

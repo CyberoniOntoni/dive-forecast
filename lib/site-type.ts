@@ -117,11 +117,11 @@ export function alongReefHeading(inwardBearingDeg: number): number {
 
 /** Walls of an ocean strait between atolls (Vaadhoo Kandu): the flow runs through the strait, east or west. */
 export const STRAIT_NOTE =
-  "Strait wall: the current runs through the channel between the atolls, east or west. The monsoon sets the main direction (west in the NE monsoon, east in the SW), the rising tide pushes east and the falling tide west, and the strait speeds it up. Not checked against reports yet.";
+  "Strait wall: the current runs through the channel between the atolls, east or west. The monsoon sets the main direction (west in the NE monsoon, east in the SW), the rising tide pushes east and the falling tide west, and the strait speeds it up. Divers' reports nudge the next few hours; confidence stays at most medium.";
 
 /** Outer walls: the stream along the reef comes from the ocean model's tide and drift, not from the passes. */
 export const ALONG_REEF_NOTE =
-  "Outer wall: the current runs along the reef and turns with the tide, and the monsoon drift makes one way stronger or longer. Taken from the ocean model, not checked against reports yet.";
+  "Outer wall: the current runs along the reef and turns with the tide, and the monsoon drift makes one way stronger or longer. Taken from the ocean model; divers' reports nudge the next few hours, and confidence stays at most medium.";
 
 /** Inside the lagoon the flow comes from the water exchanged through the rim and channels: approximate. */
 export const LAGOON_NOTE =

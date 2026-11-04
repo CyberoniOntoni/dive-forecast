@@ -19,7 +19,7 @@ const MEDIUM_AGREEMENT = 0.8;
  *   channels. Strength moves by how far the report was from the model at its own hour, so a report that agrees
  *   changes nothing.
  * - **Confidence.** Never high. Medium where at least two reports fall on hours the model ran the same way as this
- *   hour (slack reports do not count), at least 80 % of them (by weight) saw the direction the model gave at their own hour, and no report within
+ *   hour (slack reports do not count) from at least two divers, at least 80 % of them (by weight) saw the direction the model gave at their own hour, and no report within
  *   three hours says otherwise. Otherwise low.
  *
  * Only reports inside the series count: the stream at a report's hour is not saved with it, so an older report has
@@ -42,7 +42,7 @@ export function applyAxisReports(
     if (index < 0) return [];
     const weight = reportTemporalWeight(report.time, referenceMs);
     if (!(weight > 0)) return [];
-    return [{ report, direction, ms, index, weight, slack: report.strength === "slack" }];
+    return [{ report, direction, index, hourMs: times[index], weight, slack: report.strength === "slack" }];
   });
   if (read.length === 0) return [...hours];
   return hours.map((hour, index) => {
@@ -51,7 +51,7 @@ export function applyAxisReports(
       ...hour,
       direction: pulled.direction,
       strength: pulled.strength,
-      confidence: axisConfidence(hours, times[index], hour.direction, pulled, read),
+      confidence: axisConfidence(hours, index, times[index], hour.direction, pulled, read),
     };
   });
 }
@@ -60,9 +60,9 @@ type AxisReport = {
   report: Report;
   /** The diver's direction read along today's axis. */
   direction: Direction;
-  ms: number;
-  /** The model hour of the report. */
+  /** The model hour of the report, and its time: a report at 10:20 is about the 10:00 hour and pulls it. */
   index: number;
+  hourMs: number;
   weight: number;
   /** Slack saw no flow: it pulls strength but casts no direction vote. */
   slack: boolean;
@@ -80,7 +80,7 @@ function pullHour(
   let slackWeight = 0;
   const active: { item: AxisReport; weight: number }[] = [];
   for (const item of read) {
-    const since = (hourMs - item.ms) / HOUR_MS;
+    const since = (hourMs - item.hourMs) / HOUR_MS;
     if (!(since >= 0) || since >= PULL_HOURS) continue;
     if (turnedBetween(hours, item.index, index)) continue;
     const weight = (1 - since / PULL_HOURS) * item.weight;
@@ -112,16 +112,18 @@ function pullHour(
   return { direction, strength, contradicted: conflict || direction !== hour.direction };
 }
 
-/** Whether the model's direction changes anywhere from the report's hour up to this hour. */
+/** Whether the model's direction changes anywhere between these two hours, in either order. */
 function turnedBetween(hours: readonly HourForecast[], from: number, to: number): boolean {
-  for (let index = from + 1; index <= to; index += 1) {
-    if (hours[index].direction !== hours[from].direction) return true;
+  const [first, last] = from <= to ? [from, to] : [to, from];
+  for (let index = first + 1; index <= last; index += 1) {
+    if (hours[index].direction !== hours[first].direction) return true;
   }
   return false;
 }
 
 function axisConfidence(
   hours: readonly HourForecast[],
+  index: number,
   hourMs: number,
   modelDirection: Direction,
   pulled: { direction: Direction; contradicted: boolean },
@@ -129,14 +131,19 @@ function axisConfidence(
 ): "low" | "medium" {
   if (pulled.contradicted) return "low";
   const directional = read.filter((item) => !item.slack);
-  const near = directional.some(
-    (item) => Math.abs(hourMs - item.ms) <= CONTRADICTION_NEAR_MS && item.direction !== pulled.direction,
-  );
+  // A report within three hours says otherwise: on this run of the stream it saw another way than this hour gives;
+  // across a turn it saw another way than the model gave at its own hour.
+  const near = directional.some((item) => {
+    if (Math.abs(hourMs - item.hourMs) > CONTRADICTION_NEAR_MS) return false;
+    const expected = turnedBetween(hours, item.index, index) ? hours[item.index].direction : pulled.direction;
+    return item.direction !== expected;
+  });
   if (near) return "low";
   // Reports from the same phase of the stream: the model ran the same way at their hour as at this one.
   // Slack reports cast no direction vote, so they do not count toward the two.
   const voting = read.filter((item) => !item.slack && hours[item.index].direction === modelDirection);
-  if (voting.length < 2) return "low";
+  // Two different divers: one diver's reports, or their one-tap "as forecast" reports, are not a track record.
+  if (new Set(voting.map((item) => item.report.userId ?? item.report.id)).size < 2) return "low";
   const weight = voting.reduce((sum, item) => sum + item.weight, 0);
   if (weight === 0) return "low";
   const agree = voting

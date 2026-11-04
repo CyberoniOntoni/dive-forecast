@@ -97,21 +97,26 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
     const channels = mates.filter(
       (mate) => mate.atollId === atoll.id && crossesRim(mate, mates),
     );
-    // Dive sites in one channel share its weight, so a channel counts once however many pins it has.
-    const weights = channelWeights(channels);
     const fetched = await Promise.all(
-      channels.map(async (channel, index) => {
+      channels.map(async (channel) => {
         const { deg } = resolveBearing(channel, mates, outside, rim);
         const marine = await siteMarineHours(channel.lat, channel.lon, deg, outside.lat, outside.lon, {
           ...options,
           seawardKm: seawardKmFor(channel.id),
         });
-        if (marine.ok) return channelSource(channel, marine.hours, deg, ring.level, weights[index]);
+        if (marine.ok) return { channel, hours: marine.hours, deg };
         if (marine.pending) pending = true;
         return null;
       }),
     );
-    const sources = [...rimSources(ring), ...fetched.filter((source): source is LagoonSource => source != null)];
+    const loadedChannels = fetched.filter((item) => item != null);
+    // Dive sites in one channel share its weight, so a channel counts once however many pins it has. Shared among
+    // the pins that loaded, so a pin still fetching does not take part of its channel's weight with it.
+    const weights = channelWeights(loadedChannels.map((item) => item.channel));
+    const sources = [
+      ...rimSources(ring),
+      ...loadedChannels.map((item, index) => channelSource(item.channel, item.hours, item.deg, ring.level, weights[index])),
+    ];
     if (!pending) lagoonMemo.set(atoll.id, { at: Date.now(), sources });
     return sources;
   })().finally(() => lagoonLoading.delete(atoll.id));

@@ -93,6 +93,31 @@ describe("applyAxisReports", () => {
     expect(applyAxisReports(stream(), one, asFiled)[4].confidence).toBe("low");
   });
 
+  it("pulls the hour a report is about when it was filed after the top of the hour", () => {
+    const pulled = applyAxisReports(stream(), [report("a", "2026-11-03T02:20", "outgoing", "mild")], asFiled);
+    expect(pulled[2].direction).toBe("outgoing");
+  });
+
+  it("does not hold an hour low for a nearby report across a turn that agreed with the model at its own hour", () => {
+    const agreeing = [
+      report("a", "2026-11-03T06:00", "outgoing", "mild"),
+      report("b", "2026-11-03T07:00", "outgoing", "mild"),
+      report("c", "2026-11-03T04:00", "incoming", "mild"),
+    ];
+    // 04:00 saw incoming, as the model gave then; 06:00 is outgoing after the turn and two reports back it.
+    expect(applyAxisReports(stream(), agreeing, asFiled)[6].confidence).toBe("medium");
+  });
+
+  it("needs two different divers for medium", () => {
+    const oneDiver = [
+      { ...report("a", "2026-11-03T00:00", "incoming", "mild"), userId: "u1" },
+      { ...report("b", "2026-11-03T01:00", "incoming", "mild"), userId: "u1" },
+    ];
+    expect(applyAxisReports(stream(), oneDiver, asFiled)[4].confidence).toBe("low");
+    const twoDivers = [oneDiver[0], { ...oneDiver[1], userId: "u2" }];
+    expect(applyAxisReports(stream(), twoDivers, asFiled)[4].confidence).toBe("medium");
+  });
+
   it("lets a slack report pull strength but not direction", () => {
     const slack = applyAxisReports(stream(), [report("a", "2026-11-03T02:00", "outgoing", "slack")], asFiled);
     expect(slack[3].direction).toBe("incoming");

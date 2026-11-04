@@ -115,8 +115,13 @@ export default async function SitePage({
           zone={zone}
           defaultTime={currentWallHour(zone)}
           nickname={session?.nickname ?? null}
-          // Forecast hours are Maldives wall time; offer the one-tap report only where the site's clock is the same.
-          forecast={zone.id === MALDIVES_TIME.id ? forecast.hours : []}
+          // Forecast hours are Maldives wall time; offer the one-tap report only where the site's clock is the same, and
+          // only to a signed-in diver (the form is all the page sends otherwise).
+          forecast={
+            session != null && zone.id === MALDIVES_TIME.id
+              ? forecast.hours.map(({ time, direction, strength }) => ({ time, direction, strength }))
+              : []
+          }
         />
         <RatingForm key={`rating-${site.id}`} siteId={site.id} summary={rating} signedIn={session != null} />
       </div>

@@ -104,12 +104,12 @@ async function main(): Promise<void> {
     const peaks: number[] = [];
     const nearChannel: string[] = [];
     for (const atoll of atolls) {
-      const shares = channelWeights(atoll.channels.map((item) => item.site)).map((share) => share / CHANNEL_WEIGHT_KM);
+      const channelKm = channelWeights(atoll.channels.map((item) => item.site), weight);
       const sources: LagoonSource[] = [
         ...rimSources(atoll.ring, TAU),
         // Pins in one channel share its weight, as in lib/load-site.ts.
         ...atoll.channels.map((item, index) =>
-          channelSource(item.site, item.hours, item.bearing, atoll.ring.level, weight * shares[index], TAU),
+          channelSource(item.site, item.hours, item.bearing, atoll.ring.level, channelKm[index], TAU),
         ),
       ];
       const times = atoll.ring.level.map((item) => item.time);

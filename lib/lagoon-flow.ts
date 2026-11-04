@@ -83,23 +83,32 @@ export function rimSources(ring: AtollRing, headTauHours?: number): LagoonSource
  * (Felidhoo and Keyodhoo, 0.99 km).
  */
 export const SAME_CHANNEL_KM = 0.5;
+/** The widest one channel's pins may spread: neighbouring kandus pair up from about 0.8 km (Felidhoo–Keyodhoo 0.99). */
+const CHANNEL_SPAN_KM = 0.8;
 
 /**
- * Each channel pin's share of CHANNEL_WEIGHT_KM: pins chained within SAME_CHANNEL_KM of each other are one channel
- * and split its weight evenly, so a channel with three dive sites counts once, not three times. Each pin keeps its
- * own net flow. Returned in the order given.
+ * Each channel pin's share of a channel's weight (CHANNEL_WEIGHT_KM unless given): pins chained within SAME_CHANNEL_KM
+ * of each other are one channel and split its weight evenly, so a channel with three dive sites counts once, not three
+ * times. A pin joins a group only when it is also within CHANNEL_SPAN_KM of every pin already in it, so a pin between
+ * two neighbouring kandus cannot chain them into one. Each pin keeps its own net flow. Returned in the order given.
  */
-export function channelWeights(points: readonly Point[]): number[] {
-  const group = points.map((_, index) => index);
-  const root = (index: number): number => (group[index] === index ? index : (group[index] = root(group[index])));
-  for (let left = 0; left < points.length; left += 1) {
-    for (let right = left + 1; right < points.length; right += 1) {
-      if (distanceKm(points[left], points[right]) <= SAME_CHANNEL_KM) group[root(right)] = root(left);
+export function channelWeights(points: readonly Point[], weightKm: number = CHANNEL_WEIGHT_KM): number[] {
+  const groups: number[][] = [];
+  const groupOf: number[] = [];
+  points.forEach((point, index) => {
+    const found = groups.findIndex(
+      (members) =>
+        members.some((member) => distanceKm(points[member], point) <= SAME_CHANNEL_KM) &&
+        members.every((member) => distanceKm(points[member], point) <= CHANNEL_SPAN_KM),
+    );
+    if (found >= 0) {
+      groups[found].push(index);
+      groupOf[index] = found;
+    } else {
+      groupOf[index] = groups.push([index]) - 1;
     }
-  }
-  const sizes = new Map<number, number>();
-  points.forEach((_, index) => sizes.set(root(index), (sizes.get(root(index)) ?? 0) + 1));
-  return points.map((_, index) => CHANNEL_WEIGHT_KM / (sizes.get(root(index)) ?? 1));
+  });
+  return points.map((_, index) => weightKm / groups[groupOf[index]].length);
 }
 
 /** A known channel as an opening: its own net flow from the channel model, weighted CHANNEL_WEIGHT_KM. */
