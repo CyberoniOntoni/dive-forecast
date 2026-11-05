@@ -7,6 +7,13 @@ import type { MarineHour } from "./types";
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
+/**
+ * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is still served at once while
+ * R2 (or Open-Meteo) is checked behind the response, so a page after a quiet spell does not wait on R2 in the US.
+ */
+const EDGE_KEEP_MS = 24 * 60 * 60 * 1000;
+/** A point is checked again behind a response at most this often per isolate. */
+const REVALIDATE_EVERY_MS = 60 * 1000;
 const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
 const SEAWARD_KM = 3;
 /** Open-Meteo requests running at once. Hundreds of sites must not fire hundreds of requests together. */
@@ -105,12 +112,18 @@ export type FetchOptions = {
   wait?: boolean;
   /** Seaward distance in km. Absent means 3. The GEBCO table sets it when the 3 km cell is not open ocean. */
   seawardKm?: number;
+  /**
+   * Wait for a refresh of any series older than this (ms), instead of serving it and refreshing behind the response.
+   * The scheduled warm-up (lib/warm.ts) sets it a little under the TTL, so visitors find R2 fresh. It also skips the
+   * ten-minute ring and lagoon memos, which would otherwise hide series that are due.
+   */
+  refreshOlderThanMs?: number;
 };
 
 /**
- * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a refresh runs in the
- * background, so a page never waits on Open-Meteo for a point it has seen before. A point with no cache at all
- * waits for its first fetch, unless the caller asked not to wait.
+ * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, it is checked again in the
+ * background (R2 first on a worker, then Open-Meteo), so a page never waits on Open-Meteo for a point it has seen
+ * before. A point with no cache at all waits for its first fetch, unless the caller asked not to wait.
  */
 export function fetchMarine(lat: number, lon: number, options: FetchOptions = {}): Promise<MarineFetch> {
   return marinePoints.fetch(lat, lon, options);
@@ -161,27 +174,56 @@ export function pointFetcher<T>(source: PointSource<T>) {
       }
     }
     const known = remembered.get(name);
-    const fresh = (series: { fetchedAt: number } | null | undefined) =>
-      series != null && Date.now() - series.fetchedAt <= CACHE_TTL_MS;
-    if (fresh(known)) return known!;
-    const key = `${WORKER_CACHE_PREFIX}${name}`;
-    // This data centre's copy first: R2 is a long way from the Maldives (lib/edge-cache.ts).
-    const edgeText = await edgeRead(key);
-    const edge = edgeText ? parsePointCache(edgeText, source.readHours) : null;
-    if (edge && fresh(edge)) {
-      remembered.set(name, edge);
-      return edge;
-    }
-    // Past the TTL another isolate may have refreshed it already: look in R2 before fetching Open-Meteo again.
+    if (known && withinTtl(known)) return known;
+    // This data centre's copy first: R2 is a long way from the Maldives (lib/edge-cache.ts). A copy past the TTL is
+    // still served; fetchPoint checks R2 again behind the response.
+    const edgeText = await edgeRead(workerKey(name));
+    const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
+    if (local) return remember(name, local);
+    return readR2(name, null);
+  }
+
+  /** The series in R2 (or `local` when R2 has nothing newer), copied to this data centre's edge. */
+  async function readR2(
+    name: string,
+    local: { fetchedAt: number; hours: T[] } | null,
+  ): Promise<{ fetchedAt: number; hours: T[] } | null> {
+    const env = workerEnv();
+    if (!env) return local;
+    const key = workerKey(name);
     try {
       const object = await env.DATA.get(key);
       const text = object ? await object.text() : null;
       const parsed = text ? parsePointCache(text, source.readHours) : null;
-      if (parsed && fresh(parsed)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
-      return remember(name, newest(parsed, edge, known));
+      if (parsed && (!local || parsed.fetchedAt > local.fetchedAt)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
+      return remember(name, newest(parsed, local));
     } catch {
-      return remember(name, newest(edge, known));
+      return remember(name, local);
     }
+  }
+
+  /** Per request on a worker (perRequest). */
+  const revalidationsInFlight = inFlightPerRequest<{ hours: T[]; fetchedAt: number } | null>();
+  /** When this isolate last checked each point behind a response: plain times, shared across requests. */
+  const lastRevalidated = new Map<string, number>();
+
+  /**
+   * A series newer than maxAgeMs if one can be had: on a worker another isolate or the scheduled warm-up may have put
+   * one in R2 already, so R2 is read before Open-Meteo is asked. Null when neither has one (the caller keeps what it had).
+   */
+  function revalidate(lat: number, lon: number, maxAgeMs: number): Promise<{ hours: T[]; fetchedAt: number } | null> {
+    const name = fileName(lat, lon);
+    const inFlight = revalidationsInFlight();
+    const running = inFlight.get(name);
+    if (running) return running;
+    const check = (async () => {
+      lastRevalidated.set(name, Date.now());
+      const stored = await readR2(name, remembered.get(name) ?? null);
+      if (stored && Date.now() - stored.fetchedAt <= maxAgeMs) return stored;
+      return (await refresh(lat, lon)) ?? stored;
+    })().finally(() => inFlight.delete(name));
+    inFlight.set(name, check);
+    return check;
   }
 
   /** Keeps the newest series this isolate has seen, so its memory never goes back to an older one. */
@@ -197,7 +239,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       const env = workerEnv();
       if (env) {
         remembered.set(name, { fetchedAt, hours });
-        const key = `${WORKER_CACHE_PREFIX}${name}`;
+        const key = workerKey(name);
         await env.DATA.put(key, text);
         edgeWrite(key, text, edgeSeconds(fetchedAt));
         return;
@@ -237,7 +279,15 @@ export function pointFetcher<T>(source: PointSource<T>) {
   async function fetchPoint(lat: number, lon: number, options: FetchOptions = {}): Promise<PointFetch<T>> {
     const cached = await readCached(lat, lon);
     if (cached) {
-      if (Date.now() - cached.fetchedAt > CACHE_TTL_MS) runInBackground(refresh(lat, lon));
+      const name = fileName(lat, lon);
+      const age = Date.now() - cached.fetchedAt;
+      const due = options.refreshOlderThanMs;
+      if (due != null && age > due) {
+        const latest = newest(await revalidate(lat, lon, due), cached)!;
+        return { ok: true, hours: latest.hours, fetchedAt: latest.fetchedAt, stale: false };
+      }
+      const checkedLately = Date.now() - (lastRevalidated.get(name) ?? 0) < REVALIDATE_EVERY_MS;
+      if (age > CACHE_TTL_MS && !checkedLately) runInBackground(revalidate(lat, lon, CACHE_TTL_MS));
       return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
     }
     const failed = failedPoints.has(fileName(lat, lon));
@@ -254,9 +304,18 @@ export function pointFetcher<T>(source: PointSource<T>) {
   return { fetch: fetchPoint, readCached };
 }
 
-/** How long an edge copy of a series is worth keeping: until it passes the TTL. */
+/** How long an edge copy of a series is worth keeping: EDGE_KEEP_MS from its fetch (edgeWrite skips one already past it). */
 function edgeSeconds(fetchedAt: number): number {
-  return (fetchedAt + CACHE_TTL_MS - Date.now()) / 1000;
+  return (fetchedAt + EDGE_KEEP_MS - Date.now()) / 1000;
+}
+
+function withinTtl(series: { fetchedAt: number }): boolean {
+  return Date.now() - series.fetchedAt <= CACHE_TTL_MS;
+}
+
+/** A cache file's key in the worker's R2 bucket (and its edge copy). */
+function workerKey(name: string): string {
+  return `${WORKER_CACHE_PREFIX}${name}`;
 }
 
 /** The most recently fetched of the series, or null when there are none. */

@@ -9,9 +9,9 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`); `shelter-grid.json` (8.5 MB) only by the sheltered-water actions, the rest by every action |
 | Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list, read once per request; a change writes only the rows it touched, in one transaction (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
-| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus a copy in the serving data centre's Cache API while fresh (the bucket is in eastern North America, far from the Maldives; `lib/edge-cache.ts`) and an in-memory copy per isolate (`lib/marine.ts`) |
+| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus a copy in the serving data centre's Cache API kept 24 hours (the bucket is in eastern North America, far from the Maldives; `lib/edge-cache.ts`): a copy past the 6-hour TTL is served at once and checked against R2 behind the response and an in-memory copy per isolate (`lib/marine.ts`) |
 | Site photos added by divers | `data/photos/` | `site-photos/<site>/<photo>.jpg` in the same bucket (previews use the preview bucket), JPEG only, at most 1.5 MB each after the browser shrinks them (`lib/site-photos.ts`) |
-| Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: served at once for the same Maldives hour and site list, rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
+| Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: with a copy in the serving data centre's Cache API: served at once for the same Maldives hour and site list, checked against R2 or rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
 
 `lib/cloudflare.ts` tells the two apart: OpenNext's request context exists only on a worker. Two rules come from
 the Workers runtime:
@@ -28,6 +28,18 @@ Background cache refreshes run under `waitUntil` (`runInBackground`).
 The worker's entry is `cloudflare-worker.js`, which wraps OpenNext's `.open-next/worker.js`: it answers 405 to
 anything but GET, HEAD and server-action POSTs (`lib/request-guard.ts`), so bot probes such as WordPress's
 `POST /?rest_route=/batch/v1` never render the map.
+
+### Cache warm-up (cron)
+
+Pages only ever refresh a series behind the response, so without help the first visitor after a quiet spell reads
+every series from R2 in the US and the first map of each hour builds every site's nowcast. A cron trigger
+(`triggers.crons` in `wrangler.jsonc`, every 15 minutes) runs `scheduled()` in `cloudflare-worker.js`, which asks
+`POST /api/warm` through Next with `AUTH_SECRET` in a header (`lib/warm.ts`; the worker answers 404 to that path from
+outside, and the route does without the token). It refreshes every series 5 hours old or more (each site's own,
+ring points, lagoon openings, offshore waves and wind) and saves the map's nowcasts for the hour, and from minute 40
+for the next hour too. A missed run changes nothing but speed. Each run's result is in the worker's logs
+(`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No `AUTH_SECRET`, no warm-up.
+Preview builds run no cron.
 
 ## Commands
 
@@ -96,7 +108,9 @@ in the store (D1 on the worker); points and badges are worked out from the repor
 
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over
 the free plan's 10 ms. `limits.cpu_ms` in `wrangler.jsonc` is 30 s. Paid includes 30M CPU-ms a month, about
-10,000 map loads; beyond that it is $0.02 per million CPU-ms (about $0.00005 per map load). R2 (under 20 MB stored, a few
+10,000 map loads; beyond that it is $0.02 per million CPU-ms (about $0.00005 per map load). The warm-up builds the map
+about 120 times a day, roughly 10-15M CPU-ms a month, and asks Open-Meteo for every point every 5 hours (a few thousand
+requests a day, inside its free 10,000). R2 (under 20 MB stored, a few
 thousand writes a day) stays inside its free allowance. D1 on Workers Paid includes 25 billion rows read and 50 million
 rows written a month and 5 GB stored; every request reads every store row, which is far inside that for now.
 

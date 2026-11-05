@@ -3,9 +3,10 @@ import { appSetting, perRequest, runInBackground, workerEnv } from "./cloudflare
 /**
  * A copy of R2 objects in the Cloudflare data centre serving the request (the Workers Cache API). The R2 bucket sits in
  * eastern North America, so from the Maldives every R2 read crosses the world, and a site page reads 10 to 30 of
- * them on a fresh isolate. The edge copy is read in a few milliseconds. Only the Open-Meteo series use it: the map's
- * saved nowcasts change every few minutes and stay in R2 alone. It is only ever a copy: callers check the
- * text they get for freshness and go to R2 when it is too old, and the data centre may drop it at any time.
+ * them on a fresh isolate. The edge copy is read in a few milliseconds. The Open-Meteo series use it, and the map.s
+ * saved nowcasts have their own copy (lib/nowcast-cache.ts). It is only ever a copy: callers check the text they get
+ * for freshness, serve one that is too old while they check R2 behind the response, and the data centre may drop it
+ * at any time.
  */
 type EdgeCache = {
   match: (key: string) => Promise<Response | undefined>;
@@ -63,12 +64,13 @@ export async function edgeRead(key: string): Promise<string | null> {
 
 /** Keeps a copy of an R2 object's text at the edge for up to maxAgeSeconds, after the response is sent. */
 export function edgeWrite(key: string, text: string, maxAgeSeconds: number): void {
+  if (!(maxAgeSeconds >= 1)) return;
   const url = keyUrl(key);
   const cache = url ? edgeCache() : null;
   if (!cache || !url) return;
   try {
     const response = new Response(text, {
-      headers: { "content-type": "application/json", "cache-control": `max-age=${Math.max(1, Math.round(maxAgeSeconds))}` },
+      headers: { "content-type": "application/json", "cache-control": `max-age=${Math.round(maxAgeSeconds)}` },
     });
     runInBackground(cache.put(url, response));
   } catch {
