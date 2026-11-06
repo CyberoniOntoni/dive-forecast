@@ -37,7 +37,8 @@
     "atoll-head-calibrate": "tsx scripts/atoll-head-calibrate.ts",
     "strength-calibrate": "tsx scripts/strength-calibrate.ts",
     "lagoon-calibrate": "tsx scripts/lagoon-calibrate.ts",
-    "strait-calibrate": "tsx scripts/strait-calibrate.ts"
+    "strait-calibrate": "tsx scripts/strait-calibrate.ts",
+    "tide-check": "tsx scripts/tide-check.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.14",
