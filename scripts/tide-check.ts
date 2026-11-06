@@ -154,8 +154,9 @@ async function main() {
     for (const row of rows) {
       console.log(`  ${String(row.lag).padStart(5)}  ${fixed(row.r)}  ${pct(row.sign).padStart(6)}  ${fixed(row.ratio, 2)}`);
     }
-    const best = rows.reduce((top, row) => (row.r > top.r ? row : top));
-    const onTime = best.lag === 0 && best.r >= MIN_CORRELATION;
+    // A lag with no pairs has r NaN; it never wins, and if every lag is NaN the check fails below.
+    const best = rows.reduce((top, row) => (Number.isFinite(row.r) && !(row.r <= top.r) ? row : top));
+    const onTime = best.lag === 0 && Number.isFinite(best.r) && best.r >= MIN_CORRELATION;
     if (!onTime) failed = true;
     const timing = best.lag === 0 ? "on time" : best.lag > 0 ? `${best.lag} h early` : `${-best.lag} h late`;
     console.log(`  best lag ${best.lag} h (${timing}), r ${fixed(best.r)}: ${onTime ? "ok" : "CHECK"}`);

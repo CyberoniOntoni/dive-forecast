@@ -6,17 +6,20 @@ import type { MarineHour } from "../lib/types";
 
 /**
  * About 99 days of ocean data for one point (92 past days and 7 ahead: the longest the marine API gives), for the
- * calibration scripts. Cached under the OS temp directory, so the app's six-hour cache is not touched.
+ * calibration scripts and tide-check. Cached for a day under the OS temp directory, so the app's six-hour cache is not
+ * touched.
  */
 const CACHE_DIR = path.join(os.tmpdir(), "dive-current-strength-calibrate");
 const MAX_REQUESTS = 4;
+/** A cached series older than this is fetched again, so a rerun weeks later does not compare against an old window. */
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 export async function longSeries(lat: number, lon: number): Promise<MarineHour[] | null> {
   const file = path.join(CACHE_DIR, `${lat.toFixed(4)}_${lon.toFixed(4)}.json`);
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8")) as MarineHour[];
+    if (Date.now() - fs.statSync(file).mtimeMs < MAX_AGE_MS) return JSON.parse(fs.readFileSync(file, "utf8")) as MarineHour[];
   } catch {
-    // Not cached yet.
+    // Not cached yet, or unreadable: fetch it again.
   }
   const params = new URLSearchParams({
     latitude: String(lat),
