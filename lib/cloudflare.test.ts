@@ -295,6 +295,32 @@ describe("on a Cloudflare worker", () => {
     }
   });
 
+  it("does not ask Open-Meteo again for a point whose refresh failed earlier in the same warm-up", async () => {
+    const { fetchMarine, marineCacheName } = await import("./marine");
+    const bucket = fakeBucket();
+    const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1() };
+    const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+    const due = Date.now() - 5.5 * 60 * 60 * 1000;
+    await bucket.put(`marine-cache/${marineCacheName(4, 73)}`, JSON.stringify({ fetchedAt: due, hours }));
+    const fetchSpy = vi.fn(async () => new Response("busy", { status: 429 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      newRequest(env);
+      const options = { refreshOlderThanMs: 4.5 * 60 * 60 * 1000 };
+      expect(await fetchMarine(4, 73, options)).toMatchObject({ ok: true, fetchedAt: due });
+      const asked = fetchSpy.mock.calls.length;
+      expect(asked).toBeGreaterThan(0);
+      expect(await fetchMarine(4, 73, options)).toMatchObject({ ok: true, fetchedAt: due });
+      expect(fetchSpy).toHaveBeenCalledTimes(asked);
+      // The next run is a new request and tries again.
+      newRequest(env);
+      await fetchMarine(4, 73, options);
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(asked);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("preloads every data file but the shelter grid, which loads only for the actions that name it", async () => {
     const { preloadDataFiles, readDataFile, CORE_DATA_FILES } = await import("./data-files");
     const asked: string[] = [];

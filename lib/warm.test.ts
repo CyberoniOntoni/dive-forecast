@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const built: { wall: string; options: unknown }[] = [];
+let saved = true;
 vi.mock("./nowcast-cache", () => ({
   buildMapNowcasts: async (_sites: unknown, _atolls: unknown, wall: string, options: unknown) => {
     built.push({ wall, options });
-    return [];
+    return { nowcasts: [], saved };
   },
 }));
 const offshore: unknown[] = [];
@@ -32,6 +33,18 @@ describe("warmCaches", () => {
     expect(offshore.length).toBeGreaterThan(0);
     expect(offshore.every((options) => JSON.stringify(options) === JSON.stringify({ refreshOlderThanMs: WARM_REFRESH_MS }))).toBe(true);
     expect(result.hour).toBe("2026-11-05T15");
+    // Every atoll with an outline lost its waves, and the run says so.
+    expect(result.offshoreFailed).toBe(offshore.length);
+    expect(result.saved).toBe(true);
+  });
+
+  it("reports a map list R2 refused", async () => {
+    saved = false;
+    try {
+      expect((await warmCaches(Date.parse("2026-11-05T10:20:00Z"))).saved).toBe(false);
+    } finally {
+      saved = true;
+    }
   });
 
   it("builds only the next hour's map from minute 40, refreshing as it goes", async () => {

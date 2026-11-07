@@ -37,7 +37,7 @@ every series from R2 in the US and the first map of each hour builds every site'
 `POST /api/warm` through Next with `AUTH_SECRET` in a header (`lib/warm.ts`; the worker answers 404 to that path from
 outside, and the route does without the token). It builds and saves the next hour's map nowcasts, and on the way
 refreshes every series 4.5 hours old or more (each site's own, ring points, lagoon openings, offshore waves and wind),
-so with an hour between runs none passes the 6-hour TTL. A missed run changes nothing but speed. Each run's result is
+so with an hour between runs none passes the 6-hour TTL; offshore waves and wind come after the map, so a down wave host cannot hold it up. A missed run changes nothing but speed. A run whose map list R2 refused fails (Trigger events show it); `offshoreFailed` in the log counts atolls that got no waves or wind. Its edge copies land in the cron's own data centre only: visitors' data centres copy from R2. Each run's result is
 in the worker's logs (`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No
 `AUTH_SECRET`, no warm-up. Preview builds run no cron.
 

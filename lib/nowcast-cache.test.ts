@@ -88,7 +88,7 @@ describe("mapNowcasts", () => {
     vi.stubEnv("APP_URL", "https://50bar.app");
     try {
       vi.useFakeTimers({ now: Date.parse("2026-10-30T11:00:00Z") });
-      // The warm-up saves the hour's list ahead of it.
+      // A rebuild in this data centre saves the list in R2 and here.
       await buildMapNowcasts(sites, [], WALL);
       await Promise.all(background);
       expect(entries.size).toBe(1);

@@ -7,5 +7,6 @@ import { isWarmRequest, warmCaches } from "@/lib/warm";
 export async function POST(request: Request) {
   if (!isWarmRequest(request)) return new Response("Not found", { status: 404 });
   const result = await warmCaches();
-  return Response.json(result);
+  // A list R2 refused is a failed run: 500, so scheduled() throws and Trigger events show it.
+  return Response.json(result, { status: result.saved ? 200 : 500 });
 }

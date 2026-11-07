@@ -1,5 +1,6 @@
 import { runInBackground, workerEnv, type R2Bucket } from "./cloudflare";
 import { edgeRead, edgeWrite } from "./edge-cache";
+import { parseWall } from "./forecast";
 import type { FetchOptions } from "./marine";
 import { nowcastSites, type SiteNowcast } from "./nowcast";
 import type { Atoll, Site } from "./types";
@@ -7,6 +8,8 @@ import type { Atoll, Site } from "./types";
 /** A saved map younger than this is served as it is; an older one from the same hour is served while a new one is made. */
 const FRESH_MS = 5 * 60 * 1000;
 const KEY_PREFIX = "nowcast/";
+/** Maldives time is UTC+5 all year. */
+const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
 /** How long a data centre keeps its copy of an hour's list: the hour, and a little over for clock skew. */
 const EDGE_SECONDS = 65 * 60;
 /** A data centre's copy older than FRESH_MS is checked against R2 at most this often per isolate. */
@@ -34,7 +37,7 @@ export async function mapNowcasts(
   if (!env) return nowcastSites(sites, atolls, maldivesWall);
   const key = hourKey(maldivesWall);
   const sitesKey = siteIdsKey(sites);
-  const rebuild = () => buildMapNowcasts(sites, atolls, maldivesWall);
+  const rebuild = async () => (await buildMapNowcasts(sites, atolls, maldivesWall)).nowcasts;
   const fresh = (saved: SavedNowcasts) => isFresh(saved, maldivesWall);
   /** True once per CHECK_EVERY_MS per hour's list in this isolate: requests in between leave the check to it. */
   const claimCheck = () => {
@@ -59,32 +62,35 @@ export async function mapNowcasts(
   }
   const stored = await read(env.DATA, key);
   if (stored && stored.saved.sitesKey === sitesKey) {
-    // A rebuild writes its own copy to the edge; otherwise this one goes there, so the next request takes the path above.
-    if (!fresh(stored.saved) && claimCheck()) runInBackground(rebuild());
-    else edgeWrite(key, stored.text, EDGE_SECONDS);
+    // A fresh list goes to the edge, so the next request takes the path above. An old one does not: it could land on
+    // top of the newer copy a rebuild (this one or another request's) has just written there.
+    if (fresh(stored.saved)) edgeWrite(key, stored.text, EDGE_SECONDS);
+    else if (claimCheck()) runInBackground(rebuild());
     return stored.saved.nowcasts;
   }
   return rebuild();
 }
 
 /**
- * Builds the map's nowcasts for the hour of maldivesWall and saves them in R2 and this data centre's copy. The map
- * rebuilds with { wait: false }; the warm-up passes its own options. Worker only: on Node it just computes.
+ * Builds the map's nowcasts for the hour of maldivesWall and saves them in R2 and this data centre's copy (for the
+ * warm-up that is the cron's data centre, not the visitors'; they copy it from R2). The map rebuilds with
+ * { wait: false }; the warm-up passes its own options. `saved` is false only when R2 refused the list (on Node,
+ * which only computes, it is true).
  */
 export async function buildMapNowcasts(
   sites: readonly Site[],
   atolls: readonly Atoll[],
   maldivesWall: string,
   options?: FetchOptions,
-): Promise<SiteNowcast[]> {
+): Promise<{ nowcasts: SiteNowcast[]; saved: boolean }> {
   const nowcasts = await nowcastSites(sites, atolls, maldivesWall, options);
   const env = workerEnv();
-  if (!env) return nowcasts;
+  if (!env) return { nowcasts, saved: true };
   const key = hourKey(maldivesWall);
   const text = JSON.stringify({ computedAt: Date.now(), sitesKey: siteIdsKey(sites), nowcasts } satisfies SavedNowcasts);
-  await save(env.DATA, key, text);
+  const saved = await save(env.DATA, key, text);
   edgeWrite(key, text, EDGE_SECONDS);
-  return nowcasts;
+  return { nowcasts, saved };
 }
 
 function hourKey(maldivesWall: string): string {
@@ -99,11 +105,9 @@ function isFresh(saved: SavedNowcasts, maldivesWall: string): boolean {
   return Date.now() - Math.max(saved.computedAt, hourStartMs(maldivesWall)) <= FRESH_MS;
 }
 
-/** Unix ms at the start of the Maldives hour of a wall time (UTC+5, no daylight saving). */
+/** Unix ms at the start of the Maldives hour of a wall time. parseWall reads the wall as if it were UTC; it is UTC+5. */
 function hourStartMs(maldivesWall: string): number {
-  const [date, time] = maldivesWall.split("T");
-  const [year, month, day] = date.split("-").map(Number);
-  return Date.UTC(year, month - 1, day, Number(time.slice(0, 2))) - 5 * 60 * 60 * 1000;
+  return parseWall(`${maldivesWall.slice(0, 13)}:00`) - MALDIVES_OFFSET_MS;
 }
 
 /** The site ids in order, hashed (FNV-1a): a pin added or removed makes a saved list stale. */
@@ -142,10 +146,12 @@ function parseSaved(text: string | null): { saved: SavedNowcasts; text: string }
   }
 }
 
-async function save(bucket: R2Bucket, key: string, text: string): Promise<void> {
+async function save(bucket: R2Bucket, key: string, text: string): Promise<boolean> {
   try {
     await bucket.put(key, text);
+    return true;
   } catch (error) {
     console.warn("Failed to save map nowcasts", error);
+    return false;
   }
 }

@@ -111,8 +111,7 @@ export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promi
   if (!rim) return EMPTY;
   const key = atoll.rimSourceUrl;
   const kept = memo.get(key);
-  const memoOk = options.refreshOlderThanMs == null;
-  if (memoOk && kept && Date.now() - kept.at < MEMO_MS && kept.ring.level.length > 0) return kept.ring;
+  if (kept && Date.now() - kept.at < MEMO_MS && kept.ring.level.length > 0) return kept.ring;
   const loading = ringLoadsInFlight();
   const running = loading.get(key);
   if (running) return running;

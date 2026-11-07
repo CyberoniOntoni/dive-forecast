@@ -114,8 +114,8 @@ export type FetchOptions = {
   seawardKm?: number;
   /**
    * Wait for a refresh of any series older than this (ms), instead of serving it and refreshing behind the response.
-   * The scheduled warm-up (lib/warm.ts) sets it a little under the TTL, so visitors find R2 fresh. It also skips the
-   * ten-minute ring and lagoon memos, which would otherwise hide series that are due.
+   * The scheduled warm-up (lib/warm.ts) sets it a little under the TTL, so visitors find R2 fresh. A point whose
+   * refresh already failed in this request is not tried again by it.
    */
   refreshOlderThanMs?: number;
 };
@@ -203,6 +203,8 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
   }
 
+  /** Points whose refresh failed in this request: the warm-up does not ask Open-Meteo for them again in the same run. */
+  const failedThisRequest = perRequest(() => new Set<string>());
   /** Points this request has already read from R2, so a revalidate right after does not read them again. */
   const readFromR2 = perRequest(() => new Set<string>());
   /** Per request on a worker (perRequest), by point and age limit. */
@@ -226,7 +228,10 @@ export function pointFetcher<T>(source: PointSource<T>) {
       const local = remembered.get(name) ?? null;
       const stored = readFromR2().has(name) ? local : await readR2(name, local);
       if (stored && Date.now() - stored.fetchedAt <= maxAgeMs) return stored;
-      return (await refresh(lat, lon)) ?? stored;
+      if (failedThisRequest().has(name)) return stored;
+      const fetched = await refresh(lat, lon);
+      if (!fetched) failedThisRequest().add(name);
+      return fetched ?? stored;
     })().finally(() => inFlight.delete(flightKey));
     inFlight.set(flightKey, check);
     return check;

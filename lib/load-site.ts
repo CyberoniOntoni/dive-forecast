@@ -76,6 +76,11 @@ const lagoonMemo = new Map<string, { at: number; sources: LagoonSource[] }>();
 const lagoonLoadsInFlight = inFlightPerRequest<LagoonSource[]>();
 const sinkMemo = new Map<string, LagoonSink>();
 
+/** Forgets every atoll's lagoon openings, so the next load builds them again. The warm-up starts with it. */
+export function clearLagoonMemo(): void {
+  lagoonMemo.clear();
+}
+
 /**
  * The openings of an atoll's lagoon: its porous rim from the ring points, and each channel dive site (pass, channel
  * thila, corner) with its own net flow. Empty when the atoll has no ring level yet. Kept ten minutes per atoll and
@@ -84,8 +89,7 @@ const sinkMemo = new Map<string, LagoonSink>();
  */
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   const kept = lagoonMemo.get(atoll.id);
-  const memoOk = options.refreshOlderThanMs == null;
-  if (memoOk && kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
+  if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
   const lagoonLoading = lagoonLoadsInFlight();
   const running = lagoonLoading.get(atoll.id);
   if (running) return running;
