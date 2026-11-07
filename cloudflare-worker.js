@@ -10,7 +10,9 @@ export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-nex
 const worker = {
   fetch(request, env, ctx) {
     // The warm-up path is only ever asked from scheduled() below, never from outside.
-    if (new URL(request.url).pathname === WARM_PATH) return new Response("Not found", { status: 404 });
+    // With or without a trailing slash, in case routing ever treats the two alike.
+    const pathname = new URL(request.url).pathname.replace(/\/+$/, "");
+    if (pathname === WARM_PATH) return new Response("Not found", { status: 404 });
     if (rejectsRequest(request)) return rejectedResponse();
     return handler.fetch(request, env, ctx);
   },
