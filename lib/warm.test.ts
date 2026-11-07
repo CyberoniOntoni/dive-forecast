@@ -16,7 +16,7 @@ vi.mock("./sea-state", () => ({
 }));
 
 const { isWarmRequest, warmCaches, WARM_REFRESH_MS } = await import("./warm");
-const { WARM_HEADER } = await import("./warm-path");
+const { WARM_HEADER, isWarmPath } = await import("./warm-path");
 
 afterEach(() => {
   built.length = 0;
@@ -57,5 +57,14 @@ describe("isWarmRequest", () => {
     expect(isWarmRequest(request("s3cret-valuX"))).toBe(false);
     expect(isWarmRequest(request("s3cret"))).toBe(false);
     expect(isWarmRequest(request("s3cret-value"))).toBe(true);
+  });
+});
+
+describe("isWarmPath", () => {
+  it("matches the route however it is spelled, and nothing else", () => {
+    for (const path of ["/api/warm", "/api/warm/", "//api//warm", "/api/%77arm", "/API/Warm", "/api%2Fwarm"]) {
+      expect(isWarmPath(path)).toBe(true);
+    }
+    for (const path of ["/api/warmer", "/api", "/", "/sites/warm", "/api/%E0%A4%A"]) expect(isWarmPath(path)).toBe(false);
   });
 });

@@ -35,19 +35,22 @@ export async function mapNowcasts(
   const key = hourKey(maldivesWall);
   const sitesKey = siteIdsKey(sites);
   const rebuild = () => buildMapNowcasts(sites, atolls, maldivesWall);
+  const fresh = (saved: SavedNowcasts) => isFresh(saved, maldivesWall);
+  /** True once per CHECK_EVERY_MS per hour's list in this isolate: requests in between leave the check to it. */
+  const claimCheck = () => {
+    if (Date.now() - (lastChecked.get(key) ?? 0) < CHECK_EVERY_MS) return false;
+    lastChecked.set(key, Date.now());
+    return true;
+  };
   const edge = parseSaved(await edgeRead(key));
   if (edge && edge.saved.sitesKey === sitesKey) {
-    const checkedLately = Date.now() - (lastChecked.get(key) ?? 0) < CHECK_EVERY_MS;
-    if (!isFresh(edge.saved) && !checkedLately) {
-      lastChecked.set(key, Date.now());
+    if (!fresh(edge.saved) && claimCheck()) {
       runInBackground(
         (async () => {
           // Another data centre, an isolate or the warm-up may have saved a newer list already.
           const stored = await read(env.DATA, key);
-          if (stored && stored.saved.sitesKey === sitesKey && stored.saved.computedAt > edge.saved.computedAt) {
-            edgeWrite(key, stored.text, EDGE_SECONDS);
-            if (isFresh(stored.saved)) return;
-          }
+          const newer = stored && stored.saved.sitesKey === sitesKey && stored.saved.computedAt > edge.saved.computedAt;
+          if (newer && fresh(stored.saved)) return edgeWrite(key, stored.text, EDGE_SECONDS);
           await rebuild();
         })(),
       );
@@ -56,8 +59,9 @@ export async function mapNowcasts(
   }
   const stored = await read(env.DATA, key);
   if (stored && stored.saved.sitesKey === sitesKey) {
-    edgeWrite(key, stored.text, EDGE_SECONDS);
-    if (!isFresh(stored.saved)) runInBackground(rebuild());
+    // A rebuild writes its own copy to the edge; otherwise this one goes there, so the next request takes the path above.
+    if (!fresh(stored.saved) && claimCheck()) runInBackground(rebuild());
+    else edgeWrite(key, stored.text, EDGE_SECONDS);
     return stored.saved.nowcasts;
   }
   return rebuild();
@@ -87,8 +91,19 @@ function hourKey(maldivesWall: string): string {
   return `${KEY_PREFIX}${maldivesWall.slice(0, 13)}.json`;
 }
 
-function isFresh(saved: SavedNowcasts): boolean {
-  return Date.now() - saved.computedAt <= FRESH_MS;
+/**
+ * Younger than FRESH_MS, counted from when it was built or from the start of its hour if that is later: the warm-up
+ * builds an hour's list at :50 of the hour before, and that list is new when its hour starts.
+ */
+function isFresh(saved: SavedNowcasts, maldivesWall: string): boolean {
+  return Date.now() - Math.max(saved.computedAt, hourStartMs(maldivesWall)) <= FRESH_MS;
+}
+
+/** Unix ms at the start of the Maldives hour of a wall time (UTC+5, no daylight saving). */
+function hourStartMs(maldivesWall: string): number {
+  const [date, time] = maldivesWall.split("T");
+  const [year, month, day] = date.split("-").map(Number);
+  return Date.UTC(year, month - 1, day, Number(time.slice(0, 2))) - 5 * 60 * 60 * 1000;
 }
 
 /** The site ids in order, hashed (FNV-1a): a pin added or removed makes a saved list stale. */

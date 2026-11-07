@@ -276,12 +276,19 @@ describe("on a Cloudflare worker", () => {
       newRequest(env);
       expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: due });
       expect(fetchSpy).not.toHaveBeenCalled();
-      const warmed = await fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
+      const reads: string[] = [];
+      const get = bucket.get.bind(bucket);
+      bucket.get = (name) => (reads.push(name), get(name));
+      vi.resetModules();
+      newRequest(env);
+      const warmed = await (await import("./marine")).fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
+      // R2 is read once: the check before Open-Meteo reuses what this request just read.
+      expect(reads).toEqual([key]);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
       expect(warmed.ok && warmed.fetchedAt).toBeGreaterThan(due);
       expect(JSON.parse(bucket.objects.get(key)!.text).hours[0].time).toBe("2026-10-30T11:00");
       // Fresh now: a second warm-up leaves Open-Meteo alone.
-      await fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
+      await (await import("./marine")).fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       vi.unstubAllGlobals();

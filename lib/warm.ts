@@ -4,6 +4,7 @@ import { buildMapNowcasts } from "./nowcast-cache";
 import { ready } from "./ready";
 import { loadOffshore } from "./sea-state";
 import { listMergedSites, readCatalog } from "./store";
+import { sameText } from "./session-token";
 import { WARM_HEADER } from "./warm-path";
 
 /**
@@ -46,8 +47,5 @@ export async function warmCaches(now = Date.now()): Promise<WarmResult> {
 export function isWarmRequest(request: Request): boolean {
   const secret = appSetting("AUTH_SECRET");
   const token = request.headers.get(WARM_HEADER);
-  if (!secret || !token || token.length !== secret.length) return false;
-  let differ = 0;
-  for (let at = 0; at < secret.length; at += 1) differ |= secret.charCodeAt(at) ^ token.charCodeAt(at);
-  return differ === 0;
+  return secret != null && token != null && sameText(secret, token);
 }

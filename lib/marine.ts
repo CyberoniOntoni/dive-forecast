@@ -193,6 +193,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
     const key = workerKey(name);
     try {
       const object = await env.DATA.get(key);
+      readFromR2().add(name);
       const text = object ? await object.text() : null;
       const parsed = text ? parsePointCache(text, source.readHours) : null;
       if (parsed && (!local || parsed.fetchedAt > local.fetchedAt)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
@@ -202,7 +203,9 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
   }
 
-  /** Per request on a worker (perRequest). */
+  /** Points this request has already read from R2, so a revalidate right after does not read them again. */
+  const readFromR2 = perRequest(() => new Set<string>());
+  /** Per request on a worker (perRequest), by point and age limit. */
   const revalidationsInFlight = inFlightPerRequest<{ hours: T[]; fetchedAt: number } | null>();
   /** When this isolate last checked each point behind a response: plain times, shared across requests. */
   const lastRevalidated = new Map<string, number>();
@@ -213,16 +216,19 @@ export function pointFetcher<T>(source: PointSource<T>) {
    */
   function revalidate(lat: number, lon: number, maxAgeMs: number): Promise<{ hours: T[]; fetchedAt: number } | null> {
     const name = fileName(lat, lon);
+    // By age limit too: the warm-up's stricter check must not settle for a page's laxer one.
+    const flightKey = `${name}|${maxAgeMs}`;
     const inFlight = revalidationsInFlight();
-    const running = inFlight.get(name);
+    const running = inFlight.get(flightKey);
     if (running) return running;
     const check = (async () => {
       lastRevalidated.set(name, Date.now());
-      const stored = await readR2(name, remembered.get(name) ?? null);
+      const local = remembered.get(name) ?? null;
+      const stored = readFromR2().has(name) ? local : await readR2(name, local);
       if (stored && Date.now() - stored.fetchedAt <= maxAgeMs) return stored;
       return (await refresh(lat, lon)) ?? stored;
-    })().finally(() => inFlight.delete(name));
-    inFlight.set(name, check);
+    })().finally(() => inFlight.delete(flightKey));
+    inFlight.set(flightKey, check);
     return check;
   }
 

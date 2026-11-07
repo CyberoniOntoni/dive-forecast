@@ -2,7 +2,7 @@
 // cron trigger's cache warm-up (lib/warm.ts). See CLOUDFLARE.md. Build .open-next/ with `npm run cf:build` before
 // wrangler bundles this.
 import { rejectedResponse, rejectsRequest } from "./lib/request-guard";
-import { WARM_HEADER, WARM_PATH } from "./lib/warm-path";
+import { WARM_HEADER, WARM_PATH, isWarmPath } from "./lib/warm-path";
 import handler from "./.open-next/worker.js";
 
 export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-next/worker.js";
@@ -10,9 +10,7 @@ export { DOQueueHandler, DOShardedTagCache, BucketCachePurge } from "./.open-nex
 const worker = {
   fetch(request, env, ctx) {
     // The warm-up path is only ever asked from scheduled() below, never from outside.
-    // With or without a trailing slash, in case routing ever treats the two alike.
-    const pathname = new URL(request.url).pathname.replace(/\/+$/, "");
-    if (pathname === WARM_PATH) return new Response("Not found", { status: 404 });
+    if (isWarmPath(new URL(request.url).pathname)) return new Response("Not found", { status: 404 });
     if (rejectsRequest(request)) return rejectedResponse();
     return handler.fetch(request, env, ctx);
   },

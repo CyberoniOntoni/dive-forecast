@@ -114,6 +114,28 @@ describe("mapNowcasts", () => {
     }
   });
 
+  it("counts a list the warm-up built before its hour as new when the hour starts", async () => {
+    // 15:50 in the Maldives: the warm-up builds the 16:00 list.
+    vi.useFakeTimers({ now: Date.parse("2026-11-01T10:50:00Z") });
+    await buildMapNowcasts(sites, [], "2026-11-01T16:00");
+    vi.setSystemTime(Date.parse("2026-11-01T11:03:00Z"));
+    await mapNowcasts(sites, [], "2026-11-01T16:03");
+    expect(background).toHaveLength(0);
+    // Past FRESH_MS into the hour it is rebuilt behind the response as usual.
+    vi.setSystemTime(Date.parse("2026-11-01T11:06:00Z"));
+    await mapNowcasts(sites, [], "2026-11-01T16:06");
+    expect(background).toHaveLength(1);
+  });
+
+  it("starts one rebuild for a burst of loads that find an old list in R2", async () => {
+    vi.useFakeTimers({ now: Date.parse("2026-11-01T11:00:00Z") });
+    await mapNowcasts(sites, [], "2026-11-01T16:00");
+    vi.setSystemTime(Date.parse("2026-11-01T11:30:00Z"));
+    await Promise.all([1, 2, 3].map(() => mapNowcasts(sites, [], "2026-11-01T16:30")));
+    await Promise.all(background);
+    expect(nowcastSites).toHaveBeenCalledTimes(2);
+  });
+
   it("always computes on Node", async () => {
     onWorker = false;
     await mapNowcasts(sites, [], WALL);
