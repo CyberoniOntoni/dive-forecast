@@ -257,6 +257,44 @@ describe("on a Cloudflare worker", () => {
     }
   });
 
+  it("waits for a refresh of a series older than refreshOlderThanMs, R2 first, then Open-Meteo", async () => {
+    const { fetchMarine, marineCacheName } = await import("./marine");
+    const bucket = fakeBucket();
+    const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1() };
+    const key = `marine-cache/${marineCacheName(4, 73)}`;
+    const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+    const body = {
+      hourly_units: { ocean_current_velocity: "m/s" },
+      hourly: { time: ["2026-10-30T11:00"], sea_level_height_msl: [0.5], ocean_current_velocity: [0.3], ocean_current_direction: [80] },
+    };
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify(body)));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      // Five and a half hours old: inside the TTL, but due for the warm-up.
+      const due = Date.now() - 5.5 * 60 * 60 * 1000;
+      await bucket.put(key, JSON.stringify({ fetchedAt: due, hours }));
+      newRequest(env);
+      expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: due });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      const reads: string[] = [];
+      const get = bucket.get.bind(bucket);
+      bucket.get = (name) => (reads.push(name), get(name));
+      vi.resetModules();
+      newRequest(env);
+      const warmed = await (await import("./marine")).fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
+      // R2 is read once: the check before Open-Meteo reuses what this request just read.
+      expect(reads).toEqual([key]);
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(warmed.ok && warmed.fetchedAt).toBeGreaterThan(due);
+      expect(JSON.parse(bucket.objects.get(key)!.text).hours[0].time).toBe("2026-10-30T11:00");
+      // Fresh now: a second warm-up leaves Open-Meteo alone.
+      await (await import("./marine")).fetchMarine(4, 73, { refreshOlderThanMs: 5 * 60 * 60 * 1000 });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("preloads every data file but the shelter grid, which loads only for the actions that name it", async () => {
     const { preloadDataFiles, readDataFile, CORE_DATA_FILES } = await import("./data-files");
     const asked: string[] = [];
@@ -310,9 +348,16 @@ describe("on a Cloudflare worker", () => {
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
       expect(reads).toEqual([key]);
 
-      // An edge copy past the TTL: R2 is read again and its newer series wins.
+      // An edge copy past the TTL is served at once; R2 is read behind the response, and its newer series replaces the
+      // edge copy without asking Open-Meteo.
       const old = Date.now() - 7 * 60 * 60 * 1000;
       for (const url of edge.entries.keys()) edge.entries.set(url, JSON.stringify({ fetchedAt: old, hours }));
+      vi.resetModules();
+      newRequest(env);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: old });
+      await Promise.all(background);
+      expect(reads).toEqual([key, key]);
+      expect(fetch).not.toHaveBeenCalled();
       vi.resetModules();
       newRequest(env);
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });

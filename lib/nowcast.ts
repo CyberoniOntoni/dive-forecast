@@ -1,5 +1,6 @@
 import { parseWall } from "./forecast";
 import { loadSite } from "./load-site";
+import type { FetchOptions } from "./marine";
 import { readCatalog, reportsForSite } from "./store";
 import type { Atoll, BearingSource, ForecastRoute, HourForecast, Site } from "./types";
 
@@ -54,11 +55,12 @@ export async function nowcastSites(
   sites: readonly Site[],
   atolls: readonly Atoll[],
   maldivesWall: string,
+  options: FetchOptions = { wait: false },
 ): Promise<SiteNowcast[]> {
   const atollById = new Map(atolls.map((atoll) => [atoll.id, atoll]));
   // The map list can include a pin the diver just added. The centroid uses the published catalog.
   const mates = readCatalog().sites;
-  return Promise.all(sites.map((site) => nowcastOne(site, mates, atollById.get(site.atollId), maldivesWall)));
+  return Promise.all(sites.map((site) => nowcastOne(site, mates, atollById.get(site.atollId), maldivesWall, options)));
 }
 
 async function nowcastOne(
@@ -66,9 +68,11 @@ async function nowcastOne(
   mates: readonly Site[],
   atoll: Atoll | undefined,
   maldivesWall: string,
+  options: FetchOptions,
 ): Promise<SiteNowcast> {
-  // The map never waits for a first fetch: a site with no cache yet shows no forecast until its fetch lands.
-  const loaded = await loadSite(site, mates, atoll, reportsForSite(site.id), { wait: false });
+  // The map never waits for a first fetch (options.wait false): a site with no cache yet shows no forecast until its
+  // fetch lands. The scheduled warm-up waits, and refreshes series that are nearly due.
+  const loaded = await loadSite(site, mates, atoll, reportsForSite(site.id), options);
   const hour = nearestForecastHour(loaded.hours, maldivesWall);
   const hasHours = loaded.hours.length > 0;
   return {

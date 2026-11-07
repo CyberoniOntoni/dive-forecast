@@ -84,7 +84,8 @@ const sinkMemo = new Map<string, LagoonSink>();
  */
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   const kept = lagoonMemo.get(atoll.id);
-  if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
+  const memoOk = options.refreshOlderThanMs == null;
+  if (memoOk && kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
   const lagoonLoading = lagoonLoadsInFlight();
   const running = lagoonLoading.get(atoll.id);
   if (running) return running;

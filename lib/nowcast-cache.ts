@@ -1,18 +1,29 @@
 import { runInBackground, workerEnv, type R2Bucket } from "./cloudflare";
+import { edgeRead, edgeWrite } from "./edge-cache";
+import type { FetchOptions } from "./marine";
 import { nowcastSites, type SiteNowcast } from "./nowcast";
 import type { Atoll, Site } from "./types";
 
 /** A saved map younger than this is served as it is; an older one from the same hour is served while a new one is made. */
 const FRESH_MS = 5 * 60 * 1000;
 const KEY_PREFIX = "nowcast/";
+/** How long a data centre keeps its copy of an hour's list: the hour, and a little over for clock skew. */
+const EDGE_SECONDS = 65 * 60;
+/** A data centre's copy older than FRESH_MS is checked against R2 at most this often per isolate. */
+const CHECK_EVERY_MS = 60 * 1000;
 
 type SavedNowcasts = { computedAt: number; sitesKey: string; nowcasts: SiteNowcast[] };
+
+/** When this isolate last checked each hour's list against R2: plain times, shared across requests. */
+const lastChecked = new Map<string, number>();
 
 /**
  * The map's nowcasts. On Node this is nowcastSites, as the long-running process keeps its memos warm. On a worker a
  * fresh isolate would first load the data files and hundreds of cached series, so the finished list is saved in R2
- * per Maldives hour: a saved list for the same hour and the same sites is served at once, and one older than
- * FRESH_MS is rebuilt in the background. A new report or a point's first fetch shows on the map within one rebuild.
+ * per Maldives hour, with a copy in the serving data centre (lib/edge-cache.ts), since R2 is in the US: a saved list
+ * for the same hour and the same sites is served at once, and one older than FRESH_MS is checked or rebuilt in the
+ * background. The scheduled warm-up (lib/warm.ts) saves each hour's list before the hour starts, so the first map of
+ * an hour does not build it. A new report or a point's first fetch shows on the map within one rebuild.
  */
 export async function mapNowcasts(
   sites: readonly Site[],
@@ -21,19 +32,78 @@ export async function mapNowcasts(
 ): Promise<SiteNowcast[]> {
   const env = workerEnv();
   if (!env) return nowcastSites(sites, atolls, maldivesWall);
-  const key = `${KEY_PREFIX}${maldivesWall.slice(0, 13)}.json`;
+  const key = hourKey(maldivesWall);
   const sitesKey = siteIdsKey(sites);
-  const rebuild = async () => {
-    const nowcasts = await nowcastSites(sites, atolls, maldivesWall);
-    await save(env.DATA, key, { computedAt: Date.now(), sitesKey, nowcasts });
-    return nowcasts;
+  const rebuild = () => buildMapNowcasts(sites, atolls, maldivesWall);
+  const fresh = (saved: SavedNowcasts) => isFresh(saved, maldivesWall);
+  /** True once per CHECK_EVERY_MS per hour's list in this isolate: requests in between leave the check to it. */
+  const claimCheck = () => {
+    if (Date.now() - (lastChecked.get(key) ?? 0) < CHECK_EVERY_MS) return false;
+    lastChecked.set(key, Date.now());
+    return true;
   };
-  const saved = await read(env.DATA, key);
-  if (saved && saved.sitesKey === sitesKey) {
-    if (Date.now() - saved.computedAt > FRESH_MS) runInBackground(rebuild());
-    return saved.nowcasts;
+  const edge = parseSaved(await edgeRead(key));
+  if (edge && edge.saved.sitesKey === sitesKey) {
+    if (!fresh(edge.saved) && claimCheck()) {
+      runInBackground(
+        (async () => {
+          // Another data centre, an isolate or the warm-up may have saved a newer list already.
+          const stored = await read(env.DATA, key);
+          const newer = stored && stored.saved.sitesKey === sitesKey && stored.saved.computedAt > edge.saved.computedAt;
+          if (newer && fresh(stored.saved)) return edgeWrite(key, stored.text, EDGE_SECONDS);
+          await rebuild();
+        })(),
+      );
+    }
+    return edge.saved.nowcasts;
+  }
+  const stored = await read(env.DATA, key);
+  if (stored && stored.saved.sitesKey === sitesKey) {
+    // A rebuild writes its own copy to the edge; otherwise this one goes there, so the next request takes the path above.
+    if (!fresh(stored.saved) && claimCheck()) runInBackground(rebuild());
+    else edgeWrite(key, stored.text, EDGE_SECONDS);
+    return stored.saved.nowcasts;
   }
   return rebuild();
+}
+
+/**
+ * Builds the map's nowcasts for the hour of maldivesWall and saves them in R2 and this data centre's copy. The map
+ * rebuilds with { wait: false }; the warm-up passes its own options. Worker only: on Node it just computes.
+ */
+export async function buildMapNowcasts(
+  sites: readonly Site[],
+  atolls: readonly Atoll[],
+  maldivesWall: string,
+  options?: FetchOptions,
+): Promise<SiteNowcast[]> {
+  const nowcasts = await nowcastSites(sites, atolls, maldivesWall, options);
+  const env = workerEnv();
+  if (!env) return nowcasts;
+  const key = hourKey(maldivesWall);
+  const text = JSON.stringify({ computedAt: Date.now(), sitesKey: siteIdsKey(sites), nowcasts } satisfies SavedNowcasts);
+  await save(env.DATA, key, text);
+  edgeWrite(key, text, EDGE_SECONDS);
+  return nowcasts;
+}
+
+function hourKey(maldivesWall: string): string {
+  return `${KEY_PREFIX}${maldivesWall.slice(0, 13)}.json`;
+}
+
+/**
+ * Younger than FRESH_MS, counted from when it was built or from the start of its hour if that is later: the warm-up
+ * builds an hour's list at :50 of the hour before, and that list is new when its hour starts.
+ */
+function isFresh(saved: SavedNowcasts, maldivesWall: string): boolean {
+  return Date.now() - Math.max(saved.computedAt, hourStartMs(maldivesWall)) <= FRESH_MS;
+}
+
+/** Unix ms at the start of the Maldives hour of a wall time (UTC+5, no daylight saving). */
+function hourStartMs(maldivesWall: string): number {
+  const [date, time] = maldivesWall.split("T");
+  const [year, month, day] = date.split("-").map(Number);
+  return Date.UTC(year, month - 1, day, Number(time.slice(0, 2))) - 5 * 60 * 60 * 1000;
 }
 
 /** The site ids in order, hashed (FNV-1a): a pin added or removed makes a saved list stale. */
@@ -50,23 +120,31 @@ export function siteIdsKey(sites: readonly Site[]): string {
   return `${sites.length}:${(hash >>> 0).toString(16)}`;
 }
 
-async function read(bucket: R2Bucket, key: string): Promise<SavedNowcasts | null> {
+async function read(bucket: R2Bucket, key: string): Promise<{ saved: SavedNowcasts; text: string } | null> {
   try {
     const object = await bucket.get(key);
-    if (!object) return null;
-    const parsed = JSON.parse(await object.text()) as Partial<SavedNowcasts>;
-    if (typeof parsed.computedAt !== "number" || typeof parsed.sitesKey !== "string" || !Array.isArray(parsed.nowcasts)) {
-      return null;
-    }
-    return parsed as SavedNowcasts;
+    return object ? parseSaved(await object.text()) : null;
   } catch {
     return null;
   }
 }
 
-async function save(bucket: R2Bucket, key: string, saved: SavedNowcasts): Promise<void> {
+function parseSaved(text: string | null): { saved: SavedNowcasts; text: string } | null {
+  if (!text) return null;
   try {
-    await bucket.put(key, JSON.stringify(saved));
+    const parsed = JSON.parse(text) as Partial<SavedNowcasts>;
+    if (typeof parsed.computedAt !== "number" || typeof parsed.sitesKey !== "string" || !Array.isArray(parsed.nowcasts)) {
+      return null;
+    }
+    return { saved: parsed as SavedNowcasts, text };
+  } catch {
+    return null;
+  }
+}
+
+async function save(bucket: R2Bucket, key: string, text: string): Promise<void> {
+  try {
+    await bucket.put(key, text);
   } catch (error) {
     console.warn("Failed to save map nowcasts", error);
   }

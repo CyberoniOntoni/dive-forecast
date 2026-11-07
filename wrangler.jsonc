@@ -42,6 +42,10 @@
     "EMAIL_FROM": "login@50bar.app",
     "MAILGUN_DOMAIN": "mailgun.50bar.app"
   },
+  // The cache warm-up (cloudflare-worker.js scheduled, lib/warm.ts), hourly at :50: refreshes Open-Meteo series before
+  // they pass the 6-hour TTL and builds the next hour's map nowcasts, so a visitor after a quiet spell does not wait for them.
+  // Not in "previews": preview builds run no cron.
+  "triggers": { "crons": ["50 * * * *"] },
   "limits": {
     // Workers Paid allows up to 5 minutes; the map's first nowcast of every site is the heaviest request.
     "cpu_ms": 30000
