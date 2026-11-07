@@ -31,14 +31,17 @@ describe("warmCaches", () => {
     expect(built).toEqual([{ wall: "2026-11-05T15:20", options: { refreshOlderThanMs: WARM_REFRESH_MS } }]);
     expect(offshore.length).toBeGreaterThan(0);
     expect(offshore.every((options) => JSON.stringify(options) === JSON.stringify({ refreshOlderThanMs: WARM_REFRESH_MS }))).toBe(true);
-    expect(result.hours).toEqual(["2026-11-05T15"]);
+    expect(result.hour).toBe("2026-11-05T15");
   });
 
-  it("builds the next hour's map too from minute 40", async () => {
-    const result = await warmCaches(Date.parse("2026-11-05T10:45:00Z"));
-    expect(built.map((item) => item.wall)).toEqual(["2026-11-05T15:45", "2026-11-05T16:00"]);
-    expect(built[1].options).toEqual({ wait: false });
-    expect(result.hours).toEqual(["2026-11-05T15", "2026-11-05T16"]);
+  it("builds only the next hour's map from minute 40, refreshing as it goes", async () => {
+    const result = await warmCaches(Date.parse("2026-11-05T10:50:00Z"));
+    expect(built).toEqual([{ wall: "2026-11-05T16:00", options: { refreshOlderThanMs: WARM_REFRESH_MS } }]);
+    expect(result.hour).toBe("2026-11-05T16");
+  });
+
+  it("refreshes before the TTL even with a whole hour between runs", () => {
+    expect(WARM_REFRESH_MS + 60 * 60 * 1000).toBeLessThan(6 * 60 * 60 * 1000);
   });
 });
 

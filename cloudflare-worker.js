@@ -17,8 +17,8 @@ const worker = {
     return handler.fetch(request, env, ctx);
   },
 
-  // wrangler.jsonc "triggers": every few minutes, refresh the series that are nearly due and build the map's
-  // nowcasts ahead of the hour, through Next like any request so the app's request context is set.
+  // wrangler.jsonc "triggers": hourly at :50, refresh the series that are nearly due and build the next hour's map
+  // nowcasts, through Next like any request so the app's request context is set.
   async scheduled(_controller, env, ctx) {
     if (!env.AUTH_SECRET) {
       console.warn("Cache warm-up skipped: AUTH_SECRET is not set");

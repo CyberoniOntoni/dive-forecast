@@ -33,13 +33,13 @@ anything but GET, HEAD and server-action POSTs (`lib/request-guard.ts`), so bot 
 
 Pages only ever refresh a series behind the response, so without help the first visitor after a quiet spell reads
 every series from R2 in the US and the first map of each hour builds every site's nowcast. A cron trigger
-(`triggers.crons` in `wrangler.jsonc`, every 15 minutes) runs `scheduled()` in `cloudflare-worker.js`, which asks
+(`triggers.crons` in `wrangler.jsonc`, hourly at :50) runs `scheduled()` in `cloudflare-worker.js`, which asks
 `POST /api/warm` through Next with `AUTH_SECRET` in a header (`lib/warm.ts`; the worker answers 404 to that path from
-outside, and the route does without the token). It refreshes every series 5 hours old or more (each site's own,
-ring points, lagoon openings, offshore waves and wind) and saves the map's nowcasts for the hour, and from minute 40
-for the next hour too. A missed run changes nothing but speed. Each run's result is in the worker's logs
-(`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No `AUTH_SECRET`, no warm-up.
-Preview builds run no cron.
+outside, and the route does without the token). It builds and saves the next hour's map nowcasts, and on the way
+refreshes every series 4.5 hours old or more (each site's own, ring points, lagoon openings, offshore waves and wind),
+so with an hour between runs none passes the 6-hour TTL. A missed run changes nothing but speed. Each run's result is
+in the worker's logs (`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No
+`AUTH_SECRET`, no warm-up. Preview builds run no cron.
 
 ## Commands
 
@@ -109,7 +109,7 @@ in the store (D1 on the worker); points and badges are worked out from the repor
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over
 the free plan's 10 ms. `limits.cpu_ms` in `wrangler.jsonc` is 30 s. Paid includes 30M CPU-ms a month, about
 10,000 map loads; beyond that it is $0.02 per million CPU-ms (about $0.00005 per map load). The warm-up builds the map
-about 120 times a day, roughly 10-15M CPU-ms a month, and asks Open-Meteo for every point every 5 hours (a few thousand
+once an hour, roughly 2-3M CPU-ms a month, and asks Open-Meteo for every point about every 5 hours (a few thousand
 requests a day, inside its free 10,000). R2 (under 20 MB stored, a few
 thousand writes a day) stays inside its free allowance. D1 on Workers Paid includes 25 billion rows read and 50 million
 rows written a month and 5 GB stored; every request reads every store row, which is far inside that for now.
