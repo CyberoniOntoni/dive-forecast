@@ -235,6 +235,67 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().reports).toEqual([]);
   });
 
+  it("keeps series in the CACHE bucket when bound, copying one it lacks from DATA", async () => {
+    const { fetchMarine, marineCacheName } = await import("./marine");
+    const data = fakeBucket();
+    const cache = fakeBucket();
+    const env = { ASSETS: fakeAssets({}), DATA: data, CACHE: cache, DB: fakeD1() };
+    const key = `marine-cache/${marineCacheName(4, 73)}`;
+    const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+    const fetchedAt = Date.now() - 60 * 60 * 1000;
+    await data.put(key, JSON.stringify({ fetchedAt, hours }));
+    const fetchSpy = vi.fn(() => Promise.reject(new Error("offline")));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      newRequest(env);
+      // Only DATA has it (before the move): served from there, no Open-Meteo, and copied into CACHE behind the response.
+      expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      await Promise.all(background);
+      expect(JSON.parse(cache.objects.get(key)!.text).fetchedAt).toBe(fetchedAt);
+      // A fresh fetch is written to CACHE only.
+      const body = {
+        hourly_units: { ocean_current_velocity: "m/s" },
+        hourly: { time: ["2026-10-30T11:00"], sea_level_height_msl: [0.5], ocean_current_velocity: [0.3], ocean_current_direction: [80] },
+      };
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body))));
+      vi.resetModules();
+      newRequest(env);
+      const other = `marine-cache/${marineCacheName(5, 73)}`;
+      expect(await (await import("./marine")).fetchMarine(5, 73)).toMatchObject({ ok: true });
+      await Promise.all(background);
+      expect(cache.objects.has(other)).toBe(true);
+      expect(data.objects.has(other)).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("writes a newer series over a copy from DATA in the same request, never under it", async () => {
+    const { cacheGet, cachePut } = await import("./cache-bucket");
+    const data = fakeBucket();
+    const cache = fakeBucket();
+    let release = () => {};
+    const put = cache.put.bind(cache);
+    let first = true;
+    cache.put = async (key, value) => {
+      if (first) {
+        first = false;
+        await new Promise<void>((resolve) => (release = resolve));
+      }
+      return put(key, value);
+    };
+    const env = { ASSETS: fakeAssets({}), DATA: data, CACHE: cache, DB: fakeD1() };
+    await data.put("k", "old");
+    newRequest(env);
+    expect(await cacheGet(env, "k")).toBe("old");
+    const write = cachePut(env, "k", "new");
+    release();
+    await write;
+    await Promise.all(background);
+    expect(cache.objects.get("k")!.text).toBe("new");
+  });
+
   it("caches Open-Meteo series in R2 and refreshes a stale one in the background", async () => {
     const { fetchMarine, marineCacheName } = await import("./marine");
     const bucket = fakeBucket();

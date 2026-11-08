@@ -9,6 +9,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 export type WorkerEnv = {
   ASSETS: { fetch: (input: string) => Promise<Response> };
   DATA: R2Bucket;
+  /** The Asia-Pacific bucket for the Open-Meteo series and map nowcasts (lib/cache-bucket.ts). Absent: they live in DATA. */
+  CACHE?: R2Bucket;
   DB: D1Database;
   EMAIL?: SendEmail;
 };

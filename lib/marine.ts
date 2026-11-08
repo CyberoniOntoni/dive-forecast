@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { inFlightPerRequest, perRequest, runInBackground, workerEnv } from "./cloudflare";
+import { cacheGet, cachePut } from "./cache-bucket";
 import { edgeRead, edgeWrite } from "./edge-cache";
 import type { MarineHour } from "./types";
 
@@ -192,9 +193,8 @@ export function pointFetcher<T>(source: PointSource<T>) {
     if (!env) return local;
     const key = workerKey(name);
     try {
-      const object = await env.DATA.get(key);
+      const text = await cacheGet(env, key);
       readFromR2().add(name);
-      const text = object ? await object.text() : null;
       const parsed = text ? parsePointCache(text, source.readHours) : null;
       if (parsed && (!local || parsed.fetchedAt > local.fetchedAt)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
       return remember(name, newest(parsed, local));
@@ -251,7 +251,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       if (env) {
         remembered.set(name, { fetchedAt, hours });
         const key = workerKey(name);
-        await env.DATA.put(key, text);
+        await cachePut(env, key, text);
         edgeWrite(key, text, edgeSeconds(fetchedAt));
         return;
       }
