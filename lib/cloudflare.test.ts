@@ -242,11 +242,11 @@ describe("on a Cloudflare worker", () => {
     const env = { ASSETS: fakeAssets({}), DATA: data, CACHE: cache, DB: fakeD1() };
     const key = `marine-cache/${marineCacheName(4, 73)}`;
     const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.parse("2026-11-09T06:00:00Z") });
     const fetchedAt = Date.now() - 60 * 60 * 1000;
     await data.put(key, JSON.stringify({ fetchedAt, hours }));
     const fetchSpy = vi.fn(() => Promise.reject(new Error("offline")));
     vi.stubGlobal("fetch", fetchSpy);
-    vi.useFakeTimers({ toFake: ["Date"], now: Date.parse("2026-11-09T06:00:00Z") });
     try {
       newRequest(env);
       // Only DATA has it (before the move): served from there with no Open-Meteo call, and not copied.
