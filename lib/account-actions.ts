@@ -6,6 +6,7 @@ import {
   authSecret,
   clearSessionCookie,
   currentSession,
+  requestIpKey,
   requireSession,
   setSessionCookie,
 } from "./auth";
@@ -35,7 +36,8 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
 
     const code = newLoginCode();
     const codeHash = await hashLoginCode(email, code, secret);
-    const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now()));
+    const ipKey = await requestIpKey(secret);
+    const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now(), ipKey));
     const base = await appUrl();
     const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
     if (routes.length > 0) {
@@ -75,8 +77,26 @@ export async function signOut(): Promise<void> {
   await clearSessionCookie();
 }
 
-/** The signed-in diver's nickname for the header, from the cookie alone. */
+/** Ends every session of the signed-in diver, on every device, this one included. */
+export async function signOutEverywhere(): Promise<{ ok: boolean; error: string | null }> {
+  await ready();
+  try {
+    const session = await requireSession();
+    await mutateStore((store) => {
+      const user = store.users.find((item) => item.id === session.userId);
+      if (!user) throw new Error("This account no longer exists.");
+      user.sessionsValidFrom = Date.now();
+    });
+    await clearSessionCookie();
+    return { ok: true, error: null };
+  } catch (caught) {
+    return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign out everywhere." };
+  }
+}
+
+/** The signed-in diver's nickname for the header, from the cookie (and the store, for "Sign out everywhere"). */
 export async function whoAmI(): Promise<{ nickname: string } | null> {
+  await ready();
   const session = await currentSession();
   return session ? { nickname: session.nickname } : null;
 }
@@ -227,7 +247,7 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
     }));
   // Store order is the order sites were added.
   const newest = store.sites
-    .filter((site) => site.addedBy && nickname.has(site.addedBy))
+    .filter((site) => site.addedBy && !site.hidden && nickname.has(site.addedBy))
     .slice(-NEW_SITES)
     .reverse()
     .map((site) => ({ id: site.id, name: site.name, userId: site.addedBy!, nickname: nickname.get(site.addedBy!)! }));
@@ -261,7 +281,7 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
     about: user.about ?? "",
     since: user.createdAt.slice(0, 7),
     stats,
-    sitesAdded: store.sites.filter((site) => site.addedBy === user.id).length,
+    sitesAdded: store.sites.filter((site) => site.addedBy === user.id && !site.hidden).length,
     allRank,
     badges: badges.filter((badge) => badge.earned),
     isMe: session?.userId === user.id,

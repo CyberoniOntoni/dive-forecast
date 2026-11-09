@@ -6,7 +6,15 @@ import { rimForAtoll, rimWayId } from "./rim";
 import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
-import { emptyStore, loadD1Store, normalizeStore, prepareD1, storeChanges } from "./store-d1";
+import {
+  emptyStore,
+  GUARD_FAILED,
+  loadD1Rows,
+  normalizeStore,
+  prepareD1,
+  readStoreVersion,
+  storeChanges,
+} from "./store-d1";
 import {
   UNSEEDED_ATOLL_ID,
   type Catalog,
@@ -40,10 +48,31 @@ export function readCatalog(): Catalog {
  */
 const workerSnapshot = perRequest(() => ({ store: null as StoreData | null }));
 
+/**
+ * The isolate's last full read of the store, by the store version it was read at. A request first reads the version
+ * (one row) and reuses this copy while it matches, so a page view does not read every row of every table. Plain data,
+ * never a promise, so sharing it across requests is safe; nothing changes it in place (mutateStore reads afresh).
+ * Kept at most ISOLATE_STORE_MAX_MS, in case the database was edited by hand without changing the version.
+ */
+let isolateStore: { version: string; store: StoreData; readAt: number } | null = null;
+const ISOLATE_STORE_MAX_MS = 10 * 60 * 1000;
+
 /** Reads the store from D1 so this request's readStore sees other isolates' writes. Does nothing on Node. */
 export async function refreshStore(): Promise<void> {
   const env = workerEnv();
-  if (env) workerSnapshot().store = await readWorkerStore(env);
+  if (!env) return;
+  await prepareD1(env.DB, env.DATA);
+  const now = Date.now();
+  if (isolateStore && now - isolateStore.readAt < ISOLATE_STORE_MAX_MS) {
+    const version = await readStoreVersion(env.DB);
+    if (version === isolateStore.version) {
+      workerSnapshot().store = isolateStore.store;
+      return;
+    }
+  }
+  const { store, version } = await readWorkerRows(env);
+  isolateStore = { version, store, readAt: now };
+  workerSnapshot().store = store;
 }
 
 export function readStore(): StoreData {
@@ -70,9 +99,15 @@ export function readStore(): StoreData {
   }
 }
 
-async function readWorkerStore(env: WorkerEnv): Promise<StoreData> {
+/** The store when this request can read it without waiting: always on Node, after refreshStore on a worker. */
+export function peekStore(): StoreData | null {
+  if (workerEnv() && !workerSnapshot().store) return null;
+  return readStore();
+}
+
+async function readWorkerRows(env: WorkerEnv) {
   await prepareD1(env.DB, env.DATA);
-  return loadD1Store(env.DB);
+  return loadD1Rows(env.DB);
 }
 
 function isMissingFile(error: unknown): boolean {
@@ -85,7 +120,7 @@ export function listMergedSites(): Site[] {
   const added = readStore().sites;
   const publishedIds = new Set(published.map((site) => site.id));
   const onlyAdded = added
-    .filter((site) => !publishedIds.has(site.id))
+    .filter((site) => !publishedIds.has(site.id) && !site.hidden)
     .map((site) => withCurrentPlace(site, catalog));
   return [...published, ...onlyAdded];
 }
@@ -136,9 +171,17 @@ export function ratingsForSite(siteId: string): Rating[] {
   return readStore().ratings.filter((rating) => rating.siteId === siteId);
 }
 
-export async function addUserSite(site: Site): Promise<Site> {
+/** Adds an app-added pin. With `perDay`, throws when its adder already added that many in the last 24 hours. */
+export async function addUserSite(site: Site, perDay?: number): Promise<Site> {
   return mutateStore((store) => {
     if (store.sites.some((existing) => existing.id === site.id)) return site;
+    if (perDay != null && site.addedBy) {
+      const since = Date.parse(site.addedAt ?? new Date().toISOString()) - 24 * 60 * 60 * 1000;
+      const recent = store.sites.filter(
+        (existing) => existing.addedBy === site.addedBy && existing.addedAt && Date.parse(existing.addedAt) > since,
+      );
+      if (recent.length >= perDay) throw new Error(`You can add up to ${perDay} sites a day. Try again tomorrow.`);
+    }
     store.sites.push(site);
     return site;
   });
@@ -202,24 +245,42 @@ export function mutateStore<T>(mutate: (store: StoreData) => T): Promise<T> {
   return run;
 }
 
+/** Times a change is read and tried again after another request changed the same records first. */
+const MUTATE_TRIES = 8;
+
+/**
+ * One change on D1: read, change, write the touched records with guards (lib/store-d1.ts storeChanges). When
+ * another request changed one of those records (or a watched list) in between, the batch writes nothing and the
+ * change runs again on a fresh read, so counters such as a sign-in code's wrong tries never lose a count.
+ */
 async function mutateWorkerStore<T>(env: WorkerEnv, mutate: (store: StoreData) => T): Promise<T> {
-  const store = await readWorkerStore(env);
-  const before = structuredClone(store);
-  const result = mutate(store);
-  const changes = storeChanges(env.DB, before, store);
-  if (changes.length > 0) {
-    try {
-      await env.DB.batch(changes);
-    } catch (error) {
-      // Two first sign-ins for one address at once: the database keeps one account; the other is asked to retry.
-      if (/UNIQUE constraint failed: users\.email/.test(String((error as Error)?.message))) {
-        throw new Error("That account was just created. Try again.");
+  for (let attempt = 1; ; attempt += 1) {
+    const { store, raw } = await readWorkerRows(env);
+    const before = structuredClone(store);
+    const result = mutate(store);
+    const changes = storeChanges(env.DB, before, store, raw);
+    if (changes.length > 0) {
+      try {
+        await env.DB.batch(changes);
+      } catch (error) {
+        const message = String((error as Error)?.message);
+        if (GUARD_FAILED.test(message)) {
+          if (attempt >= MUTATE_TRIES) throw new Error("The app is busy. Try again in a moment.");
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 20 * attempt));
+          continue;
+        }
+        // Two first sign-ins for one address at once: the database keeps one account; the other is asked to retry.
+        if (/UNIQUE constraint failed: users\.email/.test(message)) {
+          throw new Error("That account was just created. Try again.");
+        }
+        if (/UNIQUE constraint failed: users\.nickname_key/.test(message)) throw new Error("That nickname is taken.");
+        throw error;
       }
-      throw error;
+      isolateStore = null;
     }
+    workerSnapshot().store = store;
+    return result;
   }
-  workerSnapshot().store = store;
-  return result;
 }
 
 function serializeStore(store: StoreData): string {

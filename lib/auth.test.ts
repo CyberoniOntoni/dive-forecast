@@ -9,7 +9,7 @@ vi.mock("next/headers", () => ({
   headers: async () => headersBehaviour(),
 }));
 
-const { appUrl, currentSession } = await import("./auth");
+const { appUrl, currentSession, ipGroup } = await import("./auth");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
@@ -69,5 +69,15 @@ describe("appUrl outside production, with no APP_URL", () => {
       throw new Error("`headers` was called outside a request scope.");
     };
     expect(await appUrl()).toBeNull();
+  });
+});
+
+describe("ipGroup", () => {
+  it("keeps an IPv4 address and groups an IPv6 one by its /64, however it is written", () => {
+    expect(ipGroup("203.0.113.5")).toBe("203.0.113.5");
+    expect(ipGroup("::ffff:203.0.113.5")).toBe("203.0.113.5");
+    expect(ipGroup("2001:db8:aa:1::5")).toBe(ipGroup("2001:0db8:00aa:0001:ffff:1:2:3"));
+    expect(ipGroup("2001:db8::1")).toBe(ipGroup("2001:db8:0:0:9::"));
+    expect(ipGroup("2001:db8:aa:1::5")).not.toBe(ipGroup("2001:db8:aa:2::5"));
   });
 });

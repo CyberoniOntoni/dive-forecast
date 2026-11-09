@@ -18,14 +18,15 @@ export type SiteScout = {
  * name.
  */
 export function siteScouts(
-  sites: readonly Pick<Site, "id" | "addedBy">[],
+  sites: readonly Pick<Site, "id" | "addedBy" | "hidden">[],
   users: readonly User[],
   reports: readonly Pick<Report, "siteId" | "userId">[],
 ): SiteScout[] {
   const nickname = new Map(users.map((user) => [user.id, user.nickname]));
   const byUser = new Map<string, { sites: number; reportedByOthers: number }>();
   for (const site of sites) {
-    if (!site.addedBy || !nickname.has(site.addedBy)) continue;
+    // A site the owner hid (spam, a duplicate) counts for nobody.
+    if (!site.addedBy || site.hidden || !nickname.has(site.addedBy)) continue;
     const row = byUser.get(site.addedBy) ?? { sites: 0, reportedByOthers: 0 };
     row.sites += 1;
     if (reports.some((report) => report.siteId === site.id && report.userId && report.userId !== site.addedBy)) {

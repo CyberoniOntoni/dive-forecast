@@ -4,7 +4,8 @@ import { appSetting } from "./cloudflare";
 import { SENDER_NAME } from "./login-email";
 import type { MailgunConfig } from "./mailgun";
 import { SIGN_IN_FIRST } from "./sign-in";
-import { SESSION_MAX_AGE_S, signSession, verifySession, type Session } from "./session-token";
+import { hashLoginCode, SESSION_MAX_AGE_S, signSession, verifySession, type Session } from "./session-token";
+import { peekStore } from "./store";
 
 /**
  * Who is signed in, from the signed session cookie. Settings: AUTH_SECRET (any long random string; signing in is off
@@ -76,7 +77,17 @@ export async function currentSession(): Promise<Session | null> {
   const token = jar.get(SESSION_COOKIE)?.value;
   const secret = authSecret();
   if (!secret) return null;
-  return token ? verifySession(token, secret) : null;
+  const session = token ? await verifySession(token, secret) : null;
+  return session && !signedOutSince(session) ? session : null;
+}
+
+/**
+ * Whether the diver chose "Sign out everywhere" after this cookie was issued. Read from the store when this request
+ * has loaded it (every server action has, by ready()); a page that has not is checked again by the action it calls.
+ */
+function signedOutSince(session: Session): boolean {
+  const user = peekStore()?.users.find((item) => item.id === session.userId);
+  return user?.sessionsValidFrom != null && session.issuedAt < user.sessionsValidFrom;
 }
 
 export async function requireSession(): Promise<Session> {
@@ -102,4 +113,33 @@ export async function setSessionCookie(userId: string, nickname: string): Promis
 /** Only from a server action. */
 export async function clearSessionCookie(): Promise<void> {
   (await cookies()).delete(SESSION_COOKIE);
+}
+
+/**
+ * The request's IP address as an HMAC with the app secret, for the per-IP sign-in limit: the address itself is never
+ * stored. Cloudflare sets CF-Connecting-IP; elsewhere the first X-Forwarded-For hop is used. Null when neither is set.
+ */
+export async function requestIpKey(secret: string): Promise<string | null> {
+  const list = await fromRequest(headers);
+  const ip = list?.get("cf-connecting-ip") ?? list?.get("x-forwarded-for")?.split(",")[0]?.trim();
+  if (!ip) return null;
+  return (await hashLoginCode("ip", ipGroup(ip), secret)).slice(0, 22);
+}
+
+/**
+ * The address a limit counts by: an IPv4 address as it is, an IPv6 address by its /64 (the first four groups), since
+ * one device or home gets a whole /64 and can pick a new address in it at will.
+ */
+export function ipGroup(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  // An IPv4 address written as IPv6 (::ffff:203.0.113.5) is that IPv4 address.
+  if (ip.includes(".")) return ip.slice(ip.lastIndexOf(":") + 1);
+  const [head, tail = ""] = ip.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = ip.includes("::") && tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+  return `${groups
+    .slice(0, 4)
+    .map((group) => String(parseInt(group || "0", 16) || 0))
+    .join(":")}::/64`;
 }

@@ -32,4 +32,9 @@ describe("siteScouts", () => {
       ["Bob", 1],
     ]);
   });
+
+  it("leaves out a site the owner hid", () => {
+    const rows = siteScouts([{ id: "s1", addedBy: "a" }, { id: "s2", addedBy: "a", hidden: true }, { id: "s3", addedBy: "b", hidden: true }], users, []);
+    expect(rows).toEqual([{ userId: "a", nickname: "Ann", rank: 1, sites: 1, reportedByOthers: 0 }]);
+  });
 });

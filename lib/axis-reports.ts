@@ -1,4 +1,11 @@
-import { CONSENSUS_RATIO_THRESHOLD, CONTRADICTION_NEAR_MS, parseWall, reportTemporalWeight } from "./forecast";
+import {
+  CONSENSUS_RATIO_THRESHOLD,
+  CONTRADICTION_NEAR_MS,
+  diverCount,
+  parseWall,
+  reportTemporalWeight,
+  sharedByDiver,
+} from "./forecast";
 import { STRENGTHS, type Direction, type HourForecast, type Report, type Strength } from "./types";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -17,7 +24,7 @@ const MEDIUM_AGREEMENT = 0.8;
  * - **Pull.** A report pulls the next six hours toward what the diver saw, fading over them, and stops where the model
  *   turns (its direction changes from the one it had at the report's hour). Direction needs 60 % of the weight, as at
  *   channels. Strength moves by how far the report was from the model at its own hour, so a report that agrees
- *   changes nothing.
+ *   changes nothing. One diver's reports together weigh as much as their heaviest one.
  * - **Confidence.** Never high. Medium where at least two reports fall on hours the model ran the same way as this
  *   hour (slack reports do not count) from at least two divers, at least 80 % of them (by weight) saw the direction the model gave at their own hour, and no report within
  *   three hours says otherwise. Otherwise low.
@@ -42,9 +49,12 @@ export function applyAxisReports(
     if (index < 0) return [];
     const weight = reportTemporalWeight(report.time, referenceMs);
     if (!(weight > 0)) return [];
-    return [{ report, direction, index, hourMs: times[index], weight, slack: report.strength === "slack" }];
+    return [{ report, direction, index, hourMs: times[index], weight, ownWeight: weight, slack: report.strength === "slack" }];
   });
   if (read.length === 0) return [...hours];
+  // One diver's reports together weigh as much as their heaviest one (sharedByDiver), as at channels: across the
+  // site for confidence, and among the reports pulling an hour for the pull (pullHour), from their own weights.
+  sharedByDiver(read).forEach((weight, index) => (read[index].weight = weight));
   return hours.map((hour, index) => {
     const pulled = pullHour(hours, index, times[index], read);
     return {
@@ -63,7 +73,10 @@ type AxisReport = {
   /** The model hour of the report, and its time: a report at 10:20 is about the 10:00 hour and pulls it. */
   index: number;
   hourMs: number;
+  /** Age weight shared among the diver's reports at the site: what confidence reads. */
   weight: number;
+  /** This report's own age weight, for the pull. */
+  ownWeight: number;
   /** Slack saw no flow: it pulls strength but casts no direction vote. */
   slack: boolean;
 };
@@ -83,12 +96,17 @@ function pullHour(
     const since = (hourMs - item.hourMs) / HOUR_MS;
     if (!(since >= 0) || since >= PULL_HOURS) continue;
     if (turnedBetween(hours, item.index, index)) continue;
-    const weight = (1 - since / PULL_HOURS) * item.weight;
+    const weight = (1 - since / PULL_HOURS) * item.ownWeight;
     if (!(weight > 0)) continue;
+    active.push({ item, weight });
+  }
+  // One vote per diver among the reports pulling this hour.
+  const shared = sharedByDiver(active.map(({ item, weight }) => ({ report: item.report, weight })));
+  active.forEach((entry, index) => (entry.weight = shared[index]));
+  for (const { item, weight } of active) {
     if (item.slack) slackWeight += weight;
     else if (item.direction === "incoming") incoming += weight;
     else outgoing += weight;
-    active.push({ item, weight });
   }
   const directional = incoming + outgoing;
   if (directional + slackWeight === 0) return { direction: hour.direction, strength: hour.strength, contradicted: false };
@@ -143,7 +161,7 @@ function axisConfidence(
   // Slack reports cast no direction vote, so they do not count toward the two.
   const voting = read.filter((item) => !item.slack && hours[item.index].direction === modelDirection);
   // Two different divers: one diver's reports, or their one-tap "as forecast" reports, are not a track record.
-  if (new Set(voting.map((item) => item.report.userId ?? item.report.id)).size < 2) return "low";
+  if (diverCount(voting) < 2) return "low";
   const weight = voting.reduce((sum, item) => sum + item.weight, 0);
   if (weight === 0) return "low";
   const agree = voting

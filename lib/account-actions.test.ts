@@ -10,6 +10,7 @@ import {
   getLeaderboard,
   getSiteScouts,
   requestSignIn,
+  signOutEverywhere,
   whoAmI,
 } from "./account-actions";
 import { addReport, addSite, rateSite } from "./actions";
@@ -19,13 +20,15 @@ import { readStore, setStorePath } from "./store";
 const DATA_DIR = path.join(process.cwd(), "data");
 
 const jar = vi.hoisted(() => new Map<string, string>());
+/** The connection's address as Cloudflare would give it; empty for none. */
+const client = vi.hoisted(() => ({ ip: "" }));
 vi.mock("next/headers", () => ({
   cookies: async () => ({
     get: (name: string) => (jar.has(name) ? { name, value: jar.get(name)! } : undefined),
     set: (name: string, value: string) => jar.set(name, value),
     delete: (name: string) => jar.delete(name),
   }),
-  headers: async () => new Headers({ host: "localhost:3000" }),
+  headers: async () => new Headers({ host: "localhost:3000", ...(client.ip ? { "cf-connecting-ip": client.ip } : {}) }),
 }));
 
 let testFile = "";
@@ -33,6 +36,9 @@ let sent: URLSearchParams[] = [];
 const realFetch = globalThis.fetch;
 
 beforeEach(() => {
+  // The day after the fixture reports' dives, so they are inside the reporting window.
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-28T00:00:00Z") });
+  client.ip = "";
   testFile = `.store-test-${crypto.randomUUID()}.json`;
   setStorePath(testFile);
   jar.clear();
@@ -47,6 +53,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   globalThis.fetch = realFetch;
   vi.unstubAllEnvs();
   for (const name of fs.readdirSync(DATA_DIR)) {
@@ -148,5 +155,38 @@ describe("sign in by email code", () => {
     globalThis.fetch = (async () => new Response("no", { status: 401 })) as unknown as typeof fetch;
     const result = await requestSignIn("a@example.com");
     expect(result).toMatchObject({ ok: false, error: "Could not send the email. Try again in a minute." });
+  });
+});
+
+describe("sign-in limits and sessions", () => {
+  it("caps the codes one connection can ask for in an hour, whatever the address", async () => {
+    client.ip = "203.0.113.5";
+    for (let index = 0; index < 30; index += 1) {
+      expect(await requestSignIn(`diver${index}@example.com`)).toMatchObject({ ok: true });
+    }
+    expect(await requestSignIn("another@example.com")).toMatchObject({ ok: false, error: expect.stringContaining("this connection") });
+    // The address itself is never kept, only its HMAC.
+    expect(JSON.stringify(readStore().logins)).not.toContain("203.0.113.5");
+    client.ip = "198.51.100.7";
+    expect(await requestSignIn("another@example.com")).toMatchObject({ ok: true });
+  });
+
+  it("signs a diver out on every device, and a new sign-in works again", async () => {
+    await requestSignIn("a@example.com");
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    const otherDevice = jar.get(SESSION_COOKIE)!;
+    vi.setSystemTime(new Date("2026-09-28T00:00:01Z"));
+    expect(await signOutEverywhere()).toEqual({ ok: true, error: null });
+    expect(jar.has(SESSION_COOKIE)).toBe(false);
+
+    jar.set(SESSION_COOKIE, otherDevice);
+    expect(await getAccount()).toBeNull();
+    await expect(rateSite("banana-reef", 4)).rejects.toThrow("Sign in first.");
+
+    vi.setSystemTime(new Date("2026-09-28T00:00:02Z"));
+    jar.clear();
+    await requestSignIn("a@example.com");
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail() });
+    expect(await getAccount()).toMatchObject({ nickname: "Ann" });
   });
 });

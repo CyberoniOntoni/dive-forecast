@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/22";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/23";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -83,6 +83,36 @@ export function reportTemporalWeight(reportTime: string, referenceTimeMs: number
   return Math.pow(2, -deltaMs / REPORT_HALF_LIFE_MS);
 }
 
+/** Who filed a report: the diver's account, or the report itself when it has none (older and fixture reports). */
+export function diverKey(report: Report): string {
+  return report.userId ? `user:${report.userId}` : `report:${report.id}`;
+}
+
+/** How many different divers filed these reports. */
+export function diverCount(reports: readonly { report: Report }[]): number {
+  return new Set(reports.map((item) => diverKey(item.report))).size;
+}
+
+/**
+ * Each diver's reports at a site together weigh as much as that diver's heaviest one: one account filing many reports
+ * is still one vote, so it cannot outvote other divers or train the fits alone. Returns the weights in input order;
+ * a diver with one report keeps its weight.
+ */
+export function sharedByDiver(items: readonly { report: Report; weight: number }[]): number[] {
+  const totals = new Map<string, { sum: number; max: number }>();
+  for (const { report, weight } of items) {
+    const key = diverKey(report);
+    const entry = totals.get(key) ?? { sum: 0, max: 0 };
+    entry.sum += weight;
+    entry.max = Math.max(entry.max, weight);
+    totals.set(key, entry);
+  }
+  return items.map(({ report, weight }) => {
+    const { sum, max } = totals.get(diverKey(report))!;
+    return sum > 0 ? (weight * max) / sum : weight;
+  });
+}
+
 /** A mean or typical floor is the channel's hydraulic depth. A maximum, a least depth, a range or a sounding is not. */
 export const HYDRAULIC_DEPTH_KINDS: readonly DepthKind[] = ["mean", "typical"];
 
@@ -130,7 +160,10 @@ type ClassifiedBase = {
   storedHourSlope: number | null;
   pullSlope: number | null;
   failed: boolean;
+  /** Age weight, shared among the diver's reports at the site (sharedByDiver): what the fits and confidence read. */
   temporalWeight: number;
+  /** Age weight of this report alone: the 6-hour pull shares it only among the diver's reports in that window. */
+  ownWeight: number;
   /** Through-flow at the report's hour, in slope units; added to its stored tide slopes. */
   through: number;
   /** Head drive from six hours before the report through six after, slope units; added to the stored tide slopes. */
@@ -162,6 +195,8 @@ export function forecastHours(input: ForecastInput): HourForecast[] {
   const head = headSeries(hours, residual, input.ringLevel, input.headTauHours ?? ATOLL_HEAD_TAU_HOURS);
   const flow = flowSeries(residual, addSeries(throughOnly, head));
   const classified = (input.reports ?? []).map((report) => classifyReport(report, hours));
+  const shared = sharedByDiver(classified.map((item) => ({ report: item.report, weight: item.temporalWeight })));
+  classified.forEach((item, index) => (item.temporalWeight = shared[index]));
   for (const item of classified) {
     item.through = reportThroughflow(item, throughOnly);
     item.head = reportHead(item, hours, head);
@@ -415,7 +450,17 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   const failed = report.slopeM === null && finite.length === 0;
   const referenceTimeMs = hours.length > 0 ? parseWall(hours[0].time) : Number.NaN;
   const temporalWeight = reportTemporalWeight(report.time, referenceTimeMs);
-  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed, temporalWeight, through: 0, head: NO_HEAD };
+  const base = {
+    report,
+    seriesIndex,
+    storedHourSlope,
+    pullSlope,
+    failed,
+    temporalWeight,
+    ownWeight: temporalWeight,
+    through: 0,
+    head: NO_HEAD,
+  };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
   const centerSlope = slopes ? slopes[WINDOW_HALF_HOURS] : null;
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
@@ -637,7 +682,8 @@ function fitPhaseOffset(
 ): number {
   // A slack report still names a direction (the form requires one), but it saw no flow, so it has no phase to vote.
   const voters = classified.filter((item) => item.kind !== "unusable" && !item.failed && !isSlackReport(item));
-  if (voters.length < 2) return 0;
+  // Two different divers: one diver's reports are not a track record, however many there are.
+  if (diverCount(voters) < 2) return 0;
 
   let bestK = 0;
   let bestRegularizedScore = Number.NEGATIVE_INFINITY;
@@ -646,15 +692,15 @@ function fitPhaseOffset(
 
   for (let k = -WINDOW_HALF_HOURS; k <= WINDOW_HALF_HOURS; k += 1) {
     let weightedScore = 0;
-    let count = 0;
+    const matched: ClassifiedReport[] = [];
     for (const voter of voters) {
       if (phaseScore(voter, hours, flow, k) > 0) {
         weightedScore += voter.temporalWeight;
-        count += 1;
+        matched.push(voter);
       }
     }
     rawScores.set(k, weightedScore);
-    matchCounts.set(k, count);
+    matchCounts.set(k, diverCount(matched));
 
     const regularized = weightedScore - LAG_PENALTY_LAMBDA * Math.abs(k);
     if (
@@ -700,7 +746,7 @@ function fitSpeedFactor(
 ): number {
   let weightedRatioSum = 0;
   let totalWeight = 0;
-  let count = 0;
+  const used: ClassifiedReport[] = [];
 
   for (const item of classified) {
     const prior = speedPrior(item, hours, flow, tides, offset, constriction);
@@ -711,10 +757,10 @@ function fitSpeedFactor(
     const w = item.temporalWeight;
     weightedRatioSum += ratio * w;
     totalWeight += w;
-    count += 1;
+    used.push(item);
   }
 
-  if (count < 2 || totalWeight <= 0) return 1;
+  if (diverCount(used) < 2 || totalWeight <= 0) return 1;
   const weightedMean = weightedRatioSum / totalWeight;
   return Math.min(2, Math.max(0.5, weightedMean));
 }
@@ -756,7 +802,7 @@ function confidenceFor(input: {
     });
 
   const similar = input.classified.filter(samePhase);
-  if (similar.length < 2) return "low";
+  if (diverCount(similar) < 2) return "low";
 
   const weightOf = (items: readonly ClassifiedReport[]) => items.reduce((sum, item) => sum + item.temporalWeight, 0);
   // Slack reports count toward strength agreement but not direction.
@@ -817,7 +863,8 @@ export function aggregateReportPull(
     if (!Number.isFinite(sinceHours) || sinceHours < 0 || sinceHours >= FADE_HOURS) continue;
 
     const fadeWeight = 1 - sinceHours / FADE_HOURS;
-    const decayWeight = item.temporalWeight;
+    // This report's own age weight: a diver's reports on earlier days must not thin out today's pull.
+    const decayWeight = item.ownWeight;
     const weight = fadeWeight * decayWeight;
     if (weight <= 0) continue;
 
@@ -825,7 +872,13 @@ export function aggregateReportPull(
     if (turned) {
       continue;
     }
+    activeReports.push({ item, weight });
+  }
 
+  // One vote per diver among the reports pulling this hour (sharedByDiver).
+  const shared = sharedByDiver(activeReports.map(({ item, weight }) => ({ report: item.report, weight })));
+  activeReports.forEach((active, index) => (active.weight = shared[index]));
+  for (const { item, weight } of activeReports) {
     // A slack report pulls strength but casts no direction vote: the form makes the diver pick one anyway.
     if (isSlackReport(item)) {
       slackWeight += weight;
@@ -834,7 +887,6 @@ export function aggregateReportPull(
     } else if (item.report.direction === "outgoing") {
       outgoingWeight += weight;
     }
-    activeReports.push({ item, weight });
   }
 
   const directionalWeight = incomingWeight + outgoingWeight;

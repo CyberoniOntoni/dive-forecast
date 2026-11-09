@@ -8,7 +8,7 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | Data | Docker / `next dev` | Worker |
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`); `shelter-grid.json` (8.5 MB) only by the sheltered-water actions, the rest by every action |
-| Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list, read once per request; a change writes only the rows it touched, in one transaction (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
+| Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list. A request reads the `store_version` row in `meta` and reuses its isolate's copy of the store while the version is the same (at most 10 minutes), else reads every table. A change writes only the rows it touched, in one transaction, guarded: it goes ahead only if those rows (and, for the sign-in codes and added pins, the list's membership) are as it read them, else nothing is written and it runs again on a fresh read; each write sets a new `store_version` (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
 | Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the R2 bucket `dive-current-cache` (binding `CACHE`, created with the Asia-Pacific location hint; `lib/cache-bucket.ts`), plus a copy in the serving data centre's Cache API kept 24 hours (`lib/edge-cache.ts`): a copy past the 6-hour TTL is served at once and checked against R2 behind the response and an in-memory copy per isolate (`lib/marine.ts`). Writes go to `CACHE` only; until 12 Nov 2026 a key it lacks is also looked up in `DATA` (eastern North America, where the caches lived before the move; the warm-up rewrites every series within hours). Previews have no `CACHE` binding and keep everything in their `DATA` bucket |
 | Site photos added by divers | `data/photos/` | `site-photos/<site>/<photo>.jpg` in the `DATA` bucket `dive-current-data` (previews use the preview bucket), JPEG only, at most 1.5 MB each after the browser shrinks them (`lib/site-photos.ts`) |
 | Map nowcasts | computed per load | `nowcast/<hour>.json` in the `CACHE` bucket, with a copy in the serving data centre's Cache API: served at once for the same Maldives hour and site list, checked against R2 or rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
@@ -107,6 +107,18 @@ DNS for 50bar.app. Without `AUTH_SECRET` and at least one way to send (Cloudflar
 needs none of them and prints the code to its own log instead. Users, pending codes (hashed) and ratings per diver live
 in the store (D1 on the worker); points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
 
+Limits (`lib/accounts.ts`): 5 codes per address and 30 per IP address (an IPv6 /64) an hour (the IP is kept only as an HMAC with
+`AUTH_SECRET`), 200 an hour in all, 5 wrong tries per code; 10 added sites per diver a day (`lib/actions.ts`). "Sign
+out everywhere" on the account page sets `sessionsValidFrom` on the user, which ends every older cookie.
+
+**Hiding an added site** (spam, a duplicate): set `hidden` on it and bump the version so isolates read it at once:
+
+```bash
+npx wrangler d1 execute dive-forecast --remote --command "UPDATE sites SET data = json_set(data, '$.hidden', json('true')) WHERE key = '<site-id>'; UPDATE meta SET value = lower(hex(randomblob(16))) WHERE key = 'store_version'"
+```
+
+Any hand edit in D1 should bump `store_version` the same way; otherwise isolates see it within 10 minutes.
+
 ## Cost
 
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over
@@ -115,7 +127,7 @@ the free plan's 10 ms. `limits.cpu_ms` in `wrangler.jsonc` is 30 s. Paid include
 once an hour, roughly 2-3M CPU-ms a month, and asks Open-Meteo for every point about every 5 hours (a few thousand
 requests a day, inside its free 10,000). R2 (under 20 MB stored, a few
 thousand writes a day) stays inside its free allowance. D1 on Workers Paid includes 25 billion rows read and 50 million
-rows written a month and 5 GB stored; every request reads every store row, which is far inside that for now.
+rows written a month and 5 GB stored; a request reads one row while nothing changed, and every store row after a write.
 
 ## Moving reports back
 
