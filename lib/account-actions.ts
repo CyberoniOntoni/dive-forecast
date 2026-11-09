@@ -94,8 +94,9 @@ export async function signOutEverywhere(): Promise<{ ok: boolean; error: string 
   }
 }
 
-/** The signed-in diver's nickname for the header, from the cookie alone. */
+/** The signed-in diver's nickname for the header, from the cookie (and the store, for "Sign out everywhere"). */
 export async function whoAmI(): Promise<{ nickname: string } | null> {
+  await ready();
   const session = await currentSession();
   return session ? { nickname: session.nickname } : null;
 }
@@ -280,7 +281,7 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
     about: user.about ?? "",
     since: user.createdAt.slice(0, 7),
     stats,
-    sitesAdded: store.sites.filter((site) => site.addedBy === user.id).length,
+    sitesAdded: store.sites.filter((site) => site.addedBy === user.id && !site.hidden).length,
     allRank,
     badges: badges.filter((badge) => badge.earned),
     isMe: session?.userId === user.id,

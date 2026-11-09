@@ -160,7 +160,10 @@ type ClassifiedBase = {
   storedHourSlope: number | null;
   pullSlope: number | null;
   failed: boolean;
+  /** Age weight, shared among the diver's reports at the site (sharedByDiver): what the fits and confidence read. */
   temporalWeight: number;
+  /** Age weight of this report alone: the 6-hour pull shares it only among the diver's reports in that window. */
+  ownWeight: number;
   /** Through-flow at the report's hour, in slope units; added to its stored tide slopes. */
   through: number;
   /** Head drive from six hours before the report through six after, slope units; added to the stored tide slopes. */
@@ -447,7 +450,17 @@ export function classifyReport(report: Report, hours: readonly MarineHour[]): Cl
   const failed = report.slopeM === null && finite.length === 0;
   const referenceTimeMs = hours.length > 0 ? parseWall(hours[0].time) : Number.NaN;
   const temporalWeight = reportTemporalWeight(report.time, referenceTimeMs);
-  const base = { report, seriesIndex, storedHourSlope, pullSlope, failed, temporalWeight, through: 0, head: NO_HEAD };
+  const base = {
+    report,
+    seriesIndex,
+    storedHourSlope,
+    pullSlope,
+    failed,
+    temporalWeight,
+    ownWeight: temporalWeight,
+    through: 0,
+    head: NO_HEAD,
+  };
   if (slopes && finite.length > 1) return { ...base, kind: "slope-window", slopes };
   const centerSlope = slopes ? slopes[WINDOW_HALF_HOURS] : null;
   if (typeof centerSlope === "number" && Number.isFinite(centerSlope)) {
@@ -850,7 +863,8 @@ export function aggregateReportPull(
     if (!Number.isFinite(sinceHours) || sinceHours < 0 || sinceHours >= FADE_HOURS) continue;
 
     const fadeWeight = 1 - sinceHours / FADE_HOURS;
-    const decayWeight = item.temporalWeight;
+    // This report's own age weight: a diver's reports on earlier days must not thin out today's pull.
+    const decayWeight = item.ownWeight;
     const weight = fadeWeight * decayWeight;
     if (weight <= 0) continue;
 
@@ -858,7 +872,13 @@ export function aggregateReportPull(
     if (turned) {
       continue;
     }
+    activeReports.push({ item, weight });
+  }
 
+  // One vote per diver among the reports pulling this hour (sharedByDiver).
+  const shared = sharedByDiver(activeReports.map(({ item, weight }) => ({ report: item.report, weight })));
+  activeReports.forEach((active, index) => (active.weight = shared[index]));
+  for (const { item, weight } of activeReports) {
     // A slack report pulls strength but casts no direction vote: the form makes the diver pick one anyway.
     if (isSlackReport(item)) {
       slackWeight += weight;
@@ -867,7 +887,6 @@ export function aggregateReportPull(
     } else if (item.report.direction === "outgoing") {
       outgoingWeight += weight;
     }
-    activeReports.push({ item, weight });
   }
 
   const directionalWeight = incomingWeight + outgoingWeight;

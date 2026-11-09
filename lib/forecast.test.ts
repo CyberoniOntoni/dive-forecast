@@ -281,6 +281,27 @@ describe("forecastHours", () => {
     expect(at([honest, ...against(() => "spammer")])).toBe(model);
   });
 
+  it("keeps a regular diver's full pull today, however often they reported on earlier days", () => {
+    const hours = marineFromLevels("2026-09-22T00:00", Array.from({ length: 96 }, (_, hour) => 0.5 * Math.sin((2 * Math.PI * hour) / 12.42))).map(
+      (hour) => ({ ...hour, currentVelocityMs: null, currentDirectionDeg: null }),
+    );
+    const today: Report = { id: "t", siteId: "s", time: "2026-09-23T10:00", direction: "incoming", strength: "too_strong", userId: "guide" };
+    const earlier: Report[] = [0, 2, 4, 6].map((hour) => ({
+      id: `e${hour}`,
+      siteId: "s",
+      time: `2026-09-22T0${hour}:00`,
+      direction: "incoming",
+      strength: "mild",
+      userId: "guide",
+    }));
+    const at = (reports: Report[]) =>
+      forecastHours({ hours, inwardBearingDeg: 270, reports }).find((hour) => hour.time.startsWith("2026-09-23T11:00"));
+    const alone = at([today])!;
+    const regular = at([...earlier, today])!;
+    expect(alone.direction).toBe("incoming");
+    expect([regular.direction, regular.strength]).toEqual([alone.direction, alone.strength]);
+  });
+
   it("historical-report slopeM moves the phase offset off 0 and a null slope does not train", () => {
     const hours = marineFromLevels("2026-09-22T00:00", semidiurnalLevels(72));
     const contradicting: Report[] = [

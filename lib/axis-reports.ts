@@ -49,10 +49,11 @@ export function applyAxisReports(
     if (index < 0) return [];
     const weight = reportTemporalWeight(report.time, referenceMs);
     if (!(weight > 0)) return [];
-    return [{ report, direction, index, hourMs: times[index], weight, slack: report.strength === "slack" }];
+    return [{ report, direction, index, hourMs: times[index], weight, ownWeight: weight, slack: report.strength === "slack" }];
   });
   if (read.length === 0) return [...hours];
-  // One diver's reports together weigh as much as their heaviest one (sharedByDiver), as at channels.
+  // One diver's reports together weigh as much as their heaviest one (sharedByDiver), as at channels: across the
+  // site for confidence, and among the reports pulling an hour for the pull (pullHour), from their own weights.
   sharedByDiver(read).forEach((weight, index) => (read[index].weight = weight));
   return hours.map((hour, index) => {
     const pulled = pullHour(hours, index, times[index], read);
@@ -72,7 +73,10 @@ type AxisReport = {
   /** The model hour of the report, and its time: a report at 10:20 is about the 10:00 hour and pulls it. */
   index: number;
   hourMs: number;
+  /** Age weight shared among the diver's reports at the site: what confidence reads. */
   weight: number;
+  /** This report's own age weight, for the pull. */
+  ownWeight: number;
   /** Slack saw no flow: it pulls strength but casts no direction vote. */
   slack: boolean;
 };
@@ -92,12 +96,17 @@ function pullHour(
     const since = (hourMs - item.hourMs) / HOUR_MS;
     if (!(since >= 0) || since >= PULL_HOURS) continue;
     if (turnedBetween(hours, item.index, index)) continue;
-    const weight = (1 - since / PULL_HOURS) * item.weight;
+    const weight = (1 - since / PULL_HOURS) * item.ownWeight;
     if (!(weight > 0)) continue;
+    active.push({ item, weight });
+  }
+  // One vote per diver among the reports pulling this hour.
+  const shared = sharedByDiver(active.map(({ item, weight }) => ({ report: item.report, weight })));
+  active.forEach((entry, index) => (entry.weight = shared[index]));
+  for (const { item, weight } of active) {
     if (item.slack) slackWeight += weight;
     else if (item.direction === "incoming") incoming += weight;
     else outgoing += weight;
-    active.push({ item, weight });
   }
   const directional = incoming + outgoing;
   if (directional + slackWeight === 0) return { direction: hour.direction, strength: hour.strength, contradicted: false };

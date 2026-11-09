@@ -54,6 +54,12 @@ describe("cleanJpeg", () => {
     expect(clean.length).toBe(bytes.length - 11);
   });
 
+  it("refuses a stuffed byte or a second start of image outside a scan", () => {
+    const frame = segment(0xc0, [8, 0, 1, 0, 1, 1, 1, 0x11, 0]);
+    expect(cleanJpeg(new Uint8Array([0xff, 0xd8, 0xff, 0x00, 0x00, 0x04, 0, 0, ...frame, 0xff, 0xd9]))).toBeNull();
+    expect(cleanJpeg(new Uint8Array([0xff, 0xd8, 0xff, 0xd8, 0x00, 0x04, 0, 0, ...frame, 0xff, 0xd9]))).toBeNull();
+  });
+
   it("refuses a JPEG with no end marker", () => {
     const bytes = fakeJpeg();
     expect(cleanJpeg(bytes.subarray(0, bytes.length - 2))).toBeNull();

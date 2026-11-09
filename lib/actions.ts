@@ -126,7 +126,7 @@ export async function addSitePhoto(siteId: string, formData: FormData): Promise<
   try {
     const session = await requireSession();
     requireSiteId(siteId);
-    const site = readStore().sites.find((item) => item.id === siteId);
+    const site = readStore().sites.find((item) => item.id === siteId && !item.hidden);
     if (!site) return { ok: false, error: "Photos can only be added to sites added in the app." };
     if (site.addedBy !== session.userId) return { ok: false, error: "Only the diver who added this site can add photos." };
     if ((site.photos?.length ?? 0) >= MAX_PHOTOS_PER_SITE) {

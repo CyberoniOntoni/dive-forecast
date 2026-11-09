@@ -100,6 +100,8 @@ export function cleanJpeg(bytes: Uint8Array): Uint8Array | null {
     while (markerAt < bytes.length && bytes[markerAt] === 0xff) markerAt += 1;
     if (markerAt >= bytes.length) return null;
     const marker = bytes[markerAt];
+    // A stuffed 0x00 or a second start of image belongs nowhere outside a scan.
+    if (marker === 0x00 || marker === 0xd8) return null;
     if (marker === 0xd9) {
       if (!sawScan) return null;
       kept.push(bytes.subarray(index, markerAt + 1));
