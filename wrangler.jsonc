@@ -18,8 +18,8 @@
     },
     {
       // The Open-Meteo series (marine-cache/...) and map nowcasts (nowcast/...), created with the Asia-Pacific location
-      // hint so reads from the Maldives stay close (lib/cache-bucket.ts). Only regenerable caches: a key it lacks is read
-      // from DATA once and copied here.
+      // hint so reads from the Maldives stay close (lib/cache-bucket.ts). Only regenerable caches: until 12 Nov 2026 a key
+      // it lacks is also looked up in DATA, where they lived before.
       "binding": "CACHE",
       "bucket_name": "dive-current-cache"
     }
@@ -65,11 +65,8 @@
   // writes never reach the live site. No APP_URL (a preview has no fixed address) and no AUTH_SECRET, so signing in
   // says it is not set up there; reading works.
   "previews": {
-    // Previews point CACHE at their own DATA bucket, so preview builds need no second bucket.
-    "r2_buckets": [
-      { "binding": "DATA", "bucket_name": "dive-current-data-preview" },
-      { "binding": "CACHE", "bucket_name": "dive-current-data-preview" }
-    ],
+    // No CACHE here: previews keep their caches in their own DATA bucket (lib/cache-bucket.ts).
+    "r2_buckets": [{ "binding": "DATA", "bucket_name": "dive-current-data-preview" }],
     "d1_databases": [
       {
         "binding": "DB",
