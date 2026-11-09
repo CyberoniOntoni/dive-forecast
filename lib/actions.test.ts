@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addReportAction, addSite, addSitePhoto, getRating, rateSite, submitSite } from "./actions";
+import { addReport, addReportAction, addSite, addSitePhoto, getBoatRoute, getRating, rateSite, submitSite } from "./actions";
 import { authSecret, SESSION_COOKIE } from "./auth";
 import { signSession } from "./session-token";
 import { inwardBearingDeg } from "./bearing";
@@ -9,7 +9,7 @@ import { FORECAST_MODEL_VERSION } from "./forecast";
 import { marineCacheDir, seawardPoint } from "./marine";
 import { seawardKmFor } from "./seaward-floor";
 import { rimForAtoll } from "./rim";
-import { findSite, readCatalog, setStorePath } from "./store";
+import { findSite, mutateStore, readCatalog, setStorePath } from "./store";
 import { readPhotoBytes } from "./site-photos";
 import { UNSEEDED_ATOLL_ID } from "./types";
 
@@ -35,6 +35,8 @@ let testFile = "";
 let liveSnapshot = "";
 
 beforeEach(async () => {
+  // The day after the fixture reports' dives, so they are inside the reporting window (REPORT_MAX_AGE_DAYS).
+  vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-28T00:00:00Z") });
   liveSnapshot = fs.readFileSync(LIVE_STORE, "utf8");
   testFile = `.store-test-${crypto.randomUUID()}.json`;
   setStorePath(testFile);
@@ -43,6 +45,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const name of fs.readdirSync(DATA_DIR)) {
     if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || /^\.store\..+\.tmp$/.test(name)) {
       fs.rmSync(path.join(DATA_DIR, name), { recursive: true, force: true });
@@ -134,7 +137,7 @@ describe("addSite details", () => {
     expect(site).toMatchObject({ diverSiteType: "lagoon", diveTopM: 8, diveMaxM: 24, howToDive: "Drop on the north side." });
     expect(site.siteType).toBeUndefined();
     expect(findSite(site.id)?.howToDive).toBe("Drop on the north side.");
-    expect(await getRating(site.id, "diver-1")).toEqual({ average: 4, count: 1, mine: 4 });
+    expect(await getRating(site.id)).toEqual({ average: 4, count: 1, mine: 4 });
   });
 
   it("saves nothing when a detail or the rating is bad, and submitSite says why", async () => {
@@ -312,8 +315,10 @@ describe("signing in gates writes", () => {
     await signInAs("diver-2");
     const summary = await rateSite("banana-reef", 5);
     expect(summary).toEqual({ average: 3.5, count: 2, mine: 5 });
-    expect(await getRating("banana-reef", "diver-1")).toEqual({ average: 3.5, count: 2, mine: 2 });
-    expect(await getRating("banana-reef", null)).toEqual({ average: 3.5, count: 2, mine: null });
+    await signInAs("diver-1");
+    expect(await getRating("banana-reef")).toEqual({ average: 3.5, count: 2, mine: 2 });
+    jar.clear();
+    expect(await getRating("banana-reef")).toEqual({ average: 3.5, count: 2, mine: null });
   });
 });
 
@@ -341,11 +346,49 @@ describe("addReport guards", () => {
     await expect(addReport(report)).resolves.toBeTruthy();
   });
 
+  it("refuses a dive older than the reporting window, and a time not written the normal way", async () => {
+    const report = { siteId: "banana-reef", direction: "outgoing", strength: "mild" };
+    await expect(addReport({ ...report, time: "2026-09-13T04:00" })).rejects.toThrow("last 14 days");
+    await expect(addReport({ ...report, time: "2026-09-14T06:00" })).resolves.toBeTruthy();
+    // Both roll over to real hours, but would be kept as typed, each with a day of its own.
+    await expect(addReport({ ...report, time: "2026-09-26T32:00" })).rejects.toThrow("Bad time");
+    await expect(addReport({ ...report, time: "2026-08-58T08:00" })).rejects.toThrow("Bad time");
+    await expect(addReport({ ...report, time: 5 })).rejects.toThrow("Bad time");
+  });
+
   it("refuses a dive time more than an hour ahead of the site's clock", async () => {
     // Two hours ahead of now in the Maldives: almost always a time entered in the diver's own zone.
     const ahead = new Date(Date.now() + 7 * 60 * 60 * 1000).toISOString().slice(0, 16);
     await expect(
       addReport({ siteId: "banana-reef", time: ahead, direction: "outgoing", strength: "mild" }),
     ).rejects.toThrow("still ahead in the Maldives");
+  });
+});
+
+describe("limits on public and gated actions", () => {
+  it("lets a diver add up to 10 sites a day", async () => {
+    for (let index = 0; index < 10; index += 1) {
+      await addSite({ name: `Reef ${index}`, lat: 4.2342 + index / 1000, lon: 73.534 });
+    }
+    expect((await submitSite({ name: "Reef 11", lat: 4.25, lon: 73.534 })) as { error?: string }).toMatchObject({
+      ok: false,
+      error: expect.stringContaining("10 sites a day"),
+    });
+    vi.setSystemTime(new Date("2026-09-29T00:00:01Z"));
+    await expect(addSite({ name: "Reef 11", lat: 4.25, lon: 73.534 })).resolves.toBeTruthy();
+  });
+
+  it("leaves a site the owner hid out of every list", async () => {
+    const site = await addSite({ name: "Spam Reef", lat: 4.2342, lon: 73.534 });
+    expect(findSite(site.id)).not.toBeNull();
+    await mutateStore((store) => {
+      store.sites.find((item) => item.id === site.id)!.hidden = true;
+    });
+    expect(findSite(site.id)).toBeNull();
+  });
+
+  it("plans boat routes only from and to the Maldives", async () => {
+    await expect(getBoatRoute({ lat: 51.5, lon: -0.1 }, "banana-reef")).rejects.toThrow("Routes start in the Maldives");
+    await expect(getBoatRoute({ lat: 4.2, lon: 73.5 }, "40.7,-74")).rejects.toThrow("Bad destination");
   });
 });

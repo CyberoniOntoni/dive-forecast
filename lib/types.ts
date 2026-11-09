@@ -124,6 +124,10 @@ export type Site = {
   howToDive?: string;
   /** Photos of the site, oldest first (lib/site-photos.ts). */
   photos?: SitePhoto[];
+  /** On a pin added in the app: when it was added, ISO UTC (for the daily limit per diver). */
+  addedAt?: string;
+  /** On a pin added in the app: hidden by the owner (spam, a duplicate). Left out of every list; see CLOUDFLARE.md. */
+  hidden?: boolean;
 };
 
 /** A photo of a dive site. The JPEG itself is in R2 (or data/photos on Node) under the site and photo ids. */
@@ -236,6 +240,8 @@ export type User = {
   createdAt: string;
   /** "About me", plain text, shown on the diver's public page. */
   about?: string;
+  /** "Sign out everywhere": session cookies issued before this (ms since 1970) no longer count (lib/auth.ts). */
+  sessionsValidFrom?: number;
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */
@@ -248,6 +254,8 @@ export type PendingLogin = {
   expiresAt: string;
   /** Wrong codes tried so far. */
   attempts: number;
+  /** Who asked: an HMAC of the request's IP address, never the address itself, for the per-IP send limit. */
+  ipKey?: string;
 };
 
 export type MarineHour = {

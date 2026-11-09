@@ -3,6 +3,7 @@
 import { atollForPin } from "./bearing";
 import type { BoatTrip } from "./boat-route-data";
 import { boatRoute } from "./boat-route-data";
+import { readPointDestination } from "./point-destination";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
@@ -13,7 +14,7 @@ import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { ready, readyWith } from "./ready";
-import { requireSession } from "./auth";
+import { currentSession, requireSession } from "./auth";
 import { requireSiteDetails, type SiteDetailsInput } from "./site-details";
 import { cleanJpeg, deletePhotoBytes, MAX_PHOTO_BYTES, MAX_PHOTOS_PER_SITE, photoUrl, savePhotoBytes } from "./site-photos";
 import { unstable_rethrow as rethrowIfNextError } from "next/navigation";
@@ -66,6 +67,9 @@ export async function getSite(id: string): Promise<Site | null> {
   return findSite(id);
 }
 
+/** Sites one diver can add in 24 hours: every pin goes on everyone's map and is warmed every hour. */
+const SITES_PER_DAY = 10;
+
 export type AddSiteInput = SiteDetailsInput & { name: string; lat: number; lon: number; rating?: unknown };
 
 export async function addSite(input: AddSiteInput): Promise<Site> {
@@ -82,11 +86,15 @@ export async function addSite(input: AddSiteInput): Promise<Site> {
   if (atolls.length === 0) throw new Error("No atolls");
 
   const atoll = atollForPin(lat, lon, atolls);
-  const site = await addUserSite({
-    ...newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID),
-    ...details,
-    addedBy: session.userId,
-  });
+  const site = await addUserSite(
+    {
+      ...newUserSite(name, lat, lon, atoll?.id ?? UNSEEDED_ATOLL_ID),
+      ...details,
+      addedBy: session.userId,
+      addedAt: new Date().toISOString(),
+    },
+    SITES_PER_DAY,
+  );
   if (rating != null) {
     await saveRating({ siteId: site.id, score: rating as number, updatedAt: new Date().toISOString(), userId: session.userId });
   }
@@ -147,10 +155,11 @@ export async function addSitePhoto(siteId: string, formData: FormData): Promise<
 }
 
 /** The nickname of the diver who added a site, or null. */
-export async function siteAdderNickname(site: Site): Promise<string | null> {
+export async function siteAdderNickname(siteId: string): Promise<string | null> {
   await ready();
-  if (!site.addedBy) return null;
-  return readStore().users.find((user) => user.id === site.addedBy)?.nickname ?? null;
+  const addedBy = typeof siteId === "string" ? findSite(siteId)?.addedBy : undefined;
+  if (!addedBy) return null;
+  return readStore().users.find((user) => user.id === addedBy)?.nickname ?? null;
 }
 
 /** A site's ratings: the mean of every diver's, how many there are, and the signed-in diver's own. */
@@ -166,9 +175,11 @@ export async function rateSite(siteId: string, score: number): Promise<RatingSum
   return ratingSummary(ratingsForSite(siteId), session.userId);
 }
 
-export async function getRating(siteId: string, userId: string | null): Promise<RatingSummary> {
+/** The site's ratings, and the signed-in diver's own (never another diver's: the id comes from the session). */
+export async function getRating(siteId: string): Promise<RatingSummary> {
   await ready();
-  return ratingSummary(ratingsForSite(siteId), userId);
+  const session = await currentSession();
+  return ratingSummary(ratingsForSite(siteId), session?.userId ?? null);
 }
 
 function ratingSummary(ratings: readonly Rating[], userId: string | null): RatingSummary {
@@ -189,9 +200,10 @@ export async function addReport(input: unknown): Promise<Report> {
 
   // A report's time is the dive site's own wall clock (lib/site-time.ts); today that is always the Maldives.
   const zone = timeZoneForSite(site);
-  const time = toMaldivesWall(body.time as string);
+  const time = requireReportTime(body.time);
   const filedAt = new Date();
   requireNotAhead(time, zone, filedAt.getTime());
+  requireNotTooOld(time, zone, filedAt.getTime());
   requireNotDuplicate(site.id, time, body.direction as Direction, body.strength as Strength, filedAt.getTime());
   const tide = await reportTide(site, time);
   const predicted = await predictionAtReport(site, time);
@@ -419,6 +431,28 @@ const AHEAD_LIMIT_MS = 60 * 60 * 1000;
 /** An identical report filed again within this window is a double submission, not a second diver. */
 const DUPLICATE_WINDOW_MS = 30 * 60 * 1000;
 
+/** How long after a dive it can still be reported. Older ones would only train the forecast on a memory. */
+const REPORT_MAX_AGE_DAYS = 14;
+
+/**
+ * The dive time as a wall time ("YYYY-MM-DDTHH:MM"), in its one normal spelling: "2026-11-07T47:00" or month 13 would
+ * roll over to a real time but be kept as typed, with a day of its own.
+ */
+function requireReportTime(input: unknown): string {
+  if (typeof input !== "string") throw new Error("Bad time");
+  const time = toMaldivesWall(input);
+  const ms = parseWall(time);
+  if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 16) !== time) throw new Error("Bad time");
+  return time;
+}
+
+function requireNotTooOld(time: string, zone: SiteTimeZone, nowMs: number): void {
+  const siteNowMs = parseWall(currentWallTime(zone, nowMs));
+  if (siteNowMs - parseWall(time) > REPORT_MAX_AGE_DAYS * 24 * 60 * 60 * 1000) {
+    throw new Error(`Report dives from the last ${REPORT_MAX_AGE_DAYS} days.`);
+  }
+}
+
 function requireNotAhead(time: string, zone: SiteTimeZone, nowMs: number): void {
   const siteNowMs = parseWall(currentWallTime(zone, nowMs));
   if (parseWall(time) - siteNowMs > AHEAD_LIMIT_MS) {
@@ -501,6 +535,16 @@ export async function getShelterPoint(lat: number, lon: number, time: string): P
 export type { BoatTrip } from "./boat-route-data";
 
 /**
+ * Where a boat route can start or end: the Maldives with a margin round the outer atolls. A route from far away would
+ * search a huge grid and ask Open-Meteo for the current at up to 200 new ocean points.
+ */
+const ROUTE_BOX = { south: -3, north: 10, west: 70, east: 77 };
+
+function inRouteBox(point: { lat: number; lon: number }): boolean {
+  return point.lat >= ROUTE_BOX.south && point.lat <= ROUTE_BOX.north && point.lon >= ROUTE_BOX.west && point.lon <= ROUTE_BOX.east;
+}
+
+/**
  * A boat route from a GPS position to a site or a point picked on the map ("lat,lon"), round the islands and reef the
  * app knows of. Null for an unknown site.
  */
@@ -510,7 +554,9 @@ export async function getBoatRoute(from: { lat: number; lon: number }, destinati
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
     throw new Error("Bad position");
   }
-  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new Error("Bad position");
+  if (!inRouteBox({ lat, lon })) throw new Error("Routes start in the Maldives");
   if (typeof destinationId !== "string" || destinationId.length === 0) throw new Error("Bad destination");
+  const point = readPointDestination(destinationId);
+  if (point && !inRouteBox(point)) throw new Error("Bad destination");
   return boatRoute({ lat, lon }, destinationId);
 }

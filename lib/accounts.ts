@@ -2,16 +2,19 @@ import type { StoreData, User } from "./types";
 
 /**
  * Sign-in by emailed code, on the store's data: no passwords. A code is good for LOGIN_CODE_TTL_MS and
- * LOGIN_MAX_ATTEMPTS wrong tries; asking again replaces it. Sends are capped per address and overall, since anyone can
- * type any address. These functions only change the store they are given (lib/store.ts mutateStore).
+ * LOGIN_MAX_ATTEMPTS wrong tries; asking again replaces it. Sends are capped per address, per IP address and overall,
+ * since anyone can type any address. On D1 the counts hold under parallel requests too: a change made from a stale read
+ * is not written (lib/store-d1.ts storeChanges) and runs again. These functions only change the store they are given (lib/store.ts mutateStore).
  */
 
 export const LOGIN_CODE_TTL_MS = 15 * 60 * 1000;
 export const LOGIN_MAX_ATTEMPTS = 5;
 /** Emails per address per hour. */
 export const LOGIN_SENDS_PER_EMAIL = 5;
-/** Emails per hour for everyone together. */
+/** Emails per hour for everyone together: a last resort, since the per-IP limit stops one sender first. */
 export const LOGIN_SENDS_PER_HOUR = 200;
+/** Emails per hour asked from one IP address. */
+export const LOGIN_SENDS_PER_IP = 10;
 const HOUR_MS = 60 * 60 * 1000;
 
 export const NICKNAME_MIN = 2;
@@ -66,8 +69,17 @@ export function userByEmail(store: StoreData, email: string): User | null {
  * Records a new code for `email` (as its hash) and ends any earlier one. Throws when the address or the app has sent
  * too many codes in the last hour. Old entries are dropped once they no longer count toward a limit.
  */
-export function startLogin(store: StoreData, email: string, codeHash: string, nowMs: number): { newUser: boolean } {
+export function startLogin(
+  store: StoreData,
+  email: string,
+  codeHash: string,
+  nowMs: number,
+  ipKey: string | null = null,
+): { newUser: boolean } {
   store.logins = store.logins.filter((login) => nowMs - Date.parse(login.sentAt) < HOUR_MS);
+  if (ipKey && store.logins.filter((login) => login.ipKey === ipKey).length >= LOGIN_SENDS_PER_IP) {
+    throw new Error("Too many codes asked from this connection. Try again in an hour.");
+  }
   if (store.logins.length >= LOGIN_SENDS_PER_HOUR) throw new Error("Too many sign-ins right now. Try again later.");
   const mine = store.logins.filter((login) => login.email === email);
   if (mine.length >= LOGIN_SENDS_PER_EMAIL) throw new Error("Too many codes sent to this address. Try again in an hour.");
@@ -79,6 +91,7 @@ export function startLogin(store: StoreData, email: string, codeHash: string, no
     sentAt: now,
     expiresAt: new Date(nowMs + LOGIN_CODE_TTL_MS).toISOString(),
     attempts: 0,
+    ...(ipKey ? { ipKey } : {}),
   });
   return { newUser: userByEmail(store, email) == null };
 }

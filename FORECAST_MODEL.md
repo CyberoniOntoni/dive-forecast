@@ -208,15 +208,16 @@ Divers report direction and strength after a dive (`components/ReportForm.tsx`, 
 
 At channels, reports teach the forecast (`lib/forecast.ts`):
 
-- **Phase lag.** The forecast is shifted by up to ±6 hours if earlier reports agree better with it shifted. This needs at least 2 reports, with a penalty of 0.05 per hour of shift.
-- **Speed factor.** Strength is scaled by between 0.5 and 2 if reports run consistently stronger or weaker than the model at their own hours.
+- **One vote per diver** (since model 23). A diver's reports at a site together weigh as much as their heaviest one (`sharedByDiver`), so one account filing many reports cannot outvote other divers or train the fits alone. Reports with no account (older and fixture reports) each count as their own diver. Reports can be filed up to 14 days after the dive (`REPORT_MAX_AGE_DAYS`, `lib/actions.ts`).
+- **Phase lag.** The forecast is shifted by up to ±6 hours if earlier reports agree better with it shifted. This needs reports from at least 2 different divers, agreeing at the shift, with a penalty of 0.05 per hour of shift.
+- **Speed factor.** Strength is scaled by between 0.5 and 2 if reports from at least 2 different divers run consistently stronger or weaker than the model at their own hours.
 - **Pull.** A report pulls the next 6 hours toward what it saw, fading over those hours, and stops at the next turn. Direction needs 60 % agreement.
 - **Decay.** Every report is weighted by 2^(−age / 90 days). A slack report says how strong but casts no direction vote.
 - **No saved tide.** A report whose tide could not be fetched when it was filed has no slopes. Inside the current series it still pulls and can block high confidence, but it never trains the phase lag or speed factor. Outside the series it is ignored.
 
 **Reports at walls, the strait and the lagoon** (`lib/axis-reports.ts`, since model 22). These forecasts are a signed stream along an axis, not the channel's tide slope, so the channel's phase and speed fits, which read stored slope windows, do not apply. Each report is read along today's axis (`alongReportDirection`: a wall's by its saved heading or, failing that, its saved bearing; a strait or lagoon report by its saved heading only). Only reports inside the current series count, since the stream at a report's hour is not saved with it.
 
-- **Pull.** As at channels: the next 6 hours, fading, 60 % of the weight for direction, stopping where the model turns; strength moves by how far the report was from the model's band at its own hour, so a report that agrees changes nothing. A slack report pulls strength but casts no direction vote.
+- **Pull.** As at channels: the next 6 hours, fading, one vote per diver, 60 % of the weight for direction, stopping where the model turns; strength moves by how far the report was from the model's band at its own hour, so a report that agrees changes nothing. A slack report pulls strength but casts no direction vote.
 - **Confidence.** Never high. Medium when at least two directional reports from two different divers fall on hours the model ran the same way as this hour (slack reports don't count), at least 80 % of their weight saw the direction the model gave at their own hour, and no report within 3 hours says otherwise (across a turn, a nearby report counts against the hour only if it disagreed with the model at its own hour). A report pulls the hour it was filed in, so 10:20 pulls 10:00.
 - The replay reads wall reports the same way, each against the earlier ones.
 
@@ -224,8 +225,8 @@ At channels, reports teach the forecast (`lib/forecast.ts`):
 
 | Confidence | Requires |
 |---|---|
-| high | at least 4 reports on the same phase of the tide, all agreeing on direction, at least 60 % agreeing on strength at their own hours, and no contradicting report within 3 hours, or within 7 days on the same tide phase |
-| medium | at least 80 % direction agreement |
+| high | at least 4 reports from at least 2 divers on the same phase of the tide, all agreeing on direction, at least 60 % agreeing on strength at their own hours, and no contradicting report within 3 hours, or within 7 days on the same tide phase |
+| medium | at least 80 % direction agreement, from reports on the same phase by at least 2 divers |
 | low | anything else |
 
 High is also blocked:
@@ -290,6 +291,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/20` | 3 Nov | Pins added in the app get a site type from their position (lagoon well inside the outline, pass in an open reef gap, else outer wall) or, on the rim band, from the kind their diver picked, instead of none (which ran every one as a channel). Thila and giri names no longer make a rim site a channel thila away from a pass. Catalog sites are unchanged. |
 | `…/21` | 3 Nov | The tide slope is the change from the hour before instead of the hour after, and the head is moved half an hour later, so the tide matches the Malé, Gan and Hanimaadhoo gauges at the same hour. Turns and slack at channels, strait walls and in the lagoon come about an hour later than in model 20. Replay: 26 of 30 (was 24 of 30). |
 | `…/22` | 4 Nov | Reports pull walls, strait walls and lagoon sites and can lift them to medium confidence (`lib/axis-reports.ts`). Dive sites within 0.5 km of each other count as one channel opening in the lagoon flow and split its weight, instead of counting once per pin (South Malé, North Malé and Lhaviyani lagoon sites). |
+| `…/23` | 9 Nov | One vote per diver: a diver's reports at a site together weigh as much as their heaviest one, and the phase lag, the speed factor and channel confidence above low need reports from 2 different divers. Only changes forecasts where one account filed several reports at a site; the replay (fixture reports, one per diver) is unchanged. |
 
 ## Known limits
 

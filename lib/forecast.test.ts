@@ -242,6 +242,45 @@ describe("forecastHours", () => {
     expect(directionAt(learned, "2026-09-24T04:00")).toBe("outgoing");
   });
 
+  it("needs two different divers to learn a phase offset: one account's reports are one vote", () => {
+    const custom = repeatingHours();
+    const reports: Report[] = [
+      { id: "a", siteId: "s", time: "2026-09-23T03:00", direction: "outgoing", strength: "mild", userId: "u1" },
+      { id: "b", siteId: "s", time: "2026-09-23T04:00", direction: "outgoing", strength: "mild", userId: "u1" },
+    ];
+    const oneDiver = forecastHours({ hours: custom, inwardBearingDeg: 270, reports });
+    expect(directionAt(oneDiver, "2026-09-24T04:00")).toBe("incoming");
+    const twoDivers = forecastHours({
+      hours: custom,
+      inwardBearingDeg: 270,
+      reports: [reports[0], { ...reports[1], userId: "u2" }],
+    });
+    expect(directionAt(twoDivers, "2026-09-24T04:00")).toBe("outgoing");
+  });
+
+  it("does not let one diver's many reports outvote another diver in the next hours", () => {
+    const hours = marineFromLevels("2026-09-22T00:00", Array.from({ length: 96 }, (_, hour) => 0.5 * Math.sin((2 * Math.PI * hour) / 12.42))).map(
+      (hour) => ({ ...hour, currentVelocityMs: null, currentDirectionDeg: null }),
+    );
+    const at = (reports: Report[]) => directionAt(forecastHours({ hours, inwardBearingDeg: 270, reports }), "2026-09-23T11:00");
+    const model = "outgoing";
+    const other = "incoming";
+    expect(at([])).toBe(model);
+    const honest: Report = { id: "h", siteId: "s", time: "2026-09-23T10:00", direction: model, strength: "mild", userId: "u1" };
+    const against = (userId: (minute: number) => string): Report[] =>
+      [0, 10, 20, 30].map((minute) => ({
+        id: `s${minute}`,
+        siteId: "s",
+        time: `2026-09-23T10:${String(minute).padStart(2, "0")}`,
+        direction: other,
+        strength: "mild",
+        userId: userId(minute),
+      }));
+    // Four divers who all saw it the other way outvote one; one account's four reports are one vote, with no majority.
+    expect(at([honest, ...against((minute) => `d${minute}`)])).toBe(other);
+    expect(at([honest, ...against(() => "spammer")])).toBe(model);
+  });
+
   it("historical-report slopeM moves the phase offset off 0 and a null slope does not train", () => {
     const hours = marineFromLevels("2026-09-22T00:00", semidiurnalLevels(72));
     const contradicting: Report[] = [

@@ -46,8 +46,8 @@ export default async function SitePage({
   const session = await currentSession();
   const [forecast, rating, adderNickname] = await Promise.all([
     forecastSite(site.id),
-    getRating(site.id, session?.userId ?? null),
-    siteAdderNickname(site),
+    getRating(site.id),
+    siteAdderNickname(site.id),
   ]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
   const recent = await getRecentReports(site.id, forecast.forecastRoute);

@@ -209,6 +209,93 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().users.map((item) => item.id)).toEqual(["u1"]);
   });
 
+  it("never loses a count when requests change the same record at once", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    const login = { email: "a@x.mv", codeHash: "h", sentAt: "2026-10-30T00:00:00.000Z", expiresAt: "2099-01-01T00:00:00.000Z", attempts: 0 };
+    await store.mutateStore((data) => void data.logins.push(login));
+    // Five wrong guesses sent together, each its own request: each reads attempts 0, but each write is checked
+    // against the row it read.
+    await Promise.all(
+      Array.from({ length: 5 }, () => {
+        newRequest(env);
+        return store.mutateStore((data) => void (data.logins[0].attempts += 1));
+      }),
+    );
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().logins[0].attempts).toBe(5);
+  });
+
+  it("holds a limit counted over a list when requests add to it at once", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    const results = await Promise.allSettled(
+      ["a", "b", "c"].map((email) => {
+        newRequest(env);
+        return store.mutateStore((data) => {
+          if (data.logins.length >= 1) throw new Error("limit");
+          data.logins.push({ email, codeHash: email, sentAt: "2026-10-30T00:00:00.000Z", expiresAt: "2099-01-01T00:00:00.000Z", attempts: 0 });
+        });
+      }),
+    );
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().logins).toHaveLength(1);
+  });
+
+  it("refuses a second diver with the same nickname at the database too", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.mutateStore((data) => void data.users.push(user("u1", "a@x.mv", "Ali")));
+    await expect(store.mutateStore((data) => void data.users.push(user("u2", "b@x.mv", "ALI")))).rejects.toThrow(
+      "That nickname is taken.",
+    );
+  });
+
+  it("starts even when two accounts already share a nickname, without the unique index", async () => {
+    const db = fakeD1();
+    db.sqlite.exec("CREATE TABLE users (key TEXT PRIMARY KEY, data TEXT NOT NULL, email TEXT NOT NULL UNIQUE, nickname_key TEXT NOT NULL)");
+    for (const [id, email] of [["u1", "a@x.mv"], ["u2", "b@x.mv"]]) {
+      db.sqlite.prepare("INSERT INTO users VALUES (?, ?, ?, 'ali')").run(id, JSON.stringify(user(id, email, "Ali")), email);
+    }
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: db };
+    const store = await import("./store");
+    newRequest(env);
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+    await store.refreshStore();
+    quiet.mockRestore();
+    expect(store.readStore().users.map((item) => item.id)).toEqual(["u1", "u2"]);
+  });
+
+  it("reuses the isolate's copy of the store while nothing was written, reading only the version", async () => {
+    const db = fakeD1();
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: db };
+    const store = await import("./store");
+    newRequest(env);
+    await store.addReport(report("a"));
+    newRequest(env);
+    await store.refreshStore();
+    const batches = vi.spyOn(db, "batch");
+    newRequest(env);
+    await store.refreshStore();
+    expect(batches).not.toHaveBeenCalled();
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["a"]);
+
+    // Another isolate's write changes the version, so the next request reads the rows again.
+    vi.resetModules();
+    const other = await import("./store");
+    newRequest(env);
+    await other.addReport(report("b"));
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.readStore().reports.map((item) => item.id)).toEqual(["a", "b"]);
+  });
+
   it("writes nothing when a batch fails", async () => {
     const db = fakeD1();
     const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: db };

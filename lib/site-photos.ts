@@ -83,14 +83,16 @@ const DROPPED_SEGMENTS = new Set([0xe1, 0xed, 0xfe]);
 const FRAME_MARKERS = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
 
 /**
- * The JPEG with its EXIF, XMP, IPTC and comment segments removed, or null when the bytes are not a JPEG with a frame.
- * The browser's re-encode already drops them; this covers a photo sent some other way, so a phone's GPS fix and
- * camera serial never reach the public page.
+ * The JPEG with its EXIF, XMP, IPTC and comment segments removed, or null when the bytes are not a JPEG with a frame,
+ * a scan and an end marker. The browser's re-encode already drops them; this covers a photo sent some other way, so a
+ * phone's GPS fix and camera serial never reach the public page. Every segment is walked, between the scans of a
+ * progressive JPEG too, and the file is cut at its end marker, so nothing appended after the image is kept.
  */
 export function cleanJpeg(bytes: Uint8Array): Uint8Array | null {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
   const kept: Uint8Array[] = [bytes.subarray(0, 2)];
   let sawFrame = false;
+  let sawScan = false;
   let index = 2;
   while (index < bytes.length) {
     if (bytes[index] !== 0xff) return null;
@@ -98,7 +100,11 @@ export function cleanJpeg(bytes: Uint8Array): Uint8Array | null {
     while (markerAt < bytes.length && bytes[markerAt] === 0xff) markerAt += 1;
     if (markerAt >= bytes.length) return null;
     const marker = bytes[markerAt];
-    if (marker === 0xd9) break;
+    if (marker === 0xd9) {
+      if (!sawScan) return null;
+      kept.push(bytes.subarray(index, markerAt + 1));
+      return concat(kept);
+    }
     if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
       kept.push(bytes.subarray(index, markerAt + 1));
       index = markerAt + 1;
@@ -108,13 +114,25 @@ export function cleanJpeg(bytes: Uint8Array): Uint8Array | null {
     const length = (bytes[markerAt + 1] << 8) | bytes[markerAt + 2];
     const end = markerAt + 1 + length;
     if (length < 2 || end > bytes.length) return null;
-    if (marker === 0xda) {
-      // Start of scan: the compressed image runs to the end of the file, markers and all.
-      if (!sawFrame) return null;
-      kept.push(bytes.subarray(index));
-      return concat(kept);
-    }
     if (FRAME_MARKERS.has(marker)) sawFrame = true;
+    if (marker === 0xda) {
+      // Start of scan: compressed data follows the header, up to the next marker that is not a stuffed 0xFF00 or a
+      // restart marker (which belong to the scan).
+      if (!sawFrame) return null;
+      sawScan = true;
+      let next = end;
+      while (next + 1 < bytes.length) {
+        if (bytes[next] === 0xff) {
+          const after = bytes[next + 1];
+          if (after !== 0x00 && after !== 0xff && !(after >= 0xd0 && after <= 0xd7)) break;
+        }
+        next += 1;
+      }
+      if (next + 1 >= bytes.length) return null;
+      kept.push(bytes.subarray(index, next));
+      index = next;
+      continue;
+    }
     if (!DROPPED_SEGMENTS.has(marker)) kept.push(bytes.subarray(index, end));
     index = end;
   }

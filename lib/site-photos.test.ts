@@ -31,6 +31,34 @@ describe("cleanJpeg", () => {
     expect(Array.from(clean.subarray(-7))).toEqual([0x12, 0x34, 0xff, 0x00, 0x56, 0xff, 0xd9]);
   });
 
+  it("cuts the file at its end marker, so nothing appended after the image is kept", () => {
+    const tail = [0x50, 0x4b, 0x03, 0x04, 0xff, 0xd9, 0x41];
+    const clean = cleanJpeg(new Uint8Array([...fakeJpeg(), ...tail]))!;
+    expect(Array.from(clean)).toEqual(Array.from(cleanJpeg(fakeJpeg())!));
+  });
+
+  it("walks every scan of a progressive JPEG, dropping camera data between them and keeping restart markers", () => {
+    const scan = segment(0xda, [1, 1, 0, 0, 0x3f, 0]);
+    const bytes = new Uint8Array([
+      0xff, 0xd8,
+      ...segment(0xc2, [8, 0, 1, 0, 1, 1, 1, 0x11, 0]),
+      ...scan, 0x12, 0xff, 0xd0, 0x34,
+      ...segment(0xe1, [0x45, 0x78, 0x69, 0x66, 0, 0, 9]),
+      ...segment(0xc4, [0, 1, 2]),
+      ...scan, 0x56,
+      0xff, 0xd9,
+    ]);
+    const clean = Array.from(cleanJpeg(bytes)!);
+    expect(clean).not.toContain(0xe1);
+    expect(clean).toContain(0xd0);
+    expect(clean.length).toBe(bytes.length - 11);
+  });
+
+  it("refuses a JPEG with no end marker", () => {
+    const bytes = fakeJpeg();
+    expect(cleanJpeg(bytes.subarray(0, bytes.length - 2))).toBeNull();
+  });
+
   it("refuses bytes that are not a JPEG, or have no frame before the scan", () => {
     expect(cleanJpeg(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0, 0]))).toBeNull();
     expect(cleanJpeg(new Uint8Array([0xff, 0xd8, ...segment(0xda, [1, 1, 0, 0, 0x3f, 0]), 0xff, 0xd9]))).toBeNull();

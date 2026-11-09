@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { changeNickname, signOut } from "@/lib/account-actions";
+import { changeNickname, signOut, signOutEverywhere } from "@/lib/account-actions";
 import { NICKNAME_MAX } from "@/lib/accounts";
 
-/** Change the nickname, or sign out. */
+/** Change the nickname, or sign out here or on every device. */
 export function AccountControls({ nickname }: { nickname: string }) {
   const router = useRouter();
   const [name, setName] = useState(nickname);
@@ -56,20 +56,40 @@ export function AccountControls({ nickname }: { nickname: string }) {
           {message.text}
         </p>
       ) : null}
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            await signOut();
-            router.replace("/");
-            router.refresh();
-          })
-        }
-        className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming sm:self-start"
-      >
-        Sign out
-      </button>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              await signOut();
+              router.replace("/");
+              router.refresh();
+            })
+          }
+          className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        >
+          Sign out
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            startTransition(async () => {
+              const result = await signOutEverywhere();
+              if (!result.ok) {
+                setMessage({ text: result.error ?? "Could not sign out everywhere.", error: true });
+                return;
+              }
+              router.replace("/");
+              router.refresh();
+            })
+          }
+          className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+        >
+          Sign out everywhere
+        </button>
+      </div>
     </section>
   );
 }
