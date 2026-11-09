@@ -13,8 +13,11 @@ export const LOGIN_MAX_ATTEMPTS = 5;
 export const LOGIN_SENDS_PER_EMAIL = 5;
 /** Emails per hour for everyone together: a last resort, since the per-IP limit stops one sender first. */
 export const LOGIN_SENDS_PER_HOUR = 200;
-/** Emails per hour asked from one IP address. */
-export const LOGIN_SENDS_PER_IP = 10;
+/**
+ * Emails per hour asked from one IP address (an IPv6 /64). Generous, since a resort's Wi-Fi or a mobile carrier's
+ * shared address (carrier-grade NAT) can put many divers behind one address; it stops one sender, not a crowd.
+ */
+export const LOGIN_SENDS_PER_IP = 30;
 const HOUR_MS = 60 * 60 * 1000;
 
 export const NICKNAME_MIN = 2;

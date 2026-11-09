@@ -11,6 +11,8 @@ export function AccountControls({ nickname }: { nickname: string }) {
   const [name, setName] = useState(nickname);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
+  // "Sign out everywhere" ends this device's session too, so it takes a second tap.
+  const [confirmEverywhere, setConfirmEverywhere] = useState(false);
 
   function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -74,7 +76,11 @@ export function AccountControls({ nickname }: { nickname: string }) {
         <button
           type="button"
           disabled={pending}
-          onClick={() =>
+          onClick={() => {
+            if (!confirmEverywhere) {
+              setConfirmEverywhere(true);
+              return;
+            }
             startTransition(async () => {
               const result = await signOutEverywhere();
               if (!result.ok) {
@@ -83,11 +89,11 @@ export function AccountControls({ nickname }: { nickname: string }) {
               }
               router.replace("/");
               router.refresh();
-            })
-          }
+            });
+          }}
           className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
-          Sign out everywhere
+          {confirmEverywhere ? "Tap again to sign out on every device" : "Sign out everywhere"}
         </button>
       </div>
     </section>

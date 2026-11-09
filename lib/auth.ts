@@ -123,5 +123,23 @@ export async function requestIpKey(secret: string): Promise<string | null> {
   const list = await fromRequest(headers);
   const ip = list?.get("cf-connecting-ip") ?? list?.get("x-forwarded-for")?.split(",")[0]?.trim();
   if (!ip) return null;
-  return (await hashLoginCode("ip", ip, secret)).slice(0, 22);
+  return (await hashLoginCode("ip", ipGroup(ip), secret)).slice(0, 22);
+}
+
+/**
+ * The address a limit counts by: an IPv4 address as it is, an IPv6 address by its /64 (the first four groups), since
+ * one device or home gets a whole /64 and can pick a new address in it at will.
+ */
+export function ipGroup(ip: string): string {
+  if (!ip.includes(":")) return ip;
+  // An IPv4 address written as IPv6 (::ffff:203.0.113.5) is that IPv4 address.
+  if (ip.includes(".")) return ip.slice(ip.lastIndexOf(":") + 1);
+  const [head, tail = ""] = ip.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = ip.includes("::") && tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right] : left;
+  return `${groups
+    .slice(0, 4)
+    .map((group) => String(parseInt(group || "0", 16) || 0))
+    .join(":")}::/64`;
 }

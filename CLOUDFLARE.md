@@ -107,7 +107,7 @@ DNS for 50bar.app. Without `AUTH_SECRET` and at least one way to send (Cloudflar
 needs none of them and prints the code to its own log instead. Users, pending codes (hashed) and ratings per diver live
 in the store (D1 on the worker); points and badges are worked out from the reports (`lib/points.ts`), nothing extra is stored.
 
-Limits (`lib/accounts.ts`): 5 codes per address and 10 per IP address an hour (the IP is kept only as an HMAC with
+Limits (`lib/accounts.ts`): 5 codes per address and 30 per IP address (an IPv6 /64) an hour (the IP is kept only as an HMAC with
 `AUTH_SECRET`), 200 an hour in all, 5 wrong tries per code; 10 added sites per diver a day (`lib/actions.ts`). "Sign
 out everywhere" on the account page sets `sessionsValidFrom` on the user, which ends every older cookie.
 

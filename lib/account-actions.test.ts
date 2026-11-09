@@ -161,7 +161,7 @@ describe("sign in by email code", () => {
 describe("sign-in limits and sessions", () => {
   it("caps the codes one connection can ask for in an hour, whatever the address", async () => {
     client.ip = "203.0.113.5";
-    for (let index = 0; index < 10; index += 1) {
+    for (let index = 0; index < 30; index += 1) {
       expect(await requestSignIn(`diver${index}@example.com`)).toMatchObject({ ok: true });
     }
     expect(await requestSignIn("another@example.com")).toMatchObject({ ok: false, error: expect.stringContaining("this connection") });
