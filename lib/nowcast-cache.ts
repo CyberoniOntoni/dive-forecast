@@ -1,4 +1,5 @@
-import { runInBackground, workerEnv, type R2Bucket } from "./cloudflare";
+import { cacheGet, cachePut } from "./cache-bucket";
+import { runInBackground, workerEnv, type WorkerEnv } from "./cloudflare";
 import { edgeRead, edgeWrite } from "./edge-cache";
 import { parseWall } from "./forecast";
 import type { FetchOptions } from "./marine";
@@ -23,7 +24,7 @@ const lastChecked = new Map<string, number>();
 /**
  * The map's nowcasts. On Node this is nowcastSites, as the long-running process keeps its memos warm. On a worker a
  * fresh isolate would first load the data files and hundreds of cached series, so the finished list is saved in R2
- * per Maldives hour, with a copy in the serving data centre (lib/edge-cache.ts), since R2 is in the US: a saved list
+ * per Maldives hour, with a copy in the serving data centre (lib/edge-cache.ts), since R2 may be far away: a saved list
  * for the same hour and the same sites is served at once, and one older than FRESH_MS is checked or rebuilt in the
  * background. The scheduled warm-up (lib/warm.ts) saves each hour's list before the hour starts, so the first map of
  * an hour does not build it. A new report or a point's first fetch shows on the map within one rebuild.
@@ -51,7 +52,7 @@ export async function mapNowcasts(
       runInBackground(
         (async () => {
           // Another data centre, an isolate or the warm-up may have saved a newer list already.
-          const stored = await read(env.DATA, key);
+          const stored = await read(env, key);
           const newer = stored && stored.saved.sitesKey === sitesKey && stored.saved.computedAt > edge.saved.computedAt;
           if (newer && fresh(stored.saved)) return edgeWrite(key, stored.text, EDGE_SECONDS);
           await rebuild();
@@ -60,7 +61,7 @@ export async function mapNowcasts(
     }
     return edge.saved.nowcasts;
   }
-  const stored = await read(env.DATA, key);
+  const stored = await read(env, key);
   if (stored && stored.saved.sitesKey === sitesKey) {
     // A fresh list goes to the edge, so the next request takes the path above. An old one does not: it could land on
     // top of the newer copy a rebuild (this one or another request's) has just written there.
@@ -88,7 +89,7 @@ export async function buildMapNowcasts(
   if (!env) return { nowcasts, saved: true };
   const key = hourKey(maldivesWall);
   const text = JSON.stringify({ computedAt: Date.now(), sitesKey: siteIdsKey(sites), nowcasts } satisfies SavedNowcasts);
-  const saved = await save(env.DATA, key, text);
+  const saved = await save(env, key, text);
   edgeWrite(key, text, EDGE_SECONDS);
   return { nowcasts, saved };
 }
@@ -124,10 +125,9 @@ export function siteIdsKey(sites: readonly Site[]): string {
   return `${sites.length}:${(hash >>> 0).toString(16)}`;
 }
 
-async function read(bucket: R2Bucket, key: string): Promise<{ saved: SavedNowcasts; text: string } | null> {
+async function read(env: WorkerEnv, key: string): Promise<{ saved: SavedNowcasts; text: string } | null> {
   try {
-    const object = await bucket.get(key);
-    return object ? parseSaved(await object.text()) : null;
+    return parseSaved(await cacheGet(env, key));
   } catch {
     return null;
   }
@@ -146,9 +146,9 @@ function parseSaved(text: string | null): { saved: SavedNowcasts; text: string }
   }
 }
 
-async function save(bucket: R2Bucket, key: string, text: string): Promise<boolean> {
+async function save(env: WorkerEnv, key: string, text: string): Promise<boolean> {
   try {
-    await bucket.put(key, text);
+    await cachePut(env, key, text);
     return true;
   } catch (error) {
     console.warn("Failed to save map nowcasts", error);

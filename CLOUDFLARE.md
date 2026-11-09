@@ -9,9 +9,9 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`); `shelter-grid.json` (8.5 MB) only by the sheltered-water actions, the rest by every action |
 | Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list, read once per request; a change writes only the rows it touched, in one transaction (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
-| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the same bucket, plus a copy in the serving data centre's Cache API kept 24 hours (the bucket is in eastern North America, far from the Maldives; `lib/edge-cache.ts`): a copy past the 6-hour TTL is served at once and checked against R2 behind the response and an in-memory copy per isolate (`lib/marine.ts`) |
-| Site photos added by divers | `data/photos/` | `site-photos/<site>/<photo>.jpg` in the same bucket (previews use the preview bucket), JPEG only, at most 1.5 MB each after the browser shrinks them (`lib/site-photos.ts`) |
-| Map nowcasts | computed per load | `nowcast/<hour>.json` in the same bucket: with a copy in the serving data centre's Cache API: served at once for the same Maldives hour and site list, checked against R2 or rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
+| Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the R2 bucket `dive-current-cache` (binding `CACHE`, created with the Asia-Pacific location hint; `lib/cache-bucket.ts`), plus a copy in the serving data centre's Cache API kept 24 hours (`lib/edge-cache.ts`): a copy past the 6-hour TTL is served at once and checked against R2 behind the response and an in-memory copy per isolate (`lib/marine.ts`). Writes go to `CACHE` only; until 12 Nov 2026 a key it lacks is also looked up in `DATA` (eastern North America, where the caches lived before the move; the warm-up rewrites every series within hours). Previews have no `CACHE` binding and keep everything in their `DATA` bucket |
+| Site photos added by divers | `data/photos/` | `site-photos/<site>/<photo>.jpg` in the `DATA` bucket `dive-current-data` (previews use the preview bucket), JPEG only, at most 1.5 MB each after the browser shrinks them (`lib/site-photos.ts`) |
+| Map nowcasts | computed per load | `nowcast/<hour>.json` in the `CACHE` bucket, with a copy in the serving data centre's Cache API: served at once for the same Maldives hour and site list, checked against R2 or rebuilt in the background when older than 5 minutes (`lib/nowcast-cache.ts`) |
 
 `lib/cloudflare.ts` tells the two apart: OpenNext's request context exists only on a worker. Two rules come from
 the Workers runtime:
@@ -32,12 +32,12 @@ anything but GET, HEAD and server-action POSTs (`lib/request-guard.ts`), so bot 
 ### Cache warm-up (cron)
 
 Pages only ever refresh a series behind the response, so without help the first visitor after a quiet spell reads
-every series from R2 in the US and the first map of each hour builds every site's nowcast. A cron trigger
+every series from R2 and the first map of each hour builds every site's nowcast. A cron trigger
 (`triggers.crons` in `wrangler.jsonc`, hourly at :50) runs `scheduled()` in `cloudflare-worker.js`, which asks
 `POST /api/warm` through Next with `AUTH_SECRET` in a header (`lib/warm.ts`; the worker answers 404 to that path from
 outside, and the route does without the token). It builds and saves the next hour's map nowcasts, and on the way
 refreshes every series 4.5 hours old or more (each site's own, ring points, lagoon openings, offshore waves and wind),
-so with an hour between runs none passes the 6-hour TTL; offshore waves and wind come after the map, so a down wave host cannot hold it up. A missed run changes nothing but speed. A run whose map list R2 refused fails (Trigger events show it); `offshoreFailed` in the log counts atolls that got no waves or wind. Its edge copies land in the cron's own data centre only: visitors' data centres copy from R2. Each run's result is
+so with an hour between runs none passes the 6-hour TTL; offshore waves and wind come after the map, so a down wave host cannot hold it up. A missed run changes nothing but speed. A run whose map list R2 refused fails (Trigger events show it); `offshoreFailed` in the log counts atolls that got no waves or wind. Its edge copies land in the cron's own data centre only: visitors' data centres copy from R2, which is why the caches sit in an Asia-Pacific bucket. Each run's result is
 in the worker's logs (`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No
 `AUTH_SECRET`, no warm-up. Preview builds run no cron.
 
@@ -54,7 +54,10 @@ npm run d1:export     # the live D1 store as data/store.json (for verify, replay
 ## First deploy (Cloudflare dashboard)
 
 1. **R2:** R2 Object Storage → Create bucket → name `dive-current-data`. R2 asks for a payment method even on
-   the free allowance.
+   the free allowance. Then a second bucket for the caches: name `dive-current-cache`, Location → Provide a location
+   hint → Asia-Pacific (APAC). The hint is only taken at creation; a bucket cannot be moved later.
+   `wrangler deploy` fails while a bound bucket is missing, so an existing deployment creates this bucket before the
+   change that binds it is deployed.
 2. **D1:** Storage & Databases → D1 → Create → name `dive-forecast` (location Asia-Pacific); put its id in
    `wrangler.jsonc` under `d1_databases`. Existing reports (optional): before the first request, upload an existing
    `data/store.json` to the R2 bucket as `store.json` (`npx wrangler r2 object put dive-current-data/store.json --file data/store.json --remote`);

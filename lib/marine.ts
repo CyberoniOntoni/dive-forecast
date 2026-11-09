@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { inFlightPerRequest, perRequest, runInBackground, workerEnv } from "./cloudflare";
+import { cacheGet, cachePut } from "./cache-bucket";
 import { edgeRead, edgeWrite } from "./edge-cache";
 import type { MarineHour } from "./types";
 
@@ -9,7 +10,7 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 /**
  * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is still served at once while
- * R2 (or Open-Meteo) is checked behind the response, so a page after a quiet spell does not wait on R2 in the US.
+ * R2 (or Open-Meteo) is checked behind the response, so a page after a quiet spell does not wait on R2.
  */
 const EDGE_KEEP_MS = 24 * 60 * 60 * 1000;
 /** A point is checked again behind a response at most this often per isolate. */
@@ -175,7 +176,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
     const known = remembered.get(name);
     if (known && withinTtl(known)) return known;
-    // This data centre's copy first: R2 is a long way from the Maldives (lib/edge-cache.ts). A copy past the TTL is
+    // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). A copy past the TTL is
     // still served; fetchPoint checks R2 again behind the response.
     const edgeText = await edgeRead(workerKey(name));
     const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
@@ -192,9 +193,8 @@ export function pointFetcher<T>(source: PointSource<T>) {
     if (!env) return local;
     const key = workerKey(name);
     try {
-      const object = await env.DATA.get(key);
+      const text = await cacheGet(env, key);
       readFromR2().add(name);
-      const text = object ? await object.text() : null;
       const parsed = text ? parsePointCache(text, source.readHours) : null;
       if (parsed && (!local || parsed.fetchedAt > local.fetchedAt)) edgeWrite(key, text!, edgeSeconds(parsed.fetchedAt));
       return remember(name, newest(parsed, local));
@@ -251,7 +251,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       if (env) {
         remembered.set(name, { fetchedAt, hours });
         const key = workerKey(name);
-        await env.DATA.put(key, text);
+        await cachePut(env, key, text);
         edgeWrite(key, text, edgeSeconds(fetchedAt));
         return;
       }

@@ -235,6 +235,61 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().reports).toEqual([]);
   });
 
+  it("keeps series in the CACHE bucket when bound, reading one it lacks from DATA until the cutover", async () => {
+    const { fetchMarine, marineCacheName } = await import("./marine");
+    const data = fakeBucket();
+    const cache = fakeBucket();
+    const env = { ASSETS: fakeAssets({}), DATA: data, CACHE: cache, DB: fakeD1() };
+    const key = `marine-cache/${marineCacheName(4, 73)}`;
+    const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+    vi.useFakeTimers({ toFake: ["Date"], now: Date.parse("2026-11-09T06:00:00Z") });
+    const fetchedAt = Date.now() - 60 * 60 * 1000;
+    await data.put(key, JSON.stringify({ fetchedAt, hours }));
+    const fetchSpy = vi.fn(() => Promise.reject(new Error("offline")));
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      newRequest(env);
+      // Only DATA has it (before the move): served from there with no Open-Meteo call, and not copied.
+      expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      await Promise.all(background);
+      expect(cache.objects.has(key)).toBe(false);
+      // A fresh fetch is written to CACHE only.
+      const body = {
+        hourly_units: { ocean_current_velocity: "m/s" },
+        hourly: { time: ["2026-10-30T11:00"], sea_level_height_msl: [0.5], ocean_current_velocity: [0.3], ocean_current_direction: [80] },
+      };
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify(body))));
+      vi.resetModules();
+      newRequest(env);
+      const other = `marine-cache/${marineCacheName(5, 73)}`;
+      expect(await (await import("./marine")).fetchMarine(5, 73)).toMatchObject({ ok: true });
+      await Promise.all(background);
+      expect(cache.objects.has(other)).toBe(true);
+      expect(data.objects.has(other)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("stops looking in DATA after the cutover, and never without a CACHE binding", async () => {
+    const { cacheGet, DATA_FALLBACK_UNTIL_MS } = await import("./cache-bucket");
+    const data = fakeBucket();
+    const reads: string[] = [];
+    const get = data.get.bind(data);
+    data.get = (key) => (reads.push(key), get(key));
+    await data.put("k", "old");
+    const withCache = { ASSETS: fakeAssets({}), DATA: data, CACHE: fakeBucket(), DB: fakeD1() };
+    expect(await cacheGet(withCache, "k", DATA_FALLBACK_UNTIL_MS - 1)).toBe("old");
+    expect(await cacheGet(withCache, "k", DATA_FALLBACK_UNTIL_MS)).toBeNull();
+    expect(reads).toEqual(["k"]);
+    // Previews: DATA is the cache bucket, read once.
+    const dataOnly = { ASSETS: fakeAssets({}), DATA: data, DB: fakeD1() };
+    expect(await cacheGet(dataOnly, "k", DATA_FALLBACK_UNTIL_MS - 1)).toBe("old");
+    expect(reads).toEqual(["k", "k"]);
+  });
+
   it("caches Open-Meteo series in R2 and refreshes a stale one in the background", async () => {
     const { fetchMarine, marineCacheName } = await import("./marine");
     const bucket = fakeBucket();

@@ -11,10 +11,17 @@
   },
   "r2_buckets": [
     {
-      // The Open-Meteo cache (marine-cache/...), map nowcasts and divers' site photos (site-photos/...). Also the old store.json, copied into D1 once and kept
-      // as a backup. lib/cloudflare.ts.
+      // Divers' site photos (site-photos/...) and the old store.json, copied into D1 once and kept as a backup. The
+      // caches lived here before CACHE (lib/cloudflare.ts).
       "binding": "DATA",
       "bucket_name": "dive-current-data"
+    },
+    {
+      // The Open-Meteo series (marine-cache/...) and map nowcasts (nowcast/...), created with the Asia-Pacific location
+      // hint so reads from the Maldives stay close (lib/cache-bucket.ts). Only regenerable caches: until 12 Nov 2026 a key
+      // it lacks is also looked up in DATA, where they lived before.
+      "binding": "CACHE",
+      "bucket_name": "dive-current-cache"
     }
   ],
   "d1_databases": [
@@ -58,6 +65,7 @@
   // writes never reach the live site. No APP_URL (a preview has no fixed address) and no AUTH_SECRET, so signing in
   // says it is not set up there; reading works.
   "previews": {
+    // No CACHE here: previews keep their caches in their own DATA bucket (lib/cache-bucket.ts).
     "r2_buckets": [{ "binding": "DATA", "bucket_name": "dive-current-data-preview" }],
     "d1_databases": [
       {

@@ -2,13 +2,16 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 /**
  * The bindings in wrangler.jsonc. ASSETS serves the built static files, which include the read-only data files
- * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding the Open-Meteo cache, map nowcasts and
- * site photos (and the old store.json, copied into D1 once). DB is the D1 database holding reports, ratings, added pins and accounts. EMAIL is
+ * (scripts/cf-assets.ts copies them to /_data/). DATA is the R2 bucket holding site photos (and the old store.json,
+ * copied into D1 once); CACHE, when bound, holds the Open-Meteo cache and map nowcasts (lib/cache-bucket.ts), and
+ * without it they are in DATA too. DB is the D1 database holding reports, ratings, added pins and accounts. EMAIL is
  * Cloudflare Email Sending, for the sign-in email (lib/email.ts).
  */
 export type WorkerEnv = {
   ASSETS: { fetch: (input: string) => Promise<Response> };
   DATA: R2Bucket;
+  /** The Asia-Pacific bucket for the Open-Meteo series and map nowcasts (lib/cache-bucket.ts). Absent: they live in DATA. */
+  CACHE?: R2Bucket;
   DB: D1Database;
   EMAIL?: SendEmail;
 };
