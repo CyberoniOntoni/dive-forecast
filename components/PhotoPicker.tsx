@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { addSitePhoto } from "@/lib/actions";
+import { useEffect, useId, useRef, useState } from "react";
+import { addSitePhoto, type PhotoActionResult } from "@/lib/actions";
 import { shrinkPhoto } from "@/lib/photo-shrink";
 
 /** A photo picked and already shrunk in the browser, waiting to be sent. */
@@ -25,6 +25,7 @@ export function PhotoPicker({
   label?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const inputId = useId();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const room = Math.max(0, max - photos.length);
@@ -98,7 +99,7 @@ export function PhotoPicker({
             onChange={onPick}
             disabled={disabled || busy}
             className="sr-only"
-            id="site-photo-input"
+            id={inputId}
           />
           <button
             type="button"
@@ -116,13 +117,15 @@ export function PhotoPicker({
 }
 
 /**
- * Sends picked photos one at a time (each is its own request, under the server action body limit). Returns how many
- * were saved and the first reason one was not.
+ * Sends picked photos one at a time (each is its own request, under the server action body limit), by default to the
+ * site's own photos (addSitePhoto), or with `send` to a diver's review. Returns how many were saved and the first
+ * reason one was not.
  */
 export async function uploadPhotos(
   siteId: string,
   photos: readonly PickedPhoto[],
   onProgress?: (done: number) => void,
+  send: (siteId: string, form: FormData) => Promise<PhotoActionResult> = addSitePhoto,
 ): Promise<{ saved: number; error: string | null }> {
   let saved = 0;
   let error: string | null = null;
@@ -131,7 +134,7 @@ export async function uploadPhotos(
     const form = new FormData();
     form.append("photo", photo.blob, "photo.jpg");
     try {
-      const result = await addSitePhoto(siteId, form);
+      const result = await send(siteId, form);
       if (result.ok) saved += 1;
       else error ??= result.error;
     } catch {

@@ -95,16 +95,19 @@ export function reportAwards(reports: readonly Report[]): Map<string, ReportAwar
 
 /**
  * The Maldives day and month of each signed-in diver's site ratings that earn points: one per site (the store keeps one
- * per diver and site), at most RATINGS_PER_DAY a day by when each was last saved.
+ * per diver and site), at most RATINGS_PER_DAY a day by when each diver first rated the site. A removed rating earns
+ * nothing; given again, it counts on its first day, so changing, removing and re-rating never earn more or move points
+ * into this month.
  */
 export function countedRatings(ratings: readonly Rating[]): Map<string, { day: string }[]> {
   const byUser = new Map<string, { day: string }[]>();
   const perDay = new Map<string, number>();
+  const firstAt = (rating: Rating) => rating.firstRatedAt ?? rating.updatedAt;
   const ordered = [...ratings]
-    .filter((rating) => rating.userId && !Number.isNaN(Date.parse(rating.updatedAt)))
-    .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt) || a.siteId.localeCompare(b.siteId));
+    .filter((rating) => rating.userId && !rating.removedAt && !Number.isNaN(Date.parse(firstAt(rating))))
+    .sort((a, b) => firstAt(a).localeCompare(firstAt(b)) || a.siteId.localeCompare(b.siteId));
   for (const rating of ordered) {
-    const day = toMaldivesWall(rating.updatedAt).slice(0, 10);
+    const day = toMaldivesWall(firstAt(rating)).slice(0, 10);
     const dayKey = `${rating.userId}|${day}`;
     const today = perDay.get(dayKey) ?? 0;
     if (today >= RATINGS_PER_DAY) continue;

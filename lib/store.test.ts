@@ -115,11 +115,11 @@ describe("mutateStore", () => {
     expect(readStore().sites).toEqual([site]);
   });
 
-  it("replaces a rating for the same site", async () => {
+  it("replaces a rating for the same site, keeping when it was first given", async () => {
     await saveRating({ siteId: "banana-reef", score: 3, updatedAt: "2026-09-23T10:00:00.000Z" });
     await saveRating({ siteId: "banana-reef", score: 5, updatedAt: "2026-09-23T11:00:00.000Z" });
     expect(readStore().ratings).toEqual([
-      { siteId: "banana-reef", score: 5, updatedAt: "2026-09-23T11:00:00.000Z" },
+      { siteId: "banana-reef", score: 5, updatedAt: "2026-09-23T11:00:00.000Z", firstRatedAt: "2026-09-23T10:00:00.000Z" },
     ]);
   });
 });

@@ -7,7 +7,7 @@ export const POINTS = {
   fresh: 5,
   /** Nobody had reported the site in the PATHFINDER_DAYS before this dive. */
   pathfinder: 10,
-  /** Rating a dive site (one per site; changing it later earns nothing more). */
+  /** Rating a dive site (one per site; changing, removing or giving it again earns nothing more). Reviews and photos earn nothing. */
   rating: 3,
 } as const;
 
