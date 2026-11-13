@@ -244,6 +244,8 @@ export async function saveReviewText(siteId: string, userId: string, review: str
   return mutateStore((store) => {
     const rating = liveRating(store, siteId, userId);
     if (!rating) return false;
+    // Ratings saved before firstRatedAt was kept count their points on updatedAt; pin it before moving updatedAt.
+    rating.firstRatedAt ??= rating.updatedAt;
     if (review) rating.review = review;
     else delete rating.review;
     rating.updatedAt = at;
@@ -267,12 +269,13 @@ export async function addReviewPhotoRecord(
     if (!rating) return "not-rated";
     const photos = rating.photos ?? [];
     if (photos.length >= max) return "full";
+    // Counted from the diver's upload log, not the photos still kept, so deleting a photo or the whole rating and
+    // adding again never lifts the limit.
     const since = Date.parse(photo.addedAt) - 24 * 60 * 60 * 1000;
-    const today = store.ratings
-      .filter((item) => item.userId === userId && !item.removedAt)
-      .flatMap((item) => item.photos ?? [])
-      .filter((item) => Date.parse(item.addedAt) > since).length;
-    if (today >= perDay) return "daily-limit";
+    const user = store.users.find((item) => item.id === userId);
+    const recent = (user?.reviewPhotoUploads ?? []).filter((at) => Date.parse(at) > since);
+    if (recent.length >= perDay) return "daily-limit";
+    if (user) user.reviewPhotoUploads = [...recent, photo.addedAt];
     rating.photos = [...photos, photo];
     return null;
   });

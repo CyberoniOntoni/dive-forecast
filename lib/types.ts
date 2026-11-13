@@ -257,6 +257,11 @@ export type User = {
   about?: string;
   /** "Sign out everywhere": session cookies issued before this (ms since 1970) no longer count (lib/auth.ts). */
   sessionsValidFrom?: number;
+  /**
+   * When the diver added each photo to a review in the last 24 hours, ISO UTC, for the daily photo limit. Kept apart
+   * from the photos, so deleting a photo or a rating does not give the upload back.
+   */
+  reviewPhotoUploads?: string[];
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */

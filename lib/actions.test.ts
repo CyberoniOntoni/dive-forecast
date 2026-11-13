@@ -423,6 +423,36 @@ describe("reviews on any site", () => {
     expect(await removeReviewPhoto(siteId, "../../etc")).toEqual({ ok: false, error: "Unknown photo." });
   });
 
+  it("keeps the daily photo limit when photos or the rating are deleted", async () => {
+    await withDivers();
+    await submitRating(siteId, 4);
+    for (let index = 0; index < 24; index += 1) {
+      const result = await addReviewPhoto(siteId, photoForm());
+      if (!result.ok) throw new Error(result.error);
+      // Delete each straight away: the review never fills, only the day's uploads count.
+      const removed = await removeReviewPhoto(siteId, result.photo.id);
+      if (!removed.ok) throw new Error(removed.error);
+    }
+    await removeMyRating(siteId);
+    await submitRating(siteId, 4);
+    expect(await addReviewPhoto(siteId, photoForm())).toEqual({
+      ok: false,
+      error: "You can add up to 24 photos a day. Try again tomorrow.",
+    });
+    vi.setSystemTime(new Date("2026-09-29T00:00:01Z"));
+    expect((await addReviewPhoto(siteId, photoForm())).ok).toBe(true);
+  });
+
+  it("does not move an older rating's points when its review is written", async () => {
+    await withDivers();
+    await mutateStore((store) => {
+      store.ratings.push({ siteId, score: 4, userId: "diver-1", updatedAt: "2026-08-10T04:00:00Z" });
+    });
+    await saveReview(siteId, "Written later");
+    const row = readStore().ratings.find((rating) => rating.userId === "diver-1")!;
+    expect(row.firstRatedAt).toBe("2026-08-10T04:00:00Z");
+  });
+
   it("refuses a signed-out visitor, a bad score, an unknown site and an overlong review", async () => {
     await withDivers();
     expect(await submitRating(siteId, 6)).toEqual({ ok: false, error: "Pick a rating from 1 to 5." });
