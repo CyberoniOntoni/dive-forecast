@@ -167,8 +167,9 @@ export function reportsForSite(siteId: string): Report[] {
   return readStore().reports.filter((report) => report.siteId === siteId);
 }
 
+/** The site's ratings that count: a rating its diver removed is left out. */
 export function ratingsForSite(siteId: string): Rating[] {
-  return readStore().ratings.filter((rating) => rating.siteId === siteId);
+  return readStore().ratings.filter((rating) => rating.siteId === siteId && !rating.removedAt);
 }
 
 /** Adds an app-added pin. With `perDay`, throws when its adder already added that many in the last 24 hours. */
@@ -209,13 +210,106 @@ export async function addReport(report: Report): Promise<Report> {
   });
 }
 
-/** One rating per diver per site; a rating with no userId is the site's one anonymous rating from before sign-in. */
-export async function saveRating(rating: Rating): Promise<Rating> {
+/**
+ * One rating per diver per site; a rating with no userId is the site's one anonymous rating from before sign-in. A new
+ * score keeps the diver's review and photos, and the day they first rated the site (also after they removed it), so
+ * changing, removing and giving a rating again never earns points twice or moves them to a later day.
+ */
+export async function saveRating(rating: Pick<Rating, "siteId" | "score" | "updatedAt" | "userId">): Promise<Rating> {
   return mutateStore((store) => {
     const index = store.ratings.findIndex((item) => item.siteId === rating.siteId && item.userId === rating.userId);
-    if (index >= 0) store.ratings[index] = rating;
-    else store.ratings.push(rating);
-    return rating;
+    const before = index >= 0 ? store.ratings[index] : null;
+    const saved: Rating = {
+      siteId: rating.siteId,
+      score: rating.score,
+      updatedAt: rating.updatedAt,
+      ...(rating.userId ? { userId: rating.userId } : {}),
+      firstRatedAt: before ? (before.firstRatedAt ?? before.updatedAt) : rating.updatedAt,
+      ...(before && !before.removedAt && before.review ? { review: before.review } : {}),
+      ...(before && !before.removedAt && before.photos?.length ? { photos: before.photos } : {}),
+    };
+    if (index >= 0) store.ratings[index] = saved;
+    else store.ratings.push(saved);
+    return saved;
+  });
+}
+
+/** The diver's live rating of the site, inside a mutation, or null. */
+function liveRating(store: StoreData, siteId: string, userId: string): Rating | null {
+  return store.ratings.find((item) => item.siteId === siteId && item.userId === userId && !item.removedAt) ?? null;
+}
+
+/** Sets or clears the written review on the diver's rating. False when they have not rated the site. */
+export async function saveReviewText(siteId: string, userId: string, review: string | null, at: string): Promise<boolean> {
+  return mutateStore((store) => {
+    const rating = liveRating(store, siteId, userId);
+    if (!rating) return false;
+    // Ratings saved before firstRatedAt was kept count their points on updatedAt; pin it before moving updatedAt.
+    rating.firstRatedAt ??= rating.updatedAt;
+    if (review) rating.review = review;
+    else delete rating.review;
+    rating.updatedAt = at;
+    return true;
+  });
+}
+
+/**
+ * Adds a photo to the diver's rating of a site, if it has room for `max` and the diver added fewer than `perDay`
+ * photos to reviews in the last 24 hours. Returns why not, or null when it was added.
+ */
+export async function addReviewPhotoRecord(
+  siteId: string,
+  userId: string,
+  photo: SitePhoto,
+  max: number,
+  perDay: number,
+): Promise<"not-rated" | "full" | "daily-limit" | null> {
+  return mutateStore((store) => {
+    const rating = liveRating(store, siteId, userId);
+    if (!rating) return "not-rated";
+    const photos = rating.photos ?? [];
+    if (photos.length >= max) return "full";
+    // Counted from the diver's upload log, not the photos still kept, so deleting a photo or the whole rating and
+    // adding again never lifts the limit.
+    const since = Date.parse(photo.addedAt) - 24 * 60 * 60 * 1000;
+    const user = store.users.find((item) => item.id === userId);
+    const recent = (user?.reviewPhotoUploads ?? []).filter((at) => Date.parse(at) > since);
+    if (recent.length >= perDay) return "daily-limit";
+    if (user) user.reviewPhotoUploads = [...recent, photo.addedAt];
+    rating.photos = [...photos, photo];
+    return null;
+  });
+}
+
+/** Takes one photo off the diver's rating. Returns whether it was there (the caller then deletes the JPEG). */
+export async function removeReviewPhotoRecord(siteId: string, userId: string, photoId: string): Promise<boolean> {
+  return mutateStore((store) => {
+    const rating = liveRating(store, siteId, userId);
+    const photos = rating?.photos ?? [];
+    if (!rating || !photos.some((photo) => photo.id === photoId)) return false;
+    const kept = photos.filter((photo) => photo.id !== photoId);
+    if (kept.length) rating.photos = kept;
+    else delete rating.photos;
+    return true;
+  });
+}
+
+/**
+ * Removes the diver's rating of a site with its review and photos. The row stays, with no review or photos, only to
+ * remember when they first rated it. Returns the photos it had (the caller deletes the JPEGs), or null when there was
+ * no rating to remove.
+ */
+export async function removeRating(siteId: string, userId: string, at: string): Promise<SitePhoto[] | null> {
+  return mutateStore((store) => {
+    const rating = liveRating(store, siteId, userId);
+    if (!rating) return null;
+    const photos = rating.photos ?? [];
+    rating.firstRatedAt ??= rating.updatedAt;
+    rating.removedAt = at;
+    rating.updatedAt = at;
+    delete rating.review;
+    delete rating.photos;
+    return photos;
   });
 }
 

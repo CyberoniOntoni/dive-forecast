@@ -15,13 +15,22 @@ import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { ready, readyWith } from "./ready";
 import { currentSession, requireSession } from "./auth";
-import { requireSiteDetails, type SiteDetailsInput } from "./site-details";
-import { cleanJpeg, deletePhotoBytes, MAX_PHOTO_BYTES, MAX_PHOTOS_PER_SITE, photoUrl, savePhotoBytes } from "./site-photos";
+import { requireReviewText, requireSiteDetails, type SiteDetailsInput } from "./site-details";
+import {
+  cleanJpeg,
+  deletePhotoBytes,
+  isPhotoKey,
+  MAX_PHOTO_BYTES,
+  MAX_PHOTOS_PER_SITE,
+  photoUrl,
+  savePhotoBytes,
+} from "./site-photos";
 import { unstable_rethrow as rethrowIfNextError } from "next/navigation";
 import { reportAwards } from "./points";
 import type { ReportAward } from "./points-rules";
 import {
   addReport as persistReport,
+  addReviewPhotoRecord,
   addSitePhotoRecord,
   addUserSite,
   findSite,
@@ -29,8 +38,11 @@ import {
   ratingsForSite,
   readCatalog,
   readStore,
+  removeRating,
+  removeReviewPhotoRecord,
   reportsForSite,
   saveRating,
+  saveReviewText,
 } from "./store";
 import {
   STRENGTHS,
@@ -180,6 +192,158 @@ export async function getRating(siteId: string): Promise<RatingSummary> {
   await ready();
   const session = await currentSession();
   return ratingSummary(ratingsForSite(siteId), session?.userId ?? null);
+}
+
+/** One diver's review of a site: their score, what they wrote and their photos. */
+export type SiteReview = {
+  userId: string;
+  nickname: string;
+  score: number;
+  review: string | null;
+  photos: { id: string; url: string }[];
+  /** ISO UTC, when the score, text or photos last changed. */
+  updatedAt: string;
+};
+
+/** Everything the site page's reviews card shows. */
+export type SiteReviews = {
+  summary: RatingSummary;
+  /** Other divers' reviews that have text or photos, newest first; the signed-in diver's own is `mine`. */
+  reviews: SiteReview[];
+  mine: SiteReview | null;
+};
+
+export type ReviewActionResult = { ok: true; reviews: SiteReviews } | { ok: false; error: string };
+
+/** Photos one diver can add to reviews in 24 hours, across every site. */
+const REVIEW_PHOTOS_PER_DAY = 24;
+
+/** The site's ratings and reviews, and the signed-in diver's own (the id comes from the session, never the page). */
+export async function getSiteReviews(siteId: string): Promise<SiteReviews> {
+  await ready();
+  const session = await currentSession();
+  return siteReviews(siteId, session?.userId ?? null);
+}
+
+function siteReviews(siteId: string, userId: string | null): SiteReviews {
+  const ratings = ratingsForSite(siteId);
+  const nicknames = new Map(readStore().users.map((user) => [user.id, user.nickname]));
+  const all = ratings
+    .filter((rating): rating is Rating & { userId: string } => rating.userId != null && nicknames.has(rating.userId))
+    .map(
+      (rating): SiteReview => ({
+        userId: rating.userId,
+        nickname: nicknames.get(rating.userId)!,
+        score: rating.score,
+        review: rating.review ?? null,
+        photos: (rating.photos ?? []).map((photo) => ({ id: photo.id, url: photoUrl(siteId, photo.id) })),
+        updatedAt: rating.updatedAt,
+      }),
+    );
+  const reviews = all
+    .filter((review) => review.userId !== userId && (review.review || review.photos.length))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return {
+    summary: ratingSummary(ratings, userId),
+    reviews,
+    mine: userId ? (all.find((review) => review.userId === userId) ?? null) : null,
+  };
+}
+
+/** Runs a review change for the signed-in diver on a known site; the reason comes back as a value. */
+async function reviewAction(
+  siteId: string,
+  change: (userId: string) => Promise<string | null>,
+): Promise<ReviewActionResult> {
+  await ready();
+  try {
+    const session = await requireSession();
+    requireSiteId(siteId);
+    if (!findSite(siteId)) return { ok: false, error: "Unknown site." };
+    const problem = await change(session.userId);
+    if (problem) return { ok: false, error: problem };
+    return { ok: true, reviews: siteReviews(siteId, session.userId) };
+  } catch (error) {
+    rethrowIfNextError(error);
+    return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not save that." };
+  }
+}
+
+/** rateSite for the reviews card: the whole card comes back, and the reason as a value. */
+export async function submitRating(siteId: string, score: number): Promise<ReviewActionResult> {
+  return reviewAction(siteId, async (userId) => {
+    if (!Number.isInteger(score) || score < 1 || score > 5) return "Pick a rating from 1 to 5.";
+    await saveRating({ siteId, score, updatedAt: new Date().toISOString(), userId });
+    return null;
+  });
+}
+
+/** Writes, changes or (with empty text) clears the signed-in diver's review. They rate the site first. */
+export async function saveReview(siteId: string, text: string): Promise<ReviewActionResult> {
+  return reviewAction(siteId, async (userId) => {
+    const review = requireReviewText(text);
+    const saved = await saveReviewText(siteId, userId, review, new Date().toISOString());
+    return saved ? null : "Rate the site first, then write your review.";
+  });
+}
+
+/**
+ * Adds one photo (form field "photo", a JPEG the browser already shrank) to the signed-in diver's review of any site,
+ * up to MAX_PHOTOS_PER_SITE per review and REVIEW_PHOTOS_PER_DAY a day. Camera data is stripped before saving.
+ */
+export async function addReviewPhoto(siteId: string, formData: FormData): Promise<PhotoActionResult> {
+  await ready();
+  try {
+    const session = await requireSession();
+    requireSiteId(siteId);
+    if (!findSite(siteId)) return { ok: false, error: "Unknown site." };
+    const file = formData.get("photo");
+    if (!(file instanceof Blob) || file.size === 0) return { ok: false, error: "Pick a photo." };
+    if (file.size > MAX_PHOTO_BYTES) return { ok: false, error: "That photo is too large." };
+    const clean = cleanJpeg(new Uint8Array(await file.arrayBuffer()));
+    if (!clean) return { ok: false, error: "That photo is not a JPEG." };
+
+    const photo: SitePhoto = { id: crypto.randomUUID(), addedBy: session.userId, addedAt: new Date().toISOString() };
+    await savePhotoBytes(siteId, photo.id, clean);
+    let problem: Awaited<ReturnType<typeof addReviewPhotoRecord>> | "failed" = "failed";
+    try {
+      problem = await addReviewPhotoRecord(siteId, session.userId, photo, MAX_PHOTOS_PER_SITE, REVIEW_PHOTOS_PER_DAY);
+    } finally {
+      if (problem) await deletePhotoBytes(siteId, photo.id);
+    }
+    if (problem === "not-rated") return { ok: false, error: "Rate the site first, then add your photos." };
+    if (problem === "full") return { ok: false, error: `A review can have at most ${MAX_PHOTOS_PER_SITE} photos.` };
+    if (problem === "daily-limit") {
+      return { ok: false, error: `You can add up to ${REVIEW_PHOTOS_PER_DAY} photos a day. Try again tomorrow.` };
+    }
+    return { ok: true, photo, url: photoUrl(siteId, photo.id) };
+  } catch (error) {
+    rethrowIfNextError(error);
+    return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not save the photo." };
+  }
+}
+
+/** Takes one of the signed-in diver's own photos off their review, and deletes it. */
+export async function removeReviewPhoto(siteId: string, photoId: string): Promise<ReviewActionResult> {
+  return reviewAction(siteId, async (userId) => {
+    if (typeof photoId !== "string" || !isPhotoKey(siteId, photoId)) return "Unknown photo.";
+    if (!(await removeReviewPhotoRecord(siteId, userId, photoId))) return "That photo is not on your review.";
+    await deletePhotoBytes(siteId, photoId);
+    return null;
+  });
+}
+
+/**
+ * Removes the signed-in diver's rating of a site, with their review and photos, and the points it earned. Rating the
+ * site again earns them back on the day it was first rated, never anew.
+ */
+export async function removeMyRating(siteId: string): Promise<ReviewActionResult> {
+  return reviewAction(siteId, async (userId) => {
+    const photos = await removeRating(siteId, userId, new Date().toISOString());
+    if (photos == null) return "You have not rated this site.";
+    await Promise.all(photos.map((photo) => deletePhotoBytes(siteId, photo.id)));
+    return null;
+  });
 }
 
 function ratingSummary(ratings: readonly Rating[], userId: string | null): RatingSummary {

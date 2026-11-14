@@ -3,12 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Attribution } from "@/components/Attribution";
 import { HourSlider } from "@/components/HourSlider";
-import { RatingForm } from "@/components/RatingForm";
 import { RecentReports } from "@/components/RecentReports";
 import { SiteAbout } from "@/components/SiteAbout";
+import { SiteReviews } from "@/components/SiteReviews";
 import { ReportForm } from "@/components/ReportForm";
 import { NavigateIcon } from "@/components/site-ui";
-import { forecastSite, getRating, getRecentReports, getSite, siteAdderNickname } from "@/lib/actions";
+import { forecastSite, getRecentReports, getSite, getSiteReviews, siteAdderNickname } from "@/lib/actions";
 import { currentSession } from "@/lib/auth";
 import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
@@ -44,9 +44,9 @@ export default async function SitePage({
   if (!site) notFound();
 
   const session = await currentSession();
-  const [forecast, rating, adderNickname] = await Promise.all([
+  const [forecast, reviews, adderNickname] = await Promise.all([
     forecastSite(site.id),
-    getRating(site.id),
+    getSiteReviews(site.id),
     siteAdderNickname(site.id),
   ]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
@@ -123,7 +123,13 @@ export default async function SitePage({
               : []
           }
         />
-        <RatingForm key={`rating-${site.id}`} siteId={site.id} summary={rating} signedIn={session != null} />
+        <SiteReviews
+          key={`reviews-${site.id}`}
+          siteId={site.id}
+          siteName={site.name}
+          initial={reviews}
+          signedIn={session != null}
+        />
       </div>
       <Attribution />
     </main>

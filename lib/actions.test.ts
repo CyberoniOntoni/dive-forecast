@@ -1,7 +1,22 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addReportAction, addSite, addSitePhoto, getBoatRoute, getRating, rateSite, submitSite } from "./actions";
+import {
+  addReport,
+  addReportAction,
+  addReviewPhoto,
+  addSite,
+  addSitePhoto,
+  getBoatRoute,
+  getRating,
+  getSiteReviews,
+  rateSite,
+  removeMyRating,
+  removeReviewPhoto,
+  saveReview,
+  submitRating,
+  submitSite,
+} from "./actions";
 import { authSecret, SESSION_COOKIE } from "./auth";
 import { signSession } from "./session-token";
 import { inwardBearingDeg } from "./bearing";
@@ -9,7 +24,7 @@ import { FORECAST_MODEL_VERSION } from "./forecast";
 import { marineCacheDir, seawardPoint } from "./marine";
 import { seawardKmFor } from "./seaward-floor";
 import { rimForAtoll } from "./rim";
-import { findSite, mutateStore, readCatalog, setStorePath } from "./store";
+import { findSite, mutateStore, readCatalog, readStore, setStorePath } from "./store";
 import { readPhotoBytes } from "./site-photos";
 import { UNSEEDED_ATOLL_ID } from "./types";
 
@@ -319,6 +334,135 @@ describe("signing in gates writes", () => {
     expect(await getRating("banana-reef")).toEqual({ average: 3.5, count: 2, mine: 2 });
     jar.clear();
     expect(await getRating("banana-reef")).toEqual({ average: 3.5, count: 2, mine: null });
+  });
+});
+
+describe("reviews on any site", () => {
+  const siteId = "banana-reef";
+
+  async function withDivers() {
+    await mutateStore((store) => {
+      for (const id of ["diver-1", "diver-2"]) {
+        store.users.push({ id, email: `${id}@example.com`, nickname: id.replace("diver-", "Diver "), createdAt: "2026-09-01T00:00:00Z" });
+      }
+    });
+  }
+
+  it("lets a diver rate, write, add photos to and remove a review of a catalog site", async () => {
+    await withDivers();
+    expect(await saveReview(siteId, "Lovely")).toEqual({ ok: false, error: "Rate the site first, then write your review." });
+    expect(await addReviewPhoto(siteId, photoForm())).toEqual({ ok: false, error: "Rate the site first, then add your photos." });
+
+    const rated = await submitRating(siteId, 4);
+    if (!rated.ok) throw new Error(rated.error);
+    expect(rated.reviews.mine).toMatchObject({ score: 4, review: null, photos: [] });
+
+    const written = await saveReview(siteId, "  Sharks at the corner on incoming.\r\n\n\n\nGood vis.  ");
+    if (!written.ok) throw new Error(written.error);
+    expect(written.reviews.mine?.review).toBe("Sharks at the corner on incoming.\n\nGood vis.");
+
+    const photo = await addReviewPhoto(siteId, photoForm());
+    if (!photo.ok) throw new Error(photo.error);
+    expect(await readPhotoBytes(siteId, photo.photo.id)).not.toBeNull();
+
+    // A new score keeps the text and photos.
+    const changed = await submitRating(siteId, 5);
+    if (!changed.ok) throw new Error(changed.error);
+    expect(changed.reviews.mine).toMatchObject({ score: 5, review: "Sharks at the corner on incoming.\n\nGood vis." });
+    expect(changed.reviews.mine?.photos.map((item) => item.id)).toEqual([photo.photo.id]);
+
+    // Another diver sees it in the list, with the nickname, not the email.
+    await signInAs("diver-2");
+    const seen = await getSiteReviews(siteId);
+    expect(seen.mine).toBeNull();
+    expect(seen.reviews).toHaveLength(1);
+    expect(seen.reviews[0]).toMatchObject({ nickname: "Diver 1", score: 5 });
+    expect(JSON.stringify(seen)).not.toContain("example.com");
+    // and cannot take its photo off.
+    expect(await removeReviewPhoto(siteId, photo.photo.id)).toEqual({ ok: false, error: "That photo is not on your review." });
+
+    await signInAs("diver-1");
+    const removed = await removeMyRating(siteId);
+    if (!removed.ok) throw new Error(removed.error);
+    expect(removed.reviews.mine).toBeNull();
+    expect(removed.reviews.summary).toEqual({ average: null, count: 0, mine: null });
+    expect(await readPhotoBytes(siteId, photo.photo.id)).toBeNull();
+    expect(await removeMyRating(siteId)).toEqual({ ok: false, error: "You have not rated this site." });
+    expect(await getRating(siteId)).toEqual({ average: null, count: 0, mine: null });
+  });
+
+  it("keeps the first rating's day through remove and re-rate, with no review carried back", async () => {
+    await withDivers();
+    await submitRating(siteId, 3);
+    await saveReview(siteId, "Meh");
+    const first = readStore().ratings.find((rating) => rating.userId === "diver-1")!.firstRatedAt;
+    vi.setSystemTime(new Date("2026-10-05T00:00:00Z"));
+    await removeMyRating(siteId);
+    const again = await submitRating(siteId, 5);
+    if (!again.ok) throw new Error(again.error);
+    expect(again.reviews.mine).toMatchObject({ score: 5, review: null, photos: [] });
+    const row = readStore().ratings.find((rating) => rating.userId === "diver-1")!;
+    expect(row.firstRatedAt).toBe(first);
+    expect(row.removedAt).toBeUndefined();
+  });
+
+  it("lets a diver delete one of their photos, and caps photos per review", async () => {
+    await withDivers();
+    await submitRating(siteId, 4);
+    const ids: string[] = [];
+    for (let index = 0; index < 6; index += 1) {
+      const result = await addReviewPhoto(siteId, photoForm());
+      if (!result.ok) throw new Error(result.error);
+      ids.push(result.photo.id);
+    }
+    expect(await addReviewPhoto(siteId, photoForm())).toEqual({ ok: false, error: "A review can have at most 6 photos." });
+    const dropped = await removeReviewPhoto(siteId, ids[0]);
+    if (!dropped.ok) throw new Error(dropped.error);
+    expect(dropped.reviews.mine?.photos.map((photo) => photo.id)).toEqual(ids.slice(1));
+    expect(await readPhotoBytes(siteId, ids[0])).toBeNull();
+    expect(await removeReviewPhoto(siteId, "../../etc")).toEqual({ ok: false, error: "Unknown photo." });
+  });
+
+  it("keeps the daily photo limit when photos or the rating are deleted", async () => {
+    await withDivers();
+    await submitRating(siteId, 4);
+    for (let index = 0; index < 24; index += 1) {
+      const result = await addReviewPhoto(siteId, photoForm());
+      if (!result.ok) throw new Error(result.error);
+      // Delete each straight away: the review never fills, only the day's uploads count.
+      const removed = await removeReviewPhoto(siteId, result.photo.id);
+      if (!removed.ok) throw new Error(removed.error);
+    }
+    await removeMyRating(siteId);
+    await submitRating(siteId, 4);
+    expect(await addReviewPhoto(siteId, photoForm())).toEqual({
+      ok: false,
+      error: "You can add up to 24 photos a day. Try again tomorrow.",
+    });
+    vi.setSystemTime(new Date("2026-09-29T00:00:01Z"));
+    expect((await addReviewPhoto(siteId, photoForm())).ok).toBe(true);
+  });
+
+  it("does not move an older rating's points when its review is written", async () => {
+    await withDivers();
+    await mutateStore((store) => {
+      store.ratings.push({ siteId, score: 4, userId: "diver-1", updatedAt: "2026-08-10T04:00:00Z" });
+    });
+    await saveReview(siteId, "Written later");
+    const row = readStore().ratings.find((rating) => rating.userId === "diver-1")!;
+    expect(row.firstRatedAt).toBe("2026-08-10T04:00:00Z");
+  });
+
+  it("refuses a signed-out visitor, a bad score, an unknown site and an overlong review", async () => {
+    await withDivers();
+    expect(await submitRating(siteId, 6)).toEqual({ ok: false, error: "Pick a rating from 1 to 5." });
+    expect(await submitRating("no-such-site", 4)).toEqual({ ok: false, error: "Unknown site." });
+    await submitRating(siteId, 4);
+    expect(await saveReview(siteId, "x".repeat(1501))).toEqual({ ok: false, error: "A review must be at most 1500 characters." });
+    jar.clear();
+    expect(await submitRating(siteId, 4)).toEqual({ ok: false, error: "Sign in first." });
+    expect(await removeMyRating(siteId)).toEqual({ ok: false, error: "Sign in first." });
+    expect(await addReviewPhoto(siteId, photoForm())).toEqual({ ok: false, error: "Sign in first." });
   });
 });
 

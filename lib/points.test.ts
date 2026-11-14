@@ -89,6 +89,24 @@ describe("rating points", () => {
     expect(stats[0]).toMatchObject({ userId: "a", ratings: 5, points: 15, monthPoints: 12, reports: 0 });
     expect(leaderboard(stats, "month").map((row) => [row.nickname, row.periodPoints])).toEqual([["Ann", 12]]);
   });
+
+  it("counts a changed or re-given rating on the day it was first given, and a removed one not at all", () => {
+    const now = Date.parse("2026-10-15T00:00:00Z");
+    // Rated in September, changed this month: still September's points, not this month's.
+    const changed: Rating = { siteId: "s1", score: 2, userId: "a", firstRatedAt: "2026-09-20T04:00:00Z", updatedAt: "2026-10-12T04:00:00Z" };
+    const removed: Rating = { siteId: "s2", score: 4, userId: "a", firstRatedAt: "2026-10-10T04:00:00Z", updatedAt: "2026-10-11T04:00:00Z", removedAt: "2026-10-11T04:00:00Z" };
+    const stats = diverStats([], users, [], now, [changed, removed]);
+    expect(stats[0]).toMatchObject({ ratings: 1, points: 3, monthPoints: 0 });
+  });
+
+  it("keeps the daily limit on first-rated days, so removing and re-rating never lifts it", () => {
+    const day = "2026-10-10T04:00:00Z";
+    // Four rated and removed, four more rated the same day, then the first four given again the next day.
+    const again = ["s1", "s2", "s3", "s4"].map((id): Rating => ({ siteId: id, score: 4, userId: "a", firstRatedAt: day, updatedAt: "2026-10-11T04:00:00Z" }));
+    const others = ["s5", "s6", "s7", "s8"].map((id): Rating => ({ siteId: id, score: 4, userId: "a", firstRatedAt: "2026-10-10T05:00:00Z", updatedAt: "2026-10-10T05:00:00Z" }));
+    const stats = diverStats([], users, [], Date.parse("2026-10-15T00:00:00Z"), [...again, ...others]);
+    expect(stats[0]).toMatchObject({ ratings: 4, points: 12 });
+  });
 });
 
 describe("longestDayRun", () => {

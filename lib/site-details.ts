@@ -31,6 +31,17 @@ export const DIVER_SITE_TYPE_LABEL = {
 /** Deeper than any recreational or technical site in the catalog; a typo, not a dive. */
 export const MAX_DIVE_DEPTH_M = 100;
 export const HOW_TO_DIVE_MAX = 1500;
+/** A written review of a site: what the dive was like, beside the 1 to 5 score. */
+export const REVIEW_MAX = 1500;
+
+/** A review's text, cleaned like the notes, or null when it is empty. */
+export function requireReviewText(text: unknown): string | null {
+  if (text == null) return null;
+  if (typeof text !== "string") throw new Error("The review must be text.");
+  const cleaned = cleanText(text);
+  if (cleaned.length > REVIEW_MAX) throw new Error(`A review must be at most ${REVIEW_MAX} characters.`);
+  return cleaned || null;
+}
 
 export function requireSiteDetails(input: SiteDetailsInput): SiteDetails {
   const details: SiteDetails = {};

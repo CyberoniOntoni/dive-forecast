@@ -228,6 +228,21 @@ export type Rating = {
   score: number;
   updatedAt: string;
   userId?: string;
+  /**
+   * When this diver first rated the site, ISO UTC; kept when the score changes, the rating is removed or it is given
+   * again, so points are counted on that day (lib/points.ts) and undo and re-rate earn nothing new. Absent on ratings
+   * saved before it was kept: updatedAt stands in.
+   */
+  firstRatedAt?: string;
+  /**
+   * Removed by the diver, ISO UTC. The row is kept only to remember firstRatedAt: a removed rating has no score in the
+   * average, no review, no photos and no points.
+   */
+  removedAt?: string;
+  /** The diver's written review, plain text (lib/site-details.ts REVIEW_MAX). */
+  review?: string;
+  /** The diver's photos of the site, oldest first; the JPEGs are kept like any site photo (lib/site-photos.ts). */
+  photos?: SitePhoto[];
 };
 
 /** A signed-in diver. The email is private: only the nickname is ever shown. */
@@ -242,6 +257,11 @@ export type User = {
   about?: string;
   /** "Sign out everywhere": session cookies issued before this (ms since 1970) no longer count (lib/auth.ts). */
   sessionsValidFrom?: number;
+  /**
+   * When the diver added each photo to a review in the last 24 hours, ISO UTC, for the daily photo limit. Kept apart
+   * from the photos, so deleting a photo or a rating does not give the upload back.
+   */
+  reviewPhotoUploads?: string[];
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */
