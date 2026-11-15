@@ -1,10 +1,10 @@
-import { etaMinutes, KM_PER_NM } from "./boat-nav";
 import { parseWall } from "./forecast";
-import type { Direction, DivePlan, ForecastRoute, HourForecast, PlanDay, PlanStop, SeaBand, SeaStateHour } from "./types";
+import type { Direction, ForecastRoute, HourForecast, PlanDay, PlanStop, SeaBand, SeaStateHour } from "./types";
 
 /**
- * Dive plans: checking what a guide saves, and reading each planned dive against the forecast. Pure, so the plan page,
- * the editor and the tests share it. The store keeps plans (lib/store.ts), lib/plan-actions.ts is the way in.
+ * Dive plans: checking what a guide saves, dates and labels, and reading each planned dive against the forecast. Pure,
+ * so the plan page, the editor and the tests share it. Boat legs and dive order are in lib/plan-legs.ts. The store keeps
+ * plans (lib/store.ts), lib/plan-actions.ts is the way in.
  */
 
 export const PLAN_TITLE_MAX = 80;
@@ -154,7 +154,7 @@ export function planDateSpan(days: readonly Pick<PlanDay, "date">[]): string {
 }
 
 /** The plan's stops, numbered across the whole trip, for the list of dives. */
-export function diveCount(plan: Pick<DivePlan, "days">): number {
+export function diveCount(plan: { days: readonly { stops: readonly unknown[] }[] }): number {
   return plan.days.reduce((sum, day) => sum + day.stops.length, 0);
 }
 
@@ -189,11 +189,6 @@ export function wallMs(date: string, time: string): number {
 /** Wall ms back to "YYYY-MM-DDTHH:MM", the inverse of parseWall. */
 function wallAt(ms: number): string {
   return new Date(ms).toISOString().slice(0, 16);
-}
-
-/** Nautical miles from km, for leg and day totals. */
-export function nmFromKm(km: number): number {
-  return km / KM_PER_NM;
 }
 
 /** "Incoming" from "incoming": the first letter up. */
@@ -360,55 +355,4 @@ export function canReportDive(date: string, time: string, nowWall: string): bool
   const now = parseWall(nowWall);
   if (!Number.isFinite(start) || !Number.isFinite(now)) return false;
   return now >= start + HOUR_MS && now - start <= REPORT_DAYS * DAY_MS;
-}
-
-/** Boat time for a leg, minutes, at the plan's speed through the water (no current). */
-export function legMinutes(lengthKm: number, speedKn: number): number {
-  // A plan's speed is never below BOAT_SPEED_MIN_KN, so the boat is always under way.
-  return etaMinutes(lengthKm, speedKn) ?? Infinity;
-}
-
-/**
- * Swaps the dive at `at` with the one above (-1) or below (+1). The times stay in their rows, so the day still reads in
- * time order and only the sites, with their notes and wanted current, change places. Out of range changes nothing.
- */
-export function moveStopKeepingTimes<T extends { time: string }>(stops: readonly T[], at: number, by: -1 | 1): T[] {
-  const other = at + by;
-  if (at < 0 || at >= stops.length || other < 0 || other >= stops.length) return [...stops];
-  const moved = [...stops];
-  moved[at] = { ...stops[other], time: stops[at].time };
-  moved[other] = { ...stops[at], time: stops[other].time };
-  return moved;
-}
-
-/** Minutes from a dive's entry until the boat can move on: the dive itself and getting everyone back on board. */
-export const DIVE_TURNAROUND_MIN = 60;
-
-export type LegDeparture = {
-  /** "HH:MM": the next dive's entry less the boat time, rounded down to 5 minutes. */
-  leaveBy: string;
-  /** Leaving then comes less than DIVE_TURNAROUND_MIN after the dive before went in (or before it). */
-  tight: boolean;
-};
-
-/**
- * When the boat must leave one dive to make the next on time. Both times are "HH:MM" on the same day; null when the
- * leg has no time or leaving would fall before midnight.
- */
-export function legDeparture(fromTime: string, toTime: string, legMin: number): LegDeparture | null {
-  if (!Number.isFinite(legMin)) return null;
-  const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
-  const leave = Math.floor((minutesOf(toTime) - Math.ceil(legMin)) / 5) * 5;
-  if (leave < 0) return null;
-  const leaveBy = `${String(Math.floor(leave / 60)).padStart(2, "0")}:${String(leave % 60).padStart(2, "0")}`;
-  return { leaveBy, tight: leave - minutesOf(fromTime) < DIVE_TURNAROUND_MIN };
-}
-
-/** "45 min", "1 h 20 min". */
-export function durationText(minutes: number): string {
-  const rounded = Math.max(5, Math.round(minutes / 5) * 5);
-  if (rounded < 60) return `${rounded} min`;
-  const hours = Math.floor(rounded / 60);
-  const rest = rounded % 60;
-  return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }

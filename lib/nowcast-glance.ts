@@ -111,6 +111,22 @@ export function routeWay(
   return { way, spoken: route === "lagoon" ? way : `${way} along the reef` };
 }
 
+/**
+ * routeWay's spoken words, with the compass way a channel's water heads: "incoming, toward NE". Without an inward
+ * bearing a channel just says "incoming".
+ */
+export function routeWayToward(
+  route: ForecastRoute,
+  direction: Direction,
+  inwardBearingDeg: number | null,
+  alongHeadingDeg: number | null,
+  outgoingBearingDeg: number | null = null,
+): string {
+  if (route !== "channel") return routeWay(route, direction, alongHeadingDeg).spoken;
+  if (inwardBearingDeg == null) return direction;
+  return `${direction}, toward ${compassWord(passArrowBearing(inwardBearingDeg, direction, outgoingBearingDeg))}`;
+}
+
 /** The arrow's heading on a route: a channel's follows its inward bearing and may bend outgoing; others their axis. */
 export function routeArrowBearing(
   route: ForecastRoute,

@@ -8,7 +8,6 @@ import {
   BOAT_SPEED_MIN_KN,
   dayLabel,
   DEFAULT_BOAT_SPEED_KN,
-  moveStopKeepingTimes,
   PLAN_DAYS_MAX,
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
@@ -18,6 +17,7 @@ import {
   type PickerSite,
 } from "@/lib/dive-plan";
 import { deletePlan, savePlan } from "@/lib/plan-actions";
+import { moveStopKeepingTimes } from "@/lib/plan-legs";
 import { matchesSearch } from "@/lib/site-search";
 import type { Direction, DivePlan } from "@/lib/types";
 

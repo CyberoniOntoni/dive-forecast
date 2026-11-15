@@ -2,7 +2,7 @@ import { forecastSite } from "./actions";
 import { currentSession } from "./auth";
 import { beyondOpensOn, canReportDive, capital, dayLabel, isPlanId, wallMs, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
 import { toMaldivesWall } from "./forecast";
-import { compassWord, passArrowBearing, routeArrowBearing, routeWay } from "./nowcast-glance";
+import { routeArrowBearing, routeWayToward } from "./nowcast-glance";
 import { routeFor } from "./load-site";
 import { ready } from "./ready";
 import { diveDepthPhrase, nonNegativeMetres, siteKindLabel } from "./site-facts";
@@ -166,12 +166,15 @@ function farOutlook(date: string, time: string, today: string): StopOutlook {
 /** "Incoming, toward NE" at a channel; "Running SW along the reef" at a wall; "Running SW" in a lagoon. */
 function wayWords(hour: HourForecast, forecast: SiteForecast, site: Site): string {
   if (hour.strength === "slack") return "Slack";
-  if (forecast.forecastRoute === "channel") {
-    if (forecast.inwardBearingDeg == null) return capital(hour.direction);
-    const toward = compassWord(passArrowBearing(forecast.inwardBearingDeg, hour.direction, site.outgoingBearingDeg ?? null));
-    return `${capital(hour.direction)}, toward ${toward}`;
-  }
-  return capital(routeWay(forecast.forecastRoute, hour.direction, forecast.alongHeadingDeg).spoken);
+  return capital(
+    routeWayToward(
+      forecast.forecastRoute,
+      hour.direction,
+      forecast.inwardBearingDeg,
+      forecast.alongHeadingDeg,
+      site.outgoingBearingDeg ?? null,
+    ),
+  );
 }
 
 function arrowHeading(hour: HourForecast, forecast: SiteForecast, site: Site): number | null {
@@ -184,7 +187,6 @@ function arrowHeading(hour: HourForecast, forecast: SiteForecast, site: Site): n
     site.outgoingBearingDeg ?? null,
   );
 }
-
 
 function siteFacts(site: Site, atolls: Record<string, string>): string {
   const depth = diveDepthPhrase(nonNegativeMetres(site.diveTopM), nonNegativeMetres(site.diveMaxM));

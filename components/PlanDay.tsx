@@ -7,16 +7,12 @@ import {
   capital,
   countOf,
   dayLabel,
-  DIVE_TURNAROUND_MIN,
-  durationText,
-  legDeparture,
-  nmFromKm,
   warnedCount,
-  type LegDeparture,
   type StopOutlook,
   type StopWarning,
 } from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
+import { DIVE_TURNAROUND_MIN, durationText, legDeparture, nmFromKm, type LegDeparture } from "@/lib/plan-legs";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import { strengthLabel } from "@/lib/nowcast-glance";
 import type { Confidence } from "@/lib/types";

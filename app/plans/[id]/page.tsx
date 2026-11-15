@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PlanDay } from "@/components/PlanDay";
 import { PlanShare } from "@/components/PlanShare";
 import { loadPlanView } from "@/lib/plan-view";
-import { canReportDive, dayLabel, planSize, warnedCount } from "@/lib/dive-plan";
+import { canReportDive, dayLabel, diveCount, planSize, warnedCount } from "@/lib/dive-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
   const today = plan.nowWall.slice(0, 10);
   const reportable = plan.days.some((day) => day.stops.some((stop) => stop.reportHref));
   const anyAhead = plan.days.some((day) => day.stops.some((stop) => !canReportDive(day.date, stop.time, plan.nowWall)));
-  const dives = plan.days.reduce((sum, day) => sum + day.stops.length, 0);
+  const dives = diveCount(plan);
   const warned = plan.days.reduce((sum, day) => sum + warnedCount(day.stops), 0);
 
   return (

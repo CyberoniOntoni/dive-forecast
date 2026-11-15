@@ -6,12 +6,12 @@ import { planLeg } from "./boat-route-data";
 import {
   diveCount,
   isPlanId,
-  legMinutes,
   newPlanId,
   planDateSpan,
   PLANS_PER_DIVER_MAX,
   requirePlanInput,
 } from "./dive-plan";
+import { legMinutes } from "./plan-legs";
 import { ready } from "./ready";
 import { addPlanRecord, deletePlanRecord, findPlan, listMergedSites, plansForOwner, updatePlanRecord } from "./store";
 import type { DivePlan } from "./types";
