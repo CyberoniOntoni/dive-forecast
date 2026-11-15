@@ -7,3 +7,13 @@ export function leafletApi(mod: LeafletLib): LeafletLib {
   if (fallback && typeof fallback.map === "function") return fallback;
   return mod;
 }
+
+/** Leaflet tooltips, div icons and pin labels are HTML, so text from divers (a site name) is escaped first. */
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}

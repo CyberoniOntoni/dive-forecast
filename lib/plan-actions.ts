@@ -130,12 +130,12 @@ export async function getPlanDayLegs(id: string, dayIndex: number): Promise<Plan
   if (!plan || !day) return null;
   const sites = listMergedSites();
   const byId = new Map(sites.map((site) => [site.id, site]));
+  // The dives the page shows: a site removed since the plan was saved drops out there too, so `from` counts the same
+  // stops and the boat goes straight from the dive before it to the dive after.
+  const shown = day.stops.flatMap((stop) => byId.get(stop.siteId) ?? []);
   const legs: PlanLeg[] = [];
-  for (let index = 0; index + 1 < day.stops.length; index += 1) {
-    const from = byId.get(day.stops[index].siteId);
-    const to = byId.get(day.stops[index + 1].siteId);
-    if (!from || !to) continue;
-    const route = planLeg(from, to, sites);
+  for (let index = 0; index + 1 < shown.length; index += 1) {
+    const route = planLeg(shown[index], shown[index + 1], sites);
     legs.push({
       from: index,
       points: route.points,

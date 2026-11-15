@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
 import type { LayerGroup, Map as LeafletMapType } from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { leafletApi } from "@/components/leaflet-api";
+import { escapeHtml, leafletApi } from "@/components/leaflet-api";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -65,7 +65,8 @@ const PlanMapCanvas = dynamic(
         }
         for (const stop of stops) {
           L.marker([stop.lat, stop.lon], { icon: stopIcon(L, stop), title: `${stop.number}. ${stop.name}`, keyboard: false })
-            .bindTooltip(`${stop.number}. ${stop.name}`, { direction: "top", offset: [0, -14] })
+            // A diver-added site can name itself anything, and the tooltip is HTML.
+            .bindTooltip(escapeHtml(`${stop.number}. ${stop.name}`), { direction: "top", offset: [0, -14] })
             .addTo(group);
         }
         group.addTo(map);

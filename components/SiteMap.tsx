@@ -9,7 +9,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import type { NavDraw } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
 import { attachCredits } from "@/components/map-credit";
-import { leafletApi } from "@/components/leaflet-api";
+import { escapeHtml, leafletApi } from "@/components/leaflet-api";
 import { MAP_STYLE } from "@/components/map-style";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
@@ -61,16 +61,6 @@ type ArrowFields = {
   color: string;
   estimated: boolean;
 };
-
-/** Leaflet tooltip and pin aria-label are HTML, so a site name cannot inject markup. */
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function pinHtml(glance: NowcastGlance, showStrength: boolean, age: string | null): string {
   const spoken = escapeHtml(withAge(glance.spoken, age));
