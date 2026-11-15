@@ -1,5 +1,5 @@
 import type { SiteNowcast } from "./nowcast";
-import type { Confidence, Direction, ForecastRoute, Strength } from "./types";
+import type { Confidence, Direction, ForecastRoute, HourForecast, Strength } from "./types";
 
 export function strengthLabel(strength: Strength): string {
   // Stored as too_strong; shown as "very strong", since whether it can be dived depends on the diver.
@@ -23,6 +23,10 @@ export type NowcastGlance = {
   direction: Direction | null;
   /** What the list says for the way the water runs: "incoming", "outgoing", or "running NE" along a reef. */
   way: string | null;
+  /** The way in a sentence: adds "along the reef" at a wall. Null when there is no forecast. */
+  spokenWay: string | null;
+  /** At a channel also where the water heads ("incoming, toward NE"); spokenWay elsewhere. Null with no forecast. */
+  wayToward: string | null;
   /** Slack, mild, strong, or very strong. Null when this hour has no forecast. */
   strength: Strength | null;
   confidence: Confidence | null;
@@ -44,6 +48,8 @@ function noForecastGlance(name: string): NowcastGlance {
     arrowBearing: null,
     direction: null,
     way: null,
+    spokenWay: null,
+    wayToward: null,
     strength: null,
     confidence: null,
     opacity: null,
@@ -54,27 +60,37 @@ function noForecastGlance(name: string): NowcastGlance {
   };
 }
 
+/** What a glance needs besides the hour: the site's headings and how its direction reads. */
+export type GlanceBearings = Pick<SiteNowcast, "inwardBearingDeg" | "outgoingBearingDeg" | "forecastRoute"> &
+  Partial<Pick<SiteNowcast, "bearingSource" | "alongHeadingDeg" | "fetchedAt">>;
+
 /**
  * Incoming follows the inward bearing. Outgoing is 180 opposite, wrapped to 0-360. Not the ocean vector.
  * Along a reef, incoming follows the reef heading instead, and the words are a compass direction.
  */
 export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, showStrength: boolean): NowcastGlance {
   // A stale hour still has direction and strength. Empty only when there is no hour.
-  if (!nowcast?.hour || nowcast.inwardBearingDeg == null) return noForecastGlance(name);
+  if (!nowcast?.hour) return noForecastGlance(name);
+  return hourGlance(name, nowcast.hour, nowcast, showStrength);
+}
 
-  const hour = nowcast.hour;
+/** nowcastGlance for any one hour of a site: the map's current hour, or a forecast hour for the app API. */
+export function hourGlance(
+  name: string,
+  hour: HourForecast,
+  bearings: GlanceBearings,
+  showStrength: boolean,
+): NowcastGlance {
+  const inward = bearings.inwardBearingDeg;
+  if (inward == null) return noForecastGlance(name);
   const label = strengthLabel(hour.strength);
-  const estimatedHeading = nowcast.bearingSource === "fallback";
-  const route = nowcast.forecastRoute;
-  const along = nowcast.alongHeadingDeg ?? null;
-  const arrowBearing = routeArrowBearing(
-    route,
-    hour.direction,
-    nowcast.inwardBearingDeg,
-    along,
-    nowcast.outgoingBearingDeg,
-  );
+  const estimatedHeading = bearings.bearingSource === "fallback";
+  const route = bearings.forecastRoute;
+  const along = bearings.alongHeadingDeg ?? null;
+  const outgoing = bearings.outgoingBearingDeg;
+  const arrowBearing = routeArrowBearing(route, hour.direction, inward, along, outgoing);
   const { way, spoken: spokenWay } = routeWay(route, hour.direction, along);
+  const tone = glanceTone(route, along, hour.direction, hour.strength);
   const base = showStrength
     ? `${name}, ${spokenWay}, ${label}, ${hour.confidence}`
     : `${name}, ${spokenWay}, ${hour.confidence}`;
@@ -86,12 +102,14 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
     arrowBearing,
     direction: hour.direction,
     way,
+    spokenWay,
+    wayToward: routeWayToward(route, hour.direction, inward, along, outgoing),
     strength: hour.strength,
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
-    color: onCompass(route, along) ? alongColor(hour.strength) : glanceColor(hour.direction, hour.strength),
-    tone: glanceTone(route, along, hour.direction, hour.strength),
-    fetchedAt: nowcast.fetchedAt ?? null,
+    color: TONE_COLOR[tone],
+    tone,
+    fetchedAt: bearings.fetchedAt ?? null,
   };
 }
 
@@ -179,15 +197,23 @@ export function glanceTone(
   return direction;
 }
 
+/** The CSS colour for each tone: the web pin and the API tone come from the same glanceTone. */
+const TONE_COLOR: Record<GlanceTone, string> = {
+  stop: "var(--stop)",
+  incoming: "var(--incoming)",
+  outgoing: "var(--outgoing)",
+  along: "var(--foam)",
+};
+
 /** Very strong is the stop token. Every other band keeps incoming or outgoing. Not a second hex. */
 export function glanceColor(direction: Direction, strength: Strength): string {
-  if (strength === "too_strong") return "var(--stop)";
-  return direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+  return TONE_COLOR[glanceTone("channel", null, direction, strength)];
 }
 
 /** Along a reef the way is a compass heading, not in or out, so it takes no in/out colour. Very strong is still the stop token. */
 export function alongColor(strength: Strength): string {
-  return strength === "too_strong" ? "var(--stop)" : "var(--foam)";
+  // Any compass route with a heading reads along; the heading itself does not change the tone.
+  return TONE_COLOR[glanceTone("along-reef", 0, "incoming", strength)];
 }
 
 const COMPASS_WORDS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] as const;

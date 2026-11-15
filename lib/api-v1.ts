@@ -1,6 +1,6 @@
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
-import { glanceRank, nowcastGlance, routeWay, routeWayToward, type GlanceTone } from "./nowcast-glance";
+import { glanceRank, hourGlance, type GlanceBearings, type GlanceTone } from "./nowcast-glance";
 import { photoUrl } from "./site-photos-limits";
 import { SITE_TYPE_LABEL } from "./site-type";
 import type {
@@ -124,15 +124,6 @@ export type ApiForecast = {
   seaStale: boolean;
 };
 
-/** What a glance needs besides the hour: the site's headings and how its direction reads. */
-type GlanceBearings = {
-  inwardBearingDeg: number | null;
-  outgoingBearingDeg: number | null;
-  bearingSource?: BearingSource | null;
-  forecastRoute: ForecastRoute;
-  alongHeadingDeg?: number | null;
-};
-
 export type ApiErrorCode = "not_found" | "bad_request" | "server_error";
 
 export function apiSite(site: Site, atollName?: string | null): ApiSite {
@@ -169,37 +160,31 @@ export function apiSites(sites: readonly Site[], atolls: readonly Atoll[]): ApiS
   };
 }
 
-/** The glance for one hour, or null when there is no hour or no bearing to point the arrow. */
+/** The glance for one hour, or null when there is no hour or no bearing to point the arrow. A pick of hourGlance. */
 export function apiGlance(hour: HourForecast | null, bearings: GlanceBearings): ApiGlance | null {
-  const inward = bearings.inwardBearingDeg;
-  if (!hour || inward == null) return null;
-  const along = bearings.alongHeadingDeg ?? null;
-  const glance = nowcastGlance(
-    "",
-    {
-      siteId: "",
-      atollId: "",
-      inwardBearingDeg: inward,
-      outgoingBearingDeg: bearings.outgoingBearingDeg,
-      bearingSource: bearings.bearingSource ?? null,
-      forecastRoute: bearings.forecastRoute,
-      alongHeadingDeg: along,
-      hour,
-      unavailable: false,
-    },
-    true,
-  );
-  if (glance.arrowBearing == null || glance.way == null || glance.label == null || glance.tone == null) return null;
+  if (!hour) return null;
+  const g = hourGlance("", hour, bearings, true);
+  if (
+    g.arrowBearing == null ||
+    g.way == null ||
+    g.spokenWay == null ||
+    g.wayToward == null ||
+    g.label == null ||
+    g.tone == null ||
+    g.opacity == null
+  ) {
+    return null;
+  }
   return {
-    arrowBearing: glance.arrowBearing,
-    way: glance.way,
-    spokenWay: routeWay(bearings.forecastRoute, hour.direction, along).spoken,
-    wayToward: routeWayToward(bearings.forecastRoute, hour.direction, inward, along, bearings.outgoingBearingDeg),
-    label: glance.label,
-    tone: glance.tone,
-    opacity: glance.opacity ?? 1,
-    rank: glanceRank(glance),
-    estimatedHeading: glance.estimatedHeading,
+    arrowBearing: g.arrowBearing,
+    way: g.way,
+    spokenWay: g.spokenWay,
+    wayToward: g.wayToward,
+    label: g.label,
+    tone: g.tone,
+    opacity: g.opacity,
+    rank: glanceRank(g),
+    estimatedHeading: g.estimatedHeading,
   };
 }
 

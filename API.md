@@ -73,8 +73,7 @@ The site page's forecast: about a week of hours plus the sea state. The fields a
 | Field | Meaning |
 |---|---|
 | `hours[]` | `{ time, direction: "incoming" \| "outgoing", strength: "slack" \| "mild" \| "strong" \| "too_strong", confidence: "low" \| "medium" \| "high", levelM, glance }`. `glance` is below. |
-| `forecastRoute` | `channel`: show `direction` as incoming/outgoing. `along-reef`, `strait`, `lagoon`: show it as a compass direction, where "incoming" means toward `alongHeadingDeg` and "outgoing" means the opposite way. |
-| `inwardBearingDeg`, `outgoingBearingDeg`, `bearingSource` | The arrow's inward heading (degrees from north), the outgoing heading at a curved channel (null when outgoing is straight back), and where the inward one came from (`override`, `rim-derived`, `fallback`). `fallback` means the heading is an estimate. The glance already uses all three. |
+| `forecastRoute`, `alongHeadingDeg`, `inwardBearingDeg`, `outgoingBearingDeg`, `bearingSource` | The inputs each hour's `glance` was built from: which model made the hours (`channel`, `along-reef`, `strait`, `lagoon`), the reef or flow heading off a channel, the inward and curved-outgoing headings (degrees from north), and where the inward one came from (`override`, `rim-derived`, `fallback`). For information only: a client draws `glance` and does not turn these into arrows or words itself. |
 | `unavailable` | No forecast. Either there is no cached ocean series yet or the site has no atoll. |
 | `stale`, `fetchedAt` | The hours come from the last cached series, and when it was fetched. |
 | `seaState` | Per hour `{ time, band: calm \| moderate \| choppy \| rough, feltM, swell, windWaveM, wind, againstCurrent }`. `[]` when the waves failed to load. `null` when the site has no sea state. |

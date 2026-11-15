@@ -74,7 +74,7 @@ fun MapScreen(onOpenSite: (String) -> Unit) {
     remember(state.rows, query) {
       val q = query.trim().lowercase()
       if (q.isEmpty()) state.rows
-      else state.rows.filter { it.site.name.lowercase().contains(q) || it.atollName?.lowercase()?.contains(q) == true }
+      else state.rows.filter { it.site.name.lowercase().contains(q) || it.site.atollName?.lowercase()?.contains(q) == true }
     }
 
   BottomSheetScaffold(
@@ -208,7 +208,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     Column(Modifier.weight(1f)) {
       Text(row.site.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(
-        row.atollName ?: "",
+        row.site.atollName ?: "",
         style = MaterialTheme.typography.bodySmall,
         color = colors.foam.copy(alpha = 0.7f),
         maxLines = 1,

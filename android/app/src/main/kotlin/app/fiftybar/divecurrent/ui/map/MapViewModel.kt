@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** One pin and list row: the site and how its current hour reads. */
-data class SiteRow(val site: ApiSite, val atollName: String?, val glance: Glance?, val stale: Boolean)
+data class SiteRow(val site: ApiSite, val glance: Glance?, val stale: Boolean)
 
 data class MapUiState(
   val rows: List<SiteRow> = emptyList(),
@@ -113,14 +113,13 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
      * so an offline copy never draws last hour's water as now's.
      */
     fun rows(sites: ApiSites, nowcast: ApiNowcast?, nowMs: Long = System.currentTimeMillis()): List<SiteRow> {
-      val atolls = sites.atolls.associate { it.id to it.name }
       val current = nowcast?.takeIf { outdated(it, nowMs) == null }
       val byId = current?.nowcasts?.associateBy { it.siteId }.orEmpty()
       return sites.sites
         .map { site ->
           val n = byId[site.id]
           val g = glance(n?.hour)
-          SiteRow(site, atolls[site.atollId], g, stale = n?.stale == true)
+          SiteRow(site, g, stale = n?.stale == true)
         }
         .sortedWith(compareBy<SiteRow> { glanceRank(it.glance) }.thenBy { it.site.name.lowercase() })
     }
