@@ -21,7 +21,17 @@ import type { DivePlan } from "./types";
  * The plan page itself is put together by lib/plan-view.ts.
  */
 
-export type PlanSummary = { id: string; title: string; span: string; days: number; dives: number; updatedAt: string };
+export type PlanSummary = {
+  id: string;
+  title: string;
+  span: string;
+  /** First and last dates, "YYYY-MM-DD". */
+  first: string;
+  last: string;
+  days: number;
+  dives: number;
+  updatedAt: string;
+};
 
 /** The signed-in diver's plans, newest change first; null when signed out. */
 export async function getMyPlans(): Promise<PlanSummary[] | null> {
@@ -32,6 +42,8 @@ export async function getMyPlans(): Promise<PlanSummary[] | null> {
     id: plan.id,
     title: plan.title,
     span: planDateSpan(plan.days),
+    first: plan.days[0]?.date ?? "",
+    last: plan.days.at(-1)?.date ?? "",
     days: plan.days.length,
     dives: diveCount(plan),
     updatedAt: plan.updatedAt,

@@ -20,9 +20,7 @@ export default async function NewPlanPage() {
       <header className="flex min-w-0 flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foam">New dive plan</h1>
         <p className="text-sm leading-6 text-foam/80">
-          Add the days and the dives, each a site and a time in the water (Maldives time). The plan page shows the forecast
-          current at every dive, warns when a dive lands on a very strong or wrong-way current, and draws the boat route
-          between them. Share its link with your divers.
+          Add days and dives: a site and a time in the water for each, in Maldives time. Saving gives you a link to share.
         </p>
       </header>
       <PlanEditor sites={pickerSites()} plan={null} today={toMaldivesWall(new Date().toISOString()).slice(0, 10)} />

@@ -12,6 +12,7 @@ import {
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
   PLAN_TITLE_MAX,
+  requirePlanInput,
   STOP_NOTE_MAX,
   type PickerSite,
 } from "@/lib/dive-plan";
@@ -74,11 +75,7 @@ export function PlanEditor({
   const changeStop = (dayKey: string, stopKey: string, change: Partial<DraftStop>) =>
     changeDay(dayKey, (day) => ({ ...day, stops: day.stops.map((stop) => (stop.key === stopKey ? { ...stop, ...change } : stop)) }));
 
-  const addDay = () =>
-    setDays((all) => {
-      const last = all.reduce((latest, day) => (day.date > latest ? day.date : latest), "");
-      return [...all, { key: key(), date: last ? addDays(last, 1) : today, stops: [] }];
-    });
+  const addDay = () => setDays((all) => [...all, { key: key(), date: nextDate(all, today), stops: [] }]);
 
   const addStop = (dayKey: string) =>
     changeDay(dayKey, (day) => {
@@ -89,7 +86,6 @@ export function PlanEditor({
 
   const save = async () => {
     setError(null);
-    setSaving(true);
     const input = {
       title,
       notes,
@@ -104,6 +100,14 @@ export function PlanEditor({
         })),
       })),
     };
+    // The same checks the server runs, first here, so a missing site or time shows at once, with no round trip.
+    try {
+      requirePlanInput(input, (siteId) => byId.has(siteId));
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : "Check the plan.");
+      return;
+    }
+    setSaving(true);
     try {
       const result = await savePlan(plan?.id ?? null, input);
       if (!result.ok) {
@@ -185,9 +189,12 @@ export function PlanEditor({
 
       {days.map((day, index) => (
         <section key={day.key} className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-label={`Day ${index + 1}`}>
-          <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
+          <div className="flex min-w-0 items-end justify-between gap-2">
             <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foam">
-              Day {index + 1}
+              <span>
+                Day {index + 1}
+                {day.date ? <span className="font-normal text-foam/65"> · {dayLabel(day.date)}</span> : null}
+              </span>
               <input
                 type="date"
                 value={day.date}
@@ -199,28 +206,30 @@ export function PlanEditor({
                 className={`${FIELD} sm:w-48`}
               />
             </label>
-            <span className="text-sm text-foam/70">{day.date ? dayLabel(day.date) : ""}</span>
             {days.length > 1 ? (
-              <button type="button" className={QUIET} onClick={() => setDays((all) => all.filter((item) => item.key !== day.key))}>
-                Remove day
-              </button>
+              <IconButton
+                label={`Remove day ${index + 1}`}
+                onClick={() => setDays((all) => all.filter((item) => item.key !== day.key))}
+              />
             ) : null}
           </div>
           <ol className="flex min-w-0 flex-col gap-3">
             {day.stops.map((stop, at) => (
-              <li key={stop.key} className="flex min-w-0 flex-col gap-2 rounded-2xl bg-foam/5 p-3 ring-1 ring-foam/10">
+              <li key={stop.key} className="flex min-w-0 flex-col gap-3 rounded-2xl bg-foam/[0.06] p-3 ring-1 ring-foam/10">
                 <div className="flex min-w-0 items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-foam">Dive {at + 1}</span>
-                  <button
-                    type="button"
-                    className={QUIET}
+                  <span className="flex items-center gap-2 text-sm font-semibold text-foam">
+                    <span aria-hidden="true" className="grid size-6 place-items-center rounded-full bg-foam/15 text-xs">
+                      {at + 1}
+                    </span>
+                    Dive {at + 1}
+                  </span>
+                  <IconButton
+                    label={`Remove dive ${at + 1}`}
                     onClick={() => changeDay(day.key, (item) => ({ ...item, stops: item.stops.filter((other) => other.key !== stop.key) }))}
-                  >
-                    Remove
-                  </button>
+                  />
                 </div>
-                <div className="grid min-w-0 gap-2 sm:grid-cols-[8rem_1fr]">
-                  <label className="flex min-w-0 flex-col gap-1 text-sm text-foam">
+                <div className="grid min-w-0 gap-3 sm:grid-cols-[9rem_1fr] sm:gap-2">
+                  <label className="flex min-w-0 flex-col gap-1 text-sm text-foam max-sm:w-40">
                     In the water at
                     <input
                       type="time"
@@ -238,7 +247,7 @@ export function PlanEditor({
                   />
                 </div>
                 {byId.get(stop.siteId)?.channel ? (
-                  <label className="flex min-w-0 flex-col gap-1 text-sm text-foam sm:max-w-72">
+                  <label className="flex min-w-0 flex-col gap-1 text-sm text-foam sm:max-w-80">
                     Current you want
                     <select
                       value={stop.want}
@@ -249,10 +258,13 @@ export function PlanEditor({
                       <option value="incoming">Incoming (into the atoll)</option>
                       <option value="outgoing">Outgoing (out of the atoll)</option>
                     </select>
+                    <span className="text-xs text-foam/65">A channel: the plan warns if it runs the other way.</span>
                   </label>
                 ) : null}
                 <label className="flex min-w-0 flex-col gap-1 text-sm text-foam">
-                  Note <span className="text-foam/70">(optional: entry, what to look for)</span>
+                  <span>
+                    Note <span className="text-foam/65">(optional: entry, what to look for)</span>
+                  </span>
                   <input
                     value={stop.note}
                     maxLength={STOP_NOTE_MAX}
@@ -263,52 +275,85 @@ export function PlanEditor({
               </li>
             ))}
           </ol>
+          {day.stops.length === 0 ? <p className="text-sm text-foam/65">No dives yet on this day.</p> : null}
           <button
             type="button"
-            className={`${QUIET} self-start`}
+            className={`${QUIET} self-start gap-1.5 border-dashed`}
             disabled={day.stops.length >= PLAN_STOPS_PER_DAY_MAX}
             onClick={() => addStop(day.key)}
           >
-            + Add a dive
+            <span aria-hidden="true" className="text-base leading-none">+</span> Add a dive
           </button>
         </section>
       ))}
 
-      <button type="button" className={`${QUIET} self-start`} disabled={days.length >= PLAN_DAYS_MAX} onClick={addDay}>
-        + Add a day
+      <button
+        type="button"
+        className={`${QUIET} justify-center gap-1.5 border-dashed py-3`}
+        disabled={days.length >= PLAN_DAYS_MAX}
+        onClick={addDay}
+      >
+        <span aria-hidden="true" className="text-base leading-none">+</span> Add a day
+        {days.length > 0 ? <span className="font-normal text-foam/65"> ({dayLabel(nextDate(days, today))})</span> : null}
       </button>
 
-      {error ? (
-        <p role="alert" className="text-sm font-medium text-stop">
-          {error}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-incoming px-5 text-base font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-60"
-        >
-          {saving ? "Saving…" : plan ? "Save changes" : "Save and get the link"}
-        </button>
-        {plan ? (
-          confirmDelete ? (
-            <>
-              <button type="button" className={`${QUIET} border-stop text-stop`} disabled={saving} onClick={() => void remove()}>
-                Yes, delete this plan
-              </button>
-              <button type="button" className={QUIET} onClick={() => setConfirmDelete(false)}>
-                Keep it
-              </button>
-            </>
-          ) : (
-            <button type="button" className={QUIET} onClick={() => setConfirmDelete(true)}>
-              Delete plan
-            </button>
-          )
+      {/* Stays at the foot of the screen while a long plan scrolls, so saving is always one tap away. */}
+      <div className="sticky bottom-0 z-10 -mx-4 flex shrink-0 flex-col gap-2 border-t border-foam/15 bg-[color-mix(in_srgb,var(--ink)_92%,transparent)] px-4 py-3 backdrop-blur-md sm:-mx-8 sm:px-8">
+        {error ? (
+          <p role="alert" className="text-sm font-medium text-stop">
+            {error}
+          </p>
         ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-incoming px-5 text-base font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-60"
+          >
+            {saving ? "Saving…" : plan ? "Save changes" : "Save and get the link"}
+          </button>
+          {plan ? (
+            confirmDelete ? (
+              <>
+                <button type="button" className={`${QUIET} border-stop text-stop`} disabled={saving} onClick={() => void remove()}>
+                  Yes, delete this plan
+                </button>
+                <button type="button" className={QUIET} onClick={() => setConfirmDelete(false)}>
+                  Keep it
+                </button>
+              </>
+            ) : (
+              <button type="button" className={QUIET} onClick={() => setConfirmDelete(true)}>
+                Delete plan
+              </button>
+            )
+          ) : null}
+        </div>
       </div>
     </form>
+  );
+}
+
+/** The day after the plan's last day, or today for an empty plan. */
+function nextDate(days: readonly DraftDay[], today: string): string {
+  const last = days.reduce((latest, day) => (day.date > latest ? day.date : latest), "");
+  return last ? addDays(last, 1) : today;
+}
+
+/** A round × button for removing a day or a dive. */
+function IconButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="grid size-11 shrink-0 place-items-center rounded-full text-foam/70 hover:bg-foam/10 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+    >
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
   );
 }
 
@@ -328,9 +373,9 @@ function SitePicker({ sites, value, onPick }: { sites: readonly PickerSite[]; va
       <div className="flex min-w-0 flex-col gap-1 text-sm text-foam">
         <span>Site</span>
         <div className="flex min-w-0 items-center gap-2">
-          <span className="field flex min-w-0 flex-1 items-center truncate">
+          <span className="field flex min-w-0 flex-1 flex-col justify-center py-1 leading-tight">
             <span className="truncate font-medium">{picked.name}</span>
-            {picked.atoll ? <span className="ml-1 shrink-0 text-foam/65">· {picked.atoll}</span> : null}
+            {picked.atoll ? <span className="truncate text-xs text-foam/65">{picked.atoll}</span> : null}
           </span>
           <button type="button" className={QUIET} onClick={() => setOpen(true)}>
             Change

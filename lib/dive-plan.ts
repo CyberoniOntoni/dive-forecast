@@ -318,6 +318,11 @@ export function stopOutlook(
   return { status: "forecast", hour, sea, warnings, better };
 }
 
+/** How many of these dives have a forecast warning. */
+export function warnedCount(stops: readonly { outlook: StopOutlook }[]): number {
+  return stops.filter((stop) => stop.outlook.status === "forecast" && stop.outlook.warnings.length > 0).length;
+}
+
 /** Days a dive can still be reported after it (lib/actions.ts REPORT_MAX_AGE_DAYS). */
 export const REPORT_DAYS = 14;
 

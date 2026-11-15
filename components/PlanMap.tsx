@@ -13,6 +13,8 @@ type Props = {
   stops: readonly PlanMapStop[];
   /** Each leg's points, [lat, lon]; `routed` false draws it dashed (a straight line, no way round the reef found). */
   legs: readonly { points: readonly [number, number][]; routed: boolean }[];
+  /** A day of one dive: a shorter map, since there is no route to show. */
+  compact?: boolean;
 };
 
 /** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
@@ -78,7 +80,7 @@ const PlanMapCanvas = dynamic(
           ...stops.map((stop) => L.latLng(stop.lat, stop.lon)),
           ...legs.flatMap((leg) => leg.points.map(([lat, lon]) => L.latLng(lat, lon))),
         ];
-        if (points.length === 1) map.setView(points[0], 13);
+        if (points.length === 1) map.setView(points[0], 12);
         else if (points.length > 1) map.fitBounds(L.latLngBounds(points), { padding: [28, 28], maxZoom: 14 });
       }, [stops, legs]);
 
@@ -91,7 +93,9 @@ const PlanMapCanvas = dynamic(
 
 export function PlanMap(props: Props) {
   return (
-    <div className="plan-map relative h-64 w-full overflow-hidden rounded-2xl ring-1 ring-foam/15 sm:h-80">
+    <div
+      className={`plan-map relative isolate w-full overflow-hidden rounded-2xl ring-1 ring-foam/15 ${props.compact ? "h-44 sm:h-52" : "h-64 sm:h-80"}`}
+    >
       <PlanMapCanvas {...props} />
     </div>
   );
