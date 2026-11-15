@@ -54,6 +54,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiForecast
+import app.fiftybar.divecurrent.data.api.ApiHour
 import app.fiftybar.divecurrent.data.api.ApiSeaStateHour
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.SeaBand
@@ -93,7 +94,7 @@ fun SiteScreen(siteId: String, onBack: () -> Unit) {
           IconButton(onClick = viewModel::refresh) { Icon(Icons.Filled.Refresh, "Refresh the forecast") }
           IconButton(
             onClick = {
-              val url = shareUrl(siteId, selectedTime)
+              val url = shareText(siteId, state.site?.name, hours.getOrNull(state.selected))
               val send =
                 Intent(Intent.ACTION_SEND).apply {
                   type = "text/plain"
@@ -137,9 +138,16 @@ fun SiteScreen(siteId: String, onBack: () -> Unit) {
   }
 }
 
-private fun shareUrl(siteId: String, time: String?): String {
-  val base = "${BuildConfig.WEB_URL}/sites/$siteId"
-  return if (time == null) base else "$base?at=$time"
+/**
+ * The hour in words, then the site's page. Not `?at=`: on the web that only fills the report form's dive time, and the
+ * page opens on the current hour, so the hour itself goes in the text.
+ */
+internal fun shareText(siteId: String, siteName: String?, hour: ApiHour?): String {
+  val url = "${BuildConfig.WEB_URL}/sites/$siteId"
+  if (hour == null) return url
+  val g = glance(hour)
+  val reading = if (g == null) "" else ": ${g.wayToward}, ${g.label}"
+  return "${siteName ?: "Site"}, ${MaldivesTime.label(hour.time)} Maldives$reading\n$url"
 }
 
 @Composable

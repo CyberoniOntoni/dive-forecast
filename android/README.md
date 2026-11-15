@@ -11,7 +11,8 @@ Version 1 is read-only:
 - **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with a search by site or atoll.
 - **Site page**: a slider over the week, opened on the current Maldives hour; strength bars, residual tide and sea
   state for every hour; the hour's direction, strength, confidence and sea state; the server's `notice` and `siteNote`;
-  depths, how to dive it, photos, the source; share a link to the hour (`https://50bar.app/sites/<id>?at=<time>`).
+  depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
+  not `?at=`, which on the web only fills the report form's dive time).
 - **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
