@@ -74,12 +74,16 @@ const logins: Table<PendingLogin> = {
   watchMembership: true,
 };
 
-/** Dive plans, by their share id; owner_id finds a diver's own. */
+/**
+ * Dive plans, by their share id; owner_id finds a diver's own. Membership watched, for the limit on plans per diver
+ * (lib/store.ts addPlanRecord): two creates racing cannot both pass it.
+ */
 const plans: Table<DivePlan> = {
   name: "plans",
   key: (plan) => plan.id,
   columns: (plan) => ({ owner_id: plan.ownerId }),
   schema: { columns: ["owner_id TEXT NOT NULL"], indexes: ["owner_id"] },
+  watchMembership: true,
 };
 
 const TABLES = [reports, ratings, sites, users, logins, plans] as Table<unknown>[];

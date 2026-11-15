@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { planSize } from "@/lib/dive-plan";
 import { toMaldivesWall } from "@/lib/forecast";
 import { getMyPlans, type PlanSummary } from "@/lib/plan-actions";
 import { signInHref } from "@/lib/sign-in";
@@ -74,8 +75,7 @@ export default async function PlansPage() {
                         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                           <span className="truncate text-base font-semibold text-foam">{plan.title}</span>
                           <span className="text-sm text-foam/70">
-                            {plan.span} · {plan.days} day{plan.days === 1 ? "" : "s"} · {plan.dives} dive
-                            {plan.dives === 1 ? "" : "s"}
+                            {plan.span} · {planSize(plan.days, plan.dives)}
                           </span>
                         </span>
                         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className="shrink-0 text-foam/50" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { PlanDay } from "@/components/PlanDay";
 import { PlanShare } from "@/components/PlanShare";
 import { loadPlanView } from "@/lib/plan-view";
-import { canReportDive, dayLabel, warnedCount } from "@/lib/dive-plan";
+import { canReportDive, dayLabel, planSize, warnedCount } from "@/lib/dive-plan";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +50,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                 {" · "}
               </>
             ) : null}
-            {plan.days.length} day{plan.days.length === 1 ? "" : "s"} · {dives} dive{dives === 1 ? "" : "s"} · boat {plan.boatSpeedKn} kn
+            {planSize(plan.days.length, dives)} · boat {plan.boatSpeedKn} kn
             · Maldives time
           </p>
         </div>

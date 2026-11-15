@@ -9,6 +9,7 @@ import "leaflet.markercluster/dist/MarkerCluster.css";
 import type { NavDraw } from "@/components/BoatNav";
 import { drawNav, navBounds } from "@/components/boat-nav-layer";
 import { attachCredits } from "@/components/map-credit";
+import { leafletApi } from "@/components/leaflet-api";
 import { MAP_STYLE } from "@/components/map-style";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
@@ -138,14 +139,6 @@ function framePadding(phoneBottom = 88) {
     return { paddingTopLeft: [24, 48] as [number, number], paddingBottomRight: [56, 36] as [number, number], maxZoom: 11 };
   }
   return { paddingTopLeft: [12, 48] as [number, number], paddingBottomRight: [56, phoneBottom] as [number, number], maxZoom: 11 };
-}
-
-/** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
-function leafletApi(mod: LeafletLib): LeafletLib {
-  if (typeof mod.map === "function") return mod;
-  const fallback = (mod as { default?: LeafletLib }).default;
-  if (fallback && typeof fallback.map === "function") return fallback;
-  return mod;
 }
 
 function mountDiveMap(

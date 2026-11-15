@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  beyondOpensOn,
   bestWindow,
   canReportDive,
   dayLabel,
@@ -187,6 +188,17 @@ describe("stopOutlook", () => {
       opensOn: "2026-11-24",
     });
     expect(stopOutlook({ ...channel(hours), unavailable: true }, "2026-11-20", { time: "09:00" }, "2026-11-20").status).toBe("unavailable");
+  });
+});
+
+describe("beyondOpensOn", () => {
+  it("opens six days ahead for a dive by 11:00, five for a later one, as the series ends at 11:00", () => {
+    expect(beyondOpensOn("2026-11-30", "07:00")).toBe("2026-11-24");
+    expect(beyondOpensOn("2026-11-30", "11:20")).toBe("2026-11-24");
+    expect(beyondOpensOn("2026-11-30", "11:40")).toBe("2026-11-25");
+    expect(beyondOpensOn("2026-11-30", "15:00")).toBe("2026-11-25");
+    // 23:40 is read at 00:00 the next day.
+    expect(beyondOpensOn("2026-11-30", "23:40")).toBe("2026-11-25");
   });
 });
 

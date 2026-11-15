@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { PlanMap, type PlanMapStop } from "@/components/PlanMap";
-import { capital, dayLabel, durationText, nmFromKm, warnedCount, type StopOutlook, type StopWarning } from "@/lib/dive-plan";
+import { capital, countOf, dayLabel, durationText, nmFromKm, warnedCount, type StopOutlook, type StopWarning } from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import { strengthLabel } from "@/lib/nowcast-glance";
@@ -78,11 +78,11 @@ export function PlanDay({
             <span className="text-foam/60">Day {index + 1}</span> · {dayLabel(day.date)}
           </h2>
           {isToday ? <Badge tone="incoming">Today</Badge> : past ? <Badge tone="quiet">Done</Badge> : null}
-          {warned > 0 ? <Badge tone="stop">{warned === 1 ? "1 dive to check" : `${warned} dives to check`}</Badge> : null}
+          {warned > 0 ? <Badge tone="stop">{countOf(warned, "dive")} to check</Badge> : null}
         </div>
         <p className="flex min-w-0 flex-wrap gap-x-3 text-sm text-foam/75">
           <span>
-            {day.stops.length} dive{day.stops.length === 1 ? "" : "s"}
+            {countOf(day.stops.length, "dive")}
           </span>
           {legs && legs.length > 0 ? (
             <span>

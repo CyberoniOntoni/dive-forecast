@@ -1,13 +1,12 @@
 import { forecastSite } from "./actions";
 import { currentSession } from "./auth";
-import { addDays, canReportDive, capital, dayLabel, isPlanId, wallMs, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
+import { beyondOpensOn, canReportDive, capital, dayLabel, isPlanId, wallMs, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
 import { toMaldivesWall } from "./forecast";
 import { compassWord, passArrowBearing, routeArrowBearing, routeWay } from "./nowcast-glance";
 import { routeFor } from "./load-site";
 import { ready } from "./ready";
-import { DIVER_SITE_TYPE_LABEL } from "./site-details";
+import { diveDepthPhrase, nonNegativeMetres, siteKindLabel } from "./site-facts";
 import { atollNamesById } from "./site-labels";
-import { SITE_TYPE_LABEL } from "./site-type";
 import { findPlan, listMergedSites, readCatalog, readStore } from "./store";
 import type { Direction, ForecastRoute, HourForecast, Site, SiteForecast } from "./types";
 
@@ -106,7 +105,7 @@ export async function loadPlanView(id: string): Promise<PlanView | null> {
         routeFor(site, catalog.sites, catalog.atolls.find((atoll) => atoll.id === site.atollId))?.route ??
         "channel";
       const outlook: StopOutlook = !inReach(day.date)
-        ? farOutlook(day.date, nowWall.slice(0, 10))
+        ? farOutlook(day.date, stop.time, nowWall.slice(0, 10))
         : forecast
           ? stopOutlook(
               { route, hours: forecast.hours, sea: forecast.seaState, unavailable: forecast.unavailable },
@@ -159,11 +158,9 @@ export async function loadPlanView(id: string): Promise<PlanView | null> {
 }
 
 /** A dive too far from today for the forecast: past, or the date the forecast first reaches it. */
-function farOutlook(date: string, today: string): StopOutlook {
+function farOutlook(date: string, time: string, today: string): StopOutlook {
   if (date < today) return { status: "past" };
-  // The series ends about six and a half days past today (1 past day + 7 forecast days, less the half day the 25 h
-  // mean trims off its end), so a day dive shows six days before: the same date stopOutlook gives near the edge.
-  return { status: "beyond", opensOn: addDays(date, -6) };
+  return { status: "beyond", opensOn: beyondOpensOn(date, time) };
 }
 
 /** "Incoming, toward NE" at a channel; "Running SW along the reef" at a wall; "Running SW" in a lagoon. */
@@ -190,18 +187,6 @@ function arrowHeading(hour: HourForecast, forecast: SiteForecast, site: Site): n
 
 
 function siteFacts(site: Site, atolls: Record<string, string>): string {
-  const kind = site.siteType
-    ? site.sourceUrl === "user"
-      ? DIVER_SITE_TYPE_LABEL[site.siteType]
-      : SITE_TYPE_LABEL[site.siteType]
-    : null;
-  const top = typeof site.diveTopM === "number" ? site.diveTopM : null;
-  const max = typeof site.diveMaxM === "number" ? site.diveMaxM : null;
-  const depth =
-    top != null && max != null && top !== max
-      ? `${Math.min(top, max)}–${Math.max(top, max)} m`
-      : (top ?? max) != null
-        ? `${top ?? max} m`
-        : null;
-  return [kind, atolls[site.atollId] ?? null, depth].filter(Boolean).join(" · ");
+  const depth = diveDepthPhrase(nonNegativeMetres(site.diveTopM), nonNegativeMetres(site.diveMaxM));
+  return [siteKindLabel(site), atolls[site.atollId] ?? null, depth].filter(Boolean).join(" · ");
 }

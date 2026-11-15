@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useEffect, useRef } from "react";
 import type { LayerGroup, Map as LeafletMapType } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { leafletApi } from "@/components/leaflet-api";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -16,13 +17,6 @@ type Props = {
   /** A day of one dive: a shorter map, since there is no route to show. */
   compact?: boolean;
 };
-
-/** Leaflet's dynamic import is sometimes `{ default }` rather than the namespace. */
-function leafletApi(mod: LeafletLib): LeafletLib {
-  if (typeof mod.map === "function") return mod;
-  const fallback = (mod as { default?: LeafletLib }).default;
-  return fallback && typeof fallback.map === "function" ? fallback : mod;
-}
 
 function stopIcon(L: LeafletLib, stop: PlanMapStop) {
   return L.divIcon({

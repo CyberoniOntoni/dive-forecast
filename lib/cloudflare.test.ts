@@ -278,6 +278,33 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().logins).toHaveLength(1);
   });
 
+  it("holds the plans-per-diver limit when two creates race", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    const plan = (id: string) => ({
+      id,
+      ownerId: "u1",
+      title: id,
+      boatSpeedKn: 8,
+      days: [{ date: "2026-11-20", stops: [{ siteId: "banana-reef", time: "09:00" }] }],
+      createdAt: "2026-11-15T00:00:00.000Z",
+      updatedAt: "2026-11-15T00:00:00.000Z",
+    });
+    // Both requests read no plans, so both pass the count; the second write sees the list changed, reruns and is full.
+    const results = await Promise.all(
+      ["AbCdEfGhJkLmNpQr", "ZzZzZzZzZzZzZzZz"].map((id) => {
+        newRequest(env);
+        return store.addPlanRecord(plan(id), 1);
+      }),
+    );
+    expect(results.sort()).toEqual(["full", "saved"]);
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.plansForOwner("u1")).toHaveLength(1);
+  });
+
   it("refuses a second diver with the same nickname at the database too", async () => {
     const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
     const store = await import("./store");

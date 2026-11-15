@@ -163,6 +163,16 @@ export function diveHour(date: string, time: string): string {
   return `${wallAt(wallMs(date, time) + 30 * 60_000).slice(0, 13)}:00`;
 }
 
+/** "1 dive", "3 dives". */
+export function countOf(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** "4 days · 11 dives", the size of a plan. */
+export function planSize(days: number, dives: number): string {
+  return `${countOf(days, "day")} · ${countOf(dives, "dive")}`;
+}
+
 /** The date `days` after a "YYYY-MM-DD" date. */
 export function addDays(date: string, days: number): string {
   return wallAt(wallMs(date, "00:00") + days * DAY_MS).slice(0, 10);
@@ -284,6 +294,21 @@ export function bestWindow(site: SiteHours, date: string, want: Direction | unde
   while (from > 0 && good[from - 1]) from -= 1;
   while (to < good.length - 1 && good[to + 1]) to += 1;
   return { from: good[from]!.time, to: good[to]!.time, best: good[at]! };
+}
+
+/**
+ * The forecast fetched on a day runs to 11:00 six days later: 1 past + 7 forecast days, less the last 12 hours, which
+ * the residual tide needs on each side (lib/marine.ts). Used for dives too far out to load a series for.
+ */
+const SERIES_END_DAYS = 6;
+const SERIES_END_HOUR = 11;
+
+/** The first date whose forecast reaches a dive at `time` on `date`: six days before, or five for a dive after 11:00. */
+export function beyondOpensOn(date: string, time: string): string {
+  // The hour the dive is read at, which a dive after 23:30 rounds into the next day.
+  const at = diveHour(date, time);
+  const hour = Number(at.slice(11, 13));
+  return addDays(at.slice(0, 10), hour > SERIES_END_HOUR ? 1 - SERIES_END_DAYS : -SERIES_END_DAYS);
 }
 
 /**
