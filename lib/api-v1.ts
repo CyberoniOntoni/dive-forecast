@@ -78,7 +78,20 @@ export type ApiGlance = {
 
 export type ApiHour = HourForecast & { glance: ApiGlance | null };
 
-export type ApiSiteNowcast = SiteNowcast & { hour: ApiHour | null };
+/** One site's current hour, listed field by field like the forecast. */
+export type ApiSiteNowcast = {
+  siteId: string;
+  atollId: string;
+  inwardBearingDeg: number | null;
+  outgoingBearingDeg: number | null;
+  bearingSource: BearingSource | null;
+  forecastRoute: ForecastRoute;
+  alongHeadingDeg: number | null;
+  hour: ApiHour | null;
+  unavailable: boolean;
+  stale: boolean;
+  fetchedAt: number | null;
+};
 
 export type ApiNowcast = {
   apiVersion: number;
@@ -201,12 +214,28 @@ function apiHour(hour: HourForecast, bearings: GlanceBearings): ApiHour {
   };
 }
 
+function apiSiteNowcast(nowcast: SiteNowcast): ApiSiteNowcast {
+  return {
+    siteId: nowcast.siteId,
+    atollId: nowcast.atollId,
+    inwardBearingDeg: nowcast.inwardBearingDeg,
+    outgoingBearingDeg: nowcast.outgoingBearingDeg,
+    bearingSource: nowcast.bearingSource ?? null,
+    forecastRoute: nowcast.forecastRoute,
+    alongHeadingDeg: nowcast.alongHeadingDeg ?? null,
+    hour: nowcast.hour ? apiHour(nowcast.hour, nowcast) : null,
+    unavailable: nowcast.unavailable,
+    stale: nowcast.stale ?? false,
+    fetchedAt: nowcast.fetchedAt ?? null,
+  };
+}
+
 export function apiNowcast(nowcasts: SiteNowcast[], maldivesWall: string): ApiNowcast {
   return {
     apiVersion: API_VERSION,
     modelVersion: FORECAST_MODEL_VERSION,
     maldivesWall,
-    nowcasts: nowcasts.map((nowcast) => ({ ...nowcast, hour: nowcast.hour ? apiHour(nowcast.hour, nowcast) : null })),
+    nowcasts: nowcasts.map(apiSiteNowcast),
   };
 }
 

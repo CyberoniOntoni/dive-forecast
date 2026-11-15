@@ -9,6 +9,7 @@ import app.fiftybar.divecurrent.data.api.ApiNowcast
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.ApiSites
 import app.fiftybar.divecurrent.domain.Glance
+import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.domain.glanceRank
 import kotlinx.coroutines.async
@@ -31,6 +32,11 @@ data class MapUiState(
   /** Set when the last refresh failed; the rows may still be the phone's copy. */
   val error: String? = null,
   val fromCache: Boolean = false,
+  /**
+   * The saved nowcast is for an earlier Maldives hour than now (offline, or the app left open), so its arrows are
+   * not shown: they would read as the current hour. Set with the wall time it was for.
+   */
+  val outdatedWall: String? = null,
 )
 
 class MapViewModel(private val repository: DataRepository) : ViewModel() {
@@ -41,9 +47,24 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
     viewModelScope.launch {
       val sites = repository.cachedSites()
       val nowcast = repository.cachedNowcast()
-      if (sites != null) _state.update { it.copy(rows = rows(sites.value, nowcast?.value), savedAt = nowcast?.savedAt) }
+      if (sites != null) {
+        _state.update {
+          it.copy(
+            rows = rows(sites.value, nowcast?.value),
+            savedAt = nowcast?.savedAt,
+            maldivesWall = nowcast?.value?.maldivesWall,
+            outdatedWall = outdated(nowcast?.value),
+          )
+        }
+      }
       refresh()
     }
+  }
+
+  /** On coming back to the map: fetch again once the Maldives hour has moved past the one shown. */
+  fun refreshIfHourPassed(nowMs: Long = System.currentTimeMillis()) {
+    val wall = _state.value.maldivesWall ?: return
+    if (!_state.value.loading && wall.take(13) < MaldivesTime.nowHour(nowMs).take(13)) refresh()
   }
 
   fun refresh() {
@@ -72,6 +93,7 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
     return current.copy(
       rows = if (loadedSites != null) rows(loadedSites.value, loadedNowcast?.value) else current.rows,
       maldivesWall = loadedNowcast?.value?.maldivesWall ?: current.maldivesWall,
+      outdatedWall = if (loadedNowcast != null) outdated(loadedNowcast.value) else current.outdatedWall,
       savedAt = loadedNowcast?.savedAt ?: current.savedAt,
       loading = false,
       error = failure?.let { (it as? ApiException)?.message ?: "Could not load the forecast." },
@@ -80,10 +102,20 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
   }
 
   companion object {
-    /** Strongest first, as the web list sorts, then by name. */
-    fun rows(sites: ApiSites, nowcast: ApiNowcast?): List<SiteRow> {
+    /** The nowcast's wall time when it is for an earlier Maldives hour than [nowMs]; null when it is current. */
+    fun outdated(nowcast: ApiNowcast?, nowMs: Long = System.currentTimeMillis()): String? {
+      val wall = nowcast?.maldivesWall ?: return null
+      return if (wall.take(13) < MaldivesTime.nowHour(nowMs).take(13)) wall else null
+    }
+
+    /**
+     * Strongest first, as the web list sorts, then by name. A nowcast for an earlier hour gives every row no glance,
+     * so an offline copy never draws last hour's water as now's.
+     */
+    fun rows(sites: ApiSites, nowcast: ApiNowcast?, nowMs: Long = System.currentTimeMillis()): List<SiteRow> {
       val atolls = sites.atolls.associate { it.id to it.name }
-      val byId = nowcast?.nowcasts?.associateBy { it.siteId }.orEmpty()
+      val current = nowcast?.takeIf { outdated(it, nowMs) == null }
+      val byId = current?.nowcasts?.associateBy { it.siteId }.orEmpty()
       return sites.sites
         .map { site ->
           val n = byId[site.id]

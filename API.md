@@ -106,7 +106,9 @@ Returns 404 `not_found` for an unknown or hidden site.
 
 ### `GET /api/v1/nowcast`
 
-Every site's forecast for the current Maldives hour, as the map's arrows show it.
+Every site's forecast for the current Maldives hour, as the map's arrows show it. Like the forecast, each entry's
+fields are listed one by one (`apiSiteNowcast` in `lib/api-v1.ts`). The body is for the hour of `maldivesWall`: an app
+showing a saved copy later must not present it as the current hour.
 
 ```json
 {

@@ -160,7 +160,10 @@ describe("API v1 glance", () => {
       "2026-11-15T09:00",
     );
     expect(body.nowcasts[0].hour?.glance?.arrowBearing).toBe(150);
+    expect(body.nowcasts[0]).toMatchObject({ stale: false, fetchedAt: null, bearingSource: null, alongHeadingDeg: null });
     expect(body.nowcasts[1].hour).toBeNull();
+    const extra = apiNowcast([{ ...body.nowcasts[1], secret: 1 } as never], "2026-11-15T09:00");
+    expect(extra.nowcasts[0]).not.toHaveProperty("secret");
   });
 });
 

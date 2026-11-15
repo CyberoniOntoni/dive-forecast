@@ -49,17 +49,19 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `data/api/` | The /api/v1 bodies (kotlinx.serialization, unknown fields ignored) and the OkHttp client |
 | `data/db/` | Room: the last raw body per endpoint |
 | `data/DataRepository.kt` | Network first, then the last copy |
-| `domain/Glance.kt` | Port of `lib/nowcast-glance.ts`: arrow heading, "incoming" / "running NE along the reef", tones, ranking |
+| `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
 | `ui/map/` | MapLibre map, now list |
 | `ui/site/` | Site page, hour strip |
 
-`domain/Glance.kt` must stay in step with `lib/nowcast-glance.ts`; `GlanceTest` repeats the web tests' cases.
-Labels shown to divers follow the web: `too_strong` is shown as "very strong", site kinds as in `lib/site-type.ts`.
+The display rules live only on the server (`lib/nowcast-glance.ts`, put on every hour by `lib/api-v1.ts`): the app
+draws the glance it is given, so a wording change ships with the server. Site kinds come as `siteTypeLabel`.
 
 ## Rules carried over from the API
 
-- Ignore unknown fields, and read enums through the `of()` helpers so a new value does not fail a whole body.
+- Ignore unknown fields, and read enums through the `of()` helpers: a value the app does not know gives null, so it
+  draws no arrow instead of a wrong one, and never fails a whole body.
+- A saved nowcast is for its own hour: once the Maldives hour has moved on, the map shows no arrows from it.
 - Times are Maldives wall-clock `YYYY-MM-DDTHH:MM`; parse them with `MaldivesTime`, not `LocalDateTime.now()`.
 - Show `notice` and `siteNote` with the forecast.
 - No diver id or email is ever in a response, and the app asks for none.
