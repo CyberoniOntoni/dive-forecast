@@ -50,7 +50,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
-import app.fiftybar.divecurrent.domain.strengthLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -174,7 +173,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
   val g = row.glance
   val spoken =
     if (g == null) "${row.site.name}, no forecast"
-    else "${row.site.name}, ${g.spokenWay}, ${strengthLabel(g.strength)}, ${confidenceLabel(g.confidence)} confidence"
+    else "${row.site.name}, ${g.spokenWay}, ${g.label}, ${confidenceLabel(g.confidence)} confidence"
   Row(
     Modifier.fillMaxWidth()
       .heightIn(min = 56.dp)
@@ -199,7 +198,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     }
     Column(horizontalAlignment = Alignment.End) {
       if (g != null) {
-        Text(strengthLabel(g.strength), color = colors.tone(g.tone), fontWeight = FontWeight.SemiBold)
+        Text(g.label, color = colors.tone(g.tone), fontWeight = FontWeight.SemiBold)
         Text(
           buildString {
             append(g.way)

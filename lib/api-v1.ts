@@ -1,7 +1,18 @@
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
+import { glanceRank, nowcastGlance, routeWay, routeWayToward, type GlanceTone } from "./nowcast-glance";
 import { photoUrl } from "./site-photos-limits";
-import type { Atoll, Site, SiteForecast, SiteType } from "./types";
+import { SITE_TYPE_LABEL } from "./site-type";
+import type {
+  Atoll,
+  BearingSource,
+  ForecastRoute,
+  HourForecast,
+  SeaStateHour,
+  Site,
+  SiteForecast,
+  SiteType,
+} from "./types";
 
 /**
  * The JSON API for the Android app (app/api/v1/*, contract in API.md). These functions only shape what the server
@@ -18,6 +29,10 @@ export type ApiSite = {
   lat: number;
   lon: number;
   siteType: SiteType | null;
+  /** The kind of site in words ("Rim pass"), as the site page says it. Null when not classified. */
+  siteTypeLabel: string | null;
+  /** The atoll's name, so one site's body needs no list of atolls. */
+  atollName: string | null;
   /** True for a pin a diver added in the app. */
   userAdded: boolean;
   /** Where the site's catalog entry came from; null for a pin added in the app. */
@@ -36,19 +51,78 @@ export type ApiAtoll = { id: string; name: string };
 
 export type ApiSites = { apiVersion: number; atolls: ApiAtoll[]; sites: ApiSite[] };
 
+/**
+ * How one site-hour reads on screen, made by lib/nowcast-glance.ts as the web map and site page make it, so the app
+ * draws what it is given and a wording change ships with the server. Null wherever there is no arrow to draw.
+ */
+export type ApiGlance = {
+  /** Degrees clockwise from north. */
+  arrowBearing: number;
+  /** "incoming", "outgoing", or "running NE" on a compass route. */
+  way: string;
+  /** The way in a sentence: adds "along the reef" at a wall. */
+  spokenWay: string;
+  /** The way with where a channel's water heads: "incoming, toward NE". Same as spokenWay off a channel. */
+  wayToward: string;
+  /** Strength in words: "slack", "mild", "strong", "very strong". */
+  label: string;
+  /** Which colour to draw it in: very strong is "stop"; along a reef or in a lagoon there is no in/out colour. */
+  tone: GlanceTone;
+  /** 0-1: lower confidence draws quieter. */
+  opacity: number;
+  /** Sort order for a list, strongest first: 0 very strong to 3 slack. */
+  rank: number;
+  /** True when the heading comes from the fallback heuristic, not a measurement or the atoll rim. */
+  estimatedHeading: boolean;
+};
+
+export type ApiHour = HourForecast & { glance: ApiGlance | null };
+
+export type ApiSiteNowcast = SiteNowcast & { hour: ApiHour | null };
+
 export type ApiNowcast = {
   apiVersion: number;
   modelVersion: string;
   /** The Maldives wall time the hours were picked for. */
   maldivesWall: string;
-  nowcasts: SiteNowcast[];
+  nowcasts: ApiSiteNowcast[];
 };
 
-export type ApiForecast = SiteForecast & { apiVersion: number; modelVersion: string; siteId: string };
+/** The forecast as the app sees it: an allow-list, so a field added to SiteForecast is not public until listed here. */
+export type ApiForecast = {
+  apiVersion: number;
+  modelVersion: string;
+  siteId: string;
+  hours: ApiHour[];
+  unavailable: boolean;
+  stale: boolean;
+  notice: string;
+  inwardBearingDeg: number | null;
+  /** The outgoing heading at a curved channel; null when outgoing is opposite incoming. */
+  outgoingBearingDeg: number | null;
+  bearingSource: BearingSource | null;
+  siteType: SiteType | null;
+  forecastRoute: ForecastRoute;
+  alongHeadingDeg: number | null;
+  siteNote: string | null;
+  fetchedAt: number | null;
+  seaState: SeaStateHour[] | null;
+  /** True when the sea state comes from an old cached wave or wind series. */
+  seaStale: boolean;
+};
+
+/** What a glance needs besides the hour: the site's headings and how its direction reads. */
+type GlanceBearings = {
+  inwardBearingDeg: number | null;
+  outgoingBearingDeg: number | null;
+  bearingSource?: BearingSource | null;
+  forecastRoute: ForecastRoute;
+  alongHeadingDeg?: number | null;
+};
 
 export type ApiErrorCode = "not_found" | "bad_request" | "server_error";
 
-export function apiSite(site: Site): ApiSite {
+export function apiSite(site: Site, atollName?: string | null): ApiSite {
   const userAdded = site.sourceUrl === "user";
   return {
     id: site.id,
@@ -57,6 +131,8 @@ export function apiSite(site: Site): ApiSite {
     lat: site.lat,
     lon: site.lon,
     siteType: site.siteType ?? null,
+    siteTypeLabel: site.siteType ? SITE_TYPE_LABEL[site.siteType] : null,
+    atollName: atollName ?? null,
     userAdded,
     sourceUrl: userAdded ? null : site.sourceUrl,
     diveTopM: site.diveTopM ?? null,
@@ -68,20 +144,100 @@ export function apiSite(site: Site): ApiSite {
   };
 }
 
+export function atollNameOf(atolls: readonly Atoll[], atollId: string): string | null {
+  return atolls.find((atoll) => atoll.id === atollId)?.name ?? null;
+}
+
 export function apiSites(sites: readonly Site[], atolls: readonly Atoll[]): ApiSites {
   return {
     apiVersion: API_VERSION,
     atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name })),
-    sites: sites.filter((site) => !site.hidden).map(apiSite),
+    sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId))),
+  };
+}
+
+/** The glance for one hour, or null when there is no hour or no bearing to point the arrow. */
+export function apiGlance(hour: HourForecast | null, bearings: GlanceBearings): ApiGlance | null {
+  const inward = bearings.inwardBearingDeg;
+  if (!hour || inward == null) return null;
+  const along = bearings.alongHeadingDeg ?? null;
+  const glance = nowcastGlance(
+    "",
+    {
+      siteId: "",
+      atollId: "",
+      inwardBearingDeg: inward,
+      outgoingBearingDeg: bearings.outgoingBearingDeg,
+      bearingSource: bearings.bearingSource ?? null,
+      forecastRoute: bearings.forecastRoute,
+      alongHeadingDeg: along,
+      hour,
+      unavailable: false,
+    },
+    true,
+  );
+  if (glance.arrowBearing == null || glance.way == null || glance.label == null || glance.tone == null) return null;
+  return {
+    arrowBearing: glance.arrowBearing,
+    way: glance.way,
+    spokenWay: routeWay(bearings.forecastRoute, hour.direction, along).spoken,
+    wayToward: routeWayToward(bearings.forecastRoute, hour.direction, inward, along, bearings.outgoingBearingDeg),
+    label: glance.label,
+    tone: glance.tone,
+    opacity: glance.opacity ?? 1,
+    rank: glanceRank(glance),
+    estimatedHeading: glance.estimatedHeading,
+  };
+}
+
+function apiHour(hour: HourForecast, bearings: GlanceBearings): ApiHour {
+  return {
+    time: hour.time,
+    direction: hour.direction,
+    strength: hour.strength,
+    confidence: hour.confidence,
+    levelM: hour.levelM,
+    glance: apiGlance(hour, bearings),
   };
 }
 
 export function apiNowcast(nowcasts: SiteNowcast[], maldivesWall: string): ApiNowcast {
-  return { apiVersion: API_VERSION, modelVersion: FORECAST_MODEL_VERSION, maldivesWall, nowcasts };
+  return {
+    apiVersion: API_VERSION,
+    modelVersion: FORECAST_MODEL_VERSION,
+    maldivesWall,
+    nowcasts: nowcasts.map((nowcast) => ({ ...nowcast, hour: nowcast.hour ? apiHour(nowcast.hour, nowcast) : null })),
+  };
 }
 
-export function apiForecast(siteId: string, forecast: SiteForecast): ApiForecast {
-  return { apiVersion: API_VERSION, modelVersion: FORECAST_MODEL_VERSION, siteId, ...forecast };
+export function apiForecast(site: Site, forecast: SiteForecast): ApiForecast {
+  const bearings: GlanceBearings = {
+    inwardBearingDeg: forecast.inwardBearingDeg,
+    // The site page's slider takes the curved outgoing heading from the site, not from the forecast.
+    outgoingBearingDeg: site.outgoingBearingDeg ?? null,
+    bearingSource: forecast.bearingSource,
+    forecastRoute: forecast.forecastRoute,
+    alongHeadingDeg: forecast.alongHeadingDeg,
+  };
+  return {
+    apiVersion: API_VERSION,
+    modelVersion: FORECAST_MODEL_VERSION,
+    siteId: site.id,
+    hours: forecast.hours.map((hour) => apiHour(hour, bearings)),
+    unavailable: forecast.unavailable,
+    stale: forecast.stale,
+    notice: forecast.notice,
+    inwardBearingDeg: forecast.inwardBearingDeg,
+    outgoingBearingDeg: bearings.outgoingBearingDeg,
+    bearingSource: forecast.bearingSource,
+    siteType: forecast.siteType,
+    forecastRoute: forecast.forecastRoute,
+    alongHeadingDeg: forecast.alongHeadingDeg,
+    siteNote: forecast.siteNote,
+    fetchedAt: forecast.fetchedAt,
+    seaState: forecast.seaState,
+    seaStale: forecast.seaStale,
+  };
 }
 
 /**

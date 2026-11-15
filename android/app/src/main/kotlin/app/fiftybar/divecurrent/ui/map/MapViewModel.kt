@@ -8,9 +8,7 @@ import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiNowcast
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.ApiSites
-import app.fiftybar.divecurrent.data.api.ForecastRoute
 import app.fiftybar.divecurrent.domain.Glance
-import app.fiftybar.divecurrent.domain.Heading
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.domain.glanceRank
 import kotlinx.coroutines.async
@@ -89,19 +87,7 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
       return sites.sites
         .map { site ->
           val n = byId[site.id]
-          val g =
-            n?.let {
-              glance(
-                it.hour,
-                Heading(
-                  route = ForecastRoute.of(it.forecastRoute),
-                  inwardBearingDeg = it.inwardBearingDeg,
-                  alongHeadingDeg = it.alongHeadingDeg,
-                  outgoingBearingDeg = it.outgoingBearingDeg,
-                  bearingSource = it.bearingSource,
-                ),
-              )
-            }
+          val g = glance(n?.hour)
           SiteRow(site, atolls[site.atollId], g, stale = n?.stale == true)
         }
         .sortedWith(compareBy<SiteRow> { glanceRank(it.glance) }.thenBy { it.site.name.lowercase() })

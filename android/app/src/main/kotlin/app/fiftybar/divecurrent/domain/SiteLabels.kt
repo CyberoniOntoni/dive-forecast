@@ -4,18 +4,6 @@ import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.SeaBand
 import kotlin.math.roundToInt
 
-/** The kind of site, in the words of SITE_TYPE_LABEL in the web repo's lib/site-type.ts. */
-fun siteTypeLabel(siteType: String?): String? =
-  when (siteType) {
-    "pass" -> "Rim pass"
-    "channel-thila" -> "Channel thila"
-    "corner" -> "Channel corner"
-    "outer-reef" -> "Outer reef"
-    "lagoon" -> "Lagoon"
-    "strait-wall" -> "Strait wall"
-    else -> null
-  }
-
 /** "5–30 m", "to 30 m", or null. */
 fun depthLabel(site: ApiSite): String? {
   val top = site.diveTopM?.let(::metres)

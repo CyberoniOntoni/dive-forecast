@@ -43,6 +43,8 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "lat": 4.2397,
       "lon": 73.5336,
       "siteType": "outer-reef",
+      "siteTypeLabel": "Outer reef",
+      "atollName": "North Malé",
       "userAdded": false,
       "sourceUrl": "https://…",
       "diveTopM": 5,
@@ -57,7 +59,7 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 ```
 
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
-classified. `photoUrls` are paths on this server.
+classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `photoUrls` are paths on this server.
 
 ### `GET /api/v1/sites/{id}`
 
@@ -65,20 +67,40 @@ One site in the same shape as an entry of `sites` above. Returns 404 `not_found`
 
 ### `GET /api/v1/sites/{id}/forecast`
 
-The site page's forecast: about a week of hours plus the sea state. It is `SiteForecast` from `lib/types.ts`, plus
-`apiVersion`, `modelVersion` and `siteId`.
+The site page's forecast: about a week of hours plus the sea state. The fields are listed one by one in
+`apiForecast` (`lib/api-v1.ts`), so a field added to `SiteForecast` is not part of the API until it is added there.
 
 | Field | Meaning |
 |---|---|
-| `hours[]` | `{ time, direction: "incoming" \| "outgoing", strength: "slack" \| "mild" \| "strong" \| "too_strong", confidence: "low" \| "medium" \| "high", levelM }` |
+| `hours[]` | `{ time, direction: "incoming" \| "outgoing", strength: "slack" \| "mild" \| "strong" \| "too_strong", confidence: "low" \| "medium" \| "high", levelM, glance }`. `glance` is below. |
 | `forecastRoute` | `channel`: show `direction` as incoming/outgoing. `along-reef`, `strait`, `lagoon`: show it as a compass direction, where "incoming" means toward `alongHeadingDeg` and "outgoing" means the opposite way. |
-| `inwardBearingDeg`, `bearingSource` | The arrow's inward heading (degrees from north) and where it came from (`override`, `rim-derived`, `fallback`). `fallback` means the heading is an estimate. |
+| `inwardBearingDeg`, `outgoingBearingDeg`, `bearingSource` | The arrow's inward heading (degrees from north), the outgoing heading at a curved channel (null when outgoing is straight back), and where the inward one came from (`override`, `rim-derived`, `fallback`). `fallback` means the heading is an estimate. The glance already uses all three. |
 | `unavailable` | No forecast. Either there is no cached ocean series yet or the site has no atoll. |
 | `stale`, `fetchedAt` | The hours come from the last cached series, and when it was fetched. |
 | `seaState` | Per hour `{ time, band: calm \| moderate \| choppy \| rough, feltM, swell, windWaveM, wind, againstCurrent }`. `[]` when the waves failed to load. `null` when the site has no sea state. |
+| `seaStale` | The sea state comes from an old cached wave or wind series; say so beside it, as the site page does. |
 | `notice`, `siteNote` | Text the app must show with the forecast, as the site page does. |
 
-Show `too_strong` as **"very strong"**. Whether it can be dived depends on the diver.
+Show `too_strong` as **"very strong"** (the glance's `label` already does). Whether it can be dived depends on the
+diver.
+
+#### `glance`
+
+How the hour reads on screen, made on the server by `lib/nowcast-glance.ts` exactly as the web map and site page make
+it, so the app draws what it is given and does not keep its own copy of the rules. Null when the hour has no arrow
+(no bearing). The same object is on each nowcast `hour`.
+
+| Field | Meaning |
+|---|---|
+| `arrowBearing` | Degrees clockwise from north. Bends at a curved channel's outgoing heading. |
+| `way` | `incoming`, `outgoing`, or `running NE` on a wall, strait or lagoon site. |
+| `spokenWay` | `way` in a sentence: adds "along the reef" at a wall. |
+| `wayToward` | At a channel also where the water heads: `incoming, toward NE`. Same as `spokenWay` elsewhere. |
+| `label` | Strength in words: `slack`, `mild`, `strong`, `very strong`. |
+| `tone` | `incoming`, `outgoing`, `along` (no in/out colour), or `stop` (very strong). An unknown tone should draw no glance. |
+| `opacity` | 0 to 1: lower confidence draws quieter. |
+| `rank` | Sort order for a list, strongest first: 0 very strong to 3 slack. |
+| `estimatedHeading` | The heading is the fallback estimate; say so. |
 
 Returns 404 `not_found` for an unknown or hidden site.
 
@@ -100,7 +122,14 @@ Every site's forecast for the current Maldives hour, as the map's arrows show it
       "bearingSource": "rim-derived",
       "forecastRoute": "along-reef",
       "alongHeadingDeg": 131,
-      "hour": { "time": "2026-11-15T09:00", "direction": "incoming", "strength": "mild", "confidence": "medium", "levelM": 0.12 },
+      "hour": {
+        "time": "2026-11-15T09:00", "direction": "incoming", "strength": "mild", "confidence": "medium", "levelM": 0.12,
+        "glance": {
+          "arrowBearing": 131, "way": "running SE", "spokenWay": "running SE along the reef",
+          "wayToward": "running SE along the reef", "label": "mild", "tone": "along", "opacity": 0.74, "rank": 2,
+          "estimatedHeading": false
+        }
+      },
       "unavailable": false,
       "stale": false,
       "fetchedAt": 1763180000000

@@ -29,6 +29,8 @@ export type NowcastGlance = {
   opacity: number | null;
   /** var(--stop), var(--incoming), var(--outgoing), or var(--foam) along a reef. Null when there is no forecast. */
   color: string | null;
+  /** The colour's meaning, for clients that pick their own colours (the app API). Null when there is no forecast. */
+  tone: GlanceTone | null;
   /** Unix ms when the marine series was fetched. Null when this hour has no forecast. */
   fetchedAt: number | null;
   /** True when the arrow heading comes from the fallback heuristic, not a measurement or the atoll rim. */
@@ -46,6 +48,7 @@ function noForecastGlance(name: string): NowcastGlance {
     confidence: null,
     opacity: null,
     color: null,
+    tone: null,
     fetchedAt: null,
     estimatedHeading: false,
   };
@@ -87,6 +90,7 @@ export function nowcastGlance(name: string, nowcast: SiteNowcast | undefined, sh
     confidence: hour.confidence,
     opacity: confidenceOpacity(hour.confidence),
     color: onCompass(route, along) ? alongColor(hour.strength) : glanceColor(hour.direction, hour.strength),
+    tone: glanceTone(route, along, hour.direction, hour.strength),
     fetchedAt: nowcast.fetchedAt ?? null,
   };
 }
@@ -158,6 +162,21 @@ const NO_FORECAST_RANK = 4;
 export function glanceRank(glance: NowcastGlance): number {
   if (glance.strength == null) return NO_FORECAST_RANK;
   return STRENGTH_RANK[glance.strength];
+}
+
+/** What a glance's colour means: very strong is the stop colour; along a reef there is no in/out colour. */
+export type GlanceTone = "incoming" | "outgoing" | "along" | "stop";
+
+/** The tone behind glanceColor and alongColor. */
+export function glanceTone(
+  route: ForecastRoute,
+  alongHeadingDeg: number | null,
+  direction: Direction,
+  strength: Strength,
+): GlanceTone {
+  if (strength === "too_strong") return "stop";
+  if (onCompass(route, alongHeadingDeg)) return "along";
+  return direction;
 }
 
 /** Very strong is the stop token. Every other band keeps incoming or outgoing. Not a second hex. */

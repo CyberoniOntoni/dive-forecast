@@ -3,7 +3,7 @@ package app.fiftybar.divecurrent.ui.theme
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import app.fiftybar.divecurrent.domain.GlanceTone
+import app.fiftybar.divecurrent.data.api.GlanceTone
 
 /*
  * The web app's colour tokens (app/globals.css): a luminous navy by day so type holds up in sun, darker at night.
