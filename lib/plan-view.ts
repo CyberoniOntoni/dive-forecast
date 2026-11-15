@@ -1,8 +1,9 @@
 import { forecastSite } from "./actions";
 import { currentSession } from "./auth";
-import { addDays, canReportDive, dayLabel, isPlanId, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
+import { addDays, canReportDive, capital, dayLabel, isPlanId, wallMs, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
 import { toMaldivesWall } from "./forecast";
 import { compassWord, passArrowBearing, routeArrowBearing, routeWay } from "./nowcast-glance";
+import { routeFor } from "./load-site";
 import { ready } from "./ready";
 import { DIVER_SITE_TYPE_LABEL } from "./site-details";
 import { atollNamesById } from "./site-labels";
@@ -71,9 +72,9 @@ export async function loadPlanView(id: string): Promise<PlanView | null> {
   const atolls = atollNamesById(catalog.atolls);
   const sites = new Map(listMergedSites().map((site) => [site.id, site]));
   const nowWall = toMaldivesWall(new Date().toISOString());
-  const today = Date.parse(`${nowWall.slice(0, 10)}T00:00:00Z`);
+  const today = wallMs(nowWall.slice(0, 10), "00:00");
   const inReach = (date: string) => {
-    const days = (Date.parse(`${date}T00:00:00Z`) - today) / 86_400_000;
+    const days = (wallMs(date, "00:00") - today) / 86_400_000;
     return days >= -FORECAST_DAYS_BACK && days <= FORECAST_DAYS_AHEAD;
   };
 
@@ -99,7 +100,11 @@ export async function loadPlanView(id: string): Promise<PlanView | null> {
       const site = sites.get(stop.siteId);
       if (!site) return [];
       const forecast = forecasts.get(site.id);
-      const route = forecast?.forecastRoute ?? "channel";
+      // Without a forecast (too far ahead, or it failed) the route comes from the site's bearing, as loadSite picks it.
+      const route =
+        forecast?.forecastRoute ??
+        routeFor(site, catalog.sites, catalog.atolls.find((atoll) => atoll.id === site.atollId))?.route ??
+        "channel";
       const outlook: StopOutlook = !inReach(day.date)
         ? farOutlook(day.date, nowWall.slice(0, 10))
         : forecast
@@ -153,10 +158,12 @@ export async function loadPlanView(id: string): Promise<PlanView | null> {
   };
 }
 
-/** A dive too far from today for the forecast: past, or the date the forecast first reaches it (a week ahead). */
+/** A dive too far from today for the forecast: past, or the date the forecast first reaches it. */
 function farOutlook(date: string, today: string): StopOutlook {
   if (date < today) return { status: "past" };
-  return { status: "beyond", opensOn: addDays(date, -7) };
+  // The series ends about six and a half days past today (1 past day + 7 forecast days, less the half day the 25 h
+  // mean trims off its end), so a day dive shows six days before: the same date stopOutlook gives near the edge.
+  return { status: "beyond", opensOn: addDays(date, -6) };
 }
 
 /** "Incoming, toward NE" at a channel; "Running SW along the reef" at a wall; "Running SW" in a lagoon. */
@@ -181,9 +188,6 @@ function arrowHeading(hour: HourForecast, forecast: SiteForecast, site: Site): n
   );
 }
 
-function capital(words: string): string {
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
 
 function siteFacts(site: Site, atolls: Record<string, string>): string {
   const kind = site.siteType

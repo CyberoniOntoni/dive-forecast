@@ -7,6 +7,7 @@ import {
   BOAT_SPEED_MAX_KN,
   BOAT_SPEED_MIN_KN,
   dayLabel,
+  DEFAULT_BOAT_SPEED_KN,
   PLAN_DAYS_MAX,
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
@@ -61,7 +62,7 @@ export function PlanEditor({
   const router = useRouter();
   const [title, setTitle] = useState(plan?.title ?? "");
   const [notes, setNotes] = useState(plan?.notes ?? "");
-  const [speed, setSpeed] = useState(String(plan?.boatSpeedKn ?? 8));
+  const [speed, setSpeed] = useState(String(plan?.boatSpeedKn ?? DEFAULT_BOAT_SPEED_KN));
   const [days, setDays] = useState<DraftDay[]>(() => fromPlan(plan, today));
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);

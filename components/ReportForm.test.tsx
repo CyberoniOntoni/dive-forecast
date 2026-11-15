@@ -37,4 +37,16 @@ describe("report form", () => {
     expect(html).not.toContain("As forecast");
     expect(html).toContain("Add report");
   });
+
+  it("opens on a plan's dive time, and keeps it through sign-in", () => {
+    const signedIn = renderToStaticMarkup(
+      <ReportForm siteId="s" forecastRoute="channel" nickname="Diver" defaultTime="2026-11-04T11:00" diveTime="2026-11-03T07:00" forecast={[]} />,
+    );
+    expect(signedIn).toContain('value="2026-11-03T07:00"');
+    const signedOut = renderToStaticMarkup(
+      <ReportForm siteId="s" forecastRoute="channel" nickname={null} diveTime="2026-11-03T07:00" />,
+    );
+    const next = new URLSearchParams(/href="\/login\?([^"]+)"/.exec(signedOut)![1].replaceAll("&amp;", "&")).get("next");
+    expect(next).toBe("/sites/s?at=2026-11-03T07%3A00#report");
+  });
 });

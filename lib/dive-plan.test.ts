@@ -38,6 +38,9 @@ describe("plan ids", () => {
     }
     expect(isPlanId("../etc")).toBe(false);
     expect(isPlanId("short")).toBe(false);
+    // Only what newPlanId makes: 16 of its letters, so no caller-picked id passes.
+    expect(isPlanId("AbCdEfGhJkLmNpQrStUv")).toBe(false);
+    expect(isPlanId("IlO0IlO0IlO0IlO0")).toBe(false);
     expect(isPlanId(42)).toBe(false);
   });
 });

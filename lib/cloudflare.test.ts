@@ -170,8 +170,11 @@ describe("on a Cloudflare worker", () => {
       createdAt: "2026-11-15T00:00:00.000Z",
       updatedAt: "2026-11-15T00:00:00.000Z",
     };
-    expect(await store.savePlanRecord(plan, 5)).toBe("saved");
-    expect(await store.savePlanRecord({ ...plan, ownerId: "u2", title: "Taken" }, 5)).toBe("not-yours");
+    expect(await store.addPlanRecord(plan, 5)).toBe("saved");
+    expect(await store.addPlanRecord({ ...plan, ownerId: "u2", title: "Taken" }, 5)).toBe("taken");
+    expect(await store.updatePlanRecord({ ...plan, ownerId: "u2", title: "Taken" })).toBe("not-yours");
+    expect(await store.updatePlanRecord({ ...plan, id: "ZzZzZzZzZzZzZzZz" })).toBe("missing");
+    expect(await store.addPlanRecord({ ...plan, id: "YyYyYyYyYyYyYyYy" }, 1)).toBe("full");
     expect(await store.deletePlanRecord(plan.id, "u2")).toBe(false);
 
     vi.resetModules();

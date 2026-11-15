@@ -326,19 +326,25 @@ export function plansForOwner(ownerId: string): DivePlan[] {
 }
 
 /**
- * Saves a new plan, unless its owner already keeps `max`; or replaces the owner's plan with the same id. Returns false
- * when it was not saved: the owner is full, or the id is someone else's plan.
+ * Adds a new plan (its id made by newPlanId on the server), unless its owner already keeps `max`. A new plan whose id
+ * is already taken is refused rather than replacing anything.
  */
-export async function savePlanRecord(plan: DivePlan, max: number): Promise<"saved" | "full" | "not-yours"> {
+export async function addPlanRecord(plan: DivePlan, max: number): Promise<"saved" | "full" | "taken"> {
   return mutateStore((store) => {
-    const index = store.plans.findIndex((item) => item.id === plan.id);
-    if (index >= 0) {
-      if (store.plans[index].ownerId !== plan.ownerId) return "not-yours";
-      store.plans[index] = { ...plan, createdAt: store.plans[index].createdAt };
-      return "saved";
-    }
+    if (store.plans.some((item) => item.id === plan.id)) return "taken";
     if (store.plans.filter((item) => item.ownerId === plan.ownerId).length >= max) return "full";
     store.plans.push(plan);
+    return "saved";
+  });
+}
+
+/** Replaces the owner's existing plan with the same id. Never creates one: a plan is only made by addPlanRecord. */
+export async function updatePlanRecord(plan: DivePlan): Promise<"saved" | "missing" | "not-yours"> {
+  return mutateStore((store) => {
+    const index = store.plans.findIndex((item) => item.id === plan.id);
+    if (index < 0) return "missing";
+    if (store.plans[index].ownerId !== plan.ownerId) return "not-yours";
+    store.plans[index] = { ...plan, createdAt: store.plans[index].createdAt };
     return "saved";
   });
 }

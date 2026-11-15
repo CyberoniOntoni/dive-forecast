@@ -215,12 +215,24 @@ async function checkedMarine(
   };
 }
 
-/** The axis "incoming" means at a strait wall or a wall whose current runs along the reef; null elsewhere or with no atoll. */
-export function alongHeadingFor(site: Site, mates: readonly Site[], atoll: Atoll | undefined): number | null {
+/**
+ * The route a site's forecast takes and its axis, from its bearing, without fetching anything: the same siteRoute
+ * loadSite picks (a lagoon site whose atoll has no ring still says "lagoon" here). Null with no atoll.
+ */
+export function routeFor(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll | undefined,
+): { route: ForecastRoute; axisDeg: number | null } | null {
   if (!atoll) return null;
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const deg = resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg;
-  return siteRoute(site, mates, deg).axisDeg;
+  return siteRoute(site, mates, deg);
+}
+
+/** The axis "incoming" means at a strait wall or a wall whose current runs along the reef; null elsewhere or with no atoll. */
+export function alongHeadingFor(site: Site, mates: readonly Site[], atoll: Atoll | undefined): number | null {
+  return routeFor(site, mates, atoll)?.axisDeg ?? null;
 }
 
 /** Inward bearing, marine fetch, and forecast hours, by the site's route. A missing atoll or cache is unavailable. */

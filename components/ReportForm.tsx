@@ -151,7 +151,8 @@ export function ReportForm({
           everyone, and earn points on the scoreboard.
         </p>
         <Link
-          href={signInHref(`/sites/${siteId}#report`)}
+          // The dive time a plan handed over comes back after signing in too.
+          href={signInHref(`/sites/${siteId}${diveTime ? `?at=${encodeURIComponent(diveTime)}` : ""}#report`)}
           className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming sm:w-auto sm:self-start"
         >
           Sign in to report

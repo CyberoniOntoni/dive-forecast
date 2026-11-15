@@ -13,7 +13,7 @@ import {
   requirePlanInput,
 } from "./dive-plan";
 import { ready } from "./ready";
-import { deletePlanRecord, findPlan, listMergedSites, plansForOwner, savePlanRecord } from "./store";
+import { addPlanRecord, deletePlanRecord, findPlan, listMergedSites, plansForOwner, updatePlanRecord } from "./store";
 import type { DivePlan } from "./types";
 
 /**
@@ -61,12 +61,20 @@ export async function savePlan(id: string | null, input: unknown): Promise<SaveP
     const known = new Set(listMergedSites().map((site) => site.id));
     const body = requirePlanInput(input, (siteId) => known.has(siteId));
     const now = new Date().toISOString();
-    const plan: DivePlan = { id: id ?? newPlanId(), ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
-    const saved = await savePlanRecord(plan, PLANS_PER_DIVER_MAX);
-    if (saved === "full") {
-      return { ok: false, error: `You can keep up to ${PLANS_PER_DIVER_MAX} plans. Delete an old one first.` };
+    if (id === null) {
+      // A new plan always gets its id here, never from the caller, so a link cannot be picked in advance.
+      const plan: DivePlan = { id: newPlanId(), ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
+      const added = await addPlanRecord(plan, PLANS_PER_DIVER_MAX);
+      if (added === "full") {
+        return { ok: false, error: `You can keep up to ${PLANS_PER_DIVER_MAX} plans. Delete an old one first.` };
+      }
+      if (added === "taken") return { ok: false, error: "Could not save the plan. Try again." };
+      return { ok: true, id: plan.id };
     }
-    if (saved === "not-yours") return { ok: false, error: "Only the diver who made this plan can change it." };
+    const plan: DivePlan = { id, ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
+    const updated = await updatePlanRecord(plan);
+    if (updated === "missing") return { ok: false, error: "That plan is gone." };
+    if (updated === "not-yours") return { ok: false, error: "Only the diver who made this plan can change it." };
     return { ok: true, id: plan.id };
   } catch (error) {
     rethrowIfNextError(error);

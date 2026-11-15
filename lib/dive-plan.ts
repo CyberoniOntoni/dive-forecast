@@ -1,3 +1,5 @@
+import { etaMinutes, KM_PER_NM } from "./boat-nav";
+import { parseWall } from "./forecast";
 import type { Direction, DivePlan, ForecastRoute, HourForecast, PlanDay, PlanStop, SeaBand, SeaStateHour } from "./types";
 
 /**
@@ -22,7 +24,8 @@ export const DEFAULT_BOAT_SPEED_KN = 8;
 export const DAY_DIVE_FIRST_HOUR = 6;
 export const DAY_DIVE_LAST_HOUR = 17;
 
-const PLAN_ID = /^[A-Za-z0-9]{12,32}$/;
+/** Exactly what newPlanId makes. */
+const PLAN_ID = /^[A-HJ-NP-Za-km-z2-9]{16}$/;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const CLOCK = /^([01]\d|2[0-3]):[0-5]\d$/;
 const ID_LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
@@ -68,8 +71,8 @@ function cleanText(value: unknown, max: number, label: string, multiline: boolea
 /** A real calendar date, "YYYY-MM-DD". */
 export function isPlanDate(value: unknown): value is string {
   if (typeof value !== "string" || !DATE.test(value)) return false;
-  const ms = Date.parse(`${value}T00:00:00Z`);
-  return Number.isFinite(ms) && new Date(ms).toISOString().slice(0, 10) === value;
+  const ms = wallMs(value, "00:00");
+  return Number.isFinite(ms) && wallAt(ms).slice(0, 10) === value;
 }
 
 /**
@@ -131,7 +134,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 
 /** "Tue 17 Nov". */
 export function dayLabel(date: string): string {
-  const day = new Date(`${date}T00:00:00Z`);
+  const day = new Date(wallMs(date, "00:00"));
   if (!Number.isFinite(day.getTime())) return date;
   return `${WEEKDAYS[day.getUTCDay()]} ${day.getUTCDate()} ${MONTHS[day.getUTCMonth()]}`;
 }
@@ -139,8 +142,8 @@ export function dayLabel(date: string): string {
 /** "17–23 Nov 2026", "30 Nov – 2 Dec 2026", or one day. */
 export function planDateSpan(days: readonly Pick<PlanDay, "date">[]): string {
   if (days.length === 0) return "";
-  const first = new Date(`${days[0].date}T00:00:00Z`);
-  const last = new Date(`${days[days.length - 1].date}T00:00:00Z`);
+  const first = new Date(wallMs(days[0].date, "00:00"));
+  const last = new Date(wallMs(days[days.length - 1].date, "00:00"));
   const d = (date: Date) => date.getUTCDate();
   const m = (date: Date) => MONTHS[date.getUTCMonth()];
   const y = (date: Date) => date.getUTCFullYear();
@@ -157,18 +160,39 @@ export function diveCount(plan: Pick<DivePlan, "days">): number {
 
 /** The forecast hour a dive starting at `date` `time` falls in: the hour it starts, rounded to the nearest. */
 export function diveHour(date: string, time: string): string {
-  const [hh, mm] = time.split(":").map(Number);
-  const ms = Date.parse(`${date}T00:00:00Z`) + (hh * 60 + mm + 30) * 60_000;
-  return `${new Date(ms).toISOString().slice(0, 13)}:00`;
+  return `${wallAt(wallMs(date, time) + 30 * 60_000).slice(0, 13)}:00`;
 }
 
 /** The date `days` after a "YYYY-MM-DD" date. */
 export function addDays(date: string, days: number): string {
-  return new Date(Date.parse(`${date}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+  return wallAt(wallMs(date, "00:00") + days * DAY_MS).slice(0, 10);
+}
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** A plan's Maldives date and clock ("YYYY-MM-DD", "HH:MM") as wall ms, read by parseWall like every wall time. */
+export function wallMs(date: string, time: string): number {
+  return parseWall(`${date}T${time}`);
+}
+
+/** Wall ms back to "YYYY-MM-DDTHH:MM", the inverse of parseWall. */
+function wallAt(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 16);
+}
+
+/** Nautical miles from km, for leg and day totals. */
+export function nmFromKm(km: number): number {
+  return km / KM_PER_NM;
+}
+
+/** "Incoming" from "incoming": the first letter up. */
+export function capital(words: string): string {
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 function nextHour(hour: string): string {
-  return `${new Date(Date.parse(`${hour}:00Z`) + 3_600_000).toISOString().slice(0, 13)}:00`;
+  return `${wallAt(parseWall(hour) + HOUR_MS).slice(0, 13)}:00`;
 }
 
 export type StopWarning =
@@ -278,7 +302,7 @@ export function stopOutlook(
   const last = site.hours[site.hours.length - 1].time;
   if (time < first) return { status: "past" };
   if (time > last) {
-    const shortDays = Math.ceil((Date.parse(`${time}:00Z`) - Date.parse(`${last}:00Z`)) / 86_400_000);
+    const shortDays = Math.ceil((parseWall(time) - parseWall(last)) / DAY_MS);
     return { status: "beyond", opensOn: addDays(today, shortDays) };
   }
   const byTime = new Map(site.hours.map((hour) => [hour.time, hour]));
@@ -302,15 +326,16 @@ export const REPORT_DAYS = 14;
  * ("YYYY-MM-DDTHH:MM").
  */
 export function canReportDive(date: string, time: string, nowWall: string): boolean {
-  const start = Date.parse(`${date}T${time}:00Z`);
-  const now = Date.parse(`${nowWall}:00Z`);
+  const start = wallMs(date, time);
+  const now = parseWall(nowWall);
   if (!Number.isFinite(start) || !Number.isFinite(now)) return false;
-  return now >= start + 3_600_000 && now - start <= REPORT_DAYS * 86_400_000;
+  return now >= start + HOUR_MS && now - start <= REPORT_DAYS * DAY_MS;
 }
 
 /** Boat time for a leg, minutes, at the plan's speed through the water (no current). */
 export function legMinutes(lengthKm: number, speedKn: number): number {
-  return (lengthKm / 1.852 / speedKn) * 60;
+  // A plan's speed is never below BOAT_SPEED_MIN_KN, so the boat is always under way.
+  return etaMinutes(lengthKm, speedKn) ?? Infinity;
 }
 
 /** "45 min", "1 h 20 min". */

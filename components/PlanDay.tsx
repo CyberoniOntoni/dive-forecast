@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PlanMap, type PlanMapStop } from "@/components/PlanMap";
-import { dayLabel, durationText, type StopOutlook, type StopWarning } from "@/lib/dive-plan";
+import { capital, dayLabel, durationText, nmFromKm, type StopOutlook, type StopWarning } from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import { strengthLabel } from "@/lib/nowcast-glance";
 import type { Confidence } from "@/lib/types";
 
-const KM_PER_NM = 1.852;
 
 /** The marker colour: the stop token for a warned dive, else incoming teal or outgoing amber, else plain. */
 function stopColor(stop: PlanStopView): string {
@@ -61,7 +60,7 @@ export function PlanDay({ planId, index, day, boatSpeedKn }: { planId: string; i
         <p className="text-sm text-foam/75">
           {day.stops.length} dive{day.stops.length === 1 ? "" : "s"}
           {legs && legs.length > 0
-            ? ` · ${(totalKm / KM_PER_NM).toFixed(1)} nm by boat, about ${durationText(totalMinutes)} at ${boatSpeedKn} kn`
+            ? ` · ${nmFromKm(totalKm).toFixed(1)} nm by boat, about ${durationText(totalMinutes)} at ${boatSpeedKn} kn`
             : ""}
         </p>
       </header>
@@ -90,7 +89,7 @@ export function PlanDay({ planId, index, day, boatSpeedKn }: { planId: string; i
 function LegLine({ leg, loading, speedKn }: { leg: PlanLeg | null; loading: boolean; speedKn: number }) {
   let text: string;
   if (leg) {
-    const nm = leg.lengthKm / KM_PER_NM;
+    const nm = nmFromKm(leg.lengthKm);
     text = `${nm < 0.1 ? "Same spot" : `${nm.toFixed(1)} nm, about ${durationText(leg.minutes)} at ${speedKn} kn`}${leg.routed ? "" : " (straight line: no way round the reef found)"}`;
   } else {
     text = loading ? "Planning the boat route…" : "Boat route unavailable";
@@ -215,9 +214,6 @@ function clock(time: string): string {
   return time.slice(11, 16);
 }
 
-function capital(words: string): string {
-  return words.charAt(0).toUpperCase() + words.slice(1);
-}
 
 function lower(words: string): string {
   return words.charAt(0).toLowerCase() + words.slice(1);
