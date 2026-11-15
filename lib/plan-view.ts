@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { forecastSite } from "./actions";
 import { currentSession } from "./auth";
 import { beyondOpensOn, canReportDive, capital, dayLabel, isPlanId, wallMs, planDateSpan, stopOutlook, type StopOutlook } from "./dive-plan";
@@ -61,7 +62,13 @@ export type PlanView = {
 const FORECAST_DAYS_BACK = 1;
 const FORECAST_DAYS_AHEAD = 8;
 
-export async function loadPlanView(id: string): Promise<PlanView | null> {
+/**
+ * The plan page's metadata and the page itself both ask for the view; React's cache makes that one load (and one set
+ * of site forecasts) per request.
+ */
+export const loadPlanView = cache(buildPlanView);
+
+async function buildPlanView(id: string): Promise<PlanView | null> {
   await ready();
   if (!isPlanId(id)) return null;
   const plan = findPlan(id);
