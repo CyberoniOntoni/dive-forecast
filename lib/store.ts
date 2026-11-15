@@ -18,6 +18,7 @@ import {
 import {
   UNSEEDED_ATOLL_ID,
   type Catalog,
+  type DivePlan,
   type Rating,
   type Report,
   type Site,
@@ -310,6 +311,45 @@ export async function removeRating(siteId: string, userId: string, at: string): 
     delete rating.review;
     delete rating.photos;
     return photos;
+  });
+}
+
+export function findPlan(id: string): DivePlan | null {
+  return readStore().plans.find((plan) => plan.id === id) ?? null;
+}
+
+/** The diver's own plans, the most recently changed first. */
+export function plansForOwner(ownerId: string): DivePlan[] {
+  return readStore()
+    .plans.filter((plan) => plan.ownerId === ownerId)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/**
+ * Saves a new plan, unless its owner already keeps `max`; or replaces the owner's plan with the same id. Returns false
+ * when it was not saved: the owner is full, or the id is someone else's plan.
+ */
+export async function savePlanRecord(plan: DivePlan, max: number): Promise<"saved" | "full" | "not-yours"> {
+  return mutateStore((store) => {
+    const index = store.plans.findIndex((item) => item.id === plan.id);
+    if (index >= 0) {
+      if (store.plans[index].ownerId !== plan.ownerId) return "not-yours";
+      store.plans[index] = { ...plan, createdAt: store.plans[index].createdAt };
+      return "saved";
+    }
+    if (store.plans.filter((item) => item.ownerId === plan.ownerId).length >= max) return "full";
+    store.plans.push(plan);
+    return "saved";
+  });
+}
+
+/** Deletes the owner's plan. False when there was no such plan of theirs. */
+export async function deletePlanRecord(id: string, ownerId: string): Promise<boolean> {
+  return mutateStore((store) => {
+    const index = store.plans.findIndex((item) => item.id === id && item.ownerId === ownerId);
+    if (index < 0) return false;
+    store.plans.splice(index, 1);
+    return true;
   });
 }
 

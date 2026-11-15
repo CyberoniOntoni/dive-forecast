@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import { MapPageLink } from "@/components/MapPageLink";
-import { NavigateIcon, TrophyIcon } from "@/components/site-ui";
+import { NavigateIcon, PlanIcon, TrophyIcon } from "@/components/site-ui";
 import { loadNavSite, NAV_SITE_EVENT, navigateHref, readNavigate } from "@/lib/navigate-tab";
 
 function onNavSite(changed: () => void): () => void {
@@ -22,8 +22,9 @@ const ON = "bg-foam text-ink shadow-sm";
 const OFF = "text-foam/80 hover:text-foam";
 
 /**
- * Map, Navigate and Scoreboard, in the header. Navigate is the boat view on the same map; it comes back to the site it
- * last headed for in this tab, else it opens the destination list. Scoreboard ranks the divers who report and add sites.
+ * Map, Navigate, Plans and Scoreboard, in the header. Navigate is the boat view on the same map; it comes back to the site
+ * it last headed for in this tab, else it opens the destination list. Plans are dive plans to share with a group.
+ * Scoreboard ranks the divers who report and add sites.
  */
 export function AppTabs() {
   const pathname = usePathname();
@@ -31,6 +32,7 @@ export function AppTabs() {
   const here = readNavigate(params);
   const navigating = pathname === "/" && here.navigating;
   const scoreboard = pathname.startsWith("/scoreboard") || pathname.startsWith("/divers/");
+  const plans = pathname === "/plans" || pathname.startsWith("/plans/");
   const lastSite = useSyncExternalStore(onNavSite, loadNavSite, noSiteOnServer);
 
   return (
@@ -50,8 +52,20 @@ export function AppTabs() {
         className={`${TAB_CLASS} ${navigating ? ON : OFF}`}
       >
         <NavigateIcon size={16} />
-        Navigate
+        {/* Below 400 px four tabs and the account button need the room: the pointer alone stands for it. */}
+        <span className="max-[399px]:sr-only">Navigate</span>
       </MapPageLink>
+      <Link
+        data-tab
+        href="/plans"
+        aria-current={plans ? "page" : undefined}
+        title="Dive plans"
+        className={`${TAB_CLASS} ${plans ? ON : OFF} min-w-11 justify-center max-sm:px-2.5`}
+      >
+        <PlanIcon size={16} />
+        {/* A phone has room for the mark only. */}
+        <span className="sr-only sm:not-sr-only">Plans</span>
+      </Link>
       <Link
         data-tab
         href="/scoreboard"

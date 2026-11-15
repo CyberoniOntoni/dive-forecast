@@ -34,12 +34,19 @@ export async function generateMetadata({
   };
 }
 
+/** A dive time handed over from a dive plan ("Report it"), so the report form opens on it. */
+const DIVE_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
 export default async function SitePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const { at } = await searchParams;
+  const diveAt = typeof at === "string" && DIVE_AT.test(at) ? at : undefined;
   const site = await getSite(id);
   if (!site) notFound();
 
@@ -114,6 +121,7 @@ export default async function SitePage({
           alongHeadingDeg={forecast.alongHeadingDeg}
           zone={zone}
           defaultTime={currentWallHour(zone)}
+          diveTime={diveAt}
           nickname={session?.nickname ?? null}
           // Forecast hours are Maldives wall time; offer the one-tap report only where the site's clock is the same, and
           // only to a signed-in diver (the form is all the page sends otherwise).

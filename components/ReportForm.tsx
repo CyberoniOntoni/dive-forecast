@@ -66,6 +66,7 @@ export function ReportForm({
   alongHeadingDeg = null,
   zone = MALDIVES_TIME,
   defaultTime,
+  diveTime,
   nickname,
   forecast = [],
 }: {
@@ -77,6 +78,8 @@ export function ReportForm({
   zone?: SiteTimeZone;
   /** The site's current hour, "YYYY-MM-DDTHH:00", so most reports need no typing. */
   defaultTime?: string;
+  /** A dive time to start on instead, "YYYY-MM-DDTHH:MM": a dive plan's "Report it" hands its dive over. */
+  diveTime?: string;
   /**
    * The forecast hours shown on the page, on the same clock as `zone`. When the chosen time has one, a single tap
    * reports that the current ran as forecast.
@@ -88,8 +91,8 @@ export function ReportForm({
     : null;
   const formRef = useRef<HTMLFormElement>(null);
   const router = useRouter();
-  const [choice, setChoice] = useState<TimeChoice>(0);
-  const [otherTime, setOtherTime] = useState(defaultTime ?? "");
+  const [choice, setChoice] = useState<TimeChoice>(diveTime ? "other" : 0);
+  const [otherTime, setOtherTime] = useState(diveTime ?? defaultTime ?? "");
   const time = choice === "other" ? otherTime : defaultTime ? (wallHoursBefore(defaultTime, choice) ?? "") : "";
   // After a save the button stays off until something changes, so one dive is not filed twice.
   const [saved, setSaved] = useState(false);

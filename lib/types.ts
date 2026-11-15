@@ -384,10 +384,49 @@ export type Catalog = {
   innerSea?: InnerSeaBathymetry;
 };
 
+/** One dive on a plan day: a site at a time, Maldives wall clock. */
+export type PlanStop = {
+  siteId: string;
+  /** "HH:MM", the time the divers go in, on the day's date. */
+  time: string;
+  /** The guide's note for this dive (entry, what to look for), plain text. */
+  note?: string;
+  /** At a channel: the way the guide wants the current to run. The plan page warns when the forecast says otherwise. */
+  want?: Direction;
+};
+
+export type PlanDay = {
+  /** "YYYY-MM-DD", Maldives date. */
+  date: string;
+  /** In time order. */
+  stops: PlanStop[];
+};
+
+/**
+ * A dive plan a guide or a liveaboard puts together: dives by day, with the boat route between them. Anyone with its
+ * link sees it (the id is long and random); only the diver who made it changes it.
+ */
+export type DivePlan = {
+  /** Random, unguessable: the share link is /plans/<id>. */
+  id: string;
+  /** The signed-in diver who made it (User.id). */
+  ownerId: string;
+  title: string;
+  /** Notes for everyone on the trip, plain text. */
+  notes?: string;
+  /** The boat's cruising speed through the water, knots, for the times between dives. */
+  boatSpeedKn: number;
+  /** In date order, each date once. */
+  days: PlanDay[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type StoreData = {
   reports: Report[];
   ratings: Rating[];
   sites: Site[];
   users: User[];
   logins: PendingLogin[];
+  plans: DivePlan[];
 };

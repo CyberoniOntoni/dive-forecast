@@ -156,6 +156,34 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().reports.map((item) => item.id)).toEqual(["first", "elsewhere"]);
   });
 
+  it("keeps dive plans in D1, one row per plan, only the owner replacing or deleting theirs", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    const plan = {
+      id: "AbCdEfGhJkLmNpQr",
+      ownerId: "u1",
+      title: "Week one",
+      boatSpeedKn: 8,
+      days: [{ date: "2026-11-20", stops: [{ siteId: "banana-reef", time: "09:00" }] }],
+      createdAt: "2026-11-15T00:00:00.000Z",
+      updatedAt: "2026-11-15T00:00:00.000Z",
+    };
+    expect(await store.savePlanRecord(plan, 5)).toBe("saved");
+    expect(await store.savePlanRecord({ ...plan, ownerId: "u2", title: "Taken" }, 5)).toBe("not-yours");
+    expect(await store.deletePlanRecord(plan.id, "u2")).toBe(false);
+
+    vi.resetModules();
+    const other = await import("./store");
+    newRequest(env);
+    await other.refreshStore();
+    expect(other.findPlan(plan.id)?.title).toBe("Week one");
+    expect(other.plansForOwner("u1").map((item) => item.id)).toEqual([plan.id]);
+    expect(await other.deletePlanRecord(plan.id, "u1")).toBe(true);
+    expect(other.findPlan(plan.id)).toBeNull();
+  });
+
   it("writes only the records a change touched, so a write from an older read keeps newer records", async () => {
     const { storeChanges, loadD1Store } = await import("./store-d1");
     const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
