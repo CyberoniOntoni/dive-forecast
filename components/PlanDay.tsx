@@ -3,7 +3,19 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { PlanMap, type PlanMapStop } from "@/components/PlanMap";
-import { capital, countOf, dayLabel, durationText, nmFromKm, warnedCount, type StopOutlook, type StopWarning } from "@/lib/dive-plan";
+import {
+  capital,
+  countOf,
+  dayLabel,
+  DIVE_TURNAROUND_MIN,
+  durationText,
+  legDeparture,
+  nmFromKm,
+  warnedCount,
+  type LegDeparture,
+  type StopOutlook,
+  type StopWarning,
+} from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import { strengthLabel } from "@/lib/nowcast-glance";
@@ -103,7 +115,13 @@ export function PlanDay({
             <li key={`${stop.siteId}-${stop.time}-${at}`} className="flex min-w-0 flex-col">
               <StopCard stop={stop} number={at + 1} />
               {at + 1 < day.stops.length ? (
-                <LegLine leg={leg ?? null} loading={legs == null && !failed} speedKn={boatSpeedKn} />
+                <LegLine
+                  leg={leg ?? null}
+                  loading={legs == null && !failed}
+                  speedKn={boatSpeedKn}
+                  fromTime={stop.time}
+                  toTime={day.stops[at + 1].time}
+                />
               ) : null}
             </li>
           );
@@ -127,12 +145,27 @@ function Badge({ tone, children }: { tone: keyof typeof BADGE_TONES; children: R
   );
 }
 
-function LegLine({ leg, loading, speedKn }: { leg: PlanLeg | null; loading: boolean; speedKn: number }) {
+function LegLine({
+  leg,
+  loading,
+  speedKn,
+  fromTime,
+  toTime,
+}: {
+  leg: PlanLeg | null;
+  loading: boolean;
+  speedKn: number;
+  fromTime: string;
+  toTime: string;
+}) {
   let text: string;
   let note: string | null = null;
+  let departure: LegDeparture | null = null;
   if (leg) {
     const nm = nmFromKm(leg.lengthKm);
-    text = nm < 0.1 ? "Same spot" : `${nm.toFixed(1)} nm · about ${durationText(leg.minutes)} at ${speedKn} kn`;
+    const same = nm < 0.1;
+    text = same ? "Same spot" : `${nm.toFixed(1)} nm · about ${durationText(leg.minutes)} at ${speedKn} kn`;
+    if (!same) departure = legDeparture(fromTime, toTime, leg.minutes);
     if (!leg.routed) note = "Straight line: no way round the reef found";
   } else {
     text = loading ? "Planning the boat route…" : "Boat route unavailable";
@@ -142,8 +175,19 @@ function LegLine({ leg, loading, speedKn }: { leg: PlanLeg | null; loading: bool
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
         <path d="M3 15h18l-3 4H6zM12 4v9M12 4l5 7h-5" />
       </svg>
-      <span className={loading && !leg ? "animate-pulse" : ""}>
-        {text}
+      <span className={`min-w-0 ${loading && !leg ? "animate-pulse" : ""}`}>
+        {departure ? (
+          <span className={`block font-semibold ${departure.tight ? "text-stop" : "text-foam"}`}>
+            Leave by {departure.leaveBy}
+            {departure.tight ? (
+              <span className="font-normal">
+                {" "}
+                · tight: the {fromTime} dive needs about {DIVE_TURNAROUND_MIN} min
+              </span>
+            ) : null}
+          </span>
+        ) : null}
+        <span className="block">{text}</span>
         {note ? <span className="block text-xs text-foam/60">{note}</span> : null}
       </span>
     </div>

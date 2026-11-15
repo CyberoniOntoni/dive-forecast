@@ -368,6 +368,42 @@ export function legMinutes(lengthKm: number, speedKn: number): number {
   return etaMinutes(lengthKm, speedKn) ?? Infinity;
 }
 
+/**
+ * Swaps the dive at `at` with the one above (-1) or below (+1). The times stay in their rows, so the day still reads in
+ * time order and only the sites, with their notes and wanted current, change places. Out of range changes nothing.
+ */
+export function moveStopKeepingTimes<T extends { time: string }>(stops: readonly T[], at: number, by: -1 | 1): T[] {
+  const other = at + by;
+  if (at < 0 || at >= stops.length || other < 0 || other >= stops.length) return [...stops];
+  const moved = [...stops];
+  moved[at] = { ...stops[other], time: stops[at].time };
+  moved[other] = { ...stops[at], time: stops[other].time };
+  return moved;
+}
+
+/** Minutes from a dive's entry until the boat can move on: the dive itself and getting everyone back on board. */
+export const DIVE_TURNAROUND_MIN = 60;
+
+export type LegDeparture = {
+  /** "HH:MM": the next dive's entry less the boat time, rounded down to 5 minutes. */
+  leaveBy: string;
+  /** Leaving then comes less than DIVE_TURNAROUND_MIN after the dive before went in (or before it). */
+  tight: boolean;
+};
+
+/**
+ * When the boat must leave one dive to make the next on time. Both times are "HH:MM" on the same day; null when the
+ * leg has no time or leaving would fall before midnight.
+ */
+export function legDeparture(fromTime: string, toTime: string, legMin: number): LegDeparture | null {
+  if (!Number.isFinite(legMin)) return null;
+  const minutesOf = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+  const leave = Math.floor((minutesOf(toTime) - Math.ceil(legMin)) / 5) * 5;
+  if (leave < 0) return null;
+  const leaveBy = `${String(Math.floor(leave / 60)).padStart(2, "0")}:${String(leave % 60).padStart(2, "0")}`;
+  return { leaveBy, tight: leave - minutesOf(fromTime) < DIVE_TURNAROUND_MIN };
+}
+
 /** "45 min", "1 h 20 min". */
 export function durationText(minutes: number): string {
   const rounded = Math.max(5, Math.round(minutes / 5) * 5);

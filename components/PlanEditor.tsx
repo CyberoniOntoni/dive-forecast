@@ -8,6 +8,7 @@ import {
   BOAT_SPEED_MIN_KN,
   dayLabel,
   DEFAULT_BOAT_SPEED_KN,
+  moveStopKeepingTimes,
   PLAN_DAYS_MAX,
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
@@ -74,6 +75,9 @@ export function PlanEditor({
     setDays((all) => all.map((day) => (day.key === dayKey ? change(day) : day)));
   const changeStop = (dayKey: string, stopKey: string, change: Partial<DraftStop>) =>
     changeDay(dayKey, (day) => ({ ...day, stops: day.stops.map((stop) => (stop.key === stopKey ? { ...stop, ...change } : stop)) }));
+
+  const moveStop = (dayKey: string, at: number, by: -1 | 1) =>
+    changeDay(dayKey, (day) => ({ ...day, stops: moveStopKeepingTimes(day.stops, at, by) }));
 
   const addDay = () => setDays((all) => [...all, { key: key(), date: nextDate(all, today), stops: [] }]);
 
@@ -223,10 +227,24 @@ export function PlanEditor({
                     </span>
                     Dive {at + 1}
                   </span>
-                  <IconButton
-                    label={`Remove dive ${at + 1}`}
-                    onClick={() => changeDay(day.key, (item) => ({ ...item, stops: item.stops.filter((other) => other.key !== stop.key) }))}
-                  />
+                  <span className="flex shrink-0 items-center">
+                    <IconButton
+                      icon="up"
+                      label={`Move dive ${at + 1} up`}
+                      disabled={at === 0}
+                      onClick={() => moveStop(day.key, at, -1)}
+                    />
+                    <IconButton
+                      icon="down"
+                      label={`Move dive ${at + 1} down`}
+                      disabled={at === day.stops.length - 1}
+                      onClick={() => moveStop(day.key, at, 1)}
+                    />
+                    <IconButton
+                      label={`Remove dive ${at + 1}`}
+                      onClick={() => changeDay(day.key, (item) => ({ ...item, stops: item.stops.filter((other) => other.key !== stop.key) }))}
+                    />
+                  </span>
                 </div>
                 <div className="grid min-w-0 gap-3 sm:grid-cols-[9rem_1fr] sm:gap-2">
                   <label className="flex min-w-0 flex-col gap-1 text-sm text-foam max-sm:w-40">
@@ -340,18 +358,35 @@ function nextDate(days: readonly DraftDay[], today: string): string {
   return last ? addDays(last, 1) : today;
 }
 
-/** A round × button for removing a day or a dive. */
-function IconButton({ label, onClick }: { label: string; onClick: () => void }) {
+const ICON_PATHS = {
+  close: "M6 6l12 12M18 6L6 18",
+  up: "M12 19V5M6 11l6-6 6 6",
+  down: "M12 5v14M6 13l6 6 6-6",
+} as const;
+
+/** A round icon button: × removes a day or a dive, the arrows move a dive up or down. */
+function IconButton({
+  label,
+  onClick,
+  icon = "close",
+  disabled = false,
+}: {
+  label: string;
+  onClick: () => void;
+  icon?: keyof typeof ICON_PATHS;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="grid size-11 shrink-0 place-items-center rounded-full text-foam/70 hover:bg-foam/10 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+      disabled={disabled}
+      className="grid size-11 shrink-0 place-items-center rounded-full text-foam/70 hover:bg-foam/10 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:pointer-events-none disabled:opacity-30"
     >
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-        <path d="M6 6l12 12M18 6L6 18" />
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d={ICON_PATHS[icon]} />
       </svg>
     </button>
   );
