@@ -21,3 +21,4 @@ tsconfig.tsbuildinfo
 data/sources
 .open-next
 .wrangler
+android
