@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  routeWayToward,
   glanceColor,
   glanceRank,
   nowcastGlance,
@@ -133,6 +134,15 @@ describe("nowcastGlance heading trust", () => {
 });
 
 describe("route words", () => {
+  it("names where a channel's water heads, and falls back to routeWay elsewhere", () => {
+    expect(routeWayToward("channel", "incoming", 45, null)).toBe("incoming, toward NE");
+    expect(routeWayToward("channel", "outgoing", 45, null)).toBe("outgoing, toward SW");
+    expect(routeWayToward("channel", "outgoing", 45, null, 270)).toBe("outgoing, toward W");
+    expect(routeWayToward("channel", "incoming", null, null)).toBe("incoming");
+    expect(routeWayToward("along-reef", "incoming", 0, 90)).toBe("running E along the reef");
+    expect(routeWayToward("lagoon", "outgoing", 0, 90)).toBe("running W");
+  });
+
   it("says incoming or outgoing on a channel, even with a stray heading", () => {
     expect(routeWay("channel", "incoming", null)).toEqual({ way: "incoming", spoken: "incoming" });
     expect(routeWay("channel", "outgoing", 90)).toEqual({ way: "outgoing", spoken: "outgoing" });

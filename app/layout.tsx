@@ -28,7 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <header className="chart-bar chart-bar-top flex items-center justify-between gap-3">
+        <header className="chart-bar chart-bar-top flex print:hidden items-center justify-between gap-3">
           <MapPageLink
             href="/"
             className="flex min-h-11 min-w-0 items-center gap-2.5 rounded-xl pr-2 no-underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"

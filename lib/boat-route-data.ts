@@ -8,6 +8,7 @@ import type { RouteCurrent } from "./route-current";
 import { readPointDestination } from "./point-destination";
 import { readShoals } from "./shoals";
 import { listMergedSites } from "./store";
+import type { Site } from "./types";
 
 /**
  * The shapes the boat route keeps to, from data/: OSM islands and Allen Coral Atlas lagoon reef tops and sand shallows
@@ -37,6 +38,14 @@ export async function boatRoute(from: LatLon, destinationId: string): Promise<Bo
     return null;
   });
   return { ...route, current };
+}
+
+/**
+ * The boat route between two dives of a plan, round the same islands and reef, without the current: a plan's dives can
+ * be days ahead, past the hours the route current covers.
+ */
+export function planLeg(from: LatLon, to: LatLon, sites: readonly Site[]): BoatRoute {
+  return planRoute(from, to, routeShapes(sites));
 }
 
 function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string; sourceUrl?: string }[]): RouteShapes {

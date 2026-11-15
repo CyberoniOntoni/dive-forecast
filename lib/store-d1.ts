@@ -1,5 +1,5 @@
 import type { D1Database, D1PreparedStatement, R2Bucket } from "./cloudflare";
-import type { PendingLogin, Rating, Report, Site, StoreData, User } from "./types";
+import type { DivePlan, PendingLogin, Rating, Report, Site, StoreData, User } from "./types";
 
 /**
  * The store in Cloudflare D1, on a worker. One table per StoreData list: each row holds the record as JSON (`data`)
@@ -74,7 +74,19 @@ const logins: Table<PendingLogin> = {
   watchMembership: true,
 };
 
-const TABLES = [reports, ratings, sites, users, logins] as Table<unknown>[];
+/**
+ * Dive plans, by their share id; owner_id finds a diver's own. Membership watched, for the limit on plans per diver
+ * (lib/store.ts addPlanRecord): two creates racing cannot both pass it.
+ */
+const plans: Table<DivePlan> = {
+  name: "plans",
+  key: (plan) => plan.id,
+  columns: (plan) => ({ owner_id: plan.ownerId }),
+  schema: { columns: ["owner_id TEXT NOT NULL"], indexes: ["owner_id"] },
+  watchMembership: true,
+};
+
+const TABLES = [reports, ratings, sites, users, logins, plans] as Table<unknown>[];
 
 /** The table names, which are also the StoreData list names. */
 export const STORE_TABLES = TABLES.map((table) => table.name);
@@ -144,7 +156,7 @@ function parseR2Store(raw: string): StoreData {
 }
 
 export function emptyStore(): StoreData {
-  return { reports: [], ratings: [], sites: [], users: [], logins: [] };
+  return { reports: [], ratings: [], sites: [], users: [], logins: [], plans: [] };
 }
 
 export function normalizeStore(parsed: unknown): StoreData {
@@ -155,6 +167,7 @@ export function normalizeStore(parsed: unknown): StoreData {
     sites: Array.isArray(record.sites) ? record.sites : [],
     users: Array.isArray(record.users) ? record.users : [],
     logins: Array.isArray(record.logins) ? record.logins : [],
+    plans: Array.isArray(record.plans) ? record.plans : [],
   };
 }
 

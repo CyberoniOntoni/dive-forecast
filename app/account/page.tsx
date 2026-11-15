@@ -30,12 +30,20 @@ export default async function AccountPage() {
         <Stat label="Reports" value={stats.reports} note={stats.ratings ? `${stats.ratings} rating${stats.ratings === 1 ? "" : "s"}` : null} />
         <Stat label="Sites" value={stats.sites} note={stats.atolls ? `${stats.atolls} atoll${stats.atolls === 1 ? "" : "s"}` : null} />
       </section>
-      <Link
-        href="/scoreboard"
-        className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming sm:self-start"
-      >
-        See the scoreboard
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href="/scoreboard"
+          className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming max-sm:flex-1"
+        >
+          See the scoreboard
+        </Link>
+        <Link
+          href="/plans"
+          className="button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming max-sm:flex-1"
+        >
+          Your dive plans
+        </Link>
+      </div>
 
       <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="badges-heading">
         <h2 id="badges-heading" className="text-base font-semibold text-foam">

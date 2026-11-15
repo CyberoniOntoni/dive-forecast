@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { currentSession } from "@/lib/auth";
-import { signInHref } from "@/lib/sign-in";
+import { SignInLink } from "@/components/SignInLink";
 
 /** The header's account button: the diver's initial when signed in (to their points), else a sign-in person icon. */
 export async function AccountLink() {
@@ -9,12 +9,12 @@ export async function AccountLink() {
     "inline-flex min-h-11 shrink-0 items-center justify-center rounded-full text-sm font-medium no-underline whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
   if (!session) {
     return (
-      <Link href={signInHref("/")} aria-label="Sign in" title="Sign in" className={`${base} min-w-11 text-foam/85 hover:text-foam`}>
+      <SignInLink className={`${base} min-w-11 text-foam/85 hover:text-foam`}>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="8" r="4" />
           <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
         </svg>
-      </Link>
+      </SignInLink>
     );
   }
   return (

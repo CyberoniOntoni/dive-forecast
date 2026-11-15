@@ -156,6 +156,37 @@ describe("on a Cloudflare worker", () => {
     expect(store.readStore().reports.map((item) => item.id)).toEqual(["first", "elsewhere"]);
   });
 
+  it("keeps dive plans in D1, one row per plan, only the owner replacing or deleting theirs", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    const plan = {
+      id: "AbCdEfGhJkLmNpQr",
+      ownerId: "u1",
+      title: "Week one",
+      boatSpeedKn: 8,
+      days: [{ date: "2026-11-20", stops: [{ siteId: "banana-reef", time: "09:00" }] }],
+      createdAt: "2026-11-15T00:00:00.000Z",
+      updatedAt: "2026-11-15T00:00:00.000Z",
+    };
+    expect(await store.addPlanRecord(plan, 5)).toBe("saved");
+    expect(await store.addPlanRecord({ ...plan, ownerId: "u2", title: "Taken" }, 5)).toBe("taken");
+    expect(await store.updatePlanRecord({ ...plan, ownerId: "u2", title: "Taken" })).toBe("not-yours");
+    expect(await store.updatePlanRecord({ ...plan, id: "ZzZzZzZzZzZzZzZz" })).toBe("missing");
+    expect(await store.addPlanRecord({ ...plan, id: "YyYyYyYyYyYyYyYy" }, 1)).toBe("full");
+    expect(await store.deletePlanRecord(plan.id, "u2")).toBe(false);
+
+    vi.resetModules();
+    const other = await import("./store");
+    newRequest(env);
+    await other.refreshStore();
+    expect(other.findPlan(plan.id)?.title).toBe("Week one");
+    expect(other.plansForOwner("u1").map((item) => item.id)).toEqual([plan.id]);
+    expect(await other.deletePlanRecord(plan.id, "u1")).toBe(true);
+    expect(other.findPlan(plan.id)).toBeNull();
+  });
+
   it("writes only the records a change touched, so a write from an older read keeps newer records", async () => {
     const { storeChanges, loadD1Store } = await import("./store-d1");
     const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
@@ -245,6 +276,33 @@ describe("on a Cloudflare worker", () => {
     newRequest(env);
     await store.refreshStore();
     expect(store.readStore().logins).toHaveLength(1);
+  });
+
+  it("holds the plans-per-diver limit when two creates race", async () => {
+    const env = { ASSETS: fakeAssets({}), DATA: fakeBucket(), DB: fakeD1() };
+    const store = await import("./store");
+    newRequest(env);
+    await store.refreshStore();
+    const plan = (id: string) => ({
+      id,
+      ownerId: "u1",
+      title: id,
+      boatSpeedKn: 8,
+      days: [{ date: "2026-11-20", stops: [{ siteId: "banana-reef", time: "09:00" }] }],
+      createdAt: "2026-11-15T00:00:00.000Z",
+      updatedAt: "2026-11-15T00:00:00.000Z",
+    });
+    // Both requests read no plans, so both pass the count; the second write sees the list changed, reruns and is full.
+    const results = await Promise.all(
+      ["AbCdEfGhJkLmNpQr", "ZzZzZzZzZzZzZzZz"].map((id) => {
+        newRequest(env);
+        return store.addPlanRecord(plan(id), 1);
+      }),
+    );
+    expect(results.sort()).toEqual(["full", "saved"]);
+    newRequest(env);
+    await store.refreshStore();
+    expect(store.plansForOwner("u1")).toHaveLength(1);
   });
 
   it("refuses a second diver with the same nickname at the database too", async () => {

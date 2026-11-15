@@ -14,8 +14,7 @@ import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
 import { nearestForecastHour } from "@/lib/nowcast";
 import { atollNamesById } from "@/lib/site-labels";
-import { DIVER_SITE_TYPE_LABEL } from "@/lib/site-details";
-import { SITE_TYPE_LABEL } from "@/lib/site-type";
+import { diveDepthPhrase, formatMetres, nonNegativeMetres, siteKindLabel } from "@/lib/site-facts";
 import { currentWallHour, MALDIVES_TIME, timeZoneForSite } from "@/lib/site-time";
 import { readCatalog } from "@/lib/store";
 import { UNSEEDED_ATOLL_ID, type DepthKind, type HourForecast, type Site } from "@/lib/types";
@@ -34,12 +33,19 @@ export async function generateMetadata({
   };
 }
 
+/** A dive time handed over from a dive plan ("Report it"), so the report form opens on it. */
+const DIVE_AT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
 export default async function SitePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const { at } = await searchParams;
+  const diveAt = typeof at === "string" && DIVE_AT.test(at) ? at : undefined;
   const site = await getSite(id);
   if (!site) notFound();
 
@@ -114,6 +120,7 @@ export default async function SitePage({
           alongHeadingDeg={forecast.alongHeadingDeg}
           zone={zone}
           defaultTime={currentWallHour(zone)}
+          diveTime={diveAt}
           nickname={session?.nickname ?? null}
           // Forecast hours are Maldives wall time; offer the one-tap report only where the site's clock is the same, and
           // only to a signed-in diver (the form is all the page sends otherwise).
@@ -155,7 +162,7 @@ function SiteFacts({ site }: { site: Site }) {
   const atoll = atollNamesById(readCatalog().atolls)[site.atollId];
   const line = publishedLine(site);
   const placed = site.pinPlacement === "imagery" ? "position approximate" : null;
-  const parts = [kindLabel(site), atoll ?? null, line ? line.text : null, placed].filter(
+  const parts = [siteKindLabel(site, { source: true }), atoll ?? null, line ? line.text : null, placed].filter(
     (part): part is string => part != null,
   );
   if (parts.length === 0) return null;
@@ -181,14 +188,6 @@ function SiteFacts({ site }: { site: Site }) {
   );
 }
 
-/** The site type the forecast runs on; on an app-added pin, said whether its diver picked it or its position did. */
-function kindLabel(site: Site): string | null {
-  if (!site.siteType) return null;
-  if (site.siteTypeSource === "diver") return `${DIVER_SITE_TYPE_LABEL[site.siteType]} (diver's pick)`;
-  if (site.sourceUrl === "user") return `${DIVER_SITE_TYPE_LABEL[site.siteType]} (from the pin's position)`;
-  return SITE_TYPE_LABEL[site.siteType];
-}
-
 type SourceLink = { href: string; label: string };
 
 function publishedLine(site: Site): { text: string; sources: SourceLink[] } | null {
@@ -197,7 +196,7 @@ function publishedLine(site: Site): { text: string; sources: SourceLink[] } | nu
   const max = nonNegativeMetres(site.diveMaxM);
   const width = positiveMetres(site.channelWidthM);
   const channelDepth = positiveMetres(site.channelDepthM);
-  const phrases = [depthPhrase(top, max), channelPhrase(width, channelDepth, site.channelDepthKind)].filter(
+  const phrases = [diveDepthPhrase(top, max), channelPhrase(width, channelDepth, site.channelDepthKind)].filter(
     (phrase): phrase is string => phrase != null,
   );
   if (phrases.length === 0) return null;
@@ -210,18 +209,6 @@ function publishedLine(site: Site): { text: string; sources: SourceLink[] } | nu
   };
 }
 
-function depthPhrase(top: number | null, max: number | null): string | null {
-  if (top != null) {
-    if (max != null) {
-      if (top !== max) {
-        return `${formatMetres(Math.min(top, max))}–${formatMetres(Math.max(top, max))} m`;
-      }
-    }
-  }
-  const only = top ?? max;
-  if (only == null) return null;
-  return `${formatMetres(only)} m`;
-}
 
 function channelPhrase(width: number | null, depth: number | null, kind: DepthKind | undefined): string | null {
   const parts: string[] = [];
@@ -251,20 +238,9 @@ function publishedSources(hasDiveDepth: boolean, hasChannel: boolean, site: Site
     { href: channelHref, label: "Channel" },
   ];
 }
-function nonNegativeMetres(value: number | undefined): number | null {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
-  return value;
-}
-
 function positiveMetres(value: number | undefined): number | null {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
   return value;
-}
-
-function formatMetres(value: number): string {
-  if (Number.isInteger(value)) return String(value);
-  const rounded = Math.round(value * 10) / 10;
-  return String(rounded);
 }
 
 function httpUrl(value: string | undefined): string | null {

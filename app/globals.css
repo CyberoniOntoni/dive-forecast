@@ -169,3 +169,46 @@ main > .chart-credit {
   background: color-mix(in srgb, var(--incoming) 45%, var(--ink));
   color: var(--foam);
 }
+
+/*
+ * Printing a page (a dive plan for the briefing board): dark ink on white paper, the page in full instead of a
+ * scrolling pane, and no card shadows.
+ */
+@media print {
+  :root {
+    color-scheme: light;
+    --ink: #ffffff;
+    --foam: #0b2530;
+    --incoming: #0f8a77;
+    --outgoing: #b26a00;
+    --stop: #c2253d;
+    --glass: #ffffff;
+    --background: #ffffff;
+    --foreground: #0b2530;
+  }
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #ffffff;
+  }
+  main {
+    overflow: visible !important;
+  }
+  .surface {
+    box-shadow: none;
+    border-color: #c8d3d8;
+  }
+  .plan-day {
+    break-inside: avoid;
+  }
+  .plan-map {
+    height: 14rem;
+  }
+}
+
+@media print {
+  .plan-map .leaflet-control-zoom {
+    display: none;
+  }
+}

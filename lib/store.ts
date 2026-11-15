@@ -18,6 +18,7 @@ import {
 import {
   UNSEEDED_ATOLL_ID,
   type Catalog,
+  type DivePlan,
   type Rating,
   type Report,
   type Site,
@@ -310,6 +311,51 @@ export async function removeRating(siteId: string, userId: string, at: string): 
     delete rating.review;
     delete rating.photos;
     return photos;
+  });
+}
+
+export function findPlan(id: string): DivePlan | null {
+  return readStore().plans.find((plan) => plan.id === id) ?? null;
+}
+
+/** The diver's own plans, the most recently changed first. */
+export function plansForOwner(ownerId: string): DivePlan[] {
+  return readStore()
+    .plans.filter((plan) => plan.ownerId === ownerId)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/**
+ * Adds a new plan (its id made by newPlanId on the server), unless its owner already keeps `max`. A new plan whose id
+ * is already taken is refused rather than replacing anything.
+ */
+export async function addPlanRecord(plan: DivePlan, max: number): Promise<"saved" | "full" | "taken"> {
+  return mutateStore((store) => {
+    if (store.plans.some((item) => item.id === plan.id)) return "taken";
+    if (store.plans.filter((item) => item.ownerId === plan.ownerId).length >= max) return "full";
+    store.plans.push(plan);
+    return "saved";
+  });
+}
+
+/** Replaces the owner's existing plan with the same id. Never creates one: a plan is only made by addPlanRecord. */
+export async function updatePlanRecord(plan: DivePlan): Promise<"saved" | "missing" | "not-yours"> {
+  return mutateStore((store) => {
+    const index = store.plans.findIndex((item) => item.id === plan.id);
+    if (index < 0) return "missing";
+    if (store.plans[index].ownerId !== plan.ownerId) return "not-yours";
+    store.plans[index] = { ...plan, createdAt: store.plans[index].createdAt };
+    return "saved";
+  });
+}
+
+/** Deletes the owner's plan. False when there was no such plan of theirs. */
+export async function deletePlanRecord(id: string, ownerId: string): Promise<boolean> {
+  return mutateStore((store) => {
+    const index = store.plans.findIndex((item) => item.id === id && item.ownerId === ownerId);
+    if (index < 0) return false;
+    store.plans.splice(index, 1);
+    return true;
   });
 }
 
