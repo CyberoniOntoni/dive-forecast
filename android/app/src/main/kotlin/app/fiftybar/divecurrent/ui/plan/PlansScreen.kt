@@ -55,7 +55,7 @@ fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onSignIn: () -
   val linkId = PlanLink.idOf(state.link)
 
   // Signed in on the sign-in screen and back here: load the list.
-  LaunchedEffect(session) { if (session != null && state.plans == null) viewModel.refresh() }
+  LaunchedEffect(session) { if (session != null && state.plans == null && !state.loading) viewModel.refresh() }
 
   Scaffold(
     containerColor = colors.ink,

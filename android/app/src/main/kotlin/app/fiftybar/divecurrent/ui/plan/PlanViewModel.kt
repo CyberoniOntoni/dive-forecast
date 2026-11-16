@@ -8,7 +8,9 @@ import app.fiftybar.divecurrent.data.Loaded
 import app.fiftybar.divecurrent.data.SignedOutException
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiPlan
+import app.fiftybar.divecurrent.data.api.ApiPlanDay
 import app.fiftybar.divecurrent.data.api.ApiPlanLeg
+import app.fiftybar.divecurrent.data.api.ApiPlanLegs
 import app.fiftybar.divecurrent.data.api.ApiPlanSummary
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -53,7 +55,7 @@ class PlanViewModel(
       try {
         val loaded = repository.plan(planId, account.sessions.current()?.token)
         _state.update { show(it, loaded) }
-        loadLegs(loaded.value)
+        loadLegs(loaded.value, planIsFresh = !loaded.fromCache)
       } catch (e: ApiException) {
         val notFound = e is ApiException.Server && e.code == "not_found"
         _state.update { it.copy(loading = false, error = e.message, notFound = notFound) }
@@ -61,15 +63,32 @@ class PlanViewModel(
     }
   }
 
-  private suspend fun loadLegs(plan: ApiPlan) {
+  private suspend fun loadLegs(plan: ApiPlan, planIsFresh: Boolean) {
     plan.days.forEachIndexed { index, day ->
       if (day.stops.size < 2) return@forEachIndexed
-      try {
-        val legs = repository.planLegs(planId, index).value.legs
-        _state.update { it.copy(legs = it.legs + (index to legs), legsFailed = it.legsFailed - index) }
-      } catch (_: ApiException) {
-        _state.update { it.copy(legsFailed = it.legsFailed + index) }
+      val legs =
+        try {
+          usableLegs(day, repository.planLegs(planId, index), planIsFresh)
+        } catch (_: ApiException) {
+          null
+        }
+      _state.update {
+        if (legs != null) it.copy(legs = it.legs + (index to legs), legsFailed = it.legsFailed - index)
+        else it.copy(legs = it.legs - index, legsFailed = it.legsFailed + index)
       }
+    }
+  }
+
+  companion object {
+    /**
+     * The legs to show under [day], or null when there are none to trust. The phone keeps each day's legs apart from
+     * the plan, so an old copy of the legs may belong to a version of the plan from before it was edited: next to a
+     * plan just fetched, only legs just fetched are used, and any copy must join as many dives as the day has.
+     */
+    fun usableLegs(day: ApiPlanDay, loaded: Loaded<ApiPlanLegs>, planIsFresh: Boolean): List<ApiPlanLeg>? {
+      if (planIsFresh && loaded.fromCache) return null
+      val legs = loaded.value.legs
+      return legs.takeIf { list -> list.size == day.stops.size - 1 && list.all { it.from in 0 until day.stops.size - 1 } }
     }
   }
 
