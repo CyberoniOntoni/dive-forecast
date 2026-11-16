@@ -23,8 +23,8 @@ app and the site always show the same forecast. The forecast model is untouched.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
 - **Methods.** Reads are GET. Writes are POST or PUT with an `application/json` body (anything else gets 415), or
-  DELETE with none. The one exception is a review photo (`POST /api/v1/sites/{id}/review/photos`), whose body is the
-  `image/jpeg` itself. A browser cannot send any of these (that photo type included) to this site from another one
+  DELETE with none. The exceptions are photos (`POST /api/v1/sites/{id}/photos` and `…/review/photos`), whose body is
+  the `image/jpeg` itself. A browser cannot send any of these (that photo type included) to this site from another one
   without a CORS check, which this API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
   (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
   every other non-GET request that is not a server action. `forbidden` (403) is a change to something that is another
@@ -202,7 +202,8 @@ backups and sends it as `Authorization: Bearer <token>`. A new address without a
 ### `GET /api/v1/me`
 
 Signed in. `{"apiVersion": 1, "nickname": "Manta", "points": 40, "monthPoints": 20, "reports": 2, "monthRank": 3,
-"allRank": 7}`: never the email or the diver's id. 401 once the token no longer works, which is how the app learns it
+"allRank": 7, "addedSiteIds": ["user-…"]}`: never the email or the diver's id. `addedSiteIds` are the sites the diver
+added in the app, where only they can add photos (§ Adding sites). 401 once the token no longer works, which is how the app learns it
 was signed out.
 
 ### `POST /api/v1/sign-out-everywhere`
@@ -458,6 +459,34 @@ The app shrinks it first as the web does (`lib/photo-shrink.ts`: long edge 1600 
 since the server strips camera data, rotation included). Answers 201. 413 for a larger body, 415 for another type, 400
 past 6 photos on the review or 24 review photos a day. DELETE takes one of the diver's own photos off and deletes it.
 
+## Adding sites
+
+A signed-in diver adds a dive site at a pin, as with the web map's "Add a site" form (`components/AddSiteForm.tsx`).
+The pin's position (or, on the rim, the kind the diver picks) chooses the forecast model, as on the web
+(FORECAST_MODEL.md § Pins added in the app). Depths and notes are only shown, never read by the forecast. At most 10
+sites a day per diver. Writes take the app's token, and answers carry `Cache-Control: private, no-store`.
+
+### `POST /api/v1/sites`
+
+```json
+{ "name": "Test Thila", "lat": 4.25, "lon": 73.45, "diverSiteType": "lagoon", "diveTopM": 8, "diveMaxM": 25,
+  "howToDive": "Drop on the east side…", "rating": 4 }
+```
+
+Only `name` (1 to 80 characters), `lat` and `lon` (inside the Maldives) are needed. `diverSiteType` is one of `pass`
+(channel), `corner` (channel corner), `lagoon` (inside the lagoon) or `outer-reef` (wall outside the atoll); leave it
+out for "Not sure". Depths are metres, 0 to 100, shallowest first; `howToDive` at most 1500
+characters; `rating` 1 to 5 is the adder's own (§ Ratings and reviews). Answers 201 `{"apiVersion": 1, "site": {…}}`
+with the site as `GET /api/v1/sites/{id}` gives it. A refusal is 400 with the web form's words ("Site name is
+required").
+
+### `POST /api/v1/sites/{id}/photos`
+
+The body is one JPEG (`Content-Type: image/jpeg`, at most 1.5 MB, shrunk on the phone to 1600 px as the web does).
+Only the diver who added the site adds photos, up to 6; camera data is stripped before it is saved. Answers 201 with
+the site, as above, its new photo last in `photoUrls`. 403 on a catalog site or another diver's, 404 for a site not on
+the map, 413 for a larger body, 415 for another type, 400 for a file that is not a JPEG or a site that is full.
+
 ## Next (not built yet)
 
-Adding sites (with their photos). It comes with its own section here.
+The scoreboard, divers' pages and the account's About me. They come with their own section here.

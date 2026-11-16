@@ -385,6 +385,45 @@ export async function apiJsonBody(request: Request): Promise<Record<string, unkn
 }
 
 /**
+ * A photo upload's body: the JPEG itself (`Content-Type: image/jpeg`), at most `max` bytes, or the error to send (415
+ * for another type, 413 past the limit). Read no further than the limit, so a body sent without a length is cut off
+ * there, not buffered whole. Like JSON, image/jpeg is not a type a browser sends across sites without a CORS check.
+ */
+export async function apiJpegBody(request: Request, max: number): Promise<Uint8Array<ArrayBuffer> | Response> {
+  if (requestType(request) !== "image/jpeg") return apiError(415, "bad_request", "Send the photo as image/jpeg.");
+  const tooLarge = () => apiError(413, "bad_request", "That photo is too large.");
+  if (Number(request.headers.get("content-length") ?? Number.NaN) > max) return tooLarge();
+  if (!request.body) return new Uint8Array(0);
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > max) {
+      await reader.cancel();
+      return tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/** A photo as the server actions take it: form field "photo". */
+export function photoForm(bytes: Uint8Array<ArrayBuffer>): FormData {
+  const form = new FormData();
+  form.set("photo", new Blob([bytes], { type: "image/jpeg" }), "photo.jpg");
+  return form;
+}
+
+/**
  * The 401 to send when a request that needs a diver has no `Authorization: Bearer` header, else null. Writes take the
  * app's token only, never the web's cookie, so a page on another site cannot file a report as a signed-in visitor.
  */
@@ -962,4 +1001,11 @@ export function apiReviewResult(siteId: string, result: ReviewActionResult | Pho
   const card = "reviews" in result ? result.reviews : reviews;
   if (!card) return apiError(500, "server_error", "Something went wrong. Try again.");
   return apiJson(apiReviews(siteId, card), { status, cacheControl: API_NO_STORE });
+}
+
+/** POST /api/v1/sites and its photos: the site as GET /api/v1/sites/{id} gives it. */
+export type ApiSiteSaved = { apiVersion: number; site: ApiSite };
+
+export function apiSiteSaved(site: Site, atollName: string | null, status: number): Response {
+  return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
 }

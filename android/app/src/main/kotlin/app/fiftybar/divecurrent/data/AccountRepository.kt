@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.data
 
+import app.fiftybar.divecurrent.data.api.AddSiteBody
 import app.fiftybar.divecurrent.data.api.ApiCodeSent
 import app.fiftybar.divecurrent.data.api.ApiEditablePlan
 import app.fiftybar.divecurrent.data.api.PlanBody
@@ -8,6 +9,7 @@ import app.fiftybar.divecurrent.data.api.ApiMe
 import app.fiftybar.divecurrent.data.api.ApiPlanSummaries
 import app.fiftybar.divecurrent.data.api.ApiReportSaved
 import app.fiftybar.divecurrent.data.api.ApiReviews
+import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.api.ReportRequest
 import app.fiftybar.divecurrent.data.session.Session
@@ -89,6 +91,22 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun addReviewPhoto(siteId: String, jpeg: ByteArray): ApiReviews = signedIn { api.addReviewPhoto(it, siteId, jpeg) }
 
   suspend fun removeReviewPhoto(siteId: String, photoId: String): ApiReviews = signedIn { api.removeReviewPhoto(it, siteId, photoId) }
+
+  /** Adds a site at a pin; the map and lists read it again. */
+  suspend fun addSite(site: AddSiteBody): ApiSite = signedIn { api.addSite(it, site) }.site
+
+  /** One photo for a site the diver added; answers with the site as it is now. */
+  suspend fun addSitePhoto(siteId: String, jpeg: ByteArray): ApiSite = signedIn { api.addSitePhoto(it, siteId, jpeg) }.site
+
+  /** Whether the signed-in diver added this site, so they may add its photos. False signed out or offline. */
+  suspend fun addedSite(siteId: String): Boolean =
+    try {
+      me()?.addedSiteIds?.contains(siteId) == true
+    } catch (_: ApiException) {
+      false
+    } catch (_: SignedOutException) {
+      false
+    }
 
   private suspend fun <T> signedIn(call: suspend (token: String) -> T): T {
     val session = sessions.current() ?: throw SignedOutException()

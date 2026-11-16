@@ -225,6 +225,8 @@ data class ApiMe(
   val reports: Int = 0,
   val monthRank: Int? = null,
   val allRank: Int? = null,
+  /** Sites this diver added in the app: only they can add photos there. */
+  val addedSiteIds: List<String> = emptyList(),
 )
 
 @Serializable
@@ -539,3 +541,20 @@ data class ApiReview(
 @Serializable data class RatingBody(val score: Int)
 
 @Serializable data class ReviewBody(val text: String)
+
+/** POST /api/v1/sites: a new site at a pin. Nulls are left out, as the web form leaves blank fields out. */
+@Serializable
+data class AddSiteBody(
+  val name: String,
+  val lat: Double,
+  val lon: Double,
+  /** pass | corner | lagoon | outer-reef, or null for "Not sure". */
+  val diverSiteType: String? = null,
+  val diveTopM: Double? = null,
+  val diveMaxM: Double? = null,
+  val howToDive: String? = null,
+  val rating: Int? = null,
+)
+
+/** The answer to adding a site or one of its photos: the site as GET /api/v1/sites/{id} gives it. */
+@Serializable data class ApiSiteSaved(val apiVersion: Int = 1, val site: ApiSite)

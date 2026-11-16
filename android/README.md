@@ -53,7 +53,13 @@ What it does:
   view) is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Adding sites is on the web for now (API.md § Next).
+- **Adding sites**: long-press the map on the site's spot (the list's + says so) and pick "Add a dive site here": the
+  web form's name, kind of site, depths, how to dive it, the adder's rating and up to 6 photos, sent one by one after
+  the site is added (`POST /api/v1/sites`, `/sites/{id}/photos`; `domain/NewSite.kt` makes the server's checks first, in its words). The
+  new site's page opens in the form's place, and the map reads the list again. On a site they added, the diver can add
+  more photos from its page (`addedSiteIds` from `GET /api/v1/me`).
+
+The scoreboard, divers' pages and About me are on the web for now (API.md § Next).
 
 ## Build and run
 

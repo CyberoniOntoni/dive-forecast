@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
@@ -68,6 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.domain.LatLon
 import app.fiftybar.divecurrent.domain.MaldivesTime
+import app.fiftybar.divecurrent.domain.NewSite
 import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
@@ -85,6 +87,7 @@ fun MapScreen(
   onPlans: () -> Unit,
   onNavigate: () -> Unit,
   onNavigateTo: (id: String, name: String, lat: Double, lon: Double) -> Unit,
+  onAddSite: (lat: Double, lon: Double) -> Unit,
 ) {
   val repository = appRepository()
   val session by appAccount().sessions.session.collectAsStateWithLifecycle()
@@ -104,8 +107,10 @@ fun MapScreen(
   val scaffold = rememberBottomSheetScaffoldState()
   val scope = rememberCoroutineScope()
   val colors = CurrentTheme.colors
-  // A point long-pressed on the map, waiting for "Navigate here".
+  // A point long-pressed on the map, waiting for "Navigate here" or "Add a dive site here".
   var pressed by remember { mutableStateOf<LatLon?>(null) }
+  // "Add a dive site" asked from the list: says where the pin goes.
+  var addHint by remember { mutableStateOf(false) }
   LifecycleResumeEffect(viewModel) {
     viewModel.refreshIfHourPassed()
     onPauseOrDispose {}
@@ -135,6 +140,7 @@ fun MapScreen(
         onRefresh = viewModel::refresh,
         onPlans = onPlans,
         onNavigate = onNavigate,
+        onAddSite = { addHint = true },
       )
     },
   ) { padding ->
@@ -189,23 +195,58 @@ fun MapScreen(
       }
     }
   }
+  if (addHint) {
+    AlertDialog(
+      onDismissRequest = { addHint = false },
+      title = { Text("Add a dive site") },
+      text = { Text("Long-press the map on the site's spot to put its pin there, then pick Add a dive site here.") },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            addHint = false
+            scope.launch { scaffold.bottomSheetState.partialExpand() }
+          }
+        ) {
+          Text("OK")
+        }
+      },
+    )
+  }
   pressed?.let { point ->
     val name = PointDestination.name(point)
     AlertDialog(
       onDismissRequest = { pressed = null },
-      title = { Text("Navigate by boat?") },
-      text = { Text("Head for $name, round the islands and reef the app knows of.") },
+      title = { Text(name) },
+      text = {
+        Text(
+          "Navigate there by boat, round the islands and reef the app knows of" +
+            if (NewSite.inBounds(point.lat, point.lon)) ", or add a dive site at this spot." else "."
+        )
+      },
       confirmButton = {
-        TextButton(
-          onClick = {
-            pressed = null
-            onNavigateTo(PointDestination.id(point), name, point.lat, point.lon)
+        Column(horizontalAlignment = Alignment.End) {
+          TextButton(
+            onClick = {
+              pressed = null
+              onNavigateTo(PointDestination.id(point), name, point.lat, point.lon)
+            }
+          ) {
+            Text("Navigate here")
           }
-        ) {
-          Text("Navigate here")
+          // Only where the server takes a new pin: the Maldives box, a little smaller than the boat routes'.
+          if (NewSite.inBounds(point.lat, point.lon)) {
+            TextButton(
+              onClick = {
+                pressed = null
+                onAddSite(point.lat, point.lon)
+              }
+            ) {
+              Text("Add a dive site here")
+            }
+          }
+          TextButton(onClick = { pressed = null }) { Text("Cancel") }
         }
       },
-      dismissButton = { TextButton(onClick = { pressed = null }) { Text("Cancel") } },
     )
   }
 }
@@ -251,6 +292,7 @@ private fun NowList(
   onRefresh: () -> Unit,
   onPlans: () -> Unit,
   onNavigate: () -> Unit,
+  onAddSite: () -> Unit,
 ) {
   val colors = CurrentTheme.colors
   val focus = LocalFocusManager.current
@@ -275,6 +317,9 @@ private fun NowList(
             if (state.fromCache && state.error != null) add("offline copy")
           }
         Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+      }
+      IconButton(onClick = onAddSite, modifier = Modifier.size(48.dp)) {
+        Icon(Icons.Filled.Add, contentDescription = "Add a dive site")
       }
       IconButton(onClick = onNavigate, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.LocationOn, contentDescription = "Navigate by boat")

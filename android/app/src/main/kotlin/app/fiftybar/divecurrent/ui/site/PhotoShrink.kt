@@ -6,6 +6,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
 import android.net.Uri
+import app.fiftybar.divecurrent.data.SignedOutException
+import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.domain.PhotoSize
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
@@ -76,4 +78,32 @@ object PhotoShrink {
     }
     return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
   }
+}
+
+/** How sending picked photos went: how many were saved, and the first refusal, if any. */
+data class PhotosSent(val saved: Int, val problem: String?)
+
+/**
+ * Shrinks and sends picked photos one by one, as the web does (components/PhotoPicker.tsx), and stops at the first
+ * refusal. [progress] gets "Sending photo 2 of 3…".
+ */
+suspend fun sendPhotos(context: Context, uris: List<Uri>, progress: (String) -> Unit, send: suspend (ByteArray) -> Unit): PhotosSent {
+  var saved = 0
+  for ((index, uri) in uris.withIndex()) {
+    progress("Sending photo ${index + 1} of ${uris.size}…")
+    val problem =
+      try {
+        send(PhotoShrink.shrink(context, uri))
+        saved += 1
+        null
+      } catch (e: PhotoException) {
+        e.message
+      } catch (_: SignedOutException) {
+        "Sign in again to add photos."
+      } catch (e: ApiException) {
+        e.message
+      }
+    if (problem != null) return PhotosSent(saved, problem)
+  }
+  return PhotosSent(saved, null)
 }

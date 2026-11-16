@@ -80,6 +80,9 @@ class SiteViewModel(
 
   fun photoUrl(path: String): String = repository.photoUrl(path)
 
+  /** A photo the adder just sent: the site as the server answered, shown at once. */
+  fun showSite(site: ApiSite) = _state.update { it.copy(site = site) }
+
   fun select(index: Int) = _state.update { it.copy(selected = index.coerceIn(0, (it.forecast?.hours?.lastIndex ?: 0).coerceAtLeast(0))) }
 
   fun selectNow() =

@@ -16,6 +16,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -59,6 +60,8 @@ class MapViewModel(private val repository: DataRepository) : ViewModel() {
       }
       refresh()
     }
+    // A site added on this phone shows on the map at once.
+    viewModelScope.launch { repository.sitesChanged.drop(1).collect { refresh() } }
   }
 
   /** On coming back to the map: fetch again once the Maldives hour has moved past the one shown. */
