@@ -5,7 +5,7 @@ import { appSetting, perRequest, runInBackground, workerEnv } from "./cloudflare
  * Asia-Pacific cache bucket (lib/cache-bucket.ts) an R2 read takes tens to hundreds of milliseconds, and a site page
  * reads 10 to 30 of them on a fresh isolate. The edge copy is read in a few milliseconds. The Open-Meteo series use it, and the map's
  * saved nowcasts have their own copy (lib/nowcast-cache.ts). It is only ever a copy: callers check the text they get
- * for freshness, serve one that is too old while they check R2 behind the response, and the data centre may drop it
+ * for freshness, read R2 before using one that is too old, and the data centre may drop it
  * at any time.
  */
 type EdgeCache = {

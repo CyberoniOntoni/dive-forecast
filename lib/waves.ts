@@ -34,7 +34,7 @@ const wavePoints = pointFetcher<WaveHour>({
  */
 export async function fetchWaves(lat: number, lon: number, options: FetchOptions = {}): Promise<WaveFetch> {
   const fetched = await wavePoints.fetch(lat, lon, options);
-  return fetched.ok ? { ...fetched, stale: marineSeriesStale(fetched.hours) } : fetched;
+  return fetched.ok ? { ...fetched, stale: fetched.stale || marineSeriesStale(fetched.hours) } : fetched;
 }
 
 async function requestWaves(lat: number, lon: number): Promise<WaveHour[] | null> {

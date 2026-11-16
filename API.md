@@ -75,7 +75,7 @@ The site page's forecast: about a week of hours plus the sea state. The fields a
 | `hours[]` | `{ time, direction: "incoming" \| "outgoing", strength: "slack" \| "mild" \| "strong" \| "too_strong", confidence: "low" \| "medium" \| "high", levelM, glance }`. `glance` is below. |
 | `forecastRoute`, `alongHeadingDeg`, `inwardBearingDeg`, `outgoingBearingDeg`, `bearingSource` | The inputs each hour's `glance` was built from: which model made the hours (`channel`, `along-reef`, `strait`, `lagoon`), the reef or flow heading off a channel, the inward and curved-outgoing headings (degrees from north), and where the inward one came from (`override`, `rim-derived`, `fallback`). For information only: a client draws `glance` and does not turn these into arrows or words itself. |
 | `unavailable` | No forecast. Either there is no cached ocean series yet or the site has no atoll. |
-| `stale`, `fetchedAt` | The hours come from the last cached series, and when it was fetched. |
+| `stale`, `fetchedAt` | `stale` is true when the hours come from a series fetched over 12 hours ago (its refreshes are failing) or the last cached one after a failed fetch; `fetchedAt` is when it was fetched. |
 | `seaState` | Per hour `{ time, band: calm \| moderate \| choppy \| rough, feltM, swell, windWaveM, wind, againstCurrent }`. `[]` when the waves failed to load. `null` when the site has no sea state. |
 | `seaStale` | The sea state comes from an old cached wave or wind series; say so beside it, as the site page does. |
 | `notice`, `siteNote` | Text the app must show with the forecast, as the site page does. |
