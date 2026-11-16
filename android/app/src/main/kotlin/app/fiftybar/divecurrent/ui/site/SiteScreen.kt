@@ -54,12 +54,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiForecast
+import app.fiftybar.divecurrent.data.api.ApiHour
 import app.fiftybar.divecurrent.data.api.ApiSeaStateHour
 import app.fiftybar.divecurrent.data.api.ApiSite
-import app.fiftybar.divecurrent.data.api.ForecastRoute
 import app.fiftybar.divecurrent.data.api.SeaBand
 import app.fiftybar.divecurrent.domain.Glance
-import app.fiftybar.divecurrent.domain.Heading
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.compassWord
@@ -67,10 +66,7 @@ import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.domain.heightLabel
-import app.fiftybar.divecurrent.domain.routeWayToward
 import app.fiftybar.divecurrent.domain.seaBandLabel
-import app.fiftybar.divecurrent.domain.siteTypeLabel
-import app.fiftybar.divecurrent.domain.strengthLabel
 import app.fiftybar.divecurrent.domain.windLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appRepository
@@ -98,7 +94,7 @@ fun SiteScreen(siteId: String, onBack: () -> Unit) {
           IconButton(onClick = viewModel::refresh) { Icon(Icons.Filled.Refresh, "Refresh the forecast") }
           IconButton(
             onClick = {
-              val url = shareUrl(siteId, selectedTime)
+              val url = shareText(siteId, state.site?.name, hours.getOrNull(state.selected))
               val send =
                 Intent(Intent.ACTION_SEND).apply {
                   type = "text/plain"
@@ -136,15 +132,22 @@ fun SiteScreen(siteId: String, onBack: () -> Unit) {
           NoticeCard(forecast)
         }
       }
-      state.site?.let { AboutCard(it, state.atollName, photoUrl = viewModel::photoUrl) }
+      state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }
       Spacer(Modifier.height(24.dp))
     }
   }
 }
 
-private fun shareUrl(siteId: String, time: String?): String {
-  val base = "${BuildConfig.WEB_URL}/sites/$siteId"
-  return if (time == null) base else "$base?at=$time"
+/**
+ * The hour in words, then the site's page. Not `?at=`: on the web that only fills the report form's dive time, and the
+ * page opens on the current hour, so the hour itself goes in the text.
+ */
+internal fun shareText(siteId: String, siteName: String?, hour: ApiHour?): String {
+  val url = "${BuildConfig.WEB_URL}/sites/$siteId"
+  if (hour == null) return url
+  val g = glance(hour)
+  val reading = if (g == null) "" else ": ${g.wayToward}, ${g.label}"
+  return "${siteName ?: "Site"}, ${MaldivesTime.label(hour.time)} Maldives$reading\n$url"
 }
 
 @Composable
@@ -176,39 +179,30 @@ private fun SurfaceCard(content: @Composable () -> Unit) {
   }
 }
 
-private fun heading(f: ApiForecast) =
-  Heading(
-    route = ForecastRoute.of(f.forecastRoute),
-    inwardBearingDeg = f.inwardBearingDeg,
-    alongHeadingDeg = f.alongHeadingDeg,
-    bearingSource = f.bearingSource,
-  )
-
 @Composable
 private fun HourCard(forecast: ApiForecast, selected: Int) {
   val colors = CurrentTheme.colors
   val hour = forecast.hours.getOrNull(selected) ?: return
-  val g: Glance? = glance(hour, heading(forecast))
+  val g: Glance? = glance(hour)
   SurfaceCard {
     Text(MaldivesTime.label(hour.time) + " Maldives", style = MaterialTheme.typography.labelLarge)
     if (g == null) {
       Text("No reading for this hour.")
       return@SurfaceCard
     }
-    val route = ForecastRoute.of(forecast.forecastRoute)
-    val way = routeWayToward(route, g.direction, forecast.inwardBearingDeg, forecast.alongHeadingDeg)
+    val way = g.wayToward
     Row(
       verticalAlignment = Alignment.CenterVertically,
       modifier =
         Modifier.semantics(mergeDescendants = true) {
-          contentDescription = "$way, ${strengthLabel(g.strength)}, ${confidenceLabel(g.confidence)} confidence"
+          contentDescription = "$way, ${g.label}, ${confidenceLabel(g.confidence)} confidence"
         },
     ) {
       CurrentArrow(bearing = g.arrowBearing, color = colors.tone(g.tone), alpha = g.opacity, size = 72.dp)
       Spacer(Modifier.width(16.dp))
       Column {
         Text(
-          strengthLabel(g.strength).replaceFirstChar { it.uppercase() },
+          g.label.replaceFirstChar { it.uppercase() },
           style = MaterialTheme.typography.headlineMedium,
           fontWeight = FontWeight.Bold,
           color = colors.tone(g.tone),
@@ -231,7 +225,6 @@ private fun HourCard(forecast: ApiForecast, selected: Int) {
 private fun HourPicker(forecast: ApiForecast, selected: Int, onSelect: (Int) -> Unit, onNow: () -> Unit) {
   val colors = CurrentTheme.colors
   val hours = forecast.hours
-  val heading = heading(forecast)
   SurfaceCard {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Text(MaldivesTime.dayLabel(hours[selected].time), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
@@ -239,7 +232,7 @@ private fun HourPicker(forecast: ApiForecast, selected: Int, onSelect: (Int) -> 
     }
     ForecastStrip(
       hours = hours,
-      glances = hours.map { glance(it, heading) },
+      glances = hours.map { glance(it) },
       seaState = forecast.seaState,
       selected = selected,
       onSelect = onSelect,
@@ -270,6 +263,13 @@ private fun SeaStateCard(forecast: ApiForecast, time: String?) {
   val sea = forecast.seaState ?: return
   SurfaceCard {
     Text("Sea state", style = MaterialTheme.typography.titleSmall)
+    if (forecast.seaStale) {
+      Text(
+        "From old wave or wind data: the server could not refresh it.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.8f),
+      )
+    }
     val hour: ApiSeaStateHour? = sea.firstOrNull { it.time == time }
     if (hour == null) {
       Text(if (sea.isEmpty()) "The wave forecast did not load." else "No sea state for this hour.", style = MaterialTheme.typography.bodyMedium)
@@ -323,12 +323,12 @@ private fun UnavailableCard(forecast: ApiForecast) {
 }
 
 @Composable
-private fun AboutCard(site: ApiSite, atollName: String?, photoUrl: (String) -> String) {
+private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
   SurfaceCard {
     Text("About the site", style = MaterialTheme.typography.titleSmall)
-    val facts = listOfNotNull(atollName, siteTypeLabel(site.siteType), depthLabel(site), if (site.userAdded) "added by a diver" else null)
+    val facts = listOfNotNull(site.atollName, site.siteTypeLabel, depthLabel(site), if (site.userAdded) "added by a diver" else null)
     if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
     if (site.approximatePin) {
       Text(

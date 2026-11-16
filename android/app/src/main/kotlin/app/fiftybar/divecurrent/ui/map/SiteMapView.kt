@@ -22,7 +22,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import app.fiftybar.divecurrent.domain.GlanceTone
+import app.fiftybar.divecurrent.data.api.GlanceTone
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng

@@ -5,7 +5,8 @@ import kotlinx.serialization.Serializable
 /*
  * The /api/v1 bodies (API.md in the web repo, shaped by lib/api-v1.ts). The JSON parser ignores unknown fields, so a
  * field the server adds later never breaks this version of the app. Enums arrive as strings and are read through
- * the helpers below, so a new value shows as "unknown" instead of failing the whole body.
+ * the helpers below, which give null for a value this app does not know, so it draws nothing instead of a wrong
+ * reading and never fails the whole body. How an hour reads (arrow, words, colour) comes from the server in `glance`.
  */
 
 @Serializable
@@ -26,6 +27,9 @@ data class ApiSite(
   val lon: Double,
   /** pass | channel-thila | corner | outer-reef | lagoon | strait-wall, or null when not classified. */
   val siteType: String? = null,
+  /** The kind of site in the site page's words ("Rim pass"); null when not classified. */
+  val siteTypeLabel: String? = null,
+  val atollName: String? = null,
   val userAdded: Boolean = false,
   val sourceUrl: String? = null,
   val diveTopM: Double? = null,
@@ -48,6 +52,28 @@ data class ApiHour(
   /** low | medium | high */
   val confidence: String,
   val levelM: Double = 0.0,
+  /** How the hour reads on screen, made by the server; null when there is no arrow to draw. */
+  val glance: ApiGlance? = null,
+)
+
+/** lib/api-v1.ts ApiGlance: the web's own reading of one site-hour. */
+@Serializable
+data class ApiGlance(
+  val arrowBearing: Double,
+  /** "incoming", "outgoing", or "running NE" on a compass route. */
+  val way: String,
+  /** The way in a sentence: adds "along the reef" at a wall. */
+  val spokenWay: String,
+  /** At a channel also where the water heads: "incoming, toward NE". */
+  val wayToward: String,
+  /** "slack", "mild", "strong", "very strong". */
+  val label: String,
+  /** incoming | outgoing | along | stop */
+  val tone: String,
+  val opacity: Double = 1.0,
+  /** Strongest first: 0 very strong to 3 slack. */
+  val rank: Int,
+  val estimatedHeading: Boolean = false,
 )
 
 @Serializable data class ApiWave(val heightM: Double, val fromDeg: Double, val periodS: Double? = null)
@@ -75,17 +101,12 @@ data class ApiForecast(
   val unavailable: Boolean = false,
   val stale: Boolean = false,
   val notice: String = "",
-  val inwardBearingDeg: Double? = null,
-  /** override | rim-derived | fallback */
-  val bearingSource: String? = null,
-  val siteType: String? = null,
-  /** channel | along-reef | strait | lagoon */
-  val forecastRoute: String = "channel",
-  val alongHeadingDeg: Double? = null,
   val siteNote: String? = null,
   val fetchedAt: Long? = null,
   /** Empty when the waves failed to load; null when the site has no sea state. */
   val seaState: List<ApiSeaStateHour>? = null,
+  /** True when the sea state comes from an old cached wave or wind series. */
+  val seaStale: Boolean = false,
 )
 
 @Serializable
@@ -100,11 +121,6 @@ data class ApiNowcast(
 data class ApiSiteNowcast(
   val siteId: String,
   val atollId: String,
-  val inwardBearingDeg: Double? = null,
-  val outgoingBearingDeg: Double? = null,
-  val bearingSource: String? = null,
-  val forecastRoute: String = "channel",
-  val alongHeadingDeg: Double? = null,
   val hour: ApiHour? = null,
   val unavailable: Boolean = false,
   val stale: Boolean = false,
@@ -120,15 +136,6 @@ data class ApiErrorDetail(
   /** Text the server says can be shown to the diver. */
   val message: String,
 )
-
-enum class Direction {
-  Incoming,
-  Outgoing;
-
-  companion object {
-    fun of(value: String): Direction = if (value == "outgoing") Outgoing else Incoming
-  }
-}
 
 enum class Strength(val wire: String) {
   Slack("slack"),
@@ -147,29 +154,21 @@ enum class Confidence {
   High;
 
   companion object {
-    fun of(value: String): Confidence =
-      when (value) {
-        "high" -> High
-        "medium" -> Medium
-        else -> Low
-      }
+    /** Null for a value this app does not know. */
+    fun of(value: String): Confidence? = entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
   }
 }
 
-enum class ForecastRoute {
-  Channel,
-  AlongReef,
-  Strait,
-  Lagoon;
+/** Which colour a glance takes: very strong is the stop colour; along a reef there is no in/out colour. */
+enum class GlanceTone {
+  Incoming,
+  Outgoing,
+  Along,
+  Stop;
 
   companion object {
-    fun of(value: String): ForecastRoute =
-      when (value) {
-        "along-reef" -> AlongReef
-        "strait" -> Strait
-        "lagoon" -> Lagoon
-        else -> Channel
-      }
+    /** Null for a value this app does not know. */
+    fun of(value: String): GlanceTone? = entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
   }
 }
 

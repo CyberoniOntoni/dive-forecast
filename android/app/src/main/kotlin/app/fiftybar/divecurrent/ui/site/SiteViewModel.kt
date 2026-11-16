@@ -8,6 +8,7 @@ import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.domain.MaldivesTime
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,6 @@ import kotlinx.coroutines.launch
 
 data class SiteUiState(
   val site: ApiSite? = null,
-  val atollName: String? = null,
   val forecast: ApiForecast? = null,
   /** When the phone received the forecast, Unix ms. */
   val savedAt: Long? = null,
@@ -35,10 +35,7 @@ class SiteViewModel(private val siteId: String, private val repository: DataRepo
 
   init {
     viewModelScope.launch {
-      repository.cachedSites()?.value?.let { sites ->
-        val site = sites.sites.firstOrNull { it.id == siteId }
-        _state.update { it.copy(site = site, atollName = sites.atolls.firstOrNull { a -> a.id == site?.atollId }?.name) }
-      }
+      repository.cachedSite(siteId)?.let { site -> _state.update { it.copy(site = site) } }
       repository.cachedForecast(siteId)?.let { cached -> _state.update { show(it, cached, keepSelection = false) } }
       refresh()
     }
@@ -54,14 +51,12 @@ class SiteViewModel(private val siteId: String, private val repository: DataRepo
   fun refresh() {
     viewModelScope.launch {
       _state.update { it.copy(loading = true) }
-      if (_state.value.site == null) {
-        runCatching { repository.sites() }.getOrNull()?.value?.let { sites ->
-          val site = sites.sites.firstOrNull { it.id == siteId }
-          _state.update { it.copy(site = site, atollName = sites.atolls.firstOrNull { a -> a.id == site?.atollId }?.name) }
-        }
-      }
+      // The site and its forecast load side by side; a failed site load keeps whatever copy is showing.
+      val siteJob = async { runCatching { repository.site(siteId) } }
+      val forecastJob = async { runCatching { repository.forecast(siteId) } }
+      siteJob.await().getOrNull()?.let { loaded -> _state.update { it.copy(site = loaded.value) } }
       try {
-        val loaded = repository.forecast(siteId)
+        val loaded = forecastJob.await().getOrThrow()
         _state.update { show(it, loaded, keepSelection = it.forecast != null) }
       } catch (e: ApiException) {
         val notFound = e is ApiException.Server && e.code == "not_found"

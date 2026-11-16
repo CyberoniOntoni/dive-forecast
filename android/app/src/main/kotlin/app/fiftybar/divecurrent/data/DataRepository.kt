@@ -4,6 +4,7 @@ import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiJson
 import app.fiftybar.divecurrent.data.api.ApiNowcast
+import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.ApiSites
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.db.CachedBody
@@ -36,6 +37,8 @@ class DataRepository(
 
   suspend fun nowcast(): Loaded<ApiNowcast> = load("nowcast", ApiNowcast.serializer()) { api.nowcast().second }
 
+  suspend fun site(siteId: String): Loaded<ApiSite> = load("site/$siteId", ApiSite.serializer()) { api.site(siteId).second }
+
   suspend fun forecast(siteId: String): Loaded<ApiForecast> =
     load("forecast/$siteId", ApiForecast.serializer()) { api.forecast(siteId).second }
 
@@ -43,6 +46,11 @@ class DataRepository(
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)
 
   suspend fun cachedNowcast(): Loaded<ApiNowcast>? = cached("nowcast", ApiNowcast.serializer(), null)
+
+  /** This site's own copy, else its row in the copy of the whole list. */
+  suspend fun cachedSite(siteId: String): ApiSite? =
+    cached("site/$siteId", ApiSite.serializer(), null)?.value
+      ?: cachedSites()?.value?.sites?.firstOrNull { it.id == siteId }
 
   suspend fun cachedForecast(siteId: String): Loaded<ApiForecast>? =
     cached("forecast/$siteId", ApiForecast.serializer(), null)

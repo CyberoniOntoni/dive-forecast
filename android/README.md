@@ -11,7 +11,8 @@ Version 1 is read-only:
 - **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with a search by site or atoll.
 - **Site page**: a slider over the week, opened on the current Maldives hour; strength bars, residual tide and sea
   state for every hour; the hour's direction, strength, confidence and sea state; the server's `notice` and `siteNote`;
-  depths, how to dive it, photos, the source; share a link to the hour (`https://50bar.app/sites/<id>?at=<time>`).
+  depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
+  not `?at=`, which on the web only fills the report form's dive time).
 - **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
@@ -49,17 +50,34 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `data/api/` | The /api/v1 bodies (kotlinx.serialization, unknown fields ignored) and the OkHttp client |
 | `data/db/` | Room: the last raw body per endpoint |
 | `data/DataRepository.kt` | Network first, then the last copy |
-| `domain/Glance.kt` | Port of `lib/nowcast-glance.ts`: arrow heading, "incoming" / "running NE along the reef", tones, ranking |
+| `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
 | `ui/map/` | MapLibre map, now list |
 | `ui/site/` | Site page, hour strip |
 
-`domain/Glance.kt` must stay in step with `lib/nowcast-glance.ts`; `GlanceTest` repeats the web tests' cases.
-Labels shown to divers follow the web: `too_strong` is shown as "very strong", site kinds as in `lib/site-type.ts`.
+The display rules live only on the server (`lib/nowcast-glance.ts`, put on every hour by `lib/api-v1.ts`): the app
+draws the glance it is given, so a wording change ships with the server. Site kinds come as `siteTypeLabel`.
 
 ## Rules carried over from the API
 
-- Ignore unknown fields, and read enums through the `of()` helpers so a new value does not fail a whole body.
+- Ignore unknown fields, and read enums through the `of()` helpers: a value the app does not know gives null, so it
+  draws no arrow instead of a wrong one, and never fails a whole body.
+- A saved nowcast is for its own hour: once the Maldives hour has moved on, the map shows no arrows from it.
 - Times are Maldives wall-clock `YYYY-MM-DDTHH:MM`; parse them with `MaldivesTime`, not `LocalDateTime.now()`.
 - Show `notice` and `siteNote` with the forecast.
 - No diver id or email is ever in a response, and the app asks for none.
+
+## Why the app lives in this repo
+
+Decided 16 Nov 2026: the app stays in the web repo, in `android/`, rather than a repo of its own.
+
+- **The app and the API change together.** The server decides how an hour reads (arrow, words, tone) in
+  `lib/nowcast-glance.ts` and `lib/api-v1.ts`, and the app only draws it. A change to the contract (`API.md`) and both
+  sides of it lands in one PR with one CI run, with no second PR to merge in step.
+- **The builds are already apart.** The `android` CI job runs on its own; Docker (`.dockerignore`), lint, TypeScript
+  and the Cloudflare build ignore `android/`.
+- **One developer.** A second repo would mostly add a second set of branches and issues to keep in step.
+
+Move the app to its own repo when one of these comes true: someone else owns the app, it gets its own release flow
+with signing keys and Play Store uploads as CI secrets that are better fenced off, an iOS app joins it so the API
+becomes a contract between several clients, or one part goes open source and the other does not.

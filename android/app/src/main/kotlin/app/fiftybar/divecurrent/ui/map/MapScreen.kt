@@ -45,12 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
-import app.fiftybar.divecurrent.domain.strengthLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -65,12 +65,16 @@ fun MapScreen(onOpenSite: (String) -> Unit) {
   var query by rememberSaveable { mutableStateOf("") }
   val scaffold = rememberBottomSheetScaffoldState()
   val colors = CurrentTheme.colors
+  LifecycleResumeEffect(viewModel) {
+    viewModel.refreshIfHourPassed()
+    onPauseOrDispose {}
+  }
 
   val shown =
     remember(state.rows, query) {
       val q = query.trim().lowercase()
       if (q.isEmpty()) state.rows
-      else state.rows.filter { it.site.name.lowercase().contains(q) || it.atollName?.lowercase()?.contains(q) == true }
+      else state.rows.filter { it.site.name.lowercase().contains(q) || it.site.atollName?.lowercase()?.contains(q) == true }
     }
 
   BottomSheetScaffold(
@@ -128,7 +132,12 @@ private fun NowList(
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
       Column(Modifier.weight(1f)) {
         Text(
-          text = state.maldivesWall?.let { "Now · ${MaldivesTime.label(it)} Maldives" } ?: "Now",
+          text =
+            when {
+              state.outdatedWall != null -> "No current hour offline"
+              state.maldivesWall != null -> "Now · ${MaldivesTime.label(state.maldivesWall)} Maldives"
+              else -> "Now"
+            },
           style = MaterialTheme.typography.titleMedium,
           fontWeight = FontWeight.SemiBold,
         )
@@ -145,6 +154,14 @@ private fun NowList(
       }
     }
     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+    state.outdatedWall?.let {
+      Text(
+        "The last map saved was for ${MaldivesTime.label(it)}. Open a site for its saved week, or refresh when online.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.85f),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+      )
+    }
     state.error?.let {
       Text(it, color = colors.stop, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
     }
@@ -174,7 +191,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
   val g = row.glance
   val spoken =
     if (g == null) "${row.site.name}, no forecast"
-    else "${row.site.name}, ${g.spokenWay}, ${strengthLabel(g.strength)}, ${confidenceLabel(g.confidence)} confidence"
+    else "${row.site.name}, ${g.spokenWay}, ${g.label}, ${confidenceLabel(g.confidence)} confidence"
   Row(
     Modifier.fillMaxWidth()
       .heightIn(min = 56.dp)
@@ -191,7 +208,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     Column(Modifier.weight(1f)) {
       Text(row.site.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(
-        row.atollName ?: "",
+        row.site.atollName ?: "",
         style = MaterialTheme.typography.bodySmall,
         color = colors.foam.copy(alpha = 0.7f),
         maxLines = 1,
@@ -199,7 +216,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     }
     Column(horizontalAlignment = Alignment.End) {
       if (g != null) {
-        Text(strengthLabel(g.strength), color = colors.tone(g.tone), fontWeight = FontWeight.SemiBold)
+        Text(g.label, color = colors.tone(g.tone), fontWeight = FontWeight.SemiBold)
         Text(
           buildString {
             append(g.way)

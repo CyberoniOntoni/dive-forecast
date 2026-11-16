@@ -39,8 +39,9 @@ class DataRepositoryTest {
     assertFalse(loaded.fromCache)
     val n = loaded.value.nowcasts.single()
     assertEquals("banana-reef", n.siteId)
-    assertEquals(131.0, n.alongHeadingDeg!!, 0.0)
     assertEquals("mild", n.hour!!.strength)
+    assertEquals("running SE along the reef", n.hour.glance!!.spokenWay)
+    assertEquals("along", n.hour.glance.tone)
     assertEquals("/api/v1/nowcast", server.takeRequest().path)
     assertNotNull(dao.rows["nowcast"])
   }
@@ -69,10 +70,20 @@ class DataRepositoryTest {
   }
 
   @Test
+  fun `loads one site from its own endpoint and keeps a copy`() = runTest {
+    server.enqueue(reply(200, SITE))
+    val site = repository.site("hp-reef").value
+    assertEquals("Rim pass", site.siteTypeLabel)
+    assertEquals("North Malé", site.atollName)
+    assertEquals("/api/v1/sites/hp-reef", server.takeRequest().path)
+    assertEquals("HP Reef", repository.cachedSite("hp-reef")!!.name)
+  }
+
+  @Test
   fun `reads a forecast with sea state and a null sea state`() = runTest {
     server.enqueue(reply(200, FORECAST))
     val f = repository.forecast("banana-reef").value
-    assertEquals("along-reef", f.forecastRoute)
+    assertTrue(f.seaStale)
     assertEquals(2, f.hours.size)
     assertEquals("choppy", f.seaState!!.single().band)
     assertNull(f.seaState.single().swell)
@@ -102,12 +113,22 @@ class DataRepositoryTest {
         "nowcasts": [{
           "siteId": "banana-reef", "atollId": "north-male", "inwardBearingDeg": 41, "outgoingBearingDeg": null,
           "bearingSource": "rim-derived", "forecastRoute": "along-reef", "alongHeadingDeg": 131,
-          "hour": { "time": "2026-11-15T09:00", "direction": "incoming", "strength": "mild", "confidence": "medium", "levelM": 0.12 },
+          "hour": {
+            "time": "2026-11-15T09:00", "direction": "incoming", "strength": "mild", "confidence": "medium", "levelM": 0.12,
+            "glance": {
+              "arrowBearing": 131, "way": "running SE", "spokenWay": "running SE along the reef",
+              "wayToward": "running SE along the reef", "label": "mild", "tone": "along", "opacity": 0.74, "rank": 2,
+              "estimatedHeading": false
+            }
+          },
           "unavailable": false, "stale": false, "fetchedAt": 1763180000000
         }]
       }
       """
         .trimIndent()
+
+    const val SITE =
+      """{ "id": "hp-reef", "name": "HP Reef", "atollId": "north-male", "lat": 4.3, "lon": 73.6, "siteType": "pass", "siteTypeLabel": "Rim pass", "atollName": "North Malé" }"""
 
     const val SEA_STATE =
       """[{ "time": "2026-11-15T09:00", "band": "choppy", "feltM": 0.9, "swell": null, "windWaveM": 0.4, "wind": { "speedMs": 7.2, "fromDeg": 270 }, "againstCurrent": false }]"""
@@ -123,7 +144,7 @@ class DataRepositoryTest {
         "unavailable": false, "stale": false, "notice": "Forecast, not a guarantee.",
         "inwardBearingDeg": 41, "bearingSource": "rim-derived", "siteType": "outer-reef",
         "forecastRoute": "along-reef", "alongHeadingDeg": 131, "siteNote": null, "fetchedAt": 1763180000000,
-        "seaState": $SEA_STATE
+        "seaState": $SEA_STATE, "seaStale": true
       }
       """
         .trimIndent()

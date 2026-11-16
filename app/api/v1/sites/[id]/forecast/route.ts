@@ -7,6 +7,6 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const { id } = await context.params;
     const site = await getSite(id);
     if (!site || site.hidden) return apiError(404, "not_found", "Unknown site.");
-    return apiJson(apiForecast(site.id, await forecastSite(site.id)));
+    return apiJson(apiForecast(site, await forecastSite(site.id)));
   });
 }
