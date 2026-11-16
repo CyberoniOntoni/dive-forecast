@@ -78,17 +78,17 @@ export async function siteMarineHours(
   const point = seawardPoint(lat, lon, inwardBearingDeg, options.seawardKm);
   const seaward = await fetchMarine(point.lat, point.lon, options);
   if (!seaward.ok && seaward.pending) return seaward;
-  if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
+  if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
-  if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
+  if (fallback.ok && !marineSeriesStale(fallback.hours)) return usableMarine(fallback);
   const cached = (await readCachedHours(point.lat, point.lon)) ?? (await readCachedHours(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
 }
 
-/** A usable series: stale only when it was fetched long ago (seriesOld), since its hours still reach ahead. */
-function freshMarine(fetched: { hours: MarineHour[]; fetchedAt: number; stale: boolean }): MarineFetch {
+/** A series whose hours still reach ahead, keeping the point's stale flag (seriesOld: fetched long ago). */
+function usableMarine(fetched: { hours: MarineHour[]; fetchedAt: number; stale: boolean }): MarineFetch {
   return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: fetched.stale };
 }
 
@@ -326,8 +326,8 @@ function edgeSeconds(fetchedAt: number): number {
 }
 
 /**
- * Fetched more than SERIES_STALE_MS ago: twice the TTL, so its refreshes have been failing (the warm-up keeps R2 under
- * the TTL). Such a series is still used, but marked stale.
+ * Fetched more than SERIES_STALE_MS ago, by age alone: twice the TTL, which on a worker usually means its refreshes are
+ * failing (the warm-up keeps R2 under the TTL), though a refresh may be under way. It is still used, but marked stale.
  */
 function seriesOld(series: { fetchedAt: number }): boolean {
   return Date.now() - series.fetchedAt > SERIES_STALE_MS;
