@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
@@ -35,10 +37,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +59,7 @@ import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,6 +70,7 @@ fun MapScreen(onOpenSite: (String) -> Unit) {
   var baseMap by rememberSaveable { mutableStateOf(BaseMap.Satellite) }
   var query by rememberSaveable { mutableStateOf("") }
   val scaffold = rememberBottomSheetScaffoldState()
+  val scope = rememberCoroutineScope()
   val colors = CurrentTheme.colors
   LifecycleResumeEffect(viewModel) {
     viewModel.refreshIfHourPassed()
@@ -88,6 +95,8 @@ fun MapScreen(onOpenSite: (String) -> Unit) {
         rows = shown,
         query = query,
         onQuery = { query = it },
+        // The keyboard would cover a sheet left at its peek height, field and results with it.
+        onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
       )
@@ -124,11 +133,14 @@ private fun NowList(
   rows: List<SiteRow>,
   query: String,
   onQuery: (String) -> Unit,
+  onSearchFocus: () -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
 ) {
   val colors = CurrentTheme.colors
-  Column(Modifier.fillMaxWidth()) {
+  val focus = LocalFocusManager.current
+  // imePadding lifts the sheet's content above the keyboard, so a short list of matches is not hidden behind it.
+  Column(Modifier.fillMaxWidth().imePadding()) {
     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
       Column(Modifier.weight(1f)) {
         Text(
@@ -174,7 +186,11 @@ private fun NowList(
         if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Clear, "Clear") }
       },
       keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+      keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+      modifier =
+        Modifier.fillMaxWidth()
+          .padding(horizontal = 16.dp, vertical = 8.dp)
+          .onFocusChanged { if (it.isFocused) onSearchFocus() },
     )
     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
       items(rows, key = { it.site.id }) { row ->
