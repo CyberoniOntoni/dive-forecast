@@ -198,6 +198,9 @@ describe("API v1 plans", () => {
     expect(words.leaveBy).toMatch(/^Leave by \d\d:\d\d$/);
     expect(body.legs[0]).toMatchObject({ from: 1, ...words });
     expect(body.legs[0]).not.toHaveProperty("fromTime");
+    // The plan page's day line: 3.704 km is 2.0 nm; 15 min shown as 15.
+    expect(body.total).toBe("2.0 nm by boat · about 15 min at 8 kn");
+    expect(apiPlanLegs("Kq7vHtmWpdNrcXfa", 0, [], 8).total).toBeNull();
   });
 
   describe("the editor", () => {

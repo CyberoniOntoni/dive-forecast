@@ -39,6 +39,7 @@ import type { RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
 import { SCALE_MAX_M, SCALE_STOPS, SCALE_TICKS, SHELTER_OPACITY, shelterReadout } from "./shelter-layer";
 import type { PlanLeg, PlanSummary, SavePlanResult } from "./plan-actions";
+import { dayTotalLine } from "./plan-legs";
 import type { PlanStopView, PlanView } from "./plan-view";
 import {
   betterText,
@@ -630,7 +631,14 @@ export type ApiPlanLeg = LegWords & {
   points: [number, number][];
 };
 
-export type ApiPlanLegs = { apiVersion: number; planId: string; dayIndex: number; legs: ApiPlanLeg[] };
+export type ApiPlanLegs = {
+  apiVersion: number;
+  planId: string;
+  dayIndex: number;
+  /** "4.2 nm by boat · about 35 min at 8 kn", the plan page's day line; null with no legs. */
+  total: string | null;
+  legs: ApiPlanLeg[];
+};
 
 export function apiPlanLegs(
   planId: string,
@@ -642,6 +650,7 @@ export function apiPlanLegs(
     apiVersion: API_VERSION,
     planId,
     dayIndex,
+    total: dayTotalLine(legs, speedKn),
     legs: legs.map((leg) => ({
       ...legWords(leg, speedKn, leg.fromTime, leg.toTime),
       from: leg.from,

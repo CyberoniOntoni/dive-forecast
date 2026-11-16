@@ -301,10 +301,11 @@ words. `tone` is the dive's marker colour: `incoming`, `outgoing`, `stop` (a war
 ### `GET /api/v1/plans/{id}/days/{day}/legs`
 
 The boat legs between day `day`'s dives (0-based), at the plan's boat speed with no current, as the plan page shows
-them: `{"apiVersion": 1, "planId", "dayIndex", "legs": [{"from": 0, "text": "2.1 nm · about 20 min at 8 kn",
+them: `{"apiVersion": 1, "planId", "dayIndex", "total": "4.2 nm by boat · about 35 min at 8 kn", "legs": [{"from": 0, "text": "2.1 nm · about 20 min at 8 kn",
 "leaveBy": "Leave by 10:35", "tight": false, "tightNote": null, "note": null, "lengthKm", "minutes", "routed",
 "points": [[lat, lon], …]}]}`. `from` counts the day's dives as the plan body lists them. Each day is a separate call,
-since routing takes about a tenth of a second per leg. 404 for an unknown plan or day.
+since routing takes about a tenth of a second per leg. `total` is the plan page's day line (null with no legs); the app
+draws `points` on the day's map, dashed where `routed` is false. 404 for an unknown plan or day.
 
 ## Boat navigation
 
@@ -538,7 +539,7 @@ working, and no web cookie is set. A refusal is 400 with the web form's words ("
 `GET /api/v1/me` also carries what the web's account page shows: `about`, `ratings`, `reportSites`, `atolls`, every
 badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxChars`.
 
-## Next (not built yet)
+## Next
 
-Still web-only: a dive plan day's map, and the atoll picker on the map's site list. New web features come with their
-own section here.
+With each plan day on its own map (from the legs' `points`) and the site list's atoll picker, nothing from the web is
+missing from the app now. New web features come with their own section here.

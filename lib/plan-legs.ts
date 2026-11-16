@@ -31,6 +31,14 @@ export function durationText(minutes: number): string {
   return rest ? `${hours} h ${rest} min` : `${hours} h`;
 }
 
+/** "4.2 nm by boat · about 35 min at 8 kn", a day's boat legs together; null for a day with no legs. */
+export function dayTotalLine(legs: readonly { lengthKm: number; minutes: number }[], speedKn: number): string | null {
+  if (legs.length === 0) return null;
+  const km = legs.reduce((sum, leg) => sum + leg.lengthKm, 0);
+  const minutes = legs.reduce((sum, leg) => sum + leg.minutes, 0);
+  return `${nmFromKm(km).toFixed(1)} nm by boat · about ${durationText(minutes)} at ${speedKn} kn`;
+}
+
 /** Minutes from a dive's entry until the boat can move on: the dive itself and getting everyone back on board. */
 export const DIVE_TURNAROUND_MIN = 60;
 

@@ -29,6 +29,8 @@ data class PlanUiState(
   val notFound: Boolean = false,
   /** Each day's boat legs by day index, once loaded. */
   val legs: Map<Int, List<ApiPlanLeg>> = emptyMap(),
+  /** Each day's boat line with those legs, "4.2 nm by boat · about 35 min at 8 kn". */
+  val totals: Map<Int, String> = emptyMap(),
   /** Days whose legs could not be loaded and have no copy. */
   val legsFailed: Set<Int> = emptySet(),
 )
@@ -74,15 +76,22 @@ class PlanViewModel(
   private suspend fun loadLegs(plan: ApiPlan, planIsFresh: Boolean) {
     plan.days.forEachIndexed { index, day ->
       if (day.stops.size < 2) return@forEachIndexed
-      val legs =
+      val loaded =
         try {
-          usableLegs(day, repository.planLegs(planId, index), planIsFresh)
+          repository.planLegs(planId, index)
         } catch (_: ApiException) {
           null
         }
+      val legs = loaded?.let { usableLegs(day, it, planIsFresh) }
+      val total = loaded?.value?.total.takeIf { legs != null }
       _state.update {
-        if (legs != null) it.copy(legs = it.legs + (index to legs), legsFailed = it.legsFailed - index)
-        else it.copy(legs = it.legs - index, legsFailed = it.legsFailed + index)
+        if (legs != null)
+          it.copy(
+            legs = it.legs + (index to legs),
+            totals = if (total != null) it.totals + (index to total) else it.totals - index,
+            legsFailed = it.legsFailed - index,
+          )
+        else it.copy(legs = it.legs - index, totals = it.totals - index, legsFailed = it.legsFailed + index)
       }
     }
   }

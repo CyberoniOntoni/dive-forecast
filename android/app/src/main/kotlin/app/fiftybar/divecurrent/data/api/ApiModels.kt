@@ -326,7 +326,14 @@ data class ApiPlanStop(
 
 /** GET /api/v1/plans/{id}/days/{day}/legs: the boat between one day's dives. */
 @Serializable
-data class ApiPlanLegs(val apiVersion: Int, val planId: String, val dayIndex: Int, val legs: List<ApiPlanLeg> = emptyList())
+data class ApiPlanLegs(
+  val apiVersion: Int,
+  val planId: String,
+  val dayIndex: Int,
+  val legs: List<ApiPlanLeg> = emptyList(),
+  /** "4.2 nm by boat · about 35 min at 8 kn": the day's line; null from an older server or with no legs. */
+  val total: String? = null,
+)
 
 @Serializable
 data class ApiPlanLeg(
@@ -341,6 +348,8 @@ data class ApiPlanLeg(
   /** "Straight line: no way round the reef found". */
   val note: String? = null,
   val routed: Boolean = true,
+  /** The boat's way round the reef, [lat, lon] pairs, for the day's map. */
+  val points: List<List<Double>> = emptyList(),
 )
 
 /** GET /api/v1/plans: the signed-in diver's own plans. */

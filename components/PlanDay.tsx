@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { PlanMap, type PlanMapStop } from "@/components/PlanMap";
 import { countOf, dayLabel, warnedCount, type StopOutlook } from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
-import { durationText, nmFromKm } from "@/lib/plan-legs";
+import { dayTotalLine } from "@/lib/plan-legs";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import {
   betterText,
@@ -74,8 +74,7 @@ export function PlanDay({
     name: stop.name,
     color: stopColor(stop),
   }));
-  const totalKm = legs?.reduce((sum, leg) => sum + leg.lengthKm, 0) ?? 0;
-  const totalMinutes = legs?.reduce((sum, leg) => sum + leg.minutes, 0) ?? 0;
+  const total = legs ? dayTotalLine(legs, boatSpeedKn) : null;
   const warned = warnedCount(day.stops);
   const isToday = day.date === today;
   const past = day.date < today;
@@ -98,11 +97,7 @@ export function PlanDay({
           <span>
             {countOf(day.stops.length, "dive")}
           </span>
-          {legs && legs.length > 0 ? (
-            <span>
-              {nmFromKm(totalKm).toFixed(1)} nm by boat · about {durationText(totalMinutes)} at {boatSpeedKn} kn
-            </span>
-          ) : null}
+          {total ? <span>{total}</span> : null}
         </p>
       </header>
       {day.stops.length > 0 ? (
