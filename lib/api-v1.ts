@@ -30,6 +30,7 @@ import {
   type GlanceBearings,
   type GlanceTone,
 } from "./nowcast-glance";
+import type { BoatTrip } from "./boat-route-data";
 import type { PlanLeg, PlanSummary, SavePlanResult } from "./plan-actions";
 import type { PlanStopView, PlanView } from "./plan-view";
 import {
@@ -733,5 +734,67 @@ export function apiPlanSites(sites: readonly PickerSite[], today: string): ApiPl
     apiVersion: API_VERSION,
     today,
     sites: sites.map((site) => ({ id: site.id, name: site.name, atoll: site.atoll, channel: site.channel })),
+  };
+}
+
+/** Five decimals, about a metre: enough for a route line. */
+function roundCoord(value: number): number {
+  return Math.round(value * 1e5) / 1e5;
+}
+
+function roundTo(value: number, places: number): number {
+  const scale = 10 ** places;
+  return Math.round(value * scale) / scale;
+}
+
+/** A boat route with the current along it (GET /api/v1/boat-route). */
+export type ApiBoatRoute = {
+  apiVersion: number;
+  points: [number, number][];
+  lengthKm: number;
+  directKm: number;
+  routed: boolean;
+  gaps: { lat: number; lon: number; widthM: number; shallow: boolean }[];
+  current: {
+    stepKm: number;
+    samples: number[];
+    sources: {
+      siteId: string | null;
+      name: string;
+      hours: { timeMs: number; eastKn: number; northKn: number; strength: Strength | null }[];
+    }[];
+  } | null;
+};
+
+/** getBoatRoute's trip as the API's: the same fields the web panel reads, rounded. */
+export function apiBoatRoute(trip: BoatTrip): ApiBoatRoute {
+  return {
+    apiVersion: API_VERSION,
+    points: trip.points.map(([lat, lon]) => [roundCoord(lat), roundCoord(lon)]),
+    lengthKm: roundTo(trip.lengthKm, 3),
+    directKm: roundTo(trip.directKm, 3),
+    routed: trip.routed,
+    gaps: trip.gaps.map((gap) => ({
+      lat: roundCoord(gap.lat),
+      lon: roundCoord(gap.lon),
+      widthM: Math.round(gap.widthM),
+      shallow: gap.shallow,
+    })),
+    current: trip.current
+      ? {
+          stepKm: roundTo(trip.current.stepKm, 4),
+          samples: [...trip.current.samples],
+          sources: trip.current.sources.map((source) => ({
+            siteId: source.siteId,
+            name: source.name,
+            hours: source.hours.map((hour) => ({
+              timeMs: hour.timeMs,
+              eastKn: roundTo(hour.eastKn, 2),
+              northKn: roundTo(hour.northKn, 2),
+              strength: hour.strength,
+            })),
+          })),
+        }
+      : null,
   };
 }

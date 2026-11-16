@@ -302,7 +302,47 @@ them: `{"apiVersion": 1, "planId", "dayIndex", "legs": [{"from": 0, "text": "2.1
 "points": [[lat, lon], …]}]}`. `from` counts the day's dives as the plan body lists them. Each day is a separate call,
 since routing takes about a tenth of a second per leg. 404 for an unknown plan or day.
 
+## Boat navigation
+
+### `GET /api/v1/boat-route?from=<lat>,<lon>&to=<destination>`
+
+A boat route from the phone's position to a site (`to=<site id>`) or to a point picked on the map (`to=<lat>,<lon>`),
+round the islands and reef the app knows of, with the forecast current along it: what the web's Navigate panel gets
+from `getBoatRoute` (`lib/boat-route.ts`, `lib/route-current-data.ts`). Satellite outlines, not a chart.
+
+```json
+{
+  "apiVersion": 1,
+  "points": [[4.17, 73.51], [4.19, 73.52]],
+  "lengthKm": 3.2,
+  "directKm": 2.9,
+  "routed": true,
+  "gaps": [{ "lat": 4.18, "lon": 73.515, "widthM": 300, "shallow": false }],
+  "current": {
+    "stepKm": 0.25,
+    "samples": [0, 0, 1, -1],
+    "sources": [
+      { "siteId": "banana-reef", "name": "Banana Reef",
+        "hours": [{ "timeMs": 1763269200000, "eastKn": 0.57, "northKn": -0.57, "strength": "mild" }] }
+    ]
+  }
+}
+```
+
+- `points` are `[lat, lon]` from the boat to the destination; with `routed: false` no way through the known water was
+  found and they are the straight line. `gaps` are the outline gaps the route goes through, in order; `shallow` is a
+  reef-flat sill (check the depth).
+- `current` is null when it could not be read; the route still stands. `samples` has one entry every `stepKm` along
+  the route from its start: an index into `sources`, or `-1` where no forecast covers it (inside a lagoon away from
+  sites). A source is a site's forecast near the route (`siteId` set; its arrow heading at a typical speed for its band,
+  `strength` the band) or the ocean model offshore (`siteId` and `strength` null). `hours` run from an hour before now
+  for 12 hours; `timeMs` is Unix ms at the start of each hour, and an hour counts for 90 minutes either side.
+- The app works out the steer bearing, the time-stepped ETA and the very-strong warnings itself, from these, as the web
+  panel does (`lib/route-current.ts`).
+- `Cache-Control: no-store`. Ask again at most every 20 seconds, and only when the boat is 300 m off the route.
+- 400 `bad_request` for a missing or bad `from` or `to`, or a start or point outside the Maldives (the message says
+  which). 404 for an unknown site.
+
 ## Next (not built yet)
 
-Ratings and reviews (with photos), boat routes and the map layers. Each comes with its own
-section here.
+Ratings and reviews (with photos) and the map layers. Each comes with its own section here.

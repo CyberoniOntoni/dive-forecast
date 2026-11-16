@@ -3,6 +3,7 @@
 import { atollForPin } from "./bearing";
 import type { BoatTrip } from "./boat-route-data";
 import { boatRoute } from "./boat-route-data";
+import { ROUTE_BAD_DESTINATION, ROUTE_BAD_POSITION, ROUTE_OUTSIDE } from "./boat-route-limits";
 import { readPointDestination } from "./point-destination";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
 import { siteNoteFor } from "./site-type";
@@ -716,11 +717,11 @@ export async function getBoatRoute(from: { lat: number; lon: number }, destinati
   await ready();
   const { lat, lon } = from ?? {};
   if (typeof lat !== "number" || typeof lon !== "number" || !Number.isFinite(lat) || !Number.isFinite(lon)) {
-    throw new Error("Bad position");
+    throw new Error(ROUTE_BAD_POSITION);
   }
-  if (!inRouteBox({ lat, lon })) throw new Error("Routes start in the Maldives");
-  if (typeof destinationId !== "string" || destinationId.length === 0) throw new Error("Bad destination");
+  if (!inRouteBox({ lat, lon })) throw new Error(ROUTE_OUTSIDE);
+  if (typeof destinationId !== "string" || destinationId.length === 0) throw new Error(ROUTE_BAD_DESTINATION);
   const point = readPointDestination(destinationId);
-  if (point && !inRouteBox(point)) throw new Error("Bad destination");
+  if (point && !inRouteBox(point)) throw new Error(ROUTE_BAD_DESTINATION);
   return boatRoute({ lat, lon }, destinationId);
 }

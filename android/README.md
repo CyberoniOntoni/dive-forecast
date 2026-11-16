@@ -27,11 +27,20 @@ What it does:
   of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
   open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
   note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
+- **Boat navigation**: "Navigate here by boat" on a site page, the map list's pin button (sites nearest first, with a
+  search), or a long press on the map for a point. The screen follows the phone's GPS while it is open (and keeps the
+  screen on), asks the server for a route round the islands and reef (`GET /api/v1/boat-route`, the web's route and
+  its forecast current), and shows distance left, speed, the steer allowing for the current, the ETA with the current
+  each stretch has when the boat gets there, and the web panel's warnings (very strong current ahead, a shallow
+  reef-flat gap, a current the boat cannot beat). It asks again when the boat is 300 m off the route, at most every
+  20 seconds. The steer and ETA are worked out in the app (`domain/BoatNav.kt`, `domain/RouteCurrent.kt`,
+  `domain/NavReadout.kt`), ported from `lib/boat-nav.ts` and `lib/route-current.ts` with their tests. Location comes
+  from the platform `LocationManager` (no Play services), only while the screen is started. Satellite outlines, not a
+  chart.
 - **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Ratings and reviews, adding sites, boat navigation and the extra map layers are on the web for now (API.md
-§ Next).
+Ratings and reviews, adding sites and the extra map layers are on the web for now (API.md § Next).
 
 ## Build and run
 
@@ -72,6 +81,7 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `ui/site/` | Site page, hour strip, report form, recent reports |
 | `ui/account/` | Sign-in and account |
 | `ui/plan/`, `domain/PlanLink.kt` | Plan pages, my plans, reading a plan id from a link |
+| `ui/nav/`, `domain/BoatNav.kt`, `domain/RouteCurrent.kt`, `domain/NavReadout.kt` | Boat navigation: GPS, route map, steer and ETA |
 
 The display rules live only on the server (`lib/nowcast-glance.ts`, put on every hour by `lib/api-v1.ts`): the app
 draws the glance it is given, so a wording change ships with the server. Site kinds come as `siteTypeLabel`.

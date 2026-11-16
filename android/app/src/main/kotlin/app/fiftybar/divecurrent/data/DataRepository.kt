@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.data
 
+import app.fiftybar.divecurrent.data.api.ApiBoatRoute
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiJson
@@ -66,6 +67,9 @@ class DataRepository(
 
   /** The plan editor's site list, kept like every other read so the editor opens on the last copy when the server is slow. */
   suspend fun planSites(): Loaded<ApiPlanSites> = load("plan-sites", ApiPlanSites.serializer()) { api.planSites().second }
+
+  /** A boat route, always from the server: it is about where the boat is now. */
+  suspend fun boatRoute(fromLat: Double, fromLon: Double, to: String): ApiBoatRoute = api.boatRoute(fromLat, fromLon, to)
 
   /** The phone's copy only, for showing something while the first fetch runs. */
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)

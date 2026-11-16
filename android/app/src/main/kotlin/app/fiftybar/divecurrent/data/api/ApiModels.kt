@@ -401,3 +401,44 @@ data class ApiPlanSummary(
   val first: String = "",
   val last: String = "",
 )
+
+/** GET /api/v1/boat-route: the route from the boat to a site or point, and the forecast current along it. */
+@Serializable
+data class ApiBoatRoute(
+  val apiVersion: Int = 1,
+  /** [lat, lon] from the boat to the destination; the straight line when [routed] is false. */
+  val points: List<List<Double>> = emptyList(),
+  val lengthKm: Double = 0.0,
+  val directKm: Double = 0.0,
+  val routed: Boolean = false,
+  val gaps: List<ApiRouteGap> = emptyList(),
+  val current: ApiRouteCurrent? = null,
+)
+
+@Serializable data class ApiRouteGap(val lat: Double, val lon: Double, val widthM: Double = 0.0, val shallow: Boolean = false)
+
+@Serializable
+data class ApiRouteCurrent(
+  val stepKm: Double,
+  /** One per sample every [stepKm]: an index into [sources], or -1 where no forecast covers the route. */
+  val samples: List<Int> = emptyList(),
+  val sources: List<ApiRouteCurrentSource> = emptyList(),
+)
+
+@Serializable
+data class ApiRouteCurrentSource(
+  /** Null for the ocean model offshore. */
+  val siteId: String? = null,
+  val name: String,
+  val hours: List<ApiRouteCurrentHour> = emptyList(),
+)
+
+@Serializable
+data class ApiRouteCurrentHour(
+  /** Unix ms at the start of the hour. */
+  val timeMs: Long,
+  val eastKn: Double,
+  val northKn: Double,
+  /** The site forecast's band ("too_strong" is very strong); null offshore. */
+  val strength: String? = null,
+)

@@ -1,6 +1,7 @@
 package app.fiftybar.divecurrent.data.api
 
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -105,6 +106,17 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   suspend fun fileReport(token: String, siteId: String, report: ReportRequest): ApiReportSaved =
     post(listOf("api", "v1", "sites", siteId, "reports"), ApiJson.encodeToString(report), token)
+
+  /** A boat route from [fromLat], [fromLon] to a site id or a "lat,lon" point. Never kept: it is about one position. */
+  suspend fun boatRoute(fromLat: Double, fromLon: Double, to: String): ApiBoatRoute {
+    val url =
+      url(listOf("api", "v1", "boat-route"))
+        .newBuilder()
+        .addQueryParameter("from", "${"%.5f".format(Locale.ROOT, fromLat)},${"%.5f".format(Locale.ROOT, fromLon)}")
+        .addQueryParameter("to", to)
+        .build()
+    return decode(fetch(Request.Builder().url(url).get()))
+  }
 
   private fun url(segments: List<String>): HttpUrl =
     base.newBuilder().apply { segments.forEach { addPathSegment(it) } }.build()

@@ -83,7 +83,13 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit, reportAt: String? = null) {
+fun SiteScreen(
+  siteId: String,
+  onBack: () -> Unit,
+  onSignIn: () -> Unit,
+  onNavigate: (ApiSite) -> Unit,
+  reportAt: String? = null,
+) {
   val repository = appRepository()
   val account = appAccount()
   val viewModel: SiteViewModel = viewModel(key = "site/$siteId/${reportAt.orEmpty()}") { SiteViewModel(siteId, repository, account, reportAt) }
@@ -149,6 +155,11 @@ fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit, reportA
           HourPicker(forecast, state.selected, onSelect = viewModel::select, onNow = viewModel::selectNow)
           SeaStateCard(forecast, selectedTime)
           NoticeCard(forecast)
+        }
+      }
+      state.site?.takeIf { !state.notFound }?.let { site ->
+        OutlinedButton(onClick = { onNavigate(site) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+          Text("Navigate here by boat")
         }
       }
       if (!state.notFound) {

@@ -47,6 +47,33 @@ class DataRepositoryTest {
   }
 
   @Test
+  fun `asks for a boat route with the position and destination, and keeps no copy`() = runTest {
+    server.enqueue(reply(200, BOAT_ROUTE))
+    val route = repository.boatRoute(4.123456, 73.5, "4.25000,73.60000")
+    assertTrue(route.routed)
+    assertEquals(listOf(4.17, 73.51), route.points.first())
+    assertEquals(true, route.gaps.single().shallow)
+    val source = route.current!!.sources.first()
+    assertEquals("Banana Reef", source.name)
+    assertEquals("mild", source.hours.single().strength)
+    assertEquals(listOf(0, 0, 1, -1), route.current.samples)
+    assertEquals("/api/v1/boat-route?from=4.12346%2C73.50000&to=4.25000%2C73.60000", server.takeRequest().path)
+    assertTrue(dao.rows.isEmpty())
+  }
+
+  @Test
+  fun `a refused boat route reaches the caller in the server's words`() = runTest {
+    server.enqueue(reply(400, """{"error":{"code":"bad_request","message":"Routes start in the Maldives."}}"""))
+    try {
+      repository.boatRoute(51.5, -0.1, "banana-reef")
+      fail("expected a refusal")
+    } catch (e: ApiException.Server) {
+      assertEquals(400, e.status)
+      assertEquals("Routes start in the Maldives.", e.message)
+    }
+  }
+
+  @Test
   fun `falls back to the last copy when the server cannot be reached`() = runTest {
     dao.rows["nowcast"] = CachedBody("nowcast", NOWCAST, savedAt = 500L)
     server.enqueue(reply(503, """{"error":{"code":"server_error","message":"Down for a minute."}}"""))
@@ -131,6 +158,29 @@ class DataRepositoryTest {
   }
 
   private companion object {
+    /** The API.md boat-route example. */
+    val BOAT_ROUTE =
+      """
+      {
+        "apiVersion": 1,
+        "points": [[4.17, 73.51], [4.19, 73.52]],
+        "lengthKm": 3.2,
+        "directKm": 2.9,
+        "routed": true,
+        "gaps": [{ "lat": 4.18, "lon": 73.515, "widthM": 300, "shallow": true }],
+        "current": {
+          "stepKm": 0.25,
+          "samples": [0, 0, 1, -1],
+          "sources": [
+            { "siteId": "banana-reef", "name": "Banana Reef",
+              "hours": [{ "timeMs": 1763269200000, "eastKn": 0.57, "northKn": -0.57, "strength": "mild" }] },
+            { "siteId": null, "name": "Open sea", "hours": [] }
+          ]
+        }
+      }
+      """
+        .trimIndent()
+
     val NOWCAST =
       """
       {
