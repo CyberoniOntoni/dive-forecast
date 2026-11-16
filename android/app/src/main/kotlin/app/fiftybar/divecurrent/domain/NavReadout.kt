@@ -78,7 +78,7 @@ object NavReadouts {
     val steer = crabbed?.headingDeg ?: track
 
     fun timeAt(knots: Double): RouteTime? =
-      if (points != null && along != null) RouteCurrents.routeTime(points, routeKm, route?.current, knots, boat.timeMs) else null
+      if (points != null && along != null) RouteCurrents.routeTime(points, routeKm, route.current, knots, boat.timeMs) else null
 
     val timed = throughWater?.let(::timeAt)
     val eta =
@@ -100,7 +100,7 @@ object NavReadouts {
     val veryStrong = (timed ?: if (stopped) timeAt(BoatNav.REFERENCE_KNOTS[0]) else null)?.veryStrong.orEmpty()
 
     val routed = route?.routed == true
-    val gaps = if (routed) route?.gaps?.size ?: 0 else 0
+    val gaps = if (routed) route.gaps.size else 0
     val knots = here?.current?.knots ?: 0.0
     val steerTrack = if (crabbed != null) track else null
     val steerOffTrack = steerTrack != null && BoatNav.headingGapDeg(steer, steerTrack) >= STEER_NOTE_DEG

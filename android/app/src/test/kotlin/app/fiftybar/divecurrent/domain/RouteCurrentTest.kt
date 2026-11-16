@@ -116,9 +116,10 @@ class RouteCurrentTest {
     val fixes = listOf(Fix(4.0, 73.5, t0, 5.0, speedMs = 10 * BoatNav.MS_PER_KNOT, headingDeg = 0.0))
     val readout = NavReadouts.of(target, fixes, route(steady(listOf(H(0, 90.0, 2.0)))), routeFailed = false, nowMs = t0)!!
     assertTrue(readout.byRoute)
-    assertEquals(5 * 1.852, readout.remainingKm!!, 1e-3)
+    assertEquals(BoatNav.distanceKm(LatLon(4.0, 73.5), target), readout.remainingKm!!, 1e-6)
     // Through the water: hypot(10, 2) kn, and the steer points west of north.
-    assertTrue(readout.steerDeg!! > 340 && readout.steerDeg!! < 360)
+    val steer = readout.steerDeg!!
+    assertTrue(steer > 340 && steer < 360)
     assertEquals(30.0, readout.etaMinutes!!, 0.5)
     assertEquals("08:30", readout.arrival)
     assertTrue(readout.note, readout.note.startsWith("Steer 349° N for track 000° N · current 2.0 kn toward E (Test Kandu)"))
