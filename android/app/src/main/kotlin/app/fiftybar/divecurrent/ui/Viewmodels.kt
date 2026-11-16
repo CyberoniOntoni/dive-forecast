@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import app.fiftybar.divecurrent.DiveCurrentApp
+import app.fiftybar.divecurrent.data.AccountRepository
 import app.fiftybar.divecurrent.data.DataRepository
 
 /**
@@ -11,3 +12,7 @@ import app.fiftybar.divecurrent.data.DataRepository
  */
 @Composable
 fun appRepository(): DataRepository = (LocalContext.current.applicationContext as DiveCurrentApp).repository
+
+/** Sign-in and the diver's writes, like [appRepository]. */
+@Composable
+fun appAccount(): AccountRepository = (LocalContext.current.applicationContext as DiveCurrentApp).account

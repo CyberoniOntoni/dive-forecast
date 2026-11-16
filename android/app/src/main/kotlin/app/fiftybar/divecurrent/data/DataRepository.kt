@@ -4,6 +4,7 @@ import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiJson
 import app.fiftybar.divecurrent.data.api.ApiNowcast
+import app.fiftybar.divecurrent.data.api.ApiRecentReports
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.ApiSites
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
@@ -41,6 +42,12 @@ class DataRepository(
 
   suspend fun forecast(siteId: String): Loaded<ApiForecast> =
     load("forecast/$siteId", ApiForecast.serializer()) { api.forecast(siteId).second }
+
+  suspend fun reports(siteId: String): Loaded<ApiRecentReports> =
+    load("reports/$siteId", ApiRecentReports.serializer()) { api.reports(siteId).second }
+
+  suspend fun cachedReports(siteId: String): Loaded<ApiRecentReports>? =
+    cached("reports/$siteId", ApiRecentReports.serializer(), null)
 
   /** The phone's copy only, for showing something while the first fetch runs. */
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)

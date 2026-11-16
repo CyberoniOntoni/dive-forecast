@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { compassWord, onCompass, routeDirectionLegend, strengthLabel } from "@/lib/nowcast-glance";
 import { addReportAction, type ReportActionState } from "@/lib/actions";
-import { POINTS, type AwardReason, type ReportAward } from "@/lib/points-rules";
+import { awardLine } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
 import { MALDIVES_TIME, viewerClock, wallHoursBefore, zoneLabel, type SiteTimeZone } from "@/lib/site-time";
 import type { Direction, ForecastRoute, Strength } from "@/lib/types";
@@ -34,23 +34,6 @@ type TimeChoice = (typeof QUICK_HOURS)[number] | "other";
 
 function quickLabel(hours: number): string {
   return hours === 0 ? "This hour" : `${hours} h ago`;
-}
-
-const REASON_WORDS: Record<AwardReason, string> = {
-  report: "report",
-  fresh: "filed soon after the dive",
-  pathfinder: "first report here in a month",
-};
-
-/** "+25 points: report 10, filed soon after the dive 5, first report here in a month 10". */
-function awardLine(award: ReportAward): string {
-  if (award.points === 0) {
-    return award.uncounted === "same-dive"
-      ? "No points: you already reported this dive."
-      : "No points: today's reports already count in full.";
-  }
-  const parts = award.reasons.map((reason) => `${REASON_WORDS[reason]} ${POINTS[reason]}`);
-  return `+${award.points} points: ${parts.join(", ")}.`;
 }
 
 /**

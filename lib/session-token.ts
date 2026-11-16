@@ -52,11 +52,55 @@ export async function verifySession(token: string, secret: string, nowMs: number
   if (!sameText(signature, toBase64Url(await hmac(secret, payload)))) return null;
   try {
     const bytes = fromBase64Url(payload);
-    if (!bytes) return null;
-    const parsed = JSON.parse(new TextDecoder().decode(bytes)) as { u?: unknown; n?: unknown; t?: unknown };
-    if (typeof parsed.u !== "string" || typeof parsed.n !== "string" || typeof parsed.t !== "number") return null;
-    if (nowMs - parsed.t > SESSION_MAX_AGE_S * 1000 || parsed.t - nowMs > 60_000) return null;
-    return { userId: parsed.u, nickname: parsed.n, issuedAt: parsed.t };
+    return bytes ? sessionFrom(new TextDecoder().decode(bytes), nowMs) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A payload's session, or null when it is malformed, too old, or from the future. */
+function sessionFrom(json: string, nowMs: number): Session | null {
+  const parsed = JSON.parse(json) as { u?: unknown; n?: unknown; t?: unknown };
+  if (typeof parsed.u !== "string" || typeof parsed.n !== "string" || typeof parsed.t !== "number") return null;
+  if (nowMs - parsed.t > SESSION_MAX_AGE_S * 1000 || parsed.t - nowMs > 60_000) return null;
+  return { userId: parsed.u, nickname: parsed.n, issuedAt: parsed.t };
+}
+
+/** Marks the app's token, so a cookie value never works as one and the format can change later. */
+const APP_TOKEN_PREFIX = "app1.";
+
+/** AES-256-GCM, its key derived from the app secret for this use only. */
+async function appTokenKey(secret: string, use: KeyUsage): Promise<CryptoKey> {
+  const raw = await crypto.subtle.digest("SHA-256", encoder.encode(`app-token:${secret}`));
+  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, false, [use]);
+}
+
+/**
+ * The app's bearer token (API.md § Sign-in): the same session as the cookie, but encrypted as well as sealed, so the
+ * diver's id inside it is not readable from the token. "app1." then base64url of a 12-byte IV and the ciphertext.
+ */
+export async function sealSession(session: Session, secret: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const plain = encoder.encode(JSON.stringify({ u: session.userId, n: session.nickname, t: session.issuedAt }));
+  const sealed = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await appTokenKey(secret, "encrypt"), plain));
+  const bytes = new Uint8Array(iv.length + sealed.length);
+  bytes.set(iv);
+  bytes.set(sealed, iv.length);
+  return APP_TOKEN_PREFIX + toBase64Url(bytes);
+}
+
+/** The session in an app token, or null when it is malformed, sealed with another secret, changed, or too old. */
+export async function openSession(token: string, secret: string, nowMs: number = Date.now()): Promise<Session | null> {
+  if (!token.startsWith(APP_TOKEN_PREFIX)) return null;
+  try {
+    const bytes = fromBase64Url(token.slice(APP_TOKEN_PREFIX.length));
+    if (!bytes || bytes.length < 12 + 16) return null;
+    const plain = await crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: bytes.slice(0, 12) },
+      await appTokenKey(secret, "decrypt"),
+      bytes.slice(12),
+    );
+    return sessionFrom(new TextDecoder().decode(plain), nowMs);
   } catch {
     return null;
   }

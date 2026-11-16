@@ -4,6 +4,7 @@ import { GET as getSiteById } from "@/app/api/v1/sites/[id]/route";
 import { GET as getForecast } from "@/app/api/v1/sites/[id]/forecast/route";
 import {
   API_CACHE_CONTROL,
+  apiReportWays,
   API_VERSION,
   apiForecast,
   apiGlance,
@@ -193,5 +194,14 @@ describe("API v1 routes", () => {
   it("GET /api/v1/sites/{id}/forecast is a 404 for an unknown site", async () => {
     const missing = await getForecast(new Request("http://test/api/v1/sites/nope/forecast"), params("nope"));
     expect(missing.status).toBe(404);
+  });
+});
+
+describe("report words", () => {
+  it("says incoming and outgoing at a channel, compass points along an axis", () => {
+    expect(apiReportWays("channel", 40)).toEqual({ legend: "Incoming or outgoing", incoming: "Incoming", outgoing: "Outgoing" });
+    expect(apiReportWays("along-reef", 45)).toEqual({ legend: "Which way along the reef", incoming: "Running NE", outgoing: "Running SW" });
+    expect(apiReportWays("lagoon", 180)).toMatchObject({ legend: "Which way it ran", incoming: "Running S", outgoing: "Running N" });
+    expect(apiReportWays("lagoon", null)).toMatchObject({ incoming: "Incoming" });
   });
 });

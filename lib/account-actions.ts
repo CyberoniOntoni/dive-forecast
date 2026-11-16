@@ -1,11 +1,12 @@
 "use server";
 
-import { finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
+import { normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import {
   appUrl,
   authSecret,
   clearSessionCookie,
   currentSession,
+  issueAppToken,
   requestIpKey,
   requireSession,
   setSessionCookie,
@@ -15,17 +16,20 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { siteScouts } from "./site-scouts";
-import { hashLoginCode, newLoginCode, sameText } from "./session-token";
+import { hashLoginCode, newLoginCode } from "./session-token";
+import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
 import { listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
 
-const NOT_SET_UP = "Signing in is not set up on this server yet.";
 
-/** Emails a six-digit code (and a link that fills it in) to the address. */
-export async function requestSignIn(emailInput: unknown, next?: unknown): Promise<SignInStep> {
+/**
+ * Emails a six-digit code (and a link that fills it in) to the address. `codeOnly` leaves the link out: the app asks
+ * for the code, and the link would sign the phone's browser in instead, using up the code.
+ */
+export async function requestSignIn(emailInput: unknown, next?: unknown, codeOnly?: unknown): Promise<SignInStep> {
   await ready();
   try {
     const email = normalizeEmail(emailInput);
@@ -39,7 +43,7 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
     const ipKey = await requestIpKey(secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now(), ipKey));
     const base = await appUrl();
-    const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
+    const link = base && codeOnly !== true ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
     if (routes.length > 0) {
       await sendLoginEmail(routes, { to: email, code, link }).catch(() => {
         throw new Error("Could not send the email. Try again in a minute.");
@@ -58,16 +62,28 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
 export async function completeSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<SignInStep> {
   await ready();
   try {
-    const email = normalizeEmail(input?.email);
-    const code = typeof input?.code === "string" ? input.code.replace(/\D/g, "") : "";
-    if (code.length !== 6) return { ok: false, error: "Enter the 6-digit code from the email." };
-    const secret = authSecret();
-    if (!secret) return { ok: false, error: NOT_SET_UP };
-    const codeHash = await hashLoginCode(email, code, secret);
-    const result = await mutateStore((store) => finishLogin(store, email, codeHash, Date.now(), input?.nickname, sameText));
+    const result = await checkSignInCode(input);
     if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
     await setSessionCookie(result.user.id, result.user.nickname);
     return { ok: true, error: null };
+  } catch (caught) {
+    return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign in." };
+  }
+}
+
+export type AppSignInStep = SignInStep & { token?: string; nickname?: string; expiresAt?: number };
+
+/**
+ * The app's sign-in (POST /api/v1/sign-in/token): the same code check as completeSignIn, answered with the app's
+ * encrypted bearer token instead of a cookie.
+ */
+export async function completeAppSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<AppSignInStep> {
+  await ready();
+  try {
+    const result = await checkSignInCode(input);
+    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
+    const { token, expiresAt } = await issueAppToken(result.user.id, result.user.nickname);
+    return { ok: true, error: null, token, nickname: result.user.nickname, expiresAt };
   } catch (caught) {
     return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign in." };
   }

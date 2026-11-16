@@ -1,17 +1,31 @@
+import { bearerToken } from "./auth";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
-import { glanceRank, hourGlance, type GlanceBearings, type GlanceTone } from "./nowcast-glance";
+import {
+  compassWord,
+  glanceRank,
+  hourGlance,
+  onCompass,
+  routeDirectionLegend,
+  type GlanceBearings,
+  type GlanceTone,
+} from "./nowcast-glance";
+import { awardLine, type ReportAward } from "./points-rules";
+import type { RecentReportRow } from "./recent-reports";
 import { photoUrl } from "./site-photos-limits";
 import { SITE_TYPE_LABEL } from "./site-type";
 import type {
   Atoll,
   BearingSource,
+  Direction,
   ForecastRoute,
   HourForecast,
+  Report,
   SeaStateHour,
   Site,
   SiteForecast,
   SiteType,
+  Strength,
 } from "./types";
 
 /**
@@ -122,9 +136,28 @@ export type ApiForecast = {
   seaState: SeaStateHour[] | null;
   /** True when the sea state comes from an old cached wave or wind series. */
   seaStale: boolean;
+  /** The report form's words for this site, as the web form shows them. */
+  reportWays: ApiReportWays;
 };
 
-export type ApiErrorCode = "not_found" | "bad_request" | "server_error";
+/**
+ * What the two report choices say: "Incoming" / "Outgoing" at a channel, the compass points the axis runs to elsewhere
+ * ("Running NE" / "Running SW"), with the question above them. A report still sends `incoming` or `outgoing`.
+ */
+export type ApiReportWays = { legend: string; incoming: string; outgoing: string };
+
+export function apiReportWays(route: ForecastRoute, alongHeadingDeg: number | null): ApiReportWays {
+  const legend = routeDirectionLegend(route, alongHeadingDeg);
+  if (!onCompass(route, alongHeadingDeg)) return { legend, incoming: "Incoming", outgoing: "Outgoing" };
+  return { legend, incoming: `Running ${compassWord(alongHeadingDeg)}`, outgoing: `Running ${compassWord(alongHeadingDeg + 180)}` };
+}
+
+export type ApiErrorCode =
+  | "not_found"
+  | "bad_request"
+  | "server_error"
+  | "unauthorized"
+  | "needs_nickname";
 
 export function apiSite(site: Site, atollName?: string | null): ApiSite {
   const userAdded = site.sourceUrl === "user";
@@ -251,6 +284,7 @@ export function apiForecast(site: Site, forecast: SiteForecast): ApiForecast {
     fetchedAt: forecast.fetchedAt,
     seaState: forecast.seaState,
     seaStale: forecast.seaStale,
+    reportWays: apiReportWays(forecast.forecastRoute, forecast.alongHeadingDeg),
   };
 }
 
@@ -279,4 +313,94 @@ export async function apiHandler(run: () => Promise<Response>): Promise<Response
     console.error("API v1 request failed", error);
     return apiError(500, "server_error", "Something went wrong. Try again.");
   }
+}
+
+/** For anything about one diver: never kept by the phone's HTTP cache or any cache in between. */
+export const API_NO_STORE = "private, no-store";
+
+/**
+ * A write's JSON body as an object, or the error response to send. Only `application/json` is read: a browser cannot
+ * send that to another site's address without asking first (CORS), and this API answers no such question.
+ */
+export async function apiJsonBody(request: Request): Promise<Record<string, unknown> | Response> {
+  const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (type !== "application/json") return apiError(415, "bad_request", "Send the body as application/json.");
+  try {
+    const body: unknown = await request.json();
+    if (body !== null && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
+  } catch {
+    // Falls through to the error below.
+  }
+  return apiError(400, "bad_request", "The body is not a JSON object.");
+}
+
+/**
+ * The 401 to send when a request that needs a diver has no `Authorization: Bearer` header, else null. Writes take the
+ * app's token only, never the web's cookie, so a page on another site cannot file a report as a signed-in visitor.
+ */
+export function apiNeedsToken(request: Request): Response | null {
+  return bearerToken(request.headers.get("authorization")) ? null : apiError(401, "unauthorized", "Sign in first.");
+}
+
+/** A diver's report as the site page lists it: words made on the server, and the nickname only. */
+export type ApiRecentReport = {
+  time: string;
+  /** "Tue 30 Sep 09:00". */
+  when: string;
+  /** "2 days ago". */
+  ago: string;
+  /** "Incoming", "Outgoing", or "Running NE". */
+  way: string;
+  strength: string;
+  /** What the forecast said at that hour, and how the report compares: "match", "close" or "miss". */
+  forecast: { way: string; strength: string; match: string } | null;
+  /** Filed before the site was read along its axis, so its in/out cannot be turned into a compass way. */
+  beforeAxis: boolean;
+  /** Nickname; null for reports from before sign-in. */
+  by: string | null;
+};
+
+export type ApiRecentReports = { apiVersion: number; siteId: string; reports: ApiRecentReport[] };
+
+export function apiRecentReports(siteId: string, rows: readonly RecentReportRow[]): ApiRecentReports {
+  return {
+    apiVersion: API_VERSION,
+    siteId,
+    reports: rows.map((row) => ({
+      time: row.time,
+      when: row.when,
+      ago: row.ago,
+      way: row.way,
+      strength: row.strength,
+      forecast: row.forecast
+        ? { way: row.forecast.way, strength: row.forecast.strength, match: row.forecast.match }
+        : null,
+      beforeAxis: row.beforeAxis,
+      by: row.by,
+    })),
+  };
+}
+
+/** A saved report: what was filed and what it earned. No diver id, and not the saved prediction. */
+export type ApiReportSaved = {
+  apiVersion: number;
+  report: { id: string; siteId: string; time: string; direction: Direction; strength: Strength };
+  /** `line` is what it earned in words, as the web form says it. */
+  award: { points: number; reasons: string[]; uncounted: string | null; line: string } | null;
+};
+
+export function apiReportSaved(report: Report, award: ReportAward | null): ApiReportSaved {
+  return {
+    apiVersion: API_VERSION,
+    report: {
+      id: report.id,
+      siteId: report.siteId,
+      time: report.time,
+      direction: report.direction,
+      strength: report.strength,
+    },
+    award: award
+      ? { points: award.points, reasons: [...award.reasons], uncounted: award.uncounted ?? null, line: awardLine(award) }
+      : null,
+  };
 }

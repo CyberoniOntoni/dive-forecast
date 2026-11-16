@@ -6,12 +6,16 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import app.fiftybar.divecurrent.ui.account.AccountScreen
+import app.fiftybar.divecurrent.ui.account.SignInScreen
 import app.fiftybar.divecurrent.ui.map.MapScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
 
 @Composable
 fun MainNavigation() {
   val backStack = rememberNavBackStack(MapKey)
+  // A screen that leaves by itself (signed in, signed out) never pops the map: an empty back stack would crash.
+  val leave: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
 
   NavDisplay(
     backStack = backStack,
@@ -20,8 +24,23 @@ fun MainNavigation() {
       listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
     entryProvider =
       entryProvider {
-        entry<MapKey> { MapScreen(onOpenSite = { id -> backStack.add(SiteKey(id)) }) }
-        entry<SiteKey> { key -> SiteScreen(siteId = key.siteId, onBack = { backStack.removeLastOrNull() }) }
+        entry<MapKey> {
+          MapScreen(
+            onOpenSite = { id -> backStack.add(SiteKey(id)) },
+            onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
+          )
+        }
+        entry<SiteKey> { key ->
+          SiteScreen(
+            siteId = key.siteId,
+            onBack = leave,
+            onSignIn = { backStack.add(SignInKey) },
+          )
+        }
+        entry<SignInKey> {
+          SignInScreen(onDone = leave, onBack = leave)
+        }
+        entry<AccountKey> { AccountScreen(onBack = leave) }
       },
   )
 }

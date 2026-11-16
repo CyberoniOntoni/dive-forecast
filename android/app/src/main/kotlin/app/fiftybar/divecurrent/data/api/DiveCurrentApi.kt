@@ -8,13 +8,19 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 
 /** A failed call. [message] is safe to show: either the server's own error text or a plain one of ours. */
 sealed class ApiException(message: String) : Exception(message) {
   /** The server answered with an error body. */
-  class Server(val status: Int, val code: String, message: String) : ApiException(message)
+  class Server(val status: Int, val code: String, message: String) : ApiException(message) {
+    /** The token no longer works (expired, signed out everywhere): sign in again. */
+    val signedOut: Boolean
+      get() = status == 401
+  }
 
   /** No answer: offline, timed out, DNS. */
   class Network(cause: IOException) : ApiException("No connection to the forecast server.") {
@@ -38,8 +44,8 @@ val ApiJson = Json {
 }
 
 /**
- * Reads /api/v1 (GET only). Each call returns the decoded body and the raw JSON, so the repository can keep the
- * exact text for offline use.
+ * Talks to /api/v1. Each read returns the decoded body and the raw JSON, so the repository can keep the exact text
+ * for offline use. Calls about one diver send the app's token as `Authorization: Bearer`; writes send JSON.
  */
 class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = defaultClient()) {
   private val base: HttpUrl = baseUrl.trimEnd('/').toHttpUrl()
@@ -57,21 +63,52 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   suspend fun nowcast(): Pair<ApiNowcast, String> = get(listOf("api", "v1", "nowcast"))
 
-  private suspend inline fun <reified T> get(segments: List<String>): Pair<T, String> {
-    val url = base.newBuilder().apply { segments.forEach { addPathSegment(it) } }.build()
-    val text = fetch(url)
-    return try {
-      ApiJson.decodeFromString<T>(text) to text
+  suspend fun reports(siteId: String): Pair<ApiRecentReports, String> =
+    get(listOf("api", "v1", "sites", siteId, "reports"))
+
+  /** Emails a sign-in code. */
+  suspend fun requestCode(email: String): ApiCodeSent =
+    post(listOf("api", "v1", "sign-in", "code"), ApiJson.encodeToString(CodeRequest(email)), token = null)
+
+  /** Trades the emailed code (and a new diver's nickname) for the app's token. */
+  suspend fun token(email: String, code: String, nickname: String?): ApiToken =
+    post(listOf("api", "v1", "sign-in", "token"), ApiJson.encodeToString(TokenRequest(email, code, nickname)), token = null)
+
+  suspend fun me(token: String): ApiMe = get<ApiMe>(listOf("api", "v1", "me"), token).first
+
+  suspend fun signOutEverywhere(token: String) {
+    post<ApiOk>(listOf("api", "v1", "sign-out-everywhere"), "{}", token)
+  }
+
+  suspend fun fileReport(token: String, siteId: String, report: ReportRequest): ApiReportSaved =
+    post(listOf("api", "v1", "sites", siteId, "reports"), ApiJson.encodeToString(report), token)
+
+  private fun url(segments: List<String>): HttpUrl =
+    base.newBuilder().apply { segments.forEach { addPathSegment(it) } }.build()
+
+  private suspend inline fun <reified T> get(segments: List<String>, token: String? = null): Pair<T, String> {
+    val text = fetch(Request.Builder().url(url(segments)).get().withToken(token))
+    return decode<T>(text) to text
+  }
+
+  private suspend inline fun <reified T> post(segments: List<String>, json: String, token: String?): T =
+    decode(fetch(Request.Builder().url(url(segments)).post(json.toRequestBody(JSON)).withToken(token)))
+
+  private inline fun <reified T> decode(text: String): T =
+    try {
+      ApiJson.decodeFromString<T>(text)
     } catch (e: SerializationException) {
       throw ApiException.Malformed(e)
     } catch (e: IllegalArgumentException) {
       throw ApiException.Malformed(e)
     }
-  }
 
-  private suspend fun fetch(url: HttpUrl): String =
+  private fun Request.Builder.withToken(token: String?): Request.Builder =
+    apply { if (token != null) header("Authorization", "Bearer $token") }
+
+  private suspend fun fetch(builder: Request.Builder): String =
     withContext(Dispatchers.IO) {
-      val request = Request.Builder().url(url).header("Accept", "application/json").get().build()
+      val request = builder.header("Accept", "application/json").build()
       try {
         client.newCall(request).execute().use { response ->
           val body = response.body.string()
@@ -89,6 +126,8 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
     }
 
   companion object {
+    private val JSON = "application/json".toMediaType()
+
     fun defaultClient(): OkHttpClient =
       OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)

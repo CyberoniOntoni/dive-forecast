@@ -9,7 +9,8 @@ vi.mock("next/headers", () => ({
   headers: async () => headersBehaviour(),
 }));
 
-const { appUrl, currentSession, ipGroup } = await import("./auth");
+const { appUrl, bearerToken, currentSession, ipGroup, SESSION_COOKIE } = await import("./auth");
+const { sealSession, signSession } = await import("./session-token");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
@@ -79,5 +80,33 @@ describe("ipGroup", () => {
     expect(ipGroup("2001:db8:aa:1::5")).toBe(ipGroup("2001:0db8:00aa:0001:ffff:1:2:3"));
     expect(ipGroup("2001:db8::1")).toBe(ipGroup("2001:db8:0:0:9::"));
     expect(ipGroup("2001:db8:aa:1::5")).not.toBe(ipGroup("2001:db8:aa:2::5"));
+  });
+});
+
+describe("the app's bearer token", () => {
+  it("reads only a Bearer header", () => {
+    expect(bearerToken(null)).toBeUndefined();
+    expect(bearerToken("Bearer abc.def")).toBe("abc.def");
+    expect(bearerToken("bearer  abc.def ")).toBe("abc.def");
+    expect(bearerToken("Basic abc")).toBeUndefined();
+    expect(bearerToken("Bearer")).toBeNull();
+    expect(bearerToken("Bearer a b")).toBeNull();
+  });
+
+  it("signs in by the token, and a bad token is not rescued by a cookie", async () => {
+    const token = await sealSession({ userId: "u1", nickname: "Ann", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
+    const cookie = await signSession({ userId: "u2", nickname: "Bob", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
+    cookiesBehaviour = () => ({ get: (name: string) => (name === SESSION_COOKIE ? { name, value: cookie } : undefined) });
+    headersBehaviour = () => new Headers({ authorization: `Bearer ${token}` });
+    expect(await currentSession()).toMatchObject({ userId: "u1" });
+    headersBehaviour = () => new Headers({ authorization: "Bearer forged.token" });
+    expect(await currentSession()).toBeNull();
+    // The cookie's own value is not an app token.
+    headersBehaviour = () => new Headers({ authorization: `Bearer ${cookie}` });
+    expect(await currentSession()).toBeNull();
+    headersBehaviour = () => new Headers();
+    expect(await currentSession()).toMatchObject({ userId: "u2" });
+    headersBehaviour = () => new Headers({ authorization: "Basic dXNlcjpwYXNz" });
+    expect(await currentSession()).toMatchObject({ userId: "u2" });
   });
 });
