@@ -37,6 +37,7 @@ import app.fiftybar.divecurrent.data.api.ApiRecentReport
 import app.fiftybar.divecurrent.data.api.Strength
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ReportTime
+import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.asForecastLabel
 import app.fiftybar.divecurrent.domain.strengthWord
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -232,11 +233,18 @@ private fun ReportClockDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit,
 
 /** Divers' newest reports, as the site page lists them, with what the forecast said at that hour. */
 @Composable
-internal fun RecentReportsCard(reports: List<ApiRecentReport>?) {
+internal fun RecentReportsCard(reports: List<ApiRecentReport>?, offlineSavedAt: Long?) {
   val colors = CurrentTheme.colors
   if (reports == null) return
   SurfaceCard {
     Text("Recent reports", style = MaterialTheme.typography.titleSmall)
+    offlineSavedAt?.let {
+      Text(
+        "Offline copy saved ${ageLabel(it)}; times ago are from then.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.75f),
+      )
+    }
     if (reports.isEmpty()) {
       Text("No reports yet. Add one above after your dive.", style = MaterialTheme.typography.bodyMedium)
       return@SurfaceCard

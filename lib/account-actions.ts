@@ -25,8 +25,11 @@ import type { StoreData } from "./types";
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
 
 
-/** Emails a six-digit code (and a link that fills it in) to the address. */
-export async function requestSignIn(emailInput: unknown, next?: unknown): Promise<SignInStep> {
+/**
+ * Emails a six-digit code (and a link that fills it in) to the address. `codeOnly` leaves the link out: the app asks
+ * for the code, and the link would sign the phone's browser in instead, using up the code.
+ */
+export async function requestSignIn(emailInput: unknown, next?: unknown, codeOnly?: unknown): Promise<SignInStep> {
   await ready();
   try {
     const email = normalizeEmail(emailInput);
@@ -40,7 +43,7 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
     const ipKey = await requestIpKey(secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now(), ipKey));
     const base = await appUrl();
-    const link = base ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
+    const link = base && codeOnly !== true ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
     if (routes.length > 0) {
       await sendLoginEmail(routes, { to: email, code, link }).catch(() => {
         throw new Error("Could not send the email. Try again in a minute.");

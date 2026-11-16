@@ -88,7 +88,9 @@ describe("the app's bearer token", () => {
     expect(bearerToken(null)).toBeUndefined();
     expect(bearerToken("Bearer abc.def")).toBe("abc.def");
     expect(bearerToken("bearer  abc.def ")).toBe("abc.def");
-    expect(bearerToken("Basic abc")).toBeNull();
+    expect(bearerToken("Basic abc")).toBeUndefined();
+    expect(bearerToken("Bearer")).toBeNull();
+    expect(bearerToken("Bearer a b")).toBeNull();
   });
 
   it("signs in by the token, and a bad token is not rescued by a cookie", async () => {
@@ -103,6 +105,8 @@ describe("the app's bearer token", () => {
     headersBehaviour = () => new Headers({ authorization: `Bearer ${cookie}` });
     expect(await currentSession()).toBeNull();
     headersBehaviour = () => new Headers();
+    expect(await currentSession()).toMatchObject({ userId: "u2" });
+    headersBehaviour = () => new Headers({ authorization: "Basic dXNlcjpwYXNz" });
     expect(await currentSession()).toMatchObject({ userId: "u2" });
   });
 });

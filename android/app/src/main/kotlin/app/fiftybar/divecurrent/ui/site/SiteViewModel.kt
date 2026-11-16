@@ -36,6 +36,8 @@ data class SiteUiState(
   val notFound: Boolean = false,
   /** Divers' newest reports here, newest first; null until loaded. */
   val reports: List<ApiRecentReport>? = null,
+  /** When the phone saved the reports it shows, if they are an offline copy: their "2 days ago" is from then. */
+  val reportsSavedAt: Long? = null,
   val report: ReportFormState = ReportFormState(),
 )
 
@@ -65,7 +67,9 @@ class SiteViewModel(
   init {
     viewModelScope.launch {
       repository.cachedSite(siteId)?.let { site -> _state.update { it.copy(site = site) } }
-      repository.cachedReports(siteId)?.let { cached -> _state.update { it.copy(reports = cached.value.reports) } }
+      repository.cachedReports(siteId)?.let { cached ->
+        _state.update { it.copy(reports = cached.value.reports, reportsSavedAt = cached.savedAt) }
+      }
       repository.cachedForecast(siteId)?.let { cached -> _state.update { show(it, cached, keepSelection = false) } }
       refresh()
     }
@@ -86,7 +90,9 @@ class SiteViewModel(
       val forecastJob = async { runCatching { repository.forecast(siteId) } }
       val reportsJob = async { runCatching { repository.reports(siteId) } }
       siteJob.await().getOrNull()?.let { loaded -> _state.update { it.copy(site = loaded.value) } }
-      reportsJob.await().getOrNull()?.let { loaded -> _state.update { it.copy(reports = loaded.value.reports) } }
+      reportsJob.await().getOrNull()?.let { loaded ->
+        _state.update { it.copy(reports = loaded.value.reports, reportsSavedAt = loaded.savedAt.takeIf { loaded.fromCache }) }
+      }
       try {
         val loaded = forecastJob.await().getOrThrow()
         _state.update { show(it, loaded, keepSelection = it.forecast != null) }

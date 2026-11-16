@@ -14,6 +14,8 @@ import app.fiftybar.divecurrent.ui.site.SiteScreen
 @Composable
 fun MainNavigation() {
   val backStack = rememberNavBackStack(MapKey)
+  // A screen that leaves by itself (signed in, signed out) never pops the map: an empty back stack would crash.
+  val leave: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
 
   NavDisplay(
     backStack = backStack,
@@ -31,14 +33,14 @@ fun MainNavigation() {
         entry<SiteKey> { key ->
           SiteScreen(
             siteId = key.siteId,
-            onBack = { backStack.removeLastOrNull() },
+            onBack = leave,
             onSignIn = { backStack.add(SignInKey) },
           )
         }
         entry<SignInKey> {
-          SignInScreen(onDone = { backStack.removeLastOrNull() }, onBack = { backStack.removeLastOrNull() })
+          SignInScreen(onDone = leave, onBack = leave)
         }
-        entry<AccountKey> { AccountScreen(onBack = { backStack.removeLastOrNull() }) }
+        entry<AccountKey> { AccountScreen(onBack = leave) }
       },
   )
 }

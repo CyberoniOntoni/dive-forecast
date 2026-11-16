@@ -176,7 +176,8 @@ Divers' newest reports at the site (at most 10), as the site page lists them. Th
 ### `POST /api/v1/sign-in/code`
 
 `{"email": "diver@example.com"}`. Emails the same six-digit code as the web's sign-in page (`requestSignIn` in
-`lib/account-actions.ts`, with its limits per address and per IP address). Answers
+`lib/account-actions.ts`, with its limits per address and per IP address), without the web's sign-in link: tapped
+on the phone, it would sign the browser in and use up the code. Answers
 `{"apiVersion": 1, "newUser": true}`: a new address picks a nickname on the next step. 400 with words for the diver
 for a bad address or too many codes.
 

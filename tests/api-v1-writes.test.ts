@@ -90,6 +90,8 @@ describe("API v1 sign-in", () => {
     const asked = await requestCode(call("/api/v1/sign-in/code", { body: { email: "Diver@Example.com" } }));
     expect(await asked.json()).toEqual({ apiVersion: 1, newUser: true });
     const code = codeFromEmail();
+    // No web sign-in link: tapping it on the phone would use the code up in the browser.
+    expect(sent[sent.length - 1].get("text")).not.toContain("/login?");
 
     const wrong = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code: "000000" } }));
     expect(wrong.status).toBe(400);

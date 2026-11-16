@@ -100,11 +100,12 @@ export async function currentSession(): Promise<Session | null> {
 
 /**
  * The app's session token from an `Authorization: Bearer <token>` header (API.md § Sign-in): the same session as the
- * cookie, encrypted (sealSession), so "Sign out everywhere" ends both. Undefined when the request has no such header, null when it has one
- * that is not a bearer token.
+ * cookie, encrypted (sealSession), so "Sign out everywhere" ends both. Undefined when the request has no Bearer
+ * header, null when it has a malformed one.
  */
 export function bearerToken(authorization: string | null): string | null | undefined {
-  if (authorization == null) return undefined;
+  // Another scheme (a proxy's Basic login, say) is not the app's, and leaves the cookie to decide.
+  if (authorization == null || !/^Bearer(\s|$)/i.test(authorization)) return undefined;
   const match = /^Bearer\s+(\S+)\s*$/i.exec(authorization);
   return match ? match[1] : null;
 }

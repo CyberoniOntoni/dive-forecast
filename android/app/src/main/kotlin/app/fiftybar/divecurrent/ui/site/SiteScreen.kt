@@ -148,7 +148,7 @@ fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit) {
           onSend = viewModel::sendReport,
           onAsForecast = viewModel::sendAsForecast,
         )
-        RecentReportsCard(state.reports)
+        RecentReportsCard(state.reports, state.reportsSavedAt)
       }
       state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }
       Spacer(Modifier.height(24.dp))
