@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { BadgeGrid, Stat } from "@/components/ProfileParts";
 import { getDiverProfile } from "@/lib/account-actions";
+import { monthLabel } from "@/lib/profile-words";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +11,6 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const diver = await getDiverProfile(id);
   return { title: diver ? `${diver.nickname} · Dive current` : "Diver · Dive current" };
-}
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** "Oct 2026" from "2026-10". */
-function monthLabel(yearMonth: string): string {
-  const [year, month] = yearMonth.split("-").map(Number);
-  return MONTHS[month - 1] ? `${MONTHS[month - 1]} ${year}` : yearMonth;
 }
 
 /** A diver's public page, opened from their nickname on the scoreboard. Nickname, About me, numbers, badges. */

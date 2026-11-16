@@ -1,4 +1,5 @@
-import { bearerToken } from "./auth";
+import { bearerToken, currentSession } from "./auth";
+import type { Session } from "./session-token";
 import {
   BOAT_SPEED_MAX_KN,
   BOAT_SPEED_MIN_KN,
@@ -1008,4 +1009,66 @@ export type ApiSiteSaved = { apiVersion: number; site: ApiSite };
 
 export function apiSiteSaved(site: Site, atollName: string | null, status: number): Response {
   return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
+}
+
+/** One row of a scoreboard: the nickname (which opens their page), the words under it and the number at the end. */
+export type ApiScoreRow = {
+  rank: number;
+  nickname: string;
+  /** "12 reports · 5 sites · 3 ratings · 2 ★", or "3 reported by other divers". */
+  detail: string;
+  score: number;
+  /** "site" or "sites" on the new-sites board; null where the score is points. */
+  unit: string | null;
+  /** The signed-in diver's own row (always false without a token). */
+  isMe: boolean;
+};
+
+export type ApiScoreboard = {
+  apiVersion: number;
+  board: "month" | "all" | "sites";
+  /** "Current reporters" or "Site scouts". */
+  title: string;
+  /** The line under the title, as the web board says it. */
+  note: string;
+  /** What to say when there are no rows yet. */
+  empty: string;
+  rows: ApiScoreRow[];
+  /** On the new-sites board: the newest sites and who added them, newest first. Empty on the others. */
+  newest: { siteId: string; name: string; nickname: string }[];
+};
+
+/** A diver's public page (app/divers/[id]): never their email or id. */
+export type ApiDiver = {
+  apiVersion: number;
+  nickname: string;
+  about: string;
+  /** "Diving with us since Oct 2026 · #3 all time". */
+  sinceLine: string;
+  points: number;
+  reports: number;
+  /** Different sites reported at. */
+  reportSites: number;
+  ratings: number;
+  sitesAdded: number;
+  allRank: number | null;
+  /** Earned badges only. */
+  badges: { id: string; label: string; detail: string }[];
+  /** The signed-in diver's own page (always false without a token). */
+  isMe: boolean;
+};
+
+/**
+ * Who is asking a public read that marks the asker's own row: the token's diver, null without a token (the web's
+ * cookie is ignored, so the answer is the same for everyone and the phone may keep it a minute), or the 401 to send
+ * for a token the server turns down, so the app drops it.
+ */
+export async function apiViewer(request: Request): Promise<Session | null | Response> {
+  if (bearerToken(request.headers.get("authorization")) === undefined) return null;
+  return (await currentSession()) ?? apiError(401, "unauthorized", "Sign in again.");
+}
+
+/** A public read's cache line: a minute without a token; never kept when it holds the asker's own row. */
+export function viewerCache(viewer: Session | null): string {
+  return viewer ? API_NO_STORE : "private, max-age=60";
 }

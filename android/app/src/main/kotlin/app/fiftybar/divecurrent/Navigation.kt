@@ -15,6 +15,8 @@ import app.fiftybar.divecurrent.ui.nav.NavigateScreen
 import app.fiftybar.divecurrent.ui.plan.PlanEditScreen
 import app.fiftybar.divecurrent.ui.plan.PlanScreen
 import app.fiftybar.divecurrent.ui.plan.PlansScreen
+import app.fiftybar.divecurrent.ui.scoreboard.DiverScreen
+import app.fiftybar.divecurrent.ui.scoreboard.ScoreboardScreen
 import app.fiftybar.divecurrent.ui.site.AddSiteScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
 
@@ -41,6 +43,7 @@ fun MainNavigation(startPlanId: String? = null) {
             onNavigate = { backStack.add(NavigatePickKey) },
             onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
             onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
+            onScoreboard = { backStack.add(ScoreboardKey) },
           )
         }
         entry<AddSiteKey> { key ->
@@ -83,7 +86,23 @@ fun MainNavigation(startPlanId: String? = null) {
         entry<SignInKey> {
           SignInScreen(onDone = leave, onBack = leave)
         }
-        entry<AccountKey> { AccountScreen(onBack = leave, onPlans = { backStack.add(PlansKey) }) }
+        entry<AccountKey> {
+          AccountScreen(
+            onBack = leave,
+            onPlans = { backStack.add(PlansKey) },
+            onScoreboard = { backStack.add(ScoreboardKey) },
+            onMyPage = { nickname -> backStack.add(DiverKey(nickname)) },
+          )
+        }
+        entry<ScoreboardKey> {
+          ScoreboardScreen(
+            onBack = leave,
+            onDiver = { nickname -> backStack.add(DiverKey(nickname)) },
+            onSite = { id -> backStack.add(SiteKey(id)) },
+            onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
+          )
+        }
+        entry<DiverKey> { key -> DiverScreen(key.nickname, onBack = leave, onAccount = { backStack.add(AccountKey) }) }
         entry<PlansKey> {
           PlansScreen(
             onBack = leave,

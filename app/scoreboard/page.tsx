@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getLeaderboard, getSiteScouts, type LeaderboardRow } from "@/lib/account-actions";
+import { getLeaderboard, getSiteScouts } from "@/lib/account-actions";
 import { currentSession } from "@/lib/auth";
+import { reporterDetail, scoutDetail } from "@/lib/profile-words";
 import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
@@ -124,7 +125,7 @@ async function SitesBoard() {
                   rank={row.rank}
                   nickname={row.nickname}
                   isMe={row.isMe}
-                  detail={`${row.reportedByOthers} reported by other divers`}
+                  detail={scoutDetail(row)}
                   score={row.sites}
                   unit={row.sites === 1 ? "site" : "sites"}
                 />
@@ -157,18 +158,6 @@ async function SitesBoard() {
       ) : null}
     </>
   );
-}
-
-function reporterDetail(row: LeaderboardRow): string {
-  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-  return [
-    row.reports ? count(row.reports, "report", "reports") : null,
-    row.reports ? count(row.sites, "site", "sites") : null,
-    row.ratings ? count(row.ratings, "rating", "ratings") : null,
-    row.badges ? `${row.badges} ★` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 function Row({

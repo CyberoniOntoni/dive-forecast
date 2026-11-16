@@ -100,6 +100,21 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   suspend fun me(token: String): ApiMe = get<ApiMe>(listOf("api", "v1", "me"), token).first
 
+  /** One scoreboard (month, all or sites); with a token the diver's own row is marked. */
+  suspend fun scoreboard(board: String, token: String?): ApiScoreboard {
+    val url = url(listOf("api", "v1", "scoreboard")).newBuilder().addQueryParameter("board", board).build()
+    return decode(fetch(Request.Builder().url(url).get().withToken(token)))
+  }
+
+  /** A diver's public page by nickname; with a token it says whether it is theirs. */
+  suspend fun diver(nickname: String, token: String?): ApiDiver = get<ApiDiver>(listOf("api", "v1", "divers", nickname), token).first
+
+  suspend fun saveAbout(token: String, about: String): ApiAboutSaved =
+    send("PUT", listOf("api", "v1", "me", "about"), ApiJson.encodeToString(AboutBody(about)), token)
+
+  suspend fun saveNickname(token: String, nickname: String): ApiNicknameSaved =
+    send("PUT", listOf("api", "v1", "me", "nickname"), ApiJson.encodeToString(NicknameBody(nickname)), token)
+
   suspend fun signOutEverywhere(token: String) {
     post<ApiOk>(listOf("api", "v1", "sign-out-everywhere"), "{}", token)
   }

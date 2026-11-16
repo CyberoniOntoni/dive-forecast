@@ -88,6 +88,7 @@ fun MapScreen(
   onNavigate: () -> Unit,
   onNavigateTo: (id: String, name: String, lat: Double, lon: Double) -> Unit,
   onAddSite: (lat: Double, lon: Double) -> Unit,
+  onScoreboard: () -> Unit,
 ) {
   val repository = appRepository()
   val session by appAccount().sessions.session.collectAsStateWithLifecycle()
@@ -158,17 +159,29 @@ fun MapScreen(
         onView = shelter::onView,
         onTap = shelter::tap,
       )
-      // Who is signed in, or a way to sign in: reports need it.
-      AssistChip(
-        onClick = { onAccount(session != null) },
-        label = { Text(session?.nickname ?: "Sign in", maxLines = 1) },
-        leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
-        colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam, leadingIconContentColor = colors.foam),
-        modifier =
-          Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp).heightIn(min = 44.dp).semantics {
-            contentDescription = session?.let { "Signed in as ${it.nickname}. Account" } ?: "Sign in"
-          },
-      )
+      // Who is signed in, or a way to sign in: reports need it. The scoreboard, under it, is open to everyone; one
+      // above the other, so a narrow phone has room for the Layers chip beside them.
+      Column(
+        Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        AssistChip(
+          onClick = { onAccount(session != null) },
+          label = { Text(session?.nickname ?: "Sign in", maxLines = 1) },
+          leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
+          colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam, leadingIconContentColor = colors.foam),
+          modifier =
+            Modifier.heightIn(min = 44.dp).widthIn(max = 160.dp).semantics {
+              contentDescription = session?.let { "Signed in as ${it.nickname}. Account" } ?: "Sign in"
+            },
+        )
+        AssistChip(
+          onClick = onScoreboard,
+          label = { Text("Scoreboard") },
+          colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam),
+          modifier = Modifier.heightIn(min = 44.dp),
+        )
+      }
       Column(
         Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp),
         horizontalAlignment = Alignment.End,

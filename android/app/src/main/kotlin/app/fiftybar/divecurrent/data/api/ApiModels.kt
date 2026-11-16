@@ -227,7 +227,19 @@ data class ApiMe(
   val allRank: Int? = null,
   /** Sites this diver added in the app: only they can add photos there. */
   val addedSiteIds: List<String> = emptyList(),
+  val about: String = "",
+  val ratings: Int = 0,
+  /** Different sites reported at. */
+  val reportSites: Int = 0,
+  val atolls: Int = 0,
+  /** Every badge, earned or not. */
+  val badges: List<ApiBadge> = emptyList(),
+  /** "How points work", one line each. */
+  val pointsRules: List<String> = emptyList(),
+  val aboutMaxChars: Int = 300,
 )
+
+@Serializable data class ApiBadge(val id: String, val label: String, val detail: String, val earned: Boolean = true)
 
 @Serializable
 data class ApiReportSaved(val apiVersion: Int, val report: ApiSavedReport, val award: ApiAward? = null)
@@ -558,3 +570,57 @@ data class AddSiteBody(
 
 /** The answer to adding a site or one of its photos: the site as GET /api/v1/sites/{id} gives it. */
 @Serializable data class ApiSiteSaved(val apiVersion: Int = 1, val site: ApiSite)
+
+/** GET /api/v1/scoreboard: one board, its words made on the server. */
+@Serializable
+data class ApiScoreboard(
+  val apiVersion: Int = 1,
+  /** month | all | sites */
+  val board: String,
+  val title: String = "",
+  val note: String = "",
+  val empty: String = "",
+  val rows: List<ApiScoreRow> = emptyList(),
+  /** The newest sites, on the sites board only. */
+  val newest: List<ApiNewSite> = emptyList(),
+)
+
+@Serializable
+data class ApiScoreRow(
+  val rank: Int,
+  val nickname: String,
+  val detail: String = "",
+  val score: Int = 0,
+  /** "site" or "sites" on the sites board; null where the score is points. */
+  val unit: String? = null,
+  val isMe: Boolean = false,
+)
+
+@Serializable data class ApiNewSite(val siteId: String, val name: String, val nickname: String)
+
+/** GET /api/v1/divers/{nickname}: a diver's public page. */
+@Serializable
+data class ApiDiver(
+  val apiVersion: Int = 1,
+  val nickname: String,
+  val about: String = "",
+  /** "Diving with us since Oct 2026 · #3 all time". */
+  val sinceLine: String = "",
+  val points: Int = 0,
+  val reports: Int = 0,
+  val reportSites: Int = 0,
+  val ratings: Int = 0,
+  val sitesAdded: Int = 0,
+  val allRank: Int? = null,
+  /** Earned badges only. */
+  val badges: List<ApiBadge> = emptyList(),
+  val isMe: Boolean = false,
+)
+
+@Serializable data class AboutBody(val about: String)
+
+@Serializable data class NicknameBody(val nickname: String)
+
+@Serializable data class ApiAboutSaved(val apiVersion: Int = 1, val about: String = "")
+
+@Serializable data class ApiNicknameSaved(val apiVersion: Int = 1, val nickname: String)

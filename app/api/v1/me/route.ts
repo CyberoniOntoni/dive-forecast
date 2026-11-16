@@ -1,4 +1,6 @@
 import { getAccount } from "@/lib/account-actions";
+import { ABOUT_MAX } from "@/lib/accounts";
+import { pointsRuleLines } from "@/lib/profile-words";
 import { readStore } from "@/lib/store";
 import { API_NO_STORE, API_VERSION, apiError, apiHandler, apiJson, apiNeedsToken } from "@/lib/api-v1";
 
@@ -25,6 +27,14 @@ export async function GET(request: Request) {
         addedSiteIds: readStore()
           .sites.filter((site) => site.addedBy === account.userId && !site.hidden)
           .map((site) => site.id),
+        // The rest of the web's account page: About me, the other numbers, every badge and how points work.
+        about: account.about,
+        ratings: account.stats.ratings,
+        reportSites: account.stats.sites,
+        atolls: account.stats.atolls,
+        badges: account.badges.map((badge) => ({ id: badge.id, label: badge.label, detail: badge.detail, earned: badge.earned })),
+        pointsRules: pointsRuleLines(),
+        aboutMaxChars: ABOUT_MAX,
       },
       { cacheControl: API_NO_STORE },
     );

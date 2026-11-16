@@ -203,8 +203,9 @@ backups and sends it as `Authorization: Bearer <token>`. A new address without a
 
 Signed in. `{"apiVersion": 1, "nickname": "Manta", "points": 40, "monthPoints": 20, "reports": 2, "monthRank": 3,
 "allRank": 7, "addedSiteIds": ["user-…"]}`: never the email or the diver's id. `addedSiteIds` are the sites the diver
-added in the app, where only they can add photos (§ Adding sites). 401 once the token no longer works, which is how the app learns it
-was signed out.
+added in the app, where only they can add photos (§ Adding sites). The account page's other fields are in
+§ Scoreboard, divers and the account. 401 once the token no longer works, which is how the app learns it was signed
+out.
 
 ### `POST /api/v1/sign-out-everywhere`
 
@@ -487,6 +488,52 @@ Only the diver who added the site adds photos, up to 6; camera data is stripped 
 the site, as above, its new photo last in `photoUrls`. 403 on a catalog site or another diver's, 404 for a site not on
 the map, 413 for a larger body, 415 for another type, 400 for a file that is not a JPEG or a site that is full.
 
+## Scoreboard, divers and the account
+
+The web's scoreboard, divers' public pages and account page (`app/scoreboard`, `app/divers`, `app/account`), with
+their words made on the server (`lib/profile-words.ts`). Nicknames only: a diver's page is found by nickname, so no
+diver id reaches the app. The public reads mark the asker's own row only from the app's token: without one the web's
+cookie is ignored and the answer is the same for everyone (`Cache-Control: private, max-age=60`); with one,
+`private, no-store`, and a token the server turns down answers 401.
+
+### `GET /api/v1/scoreboard?board=month|all|sites`
+
+`month` (the default) and `all` rank current reporters by points; `sites` ranks divers by the sites they added and
+lists the newest sites.
+
+```json
+{
+  "apiVersion": 1,
+  "board": "sites",
+  "title": "Site scouts",
+  "note": "Divers who added dive sites to the map, and how many of those other divers have since reported at.",
+  "empty": "No sites added yet. …",
+  "rows": [{ "rank": 1, "nickname": "Manta", "detail": "2 reported by other divers", "score": 3, "unit": "sites", "isMe": false }],
+  "newest": [{ "siteId": "user-…", "name": "Test Thila", "nickname": "Manta" }]
+}
+```
+
+On the reporters' boards `detail` reads "12 reports · 5 sites · 3 ratings · 2 ★", `score` is points and `unit` null;
+`newest` is empty. At most 50 rows.
+
+### `GET /api/v1/divers/{nickname}`
+
+Any case. `{"apiVersion": 1, "nickname": "Manta", "about": "…", "sinceLine": "Diving with us since Oct 2026 · #3 all
+time", "points": 40, "reports": 2, "reportSites": 2, "ratings": 1, "sitesAdded": 0, "allRank": 3, "badges": [{"id":
+"first-report", "label": "First report", "detail": "Filed a first current report"}], "isMe": false}`: earned badges
+only, never the email. 404 for a nickname nobody has (a renamed diver's old one included).
+
+### `PUT /api/v1/me/about`, `PUT /api/v1/me/nickname`
+
+Signed in. `{"about": "…"}` saves About me (at most `aboutMaxChars`, 300; cleaned as on the web; empty clears it) and
+answers `{"apiVersion": 1, "about": "…"}`. `{"nickname": "…"}` renames the diver (2 to 20 letters, numbers, spaces,
+dots, dashes or underscores, not taken in any case) and answers `{"apiVersion": 1, "nickname": "…"}`; the token keeps
+working, and no web cookie is set. A refusal is 400 with the web form's words ("That nickname is taken.").
+
+`GET /api/v1/me` also carries what the web's account page shows: `about`, `ratings`, `reportSites`, `atolls`, every
+badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxChars`.
+
 ## Next (not built yet)
 
-The scoreboard, divers' pages and the account's About me. They come with their own section here.
+Nothing from the web is missing from the app now, apart from the map's reef-zone, bottom-type and depth layers and
+the coordinate grid. New web features come with their own section here.
