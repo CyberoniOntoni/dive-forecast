@@ -57,7 +57,10 @@ afterEach(() => {
   globalThis.fetch = realFetch;
   vi.unstubAllEnvs();
   for (const name of fs.readdirSync(DATA_DIR)) {
-    if (name === testFile || /^\.store\..+\.tmp$/.test(name)) fs.rmSync(path.join(DATA_DIR, name), { force: true });
+    // Only this process's temp files: another test file's worker may be mid-write to its own.
+    if (name === testFile || (name.startsWith(`.store.${process.pid}.`) && name.endsWith(".tmp"))) {
+      fs.rmSync(path.join(DATA_DIR, name), { force: true });
+    }
   }
   setStorePath("store.json");
 });

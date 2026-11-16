@@ -62,7 +62,9 @@ beforeEach(async () => {
 afterEach(() => {
   vi.useRealTimers();
   for (const name of fs.readdirSync(DATA_DIR)) {
-    if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || /^\.store\..+\.tmp$/.test(name)) {
+    // Only this process's temp files: another test file's worker may be mid-write to its own.
+    const ownTmp = name.startsWith(`.store.${process.pid}.`) && name.endsWith(".tmp");
+    if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || ownTmp) {
       fs.rmSync(path.join(DATA_DIR, name), { recursive: true, force: true });
     }
   }

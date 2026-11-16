@@ -27,3 +27,19 @@ jobs:
       - run: npm run lint
       - run: npm run build
       - run: npm run replay
+
+  # The Android app (android/, its own Gradle build). Unit tests and a debug APK; no device.
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --console=plain testDebugUnitTest assembleDebug

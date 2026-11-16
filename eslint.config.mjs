@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Cloudflare build output and wrangler's local state.
     ".open-next/**",
     ".wrangler/**",
+    // The Android app (Kotlin, its own Gradle build).
+    "android/**",
   ]),
 ]);
 
