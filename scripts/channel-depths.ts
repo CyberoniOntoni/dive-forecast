@@ -12,8 +12,17 @@ import { readCatalog } from "../lib/store";
  */
 const DEPTHS_PY = path.join(process.cwd(), "scripts", "channel-depths.py");
 const CHANNEL_TYPES = new Set(["pass", "channel-thila", "corner", "strait-wall"]);
-/** The grid's satellite depths stop near 15-20 m; a floor shallower than this is probably that limit. */
-const SATURATED_M = 15;
+/**
+ * The grid's satellite depths stop near 15-20 m (Sentinel-2 above 20 m, chart soundings below); a crossing whose
+ * deepest point is shallower than this probably stops at that limit rather than at the channel floor.
+ */
+const SATURATED_M = 20;
+/**
+ * Divers going this much deeper than the crossing's deepest point means the grid floor is too shallow. Only that way
+ * round: a thila inside a channel is dived shallower than the channel floor, which says nothing about the grid. The
+ * margin allows for dives that reach deeper on the outer slope at the channel mouth.
+ */
+const DIVE_DEEPER_M = 5;
 /** Deeper than this, the crossing has run onto the ocean slope rather than the channel floor. */
 const OCEAN_SLOPE_M = 50;
 /** Wider than this, the crossing is open lagoon rather than a channel. */
@@ -44,7 +53,7 @@ function main(): void {
       console.log([site.id, site.siteType, site.atollId, site.atlasWidthM ?? "", "", "", "", "", "no closed crossing"].join(","));
       continue;
     }
-    const reason = lowReason(section.widthM, section.maxM, site.atlasWidthM);
+    const reason = lowReason(section.widthM, section.maxM, site.atlasWidthM, site.diveMaxM);
     console.log(
       [
         site.id,
@@ -61,8 +70,9 @@ function main(): void {
   }
 }
 
-function lowReason(widthM: number, maxM: number, atlasWidthM?: number): string | null {
+function lowReason(widthM: number, maxM: number, atlasWidthM?: number, diveMaxM?: number): string | null {
   if (maxM < SATURATED_M) return "floor at the satellite depth limit";
+  if (diveMaxM != null && diveMaxM >= maxM + DIVE_DEEPER_M) return "divers go deeper than the grid floor";
   if (maxM > OCEAN_SLOPE_M) return "crossing reaches the ocean slope";
   if (widthM > OPEN_WATER_M) return "crossing is open lagoon";
   if (atlasWidthM != null && Math.abs(widthM - atlasWidthM) / atlasWidthM > WIDTH_MISMATCH) return "width disagrees with the Atlas";

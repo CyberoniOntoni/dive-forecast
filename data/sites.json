@@ -166,7 +166,7 @@
       "gridWidthM": 600,
       "gridDepthMeanM": 15,
       "gridDepthMaxM": 19,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "banana-reef",
@@ -989,7 +989,7 @@
       "gridWidthM": 600,
       "gridDepthMeanM": 17,
       "gridDepthMaxM": 23,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "asdhoo-rock",
@@ -1935,7 +1935,7 @@
       "gridWidthM": 620,
       "gridDepthMeanM": 18,
       "gridDepthMaxM": 25,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "dhigu-thila",
@@ -1999,7 +1999,7 @@
       "gridWidthM": 770,
       "gridDepthMeanM": 16,
       "gridDepthMaxM": 22,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kandooma-caves",
@@ -2018,7 +2018,7 @@
       "gridWidthM": 640,
       "gridDepthMeanM": 14,
       "gridDepthMaxM": 18,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "lhosfushi-kandu",
@@ -2316,7 +2316,7 @@
       "gridWidthM": 480,
       "gridDepthMeanM": 13,
       "gridDepthMaxM": 16,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "rihiveli-wreck",
@@ -2502,7 +2502,7 @@
       "gridWidthM": 1560,
       "gridDepthMeanM": 17,
       "gridDepthMaxM": 23,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "kandholhudhoo-thila",
@@ -2821,7 +2821,7 @@
       "gridWidthM": 1450,
       "gridDepthMeanM": 12,
       "gridDepthMaxM": 17,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "fushifaru-kandu",
@@ -2857,7 +2857,7 @@
       "gridWidthM": 910,
       "gridDepthMeanM": 13,
       "gridDepthMaxM": 18,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "fushifaru-corner",
@@ -4019,7 +4019,7 @@
       "gridWidthM": 670,
       "gridDepthMeanM": 13,
       "gridDepthMaxM": 17,
-      "gridDepthConfidence": "ok"
+      "gridDepthConfidence": "low"
     },
     {
       "id": "thuvarudhekunu-kandu",

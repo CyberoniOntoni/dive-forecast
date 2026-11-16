@@ -131,12 +131,15 @@ describe("Milestone 1 Adversarial Integration Challenge", () => {
         expect(sectionInput(s)).toEqual({ channelWidthM: s.channelWidthM, channelDepthM: s.channelDepthM });
       }
       // A depth range or a maximum never sizes the channel. Where the grid read is good, the grid section does.
-      for (const id of ["embudhoo-express", "embudhu-thila"]) {
-        const s = site(id);
-        expect(s.channelDepthKind).toBe("range");
-        expect(s.gridDepthConfidence).toBe("ok");
-        expect(sectionInput(s)).toEqual({ channelWidthM: s.gridWidthM, channelDepthM: s.gridDepthMeanM });
-      }
+      const embudhoo = site("embudhoo-express");
+      expect(embudhoo.channelDepthKind).toBe("range");
+      expect(embudhoo.gridDepthConfidence).toBe("ok");
+      expect(sectionInput(embudhoo)).toEqual({ channelWidthM: embudhoo.gridWidthM, channelDepthM: embudhoo.gridDepthMeanM });
+      // Divers go to 30 m at Embudhu Thila, 5 m below the grid's deepest point: the grid floor is too shallow.
+      const embudhu = site("embudhu-thila");
+      expect(embudhu.channelDepthKind).toBe("range");
+      expect(embudhu.gridDepthConfidence).toBe("low");
+      expect(sectionInput(embudhu)).toEqual({});
       for (const id of ["gangehi-kandu", "maa-kandu", "maa-kandu-beyru", "vaadhoo-caves"]) {
         const s = site(id);
         expect(s.channelDepthKind).toBe("max");

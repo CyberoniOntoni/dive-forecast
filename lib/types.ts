@@ -86,7 +86,10 @@ export type Site = {
   gridWidthM?: number;
   gridDepthMeanM?: number;
   gridDepthMaxM?: number;
-  /** "low": the floor sits at the grid's satellite depth limit, or the crossing found the wrong gap. */
+  /**
+   * "low": the floor sits at the grid's satellite depth limit (deepest point under 20 m, or divers go 5 m or more
+   * deeper), or the crossing found the wrong gap.
+   */
   gridDepthConfidence?: "ok" | "low";
   /** Channel records that bear on this site but are not its section. Catalog data: the factor never reads them. */
   channelLeads?: ChannelLead[];
