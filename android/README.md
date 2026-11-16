@@ -59,7 +59,13 @@ What it does:
   new site's page opens in the form's place, and the map reads the list again. On a site they added, the diver can add
   more photos from its page (`addedSiteIds` from `GET /api/v1/me`).
 
-The scoreboard, divers' pages and About me are on the web for now (API.md § Next).
+- **Scoreboard and divers**: the map's Scoreboard chip opens the web's three boards (this month, all time, new sites;
+  `GET /api/v1/scoreboard`), your own row marked; a nickname opens that diver's public page (`/api/v1/divers/{nickname}`:
+  found by nickname, so no diver id reaches the app). The account screen has what the web's account page has: numbers,
+  every badge, how points work, About me and the nickname (`PUT /api/v1/me/about`, `/me/nickname`), and your own page.
+  The words come from the server (`lib/profile-words.ts`).
+
+The map's reef-zone, bottom-type and depth layers and the coordinate grid are on the web for now (API.md § Next).
 
 ## Build and run
 
@@ -91,14 +97,15 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | Path | What |
 |---|---|
 | `data/api/` | The /api/v1 bodies (kotlinx.serialization, unknown fields ignored) and the OkHttp client |
-| `data/session/`, `data/AccountRepository.kt` | The signed-in diver's token; sign-in and reports |
+| `data/session/`, `data/AccountRepository.kt` | The signed-in diver's token; sign-in and every write |
 | `data/db/` | Room: the last raw body per endpoint |
 | `data/DataRepository.kt` | Network first, then the last copy |
 | `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
 | `ui/map/` | MapLibre map, now list |
-| `ui/site/` | Site page, hour strip, report form, recent reports |
-| `ui/account/` | Sign-in and account |
+| `ui/site/`, `domain/NewSite.kt` | Site page, hour strip, report form, recent reports, reviews, adding a site |
+| `ui/account/` | Sign-in and account (About me, nickname, badges) |
+| `ui/scoreboard/` | Scoreboard and divers' public pages |
 | `ui/plan/`, `domain/PlanLink.kt` | Plan pages, my plans, reading a plan id from a link |
 | `ui/nav/`, `domain/BoatNav.kt`, `domain/RouteCurrent.kt`, `domain/NavReadout.kt` | Boat navigation: GPS, route map, steer and ETA |
 

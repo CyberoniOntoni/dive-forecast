@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { getLeaderboard, getSiteScouts, type LeaderboardRow } from "@/lib/account-actions";
+import { getLeaderboard, getSiteScouts } from "@/lib/account-actions";
 import { currentSession } from "@/lib/auth";
+import { boardWords, reporterDetail, scoutDetail, sitesUnit } from "@/lib/profile-words";
 import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
@@ -66,21 +67,16 @@ export default async function ScoreboardPage({
 
 async function ReportsBoard({ period }: { period: "month" | "all" }) {
   const rows = await getLeaderboard(period);
+  const words = boardWords(period);
   return (
     <section className="flex min-w-0 flex-col gap-2" aria-labelledby="reports-board-heading">
       <h2 id="reports-board-heading" className="text-base font-semibold text-foam">
-        Current reporters
+        {words.title}
       </h2>
-      <p className="text-xs leading-5 text-foam/70">
-        Points for each report, more for reporting soon after the dive and at sites nobody has reported lately, and
-        for rating the sites you dived.
-      </p>
+      <p className="text-xs leading-5 text-foam/70">{words.note}</p>
       <div className="surface p-2 sm:p-3">
         {rows.length === 0 ? (
-          <Empty>
-            No reports {period === "month" ? "this month " : ""}yet. Be the first: open a site after your dive and report
-            the current.
-          </Empty>
+          <Empty>{words.empty}</Empty>
         ) : (
           <ol className="flex min-w-0 flex-col">
             {rows.map((row) => (
@@ -103,18 +99,17 @@ async function ReportsBoard({ period }: { period: "month" | "all" }) {
 
 async function SitesBoard() {
   const { scouts, newest } = await getSiteScouts();
+  const words = boardWords("sites");
   return (
     <>
       <section className="flex min-w-0 flex-col gap-2" aria-labelledby="sites-board-heading">
         <h2 id="sites-board-heading" className="text-base font-semibold text-foam">
-          Site scouts
+          {words.title}
         </h2>
-        <p className="text-xs leading-5 text-foam/70">
-          Divers who added dive sites to the map, and how many of those other divers have since reported at.
-        </p>
+        <p className="text-xs leading-5 text-foam/70">{words.note}</p>
         <div className="surface p-2 sm:p-3">
           {scouts.length === 0 ? (
-            <Empty>No sites added yet. Know a site that is missing? Open Add site on the map.</Empty>
+            <Empty>{words.empty}</Empty>
           ) : (
             <ol className="flex min-w-0 flex-col">
               {scouts.map((row) => (
@@ -124,9 +119,9 @@ async function SitesBoard() {
                   rank={row.rank}
                   nickname={row.nickname}
                   isMe={row.isMe}
-                  detail={`${row.reportedByOthers} reported by other divers`}
+                  detail={scoutDetail(row)}
                   score={row.sites}
-                  unit={row.sites === 1 ? "site" : "sites"}
+                  unit={sitesUnit(row.sites)}
                 />
               ))}
             </ol>
@@ -157,18 +152,6 @@ async function SitesBoard() {
       ) : null}
     </>
   );
-}
-
-function reporterDetail(row: LeaderboardRow): string {
-  const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-  return [
-    row.reports ? count(row.reports, "report", "reports") : null,
-    row.reports ? count(row.sites, "site", "sites") : null,
-    row.ratings ? count(row.ratings, "rating", "ratings") : null,
-    row.badges ? `${row.badges} ★` : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 function Row({

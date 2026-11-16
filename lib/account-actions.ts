@@ -117,7 +117,8 @@ export async function whoAmI(): Promise<{ nickname: string } | null> {
   return session ? { nickname: session.nickname } : null;
 }
 
-export async function changeNickname(input: unknown): Promise<{ ok: boolean; error: string | null; nickname?: string }> {
+/** Renames the signed-in diver. The web's cookie carries the nickname, so it is set again; the app's API passes `cookie: false`. */
+export async function changeNickname(input: unknown, options?: { cookie?: boolean }): Promise<{ ok: boolean; error: string | null; nickname?: string }> {
   await ready();
   try {
     const session = await requireSession();
@@ -127,7 +128,7 @@ export async function changeNickname(input: unknown): Promise<{ ok: boolean; err
       user.nickname = requireNickname(input, store.users, user.id);
       return user.nickname;
     });
-    await setSessionCookie(session.userId, nickname);
+    if (options?.cookie !== false) await setSessionCookie(session.userId, nickname);
     return { ok: true, error: null, nickname };
   } catch (caught) {
     return { ok: false, error: caught instanceof Error ? caught.message : "Could not change the nickname." };

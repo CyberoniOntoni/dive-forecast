@@ -2,6 +2,7 @@ package app.fiftybar.divecurrent.data
 
 import app.fiftybar.divecurrent.data.api.AddSiteBody
 import app.fiftybar.divecurrent.data.api.ApiCodeSent
+import app.fiftybar.divecurrent.data.api.ApiDiver
 import app.fiftybar.divecurrent.data.api.ApiEditablePlan
 import app.fiftybar.divecurrent.data.api.PlanBody
 import app.fiftybar.divecurrent.data.api.ApiException
@@ -9,6 +10,7 @@ import app.fiftybar.divecurrent.data.api.ApiMe
 import app.fiftybar.divecurrent.data.api.ApiPlanSummaries
 import app.fiftybar.divecurrent.data.api.ApiReportSaved
 import app.fiftybar.divecurrent.data.api.ApiReviews
+import app.fiftybar.divecurrent.data.api.ApiScoreboard
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.api.ReportRequest
@@ -73,12 +75,34 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
    * The site's ratings and reviews, with the diver's own when signed in. A token that stopped working is forgotten and
    * the card is read signed out, so it still shows.
    */
-  suspend fun reviews(siteId: String): ApiReviews {
-    val session = sessions.current() ?: return api.reviews(siteId, null)
+  suspend fun reviews(siteId: String): ApiReviews = withTokenIfAny { api.reviews(siteId, it) }
+
+  /** A scoreboard, with the diver's own row marked when signed in. */
+  suspend fun scoreboard(board: String): ApiScoreboard = withTokenIfAny { api.scoreboard(board, it) }
+
+  /** A diver's public page by nickname. */
+  suspend fun diver(nickname: String): ApiDiver = withTokenIfAny { api.diver(nickname, it) }
+
+  /** Saves About me; answers it as the server cleaned it. */
+  suspend fun saveAbout(about: String): String = signedIn { api.saveAbout(it, about) }.about
+
+  /** Renames the diver; the token keeps working, and the app's name for them changes at once. */
+  suspend fun saveNickname(nickname: String): String {
+    val saved = signedIn { api.saveNickname(it, nickname) }.nickname
+    sessions.rename(saved)
+    return saved
+  }
+
+  /**
+   * A public read that marks the diver's own row: with the token when signed in, else without. A token that stopped
+   * working is forgotten and the read is made signed out, so it still shows.
+   */
+  private suspend fun <T> withTokenIfAny(call: suspend (token: String?) -> T): T {
+    val session = sessions.current() ?: return call(null)
     return try {
-      authed { api.reviews(siteId, session.token) }
+      authed { call(session.token) }
     } catch (_: SignedOutException) {
-      api.reviews(siteId, null)
+      call(null)
     }
   }
 
