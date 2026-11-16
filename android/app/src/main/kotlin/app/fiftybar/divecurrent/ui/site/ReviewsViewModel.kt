@@ -122,7 +122,15 @@ class ReviewsViewModel(
           busy = false,
           progress = null,
           error = problem,
-          note = if (problem == null) (if (saved == 1) "Photo added." else "$saved photos added.") else null,
+          note =
+            if (problem != null) null
+            else
+              listOfNotNull(
+                  if (saved == 1) "Photo added." else "$saved photos added.",
+                  "A review holds ${it.card?.maxPhotos ?: 6} photos, so the other ${uris.size - picked.size} were left out."
+                    .takeIf { uris.size > picked.size },
+                )
+                .joinToString(" "),
         )
       }
     }
