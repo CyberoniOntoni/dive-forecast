@@ -130,7 +130,8 @@ fun MapScreen(
         colors = colors,
         onOpenSite = onOpenSite,
         modifier = Modifier.fillMaxSize(),
-        onLongPress = { lat, lon -> pressed = LatLon(lat, lon) },
+        // Only where a route can go: far outside the Maldives the server would refuse it.
+        onLongPress = { lat, lon -> LatLon(lat, lon).takeIf(PointDestination::inRouteArea)?.let { pressed = it } },
       )
       // Who is signed in, or a way to sign in: reports need it.
       AssistChip(

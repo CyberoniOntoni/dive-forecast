@@ -701,7 +701,8 @@ export type { BoatTrip } from "./boat-route-data";
 
 /**
  * Where a boat route can start or end: the Maldives with a margin round the outer atolls. A route from far away would
- * search a huge grid and ask Open-Meteo for the current at up to 200 new ocean points.
+ * search a huge grid and ask Open-Meteo for the current at up to 200 new ocean points. The Android app keeps a copy
+ * (PointDestination.inRouteArea) so a long press far away offers no route.
  */
 const ROUTE_BOX = { south: -3, north: 10, west: 70, east: 77 };
 

@@ -21,6 +21,12 @@ object PointDestination {
     return if (abs(lat) <= 90 && abs(lon) <= 180) LatLon(lat, lon) else null
   }
 
+  /**
+   * Whether boat routes reach this point: the Maldives with a margin round the outer atolls, the server's ROUTE_BOX
+   * (lib/actions.ts). A point outside it would only be refused.
+   */
+  fun inRouteArea(point: LatLon): Boolean = point.lat in -3.0..10.0 && point.lon in 70.0..77.0
+
   /** "Point 4.1234° N, 73.5123° E". */
   fun name(point: LatLon): String {
     val ns = if (point.lat < 0) "S" else "N"

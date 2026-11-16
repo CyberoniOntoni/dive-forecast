@@ -2,13 +2,18 @@ package app.fiftybar.divecurrent.ui.nav
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -56,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -92,10 +98,18 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
   var baseMap by rememberSaveable { mutableStateOf(BaseMap.Satellite) }
   var granted by remember { mutableStateOf(hasLocationPermission(context)) }
   var asked by rememberSaveable { mutableStateOf(false) }
+  // Refused with "don't ask again": Android shows no dialog any more, so the button opens the app's settings instead.
+  var blocked by rememberSaveable { mutableStateOf(false) }
   val launcher =
     rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
       granted = result.values.any { it } || hasLocationPermission(context)
+      blocked = !granted && context.findActivity()?.let { activity -> LOCATION_PERMISSIONS.none { activity.shouldShowRequestPermissionRationale(it) } } == true
     }
+  // Back from the settings screen with location allowed.
+  LifecycleResumeEffect(Unit) {
+    granted = hasLocationPermission(context)
+    onPauseOrDispose {}
+  }
   LaunchedEffect(Unit) {
     if (!granted && !asked) {
       asked = true
@@ -142,8 +156,19 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
             !granted ->
               Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Navigation needs the phone's location. Allow it to follow the boat.", color = colors.stop)
-                OutlinedButton(onClick = { launcher.launch(LOCATION_PERMISSIONS) }, modifier = Modifier.heightIn(min = 44.dp)) {
-                  Text("Allow location")
+                OutlinedButton(
+                  onClick = {
+                    if (blocked) {
+                      context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                      )
+                    } else {
+                      launcher.launch(LOCATION_PERMISSIONS)
+                    }
+                  },
+                  modifier = Modifier.heightIn(min = 44.dp),
+                ) {
+                  Text(if (blocked) "Open the app's settings" else "Allow location")
                 }
               }
             gps is GpsStatus.Error -> Text(gps.message, color = colors.stop)
@@ -274,6 +299,13 @@ private fun FollowGps(context: Context, viewModel: NavigateViewModel) {
     onStopOrDispose { manager?.removeUpdates(listener) }
   }
 }
+
+private tailrec fun Context.findActivity(): Activity? =
+  when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+  }
 
 private fun Location.toFix(): Fix =
   Fix(

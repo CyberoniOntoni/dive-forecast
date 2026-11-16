@@ -1,6 +1,7 @@
 package app.fiftybar.divecurrent.domain
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -83,6 +84,9 @@ class BoatNavTest {
     assertNull(PointDestination.read("banana-reef"))
     assertNull(PointDestination.read("95.0,73.5"))
     assertEquals("Point 4.1235° N, 73.5000° E", PointDestination.name(point))
+    assertTrue(PointDestination.inRouteArea(point))
+    assertTrue(PointDestination.inRouteArea(LatLon(-0.69, 73.15)))
+    assertFalse(PointDestination.inRouteArea(LatLon(51.5, -0.1)))
   }
 
   @Test
