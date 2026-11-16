@@ -40,7 +40,9 @@ data class PlanDraft(
 
   fun removeDay(dayKey: Long) = copy(days = days.filterNot { it.key == dayKey })
 
-  fun setDate(dayKey: Long, date: String) = changeDay(dayKey) { it.copy(date = date) }
+  /** Days stay in date order, as the server saves them, so "Day 2" in the editor is day 2 on the plan page. */
+  fun setDate(dayKey: Long, date: String) =
+    changeDay(dayKey) { it.copy(date = date) }.let { draft -> draft.copy(days = draft.days.sortedBy { it.date }) }
 
   /** A new dive at the next usual time after the day's latest. */
   fun addStop(dayKey: Long): PlanDraft {

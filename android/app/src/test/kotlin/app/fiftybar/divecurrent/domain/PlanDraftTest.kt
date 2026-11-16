@@ -33,6 +33,15 @@ class PlanDraftTest {
   }
 
   @Test
+  fun `a day moved to an earlier date takes its place in order`() {
+    val two = twoDives().addDay("2026-11-17")
+    val second = two.days.last()
+    val moved = two.setDate(second.key, "2026-11-10")
+    assertEquals(listOf("2026-11-10", "2026-11-17"), moved.days.map { it.date })
+    assertEquals(second.key, moved.days.first().key)
+  }
+
+  @Test
   fun `sends a wanted way only at a channel, and leaves out empty text`() {
     val body = twoDives().body { it in channels }
     assertNull(body.notes)
