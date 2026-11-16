@@ -66,3 +66,18 @@ draws the glance it is given, so a wording change ships with the server. Site ki
 - Times are Maldives wall-clock `YYYY-MM-DDTHH:MM`; parse them with `MaldivesTime`, not `LocalDateTime.now()`.
 - Show `notice` and `siteNote` with the forecast.
 - No diver id or email is ever in a response, and the app asks for none.
+
+## Why the app lives in this repo
+
+Decided 16 Nov 2026: the app stays in the web repo, in `android/`, rather than a repo of its own.
+
+- **The app and the API change together.** The server decides how an hour reads (arrow, words, tone) in
+  `lib/nowcast-glance.ts` and `lib/api-v1.ts`, and the app only draws it. A change to the contract (`API.md`) and both
+  sides of it lands in one PR with one CI run, with no second PR to merge in step.
+- **The builds are already apart.** The `android` CI job runs on its own; Docker (`.dockerignore`), lint, TypeScript
+  and the Cloudflare build ignore `android/`.
+- **One developer.** A second repo would mostly add a second set of branches and issues to keep in step.
+
+Move the app to its own repo when one of these comes true: someone else owns the app, it gets its own release flow
+with signing keys and Play Store uploads as CI secrets that are better fenced off, an iOS app joins it so the API
+becomes a contract between several clients, or one part goes open source and the other does not.
