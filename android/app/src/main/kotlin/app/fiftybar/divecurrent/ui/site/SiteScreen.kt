@@ -180,6 +180,11 @@ fun SiteScreen(
         RecentReportsCard(state.reports, state.reportsSavedAt)
       }
       state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }
+      if (!state.notFound) {
+        val reviews: ReviewsViewModel = viewModel(key = "reviews/$siteId") { ReviewsViewModel(siteId, repository, account) }
+        val reviewsState by reviews.state.collectAsStateWithLifecycle()
+        ReviewsCard(reviewsState, signedIn = session != null, viewModel = reviews, onSignIn = onSignIn)
+      }
       Spacer(Modifier.height(24.dp))
     }
   }
@@ -410,10 +415,5 @@ private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
         OutlinedButton(onClick = { uri.openUri(source) }, modifier = Modifier.heightIn(min = 44.dp)) { Text("Source") }
       }
     }
-    Text(
-      "Ratings and reviews are on the web site for now.",
-      style = MaterialTheme.typography.bodySmall,
-      color = colors.foam.copy(alpha = 0.7f),
-    )
   }
 }

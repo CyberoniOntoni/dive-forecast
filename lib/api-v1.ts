@@ -31,6 +31,9 @@ import {
   type GlanceTone,
 } from "./nowcast-glance";
 import type { BoatTrip } from "./boat-route-data";
+import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
+import { REVIEW_MAX } from "./site-details";
+import { reviewDate, reviewSummaryLine } from "./review-words";
 import type { RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
 import { SCALE_MAX_M, SCALE_STOPS, SCALE_TICKS, SHELTER_OPACITY, shelterReadout } from "./shelter-layer";
@@ -50,10 +53,10 @@ import {
   type LegWords,
   type StopTone,
 } from "./plan-words";
-import { awardLine, type ReportAward } from "./points-rules";
+import { awardLine, POINTS, type ReportAward } from "./points-rules";
 import type { RecentReportRow } from "./recent-reports";
 import { SIGN_IN_FIRST } from "./sign-in";
-import { photoUrl } from "./site-photos-limits";
+import { MAX_PHOTOS_PER_SITE, photoUrl } from "./site-photos-limits";
 import { SITE_TYPE_LABEL } from "./site-type";
 import type {
   Atoll,
@@ -361,13 +364,17 @@ export async function apiHandler(run: () => Promise<Response>): Promise<Response
 /** For anything about one diver: never kept by the phone's HTTP cache or any cache in between. */
 export const API_NO_STORE = "private, no-store";
 
+/** The request body's media type, lower case and without parameters: "application/json", "image/jpeg", or "". */
+export function requestType(request: Request): string {
+  return (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+}
+
 /**
  * A write's JSON body as an object, or the error response to send. Only `application/json` is read: a browser cannot
  * send that to another site's address without asking first (CORS), and this API answers no such question.
  */
 export async function apiJsonBody(request: Request): Promise<Record<string, unknown> | Response> {
-  const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-  if (type !== "application/json") return apiError(415, "bad_request", "Send the body as application/json.");
+  if (requestType(request) !== "application/json") return apiError(415, "bad_request", "Send the body as application/json.");
   try {
     const body: unknown = await request.json();
     if (body !== null && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
@@ -883,4 +890,76 @@ export function apiShelterPoint(time: string, hour: SeaStateHour | "unknown" | n
     head: words.head,
     detail: words.body,
   };
+}
+
+/** One diver's review: their nickname only, never their id. */
+export type ApiReview = {
+  nickname: string;
+  score: number;
+  review: string | null;
+  /** Paths under the site, `/site-photos/<site>/<photo>.jpg`; `id` names one for deleting your own. */
+  photos: { id: string; url: string }[];
+  /** ISO UTC, when the score, text or photos last changed. */
+  updatedAt: string;
+  /** "9 Nov 2026", Maldives date. */
+  date: string;
+};
+
+export type ApiReviews = {
+  apiVersion: number;
+  siteId: string;
+  /** The mean of every diver's score (one decimal), how many there are, and the signed-in diver's own. */
+  summary: { average: number | null; count: number; mine: number | null };
+  /** "4.2 from 5 divers", or "No ratings yet". */
+  summaryLine: string;
+  /** Other divers' reviews with text or photos, newest first. */
+  reviews: ApiReview[];
+  /** The signed-in diver's own (null when signed out or not rated). */
+  mine: ApiReview | null;
+  /** What a first rating of a site earns, for "rate it for 3 points". */
+  ratingPoints: number;
+  /** The limits the web form shows: characters in a review, photos on one. */
+  reviewMaxChars: number;
+  maxPhotos: number;
+};
+
+function apiReview(review: SiteReview): ApiReview {
+  return {
+    nickname: review.nickname,
+    score: review.score,
+    review: review.review,
+    photos: review.photos.map((photo) => ({ id: photo.id, url: photo.url })),
+    updatedAt: review.updatedAt,
+    date: reviewDate(review.updatedAt),
+  };
+}
+
+/** The site page's ratings and reviews card, as getSiteReviews gives the web, without any diver's id. */
+export function apiReviews(siteId: string, reviews: SiteReviews): ApiReviews {
+  return {
+    apiVersion: API_VERSION,
+    siteId,
+    summary: { ...reviews.summary },
+    summaryLine: reviewSummaryLine(reviews.summary),
+    reviews: reviews.reviews.map(apiReview),
+    mine: reviews.mine ? apiReview(reviews.mine) : null,
+    ratingPoints: POINTS.rating,
+    reviewMaxChars: REVIEW_MAX,
+    maxPhotos: MAX_PHOTOS_PER_SITE,
+  };
+}
+
+/**
+ * A review action's result as the API's answer: the whole card again (`status` on success), or its refusal. The
+ * actions give their reasons in words for the diver; signed out is 401 and an unknown site 404.
+ */
+export function apiReviewResult(siteId: string, result: ReviewActionResult | PhotoActionResult, reviews: SiteReviews | null, status = 200): Response {
+  if (!result.ok) {
+    if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
+    if (result.error === "Unknown site.") return apiError(404, "not_found", "Unknown site.");
+    return apiError(400, "bad_request", result.error);
+  }
+  const card = "reviews" in result ? result.reviews : reviews;
+  if (!card) return apiError(500, "server_error", "Something went wrong. Try again.");
+  return apiJson(apiReviews(siteId, card), { status, cacheControl: API_NO_STORE });
 }

@@ -118,6 +118,31 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
     return decode(fetch(Request.Builder().url(url).get()))
   }
 
+  /** The site's ratings and reviews; with a token, the diver's own too. */
+  suspend fun reviews(siteId: String, token: String?): ApiReviews = get<ApiReviews>(listOf("api", "v1", "sites", siteId, "reviews"), token).first
+
+  suspend fun rate(token: String, siteId: String, score: Int): ApiReviews =
+    send("PUT", listOf("api", "v1", "sites", siteId, "rating"), ApiJson.encodeToString(RatingBody(score)), token)
+
+  suspend fun removeRating(token: String, siteId: String): ApiReviews = send("DELETE", listOf("api", "v1", "sites", siteId, "rating"), null, token)
+
+  suspend fun saveReview(token: String, siteId: String, text: String): ApiReviews =
+    send("PUT", listOf("api", "v1", "sites", siteId, "review"), ApiJson.encodeToString(ReviewBody(text)), token)
+
+  /** One photo for the diver's review: [jpeg] already shrunk (PhotoShrink), at most 1.5 MB. */
+  suspend fun addReviewPhoto(token: String, siteId: String, jpeg: ByteArray): ApiReviews =
+    decode(
+      fetch(
+        Request.Builder()
+          .url(url(listOf("api", "v1", "sites", siteId, "review", "photos")))
+          .post(jpeg.toRequestBody(JPEG))
+          .withToken(token)
+      )
+    )
+
+  suspend fun removeReviewPhoto(token: String, siteId: String, photoId: String): ApiReviews =
+    send("DELETE", listOf("api", "v1", "sites", siteId, "review", "photos", photoId), null, token)
+
   /** The sheltered-water layer for a view, at a Maldives wall hour or (null) the current one. */
   suspend fun shelter(south: Double, west: Double, north: Double, east: Double, time: String?): ApiShelter {
     val url =
@@ -194,6 +219,7 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   companion object {
     private val JSON = "application/json".toMediaType()
+    private val JPEG = "image/jpeg".toMediaType()
 
     fun defaultClient(): OkHttpClient =
       OkHttpClient.Builder()

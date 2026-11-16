@@ -23,8 +23,9 @@ app and the site always show the same forecast. The forecast model is untouched.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
 - **Methods.** Reads are GET. Writes are POST or PUT with an `application/json` body (anything else gets 415), or
-  DELETE with none: a browser cannot send any of these to this site from another one without a CORS check, which this
-  API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
+  DELETE with none. The one exception is a review photo (`POST /api/v1/sites/{id}/review/photos`), whose body is the
+  `image/jpeg` itself. A browser cannot send any of these (that photo type included) to this site from another one
+  without a CORS check, which this API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
   (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
   every other non-GET request that is not a server action. `forbidden` (403) is a change to something that is another
   diver's, such as `PUT` on their plan; deleting it answers 404, as for a plan that is gone.
@@ -406,6 +407,57 @@ forecast. Where the layer reaches but has no data that hour, `seaState` is null 
 has no water to read (an island, or far from any atoll), `inLayer` is false and the rest null; the app then shows
 nothing. 400 for a bad `at` or `time`.
 
+## Ratings and reviews
+
+A signed-in diver rates any site 1 to 5; the rating can carry a written review and up to 6 photos, all changeable or
+removable, as on the web's site page (`components/SiteReviews.tsx`). Reviews never change the forecast. Writes take the
+app's token (`Authorization: Bearer`), and each answers with the whole card below, `Cache-Control: private, no-store`.
+A refusal is 400 with the web form's words ("Rate the site first, then write your review."), 401 when the token
+stopped working, 404 for a site not on the map.
+
+### `GET /api/v1/sites/{id}/reviews`
+
+```json
+{
+  "apiVersion": 1,
+  "siteId": "banana-reef",
+  "summary": { "average": 4.2, "count": 5, "mine": 4 },
+  "summaryLine": "4.2 from 5 divers",
+  "reviews": [
+    { "nickname": "Manta", "score": 5, "review": "Sharks at the corner.", "updatedAt": "2026-11-09T04:12:00.000Z",
+      "date": "9 Nov 2026", "photos": [{ "id": "…", "url": "/site-photos/banana-reef/….jpg" }] }
+  ],
+  "mine": null,
+  "ratingPoints": 3,
+  "reviewMaxChars": 1500,
+  "maxPhotos": 6
+}
+```
+
+- `reviews` are other divers' with text or photos, newest first; `mine` is the signed-in diver's own (null signed out
+  or unrated), so send the token to get it. Nicknames only, never a diver's id or email.
+- Photo `url`s are paths on the site's host. `ratingPoints` is what a first rating earns (removing it takes them away;
+  rating again gives them back, never anew).
+- Without a token the answer is the same for everyone (the web's cookie is ignored here, so `mine` is null), with
+  `Cache-Control: private, max-age=60`. With one, `private, no-store`; a token the server turns down (expired, or
+  "Sign out everywhere") answers 401, so the app drops it and asks again without.
+
+### `PUT /api/v1/sites/{id}/rating`, `DELETE /api/v1/sites/{id}/rating`
+
+PUT `{"score": 4}` rates the site or changes the rating. DELETE removes the rating with its review and photos.
+
+### `PUT /api/v1/sites/{id}/review`
+
+`{"text": "…"}` writes or changes the review (at most `reviewMaxChars` characters, cleaned like the web's); empty text
+clears it. The site is rated first.
+
+### `POST /api/v1/sites/{id}/review/photos`, `DELETE /api/v1/sites/{id}/review/photos/{photoId}`
+
+POST adds one photo to the diver's review: the body is the JPEG itself, `Content-Type: image/jpeg`, at most 1.5 MB.
+The app shrinks it first as the web does (`lib/photo-shrink.ts`: long edge 1600 px, quality 0.82, turned upright,
+since the server strips camera data, rotation included). Answers 201. 413 for a larger body, 415 for another type, 400
+past 6 photos on the review or 24 review photos a day. DELETE takes one of the diver's own photos off and deletes it.
+
 ## Next (not built yet)
 
-Ratings and reviews (with photos). It comes with its own section here.
+Adding sites (with their photos). It comes with its own section here.
