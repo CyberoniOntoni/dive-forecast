@@ -18,6 +18,10 @@ export const PLAN_STOPS_PER_DAY_MAX = 6;
 export const PLANS_PER_DIVER_MAX = 40;
 export const BOAT_SPEED_MIN_KN = 3;
 export const BOAT_SPEED_MAX_KN = 40;
+/** Why a plan write was refused, shared by lib/plan-actions.ts and the app's API (which picks a status from them). */
+export const PLAN_GONE = "That plan is gone.";
+export const PLAN_NOT_YOURS = "Only the diver who made this plan can change it.";
+export const PLAN_NOT_YOURS_OR_GONE = "That plan is not yours, or it is gone.";
 /** A dhoni's usual cruising speed. */
 export const DEFAULT_BOAT_SPEED_KN = 8;
 /** The first and last hours a day dive starts, for the suggested window. Night dives keep the planned time. */

@@ -1,6 +1,8 @@
 package app.fiftybar.divecurrent.data
 
 import app.fiftybar.divecurrent.data.api.ApiCodeSent
+import app.fiftybar.divecurrent.data.api.ApiEditablePlan
+import app.fiftybar.divecurrent.data.api.PlanBody
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiMe
 import app.fiftybar.divecurrent.data.api.ApiPlanSummaries
@@ -40,6 +42,23 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun myPlans(): ApiPlanSummaries? {
     val session = sessions.current() ?: return null
     return authed { api.myPlans(session.token) }
+  }
+
+  /** The diver's own plan for the editor. */
+  suspend fun editablePlan(id: String): ApiEditablePlan {
+    val session = sessions.current() ?: throw SignedOutException()
+    return authed { api.editablePlan(session.token, id) }
+  }
+
+  /** Saves a new plan (`id` null) or the diver's own; answers with the plan's id. */
+  suspend fun savePlan(id: String?, plan: PlanBody): String {
+    val session = sessions.current() ?: throw SignedOutException()
+    return authed { if (id == null) api.createPlan(session.token, plan).id else api.updatePlan(session.token, id, plan).id }
+  }
+
+  suspend fun deletePlan(id: String) {
+    val session = sessions.current() ?: throw SignedOutException()
+    authed { api.deletePlan(session.token, id) }
   }
 
   suspend fun fileReport(siteId: String, report: ReportRequest): ApiReportSaved {

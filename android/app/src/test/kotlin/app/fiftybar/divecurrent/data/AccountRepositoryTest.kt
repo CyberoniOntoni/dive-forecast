@@ -50,6 +50,61 @@ class AccountRepositoryTest {
   }
 
   @Test
+  fun `makes, changes and deletes a plan with the token, and forgets the token on a 401`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    val body =
+      app.fiftybar.divecurrent.data.api.PlanBody(
+        title = "Ari weekend",
+        notes = null,
+        boatSpeedKn = 10.0,
+        days = listOf(
+          app.fiftybar.divecurrent.data.api.PlanDayBody(
+            "2026-10-03",
+            listOf(app.fiftybar.divecurrent.data.api.PlanStopBody("furana-south", "09:00", want = "incoming")),
+          )
+        ),
+      )
+    server.enqueue(reply(201, """{"apiVersion":1,"id":"Kq7vHtmWpdNrcXfa"}"""))
+    assertEquals("Kq7vHtmWpdNrcXfa", account.savePlan(null, body))
+    val created = server.takeRequest()
+    assertEquals("POST", created.method)
+    assertEquals("/api/v1/plans", created.path)
+    assertEquals("Bearer t.sig", created.getHeader("Authorization"))
+    assertEquals(
+      """{"title":"Ari weekend","boatSpeedKn":10.0,"days":[{"date":"2026-10-03","stops":[{"siteId":"furana-south","time":"09:00","want":"incoming"}]}]}""",
+      created.body.readUtf8(),
+    )
+
+    server.enqueue(reply(200, """{"apiVersion":1,"id":"Kq7vHtmWpdNrcXfa"}"""))
+    account.savePlan("Kq7vHtmWpdNrcXfa", body)
+    val changed = server.takeRequest()
+    assertEquals("PUT", changed.method)
+    assertEquals("/api/v1/plans/Kq7vHtmWpdNrcXfa", changed.path)
+
+    server.enqueue(reply(200, """{"apiVersion":1,"id":"Kq7vHtmWpdNrcXfa","deleted":true}"""))
+    account.deletePlan("Kq7vHtmWpdNrcXfa")
+    val deleted = server.takeRequest()
+    assertEquals("DELETE", deleted.method)
+    assertEquals("/api/v1/plans/Kq7vHtmWpdNrcXfa", deleted.path)
+
+    server.enqueue(reply(400, """{"error":{"code":"bad_request","message":"Give the plan a title"}}"""))
+    try {
+      account.savePlan(null, body)
+      fail("expected bad_request")
+    } catch (e: ApiException.Server) {
+      assertEquals("Give the plan a title", e.message)
+    }
+
+    server.enqueue(reply(401, """{"error":{"code":"unauthorized","message":"Sign in again."}}"""))
+    try {
+      account.editablePlan("Kq7vHtmWpdNrcXfa")
+      fail("expected signed out")
+    } catch (_: SignedOutException) {
+      assertNull(account.sessions.current())
+    }
+  }
+
+  @Test
   fun `files a report with the bearer token`() = runTest {
     account.sessions.set(Session("t.sig", "Manta", 9000))
     server.enqueue(

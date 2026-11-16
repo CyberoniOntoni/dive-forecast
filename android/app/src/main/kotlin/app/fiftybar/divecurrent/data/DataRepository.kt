@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.data
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiJson
+import app.fiftybar.divecurrent.data.api.ApiPlanSites
 import app.fiftybar.divecurrent.data.api.ApiNowcast
 import app.fiftybar.divecurrent.data.api.ApiPlan
 import app.fiftybar.divecurrent.data.api.ApiPlanLegs
@@ -62,6 +63,9 @@ class DataRepository(
 
   suspend fun planLegs(id: String, dayIndex: Int): Loaded<ApiPlanLegs> =
     load("plan/$id/legs/$dayIndex", ApiPlanLegs.serializer()) { api.planLegs(id, dayIndex).second }
+
+  /** The plan editor's site list, kept so a plan can be started out of signal and saved later. */
+  suspend fun planSites(): Loaded<ApiPlanSites> = load("plan-sites", ApiPlanSites.serializer()) { api.planSites().second }
 
   /** The phone's copy only, for showing something while the first fetch runs. */
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)

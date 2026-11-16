@@ -49,6 +49,14 @@ class PlanViewModel(
     }
   }
 
+  private var shownBefore = false
+
+  /** Each time the screen shows; the first is the load in init, later ones (back from the editor) reload. */
+  fun shown() {
+    if (shownBefore) refresh()
+    shownBefore = true
+  }
+
   fun refresh() {
     viewModelScope.launch {
       _state.update { it.copy(loading = true) }
@@ -118,6 +126,14 @@ class PlansViewModel(private val account: AccountRepository) : ViewModel() {
 
   init {
     refresh()
+  }
+
+  private var shownBefore = false
+
+  /** Each time the screen shows; later ones (back from a plan or the editor) reload the list. */
+  fun shown() {
+    if (shownBefore) refresh()
+    shownBefore = true
   }
 
   fun link(value: String) = _state.update { it.copy(link = value) }

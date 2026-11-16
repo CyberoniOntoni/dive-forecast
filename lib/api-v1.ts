@@ -1,5 +1,21 @@
 import { bearerToken } from "./auth";
-import { planSize, warnedCount } from "./dive-plan";
+import {
+  BOAT_SPEED_MAX_KN,
+  BOAT_SPEED_MIN_KN,
+  DEFAULT_BOAT_SPEED_KN,
+  PLAN_DAYS_MAX,
+  PLAN_GONE,
+  PLAN_NOT_YOURS,
+  PLAN_NOT_YOURS_OR_GONE,
+  PLAN_NOTES_MAX,
+  PLAN_STOPS_PER_DAY_MAX,
+  PLAN_TITLE_MAX,
+  PLANS_PER_DIVER_MAX,
+  type PickerSite,
+  planSize,
+  STOP_NOTE_MAX,
+  warnedCount,
+} from "./dive-plan";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
 import {
@@ -11,7 +27,7 @@ import {
   type GlanceBearings,
   type GlanceTone,
 } from "./nowcast-glance";
-import type { PlanLeg, PlanSummary } from "./plan-actions";
+import type { PlanLeg, PlanSummary, SavePlanResult } from "./plan-actions";
 import type { PlanStopView, PlanView } from "./plan-view";
 import {
   betterText,
@@ -29,10 +45,12 @@ import {
 } from "./plan-words";
 import { awardLine, type ReportAward } from "./points-rules";
 import type { RecentReportRow } from "./recent-reports";
+import { SIGN_IN_FIRST } from "./sign-in";
 import { photoUrl } from "./site-photos-limits";
 import { SITE_TYPE_LABEL } from "./site-type";
 import type {
   Atoll,
+  DivePlan,
   BearingSource,
   Direction,
   ForecastRoute,
@@ -174,6 +192,7 @@ export type ApiErrorCode =
   | "bad_request"
   | "server_error"
   | "unauthorized"
+  | "forbidden"
   | "needs_nickname";
 
 export function apiSite(site: Site, atollName?: string | null): ApiSite {
@@ -583,12 +602,15 @@ export function apiPlanLegs(
 /** The signed-in diver's plans (GET /api/v1/plans). */
 export type ApiPlanSummaries = {
   apiVersion: number;
+  /** What the editor allows (lib/dive-plan.ts), so the app checks the same limits before it sends. */
+  limits: ApiPlanLimits;
   plans: { id: string; title: string; span: string; size: string; first: string; last: string; updatedAt: string }[];
 };
 
 export function apiPlanSummaries(plans: readonly PlanSummary[]): ApiPlanSummaries {
   return {
     apiVersion: API_VERSION,
+    limits: PLAN_LIMITS,
     plans: plans.map((plan) => ({
       id: plan.id,
       title: plan.title,
@@ -598,5 +620,108 @@ export function apiPlanSummaries(plans: readonly PlanSummary[]): ApiPlanSummarie
       last: plan.last,
       updatedAt: plan.updatedAt,
     })),
+  };
+}
+
+export type ApiPlanLimits = {
+  titleMax: number;
+  notesMax: number;
+  diveNoteMax: number;
+  daysMax: number;
+  divesPerDayMax: number;
+  plansMax: number;
+  boatSpeedMinKn: number;
+  boatSpeedMaxKn: number;
+  boatSpeedDefaultKn: number;
+};
+
+export const PLAN_LIMITS: ApiPlanLimits = {
+  titleMax: PLAN_TITLE_MAX,
+  notesMax: PLAN_NOTES_MAX,
+  diveNoteMax: STOP_NOTE_MAX,
+  daysMax: PLAN_DAYS_MAX,
+  divesPerDayMax: PLAN_STOPS_PER_DAY_MAX,
+  plansMax: PLANS_PER_DIVER_MAX,
+  boatSpeedMinKn: BOAT_SPEED_MIN_KN,
+  boatSpeedMaxKn: BOAT_SPEED_MAX_KN,
+  boatSpeedDefaultKn: DEFAULT_BOAT_SPEED_KN,
+};
+
+/**
+ * A plan as its owner edits it (GET /api/v1/plans/{id}/edit): exactly what PUT takes back, so the app sends the same
+ * shape it read. No owner id: only the owner gets this body.
+ */
+export type ApiEditablePlan = {
+  apiVersion: number;
+  id: string;
+  title: string;
+  notes: string | null;
+  boatSpeedKn: number;
+  days: { date: string; stops: { siteId: string; time: string; note: string | null; want: string | null }[] }[];
+  updatedAt: string;
+  limits: ApiPlanLimits;
+};
+
+export function apiEditablePlan(plan: DivePlan): ApiEditablePlan {
+  return {
+    apiVersion: API_VERSION,
+    id: plan.id,
+    title: plan.title,
+    notes: plan.notes ?? null,
+    boatSpeedKn: plan.boatSpeedKn,
+    days: plan.days.map((day) => ({
+      date: day.date,
+      stops: day.stops.map((stop) => ({ siteId: stop.siteId, time: stop.time, note: stop.note ?? null, want: stop.want ?? null })),
+    })),
+    updatedAt: plan.updatedAt,
+    limits: PLAN_LIMITS,
+  };
+}
+
+/** A plan body from the app as the editor's checks take it: nulls read as left out. */
+export function planInputFromApi(body: Record<string, unknown>): unknown {
+  const days = Array.isArray(body.days)
+    ? body.days.map((day) => {
+        if (day === null || typeof day !== "object") return day;
+        const { stops, ...rest } = day as Record<string, unknown>;
+        return {
+          ...rest,
+          stops: Array.isArray(stops)
+            ? stops.map((stop) => (stop !== null && typeof stop === "object" ? withoutNulls(stop as Record<string, unknown>) : stop))
+            : stops,
+        };
+      })
+    : body.days;
+  return { ...withoutNulls(body), days };
+}
+
+function withoutNulls(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== null));
+}
+
+/** savePlan's answer as the API's: the saved plan's id, or the editor's own words with a status. */
+export function apiPlanSaved(result: SavePlanResult, created: boolean): Response {
+  if (result.ok) {
+    return apiJson({ apiVersion: API_VERSION, id: result.id }, { status: created ? 201 : 200, cacheControl: API_NO_STORE });
+  }
+  return apiPlanRefused(result.error);
+}
+
+/** A refused plan write: who may not, what is gone, or what to fix, in the web editor's words. */
+export function apiPlanRefused(message: string): Response {
+  if (message === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
+  if (message === PLAN_GONE || message === PLAN_NOT_YOURS_OR_GONE) return apiError(404, "not_found", message);
+  if (message === PLAN_NOT_YOURS) return apiError(403, "forbidden", message);
+  return apiError(400, "bad_request", message);
+}
+
+/** The plan editor's site picker (GET /api/v1/plan-sites). */
+export type ApiPlanSites = { apiVersion: number; today: string; sites: PickerSite[] };
+
+export function apiPlanSites(sites: readonly PickerSite[], today: string): ApiPlanSites {
+  return {
+    apiVersion: API_VERSION,
+    today,
+    sites: sites.map((site) => ({ id: site.id, name: site.name, atoll: site.atoll, channel: site.channel })),
   };
 }

@@ -8,6 +8,9 @@ import {
   isPlanId,
   newPlanId,
   planDateSpan,
+  PLAN_GONE,
+  PLAN_NOT_YOURS,
+  PLAN_NOT_YOURS_OR_GONE,
   PLANS_PER_DIVER_MAX,
   requirePlanInput,
 } from "./dive-plan";
@@ -85,8 +88,8 @@ export async function savePlan(id: string | null, input: unknown): Promise<SaveP
     }
     const plan: DivePlan = { id, ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
     const updated = await updatePlanRecord(plan);
-    if (updated === "missing") return { ok: false, error: "That plan is gone." };
-    if (updated === "not-yours") return { ok: false, error: "Only the diver who made this plan can change it." };
+    if (updated === "missing") return { ok: false, error: PLAN_GONE };
+    if (updated === "not-yours") return { ok: false, error: PLAN_NOT_YOURS };
     return { ok: true, id: plan.id };
   } catch (error) {
     rethrowIfNextError(error);
@@ -100,7 +103,7 @@ export async function deletePlan(id: string): Promise<{ ok: boolean; error: stri
     const session = await requireSession();
     if (!isPlanId(id)) return { ok: false, error: "Unknown plan." };
     const removed = await deletePlanRecord(id, session.userId);
-    return removed ? { ok: true, error: null } : { ok: false, error: "That plan is not yours, or it is gone." };
+    return removed ? { ok: true, error: null } : { ok: false, error: PLAN_NOT_YOURS_OR_GONE };
   } catch (error) {
     rethrowIfNextError(error);
     return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not delete the plan." };

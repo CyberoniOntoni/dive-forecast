@@ -330,7 +330,61 @@ data class ApiPlanLeg(
 )
 
 /** GET /api/v1/plans: the signed-in diver's own plans. */
-@Serializable data class ApiPlanSummaries(val apiVersion: Int, val plans: List<ApiPlanSummary> = emptyList())
+@Serializable
+data class ApiPlanSummaries(
+  val apiVersion: Int,
+  val plans: List<ApiPlanSummary> = emptyList(),
+  val limits: ApiPlanLimits = ApiPlanLimits(),
+)
+
+/** What the plan editor allows (server lib/dive-plan.ts); the defaults match it for a server that sends none. */
+@Serializable
+data class ApiPlanLimits(
+  val titleMax: Int = 80,
+  val notesMax: Int = 1500,
+  val diveNoteMax: Int = 300,
+  val daysMax: Int = 16,
+  val divesPerDayMax: Int = 6,
+  val plansMax: Int = 40,
+  val boatSpeedMinKn: Double = 3.0,
+  val boatSpeedMaxKn: Double = 40.0,
+  val boatSpeedDefaultKn: Double = 8.0,
+)
+
+/**
+ * A plan as its owner edits it (GET /api/v1/plans/{id}/edit), and the body POST /api/v1/plans and PUT
+ * /api/v1/plans/{id} take: the same days and dives.
+ */
+@Serializable
+data class ApiEditablePlan(
+  val apiVersion: Int = 1,
+  val id: String = "",
+  val title: String = "",
+  val notes: String? = null,
+  val boatSpeedKn: Double = 8.0,
+  val days: List<PlanDayBody> = emptyList(),
+  val updatedAt: String = "",
+  val limits: ApiPlanLimits = ApiPlanLimits(),
+)
+
+@Serializable
+data class PlanBody(val title: String, val notes: String?, val boatSpeedKn: Double, val days: List<PlanDayBody>)
+
+@Serializable data class PlanDayBody(val date: String, val stops: List<PlanStopBody> = emptyList())
+
+/** `want`: "incoming" or "outgoing", only at a channel. */
+@Serializable
+data class PlanStopBody(val siteId: String, val time: String, val note: String? = null, val want: String? = null)
+
+@Serializable data class ApiPlanSaved(val apiVersion: Int = 1, val id: String)
+
+@Serializable data class ApiPlanDeleted(val apiVersion: Int = 1, val id: String, val deleted: Boolean = true)
+
+/** GET /api/v1/plan-sites: every site the editor can pick, and the Maldives date a new plan starts on. */
+@Serializable data class ApiPlanSites(val apiVersion: Int = 1, val today: String = "", val sites: List<ApiPickerSite> = emptyList())
+
+/** `channel`: the dive takes a wanted way (incoming or outgoing). */
+@Serializable data class ApiPickerSite(val id: String, val name: String, val atoll: String? = null, val channel: Boolean = false)
 
 @Serializable
 data class ApiPlanSummary(
