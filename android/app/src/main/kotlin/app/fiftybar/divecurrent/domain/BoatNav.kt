@@ -177,7 +177,7 @@ object BoatNav {
 
   /** The smaller angle between two headings, 0 to 180 degrees. */
   fun headingGapDeg(a: Double, b: Double): Double = abs(((a - b + 540) % 360) - 180)
-
-  /** Math.round as JavaScript does it (halves up), so the words match the web's. */
-  private fun jsRound(value: Double): Int = floor(value + 0.5).roundToLong().toInt()
 }
+
+/** Math.round as JavaScript does it (halves up), so the app's numbers and words match the web's. */
+internal fun jsRound(value: Double): Int = floor(value + 0.5).roundToLong().toInt()

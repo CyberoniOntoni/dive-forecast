@@ -37,7 +37,7 @@ What it does:
   `domain/NavReadout.kt`), ported from `lib/boat-nav.ts` and `lib/route-current.ts` with their tests. Location comes
   from the platform `LocationManager` (no Play services), only while the screen is started. Satellite outlines, not a
   chart.
-- **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
+- **Offline**: the last body of each read endpoint except boat routes (about one position, `no-store`) is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
 Ratings and reviews, adding sites and the extra map layers are on the web for now (API.md § Next).

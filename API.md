@@ -340,8 +340,10 @@ from `getBoatRoute` (`lib/boat-route.ts`, `lib/route-current-data.ts`). Satellit
 - The app works out the steer bearing, the time-stepped ETA and the very-strong warnings itself, from these, as the web
   panel does (`lib/route-current.ts`).
 - `Cache-Control: no-store`. Ask again at most every 20 seconds, and only when the boat is 300 m off the route.
+- `from` and a point `to` are `<lat>,<lon>` with at most two digits before the latitude's point and three before the
+  longitude's, on the globe. A `to` with a comma is always a point (no site id holds one).
 - 400 `bad_request` for a missing or bad `from` or `to`, or a start or point outside the Maldives (the message says
-  which). 404 for an unknown site.
+  which). 404 only for a site id that is not on the map.
 
 ## Next (not built yet)
 

@@ -88,6 +88,13 @@ describe("GET /api/v1/boat-route", () => {
     expect((await ask("?to=banana-reef")).status).toBe(400);
     expect((await ask("?from=north&to=banana-reef")).status).toBe(400);
     expect((await ask("?from=4.1,73.4")).status).toBe(400);
+    // Off the globe, at either end, is a bad request, never an unknown site.
+    expect((await ask("?from=91,73&to=banana-reef")).status).toBe(400);
+    for (const to of ["91,73", "4.2,200", "4.2,73,1"]) {
+      const response = await ask(`?from=4.1,73.4&to=${to}`);
+      expect(response.status).toBe(400);
+      expect((await response.json()).error.message).toBe("Routes go to a dive site or a point in the Maldives.");
+    }
     expect(calls).toEqual([]);
     answer = async () => {
       throw new Error(ROUTE_OUTSIDE);

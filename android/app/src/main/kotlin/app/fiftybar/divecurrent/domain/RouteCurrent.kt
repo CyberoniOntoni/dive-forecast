@@ -10,7 +10,6 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -135,6 +134,4 @@ object RouteCurrents {
     }
     return RouteTime(if (blocked || !(speedKnots > 0)) null else hours * 60, veryStrong, coveredKm)
   }
-
-  private fun jsRound(value: Double): Int = kotlin.math.floor(value + 0.5).roundToInt()
 }

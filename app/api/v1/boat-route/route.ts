@@ -1,5 +1,6 @@
 import { getBoatRoute } from "@/lib/actions";
 import { apiBoatRoute, apiError, apiHandler, apiJson } from "@/lib/api-v1";
+import { readPointDestination } from "@/lib/point-destination";
 import { ROUTE_BAD_DESTINATION, ROUTE_BAD_POSITION, ROUTE_OUTSIDE } from "@/lib/boat-route-limits";
 
 /** getBoatRoute's refusals in words a diver can act on. */
@@ -9,11 +10,6 @@ const REFUSED: Record<string, string> = {
   [ROUTE_BAD_DESTINATION]: "Routes go to a dive site or a point in the Maldives.",
 };
 
-/** "4.17,73.51" as numbers, or null. */
-function readLatLon(value: string | null): { lat: number; lon: number } | null {
-  const match = value ? /^(-?\d{1,3}(?:\.\d+)?),(-?\d{1,3}(?:\.\d+)?)$/.exec(value.trim()) : null;
-  return match ? { lat: Number(match[1]), lon: Number(match[2]) } : null;
-}
 
 /**
  * A boat route from the phone's position (`from=lat,lon`) to a site or a point (`to=<site id>` or `to=lat,lon`),
@@ -23,10 +19,13 @@ function readLatLon(value: string | null): { lat: number; lon: number } | null {
 export async function GET(request: Request) {
   return apiHandler(async () => {
     const params = new URL(request.url).searchParams;
-    const from = readLatLon(params.get("from"));
+    // One grammar for both ends, the web's point id: a position off the globe is a bad request, not "no such site".
+    const from = readPointDestination(params.get("from")?.trim() ?? "");
     const to = params.get("to")?.trim() ?? "";
-    if (!from) return apiError(400, "bad_request", "Give the boat's position as from=lat,lon.");
+    if (!from) return apiError(400, "bad_request", REFUSED[ROUTE_BAD_POSITION]);
     if (!to) return apiError(400, "bad_request", "Give the destination as to=<site id> or to=lat,lon.");
+    // No site id holds a comma, so a "to" with one is a point, and one that does not read as a point is refused.
+    if (to.includes(",") && !readPointDestination(to)) return apiError(400, "bad_request", REFUSED[ROUTE_BAD_DESTINATION]);
     try {
       const trip = await getBoatRoute(from, to);
       if (!trip) return apiError(404, "not_found", "No such site.");
