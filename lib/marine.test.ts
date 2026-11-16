@@ -470,6 +470,41 @@ describe("stale marine cache", () => {
     }
   });
 
+  it("marks a series fetched over 12 hours ago stale, though its hours still reach past now", async () => {
+    const lat = 2.3333;
+    const lon = 73.5555;
+    const bearing = 90;
+    const fallbackLat = 2.9;
+    const fallbackLon = 74.2;
+    const point = seawardPoint(lat, lon, bearing);
+    const cachedHours = [
+      { time: maldivesWall(Date.now() + 24 * HOUR), seaLevelM: 0.5, currentVelocityMs: 0.2, currentDirectionDeg: 10 },
+    ];
+    const fetchedAt = Date.now() - 20 * HOUR;
+    const seawardName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`.replace(/[^0-9.+_-]/g, "");
+    vi.spyOn(fs, "readFileSync").mockImplementation((file) => {
+      if (path.basename(String(file)) === seawardName) return JSON.stringify({ fetchedAt, hours: cachedHours });
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", async () => new Response(null, { status: 404 }));
+    try {
+      expect(await siteMarineHours(lat, lon, bearing, fallbackLat, fallbackLon, { wait: false })).toEqual({
+        ok: true,
+        hours: cachedHours,
+        fetchedAt,
+        stale: true,
+      });
+      await vi.waitFor(() => expect(marineRequestsInFlight()).toBe(0));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(point.lat, point.lon);
+      forgetMarineCache(fallbackLat, fallbackLon);
+    }
+  });
+
   it("shares one request between callers of the same point and runs at most four at once", async () => {
     vi.spyOn(fs, "readFileSync").mockImplementation(() => {
       throw new Error("cache miss");

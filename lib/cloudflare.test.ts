@@ -574,13 +574,14 @@ describe("on a Cloudflare worker", () => {
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
       expect(reads).toEqual([key]);
 
-      // An edge copy past the TTL is served at once; R2 is read behind the response, and its newer series replaces the
-      // edge copy without asking Open-Meteo.
-      const old = Date.now() - 7 * 60 * 60 * 1000;
+      // An edge copy past the TTL is not used while R2 may hold a newer series: R2 is read before the answer (once),
+      // its series replaces the edge copy, and Open-Meteo is not asked. The map's list was built from such copies up
+      // to 24 h old while the site page showed R2's.
+      const old = Date.now() - 20 * 60 * 60 * 1000;
       for (const url of edge.entries.keys()) edge.entries.set(url, JSON.stringify({ fetchedAt: old, hours }));
       vi.resetModules();
       newRequest(env);
-      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: old });
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent, stale: false });
       await Promise.all(background);
       expect(reads).toEqual([key, key]);
       expect(fetch).not.toHaveBeenCalled();
@@ -588,6 +589,14 @@ describe("on a Cloudflare worker", () => {
       newRequest(env);
       expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: recent });
       expect(reads).toEqual([key, key]);
+
+      // When R2 is as old (its refreshes have been failing), that series is still served, but marked stale.
+      await bucket.put(key, JSON.stringify({ fetchedAt: old, hours }));
+      for (const url of edge.entries.keys()) edge.entries.set(url, JSON.stringify({ fetchedAt: old, hours }));
+      vi.resetModules();
+      newRequest(env);
+      expect(await (await import("./marine")).fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: old, stale: true });
+      await Promise.all(background);
     } finally {
       vi.unstubAllGlobals();
       vi.unstubAllEnvs();

@@ -19,7 +19,7 @@ const windPoints = pointFetcher<WindHour>({
 /** Wind hours for one point, through the shared per-point cache (pointFetcher in marine.ts). */
 export async function fetchWind(lat: number, lon: number, options: FetchOptions = {}): Promise<WindFetch> {
   const fetched = await windPoints.fetch(lat, lon, options);
-  return fetched.ok ? { ...fetched, stale: marineSeriesStale(fetched.hours) } : fetched;
+  return fetched.ok ? { ...fetched, stale: fetched.stale || marineSeriesStale(fetched.hours) } : fetched;
 }
 
 async function requestWind(lat: number, lon: number): Promise<WindHour[] | null> {

@@ -9,8 +9,8 @@ const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 /**
- * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is still served at once while
- * R2 (or Open-Meteo) is checked behind the response, so a page after a quiet spell does not wait on R2.
+ * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is only used once R2 has been
+ * read and holds nothing newer (fetchPoint); Open-Meteo is then asked behind the response.
  */
 const EDGE_KEEP_MS = 24 * 60 * 60 * 1000;
 /** A point is checked again behind a response at most this often per isolate. */
@@ -78,17 +78,18 @@ export async function siteMarineHours(
   const point = seawardPoint(lat, lon, inwardBearingDeg, options.seawardKm);
   const seaward = await fetchMarine(point.lat, point.lon, options);
   if (!seaward.ok && seaward.pending) return seaward;
-  if (seaward.ok && !marineSeriesStale(seaward.hours)) return freshMarine(seaward);
+  if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
-  if (fallback.ok && !marineSeriesStale(fallback.hours)) return freshMarine(fallback);
+  if (fallback.ok && !marineSeriesStale(fallback.hours)) return usableMarine(fallback);
   const cached = (await readCachedHours(point.lat, point.lon)) ?? (await readCachedHours(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
 }
 
-function freshMarine(fetched: { hours: MarineHour[]; fetchedAt: number }): MarineFetch {
-  return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: false };
+/** A series whose hours still reach ahead, keeping the point's stale flag (seriesOld: fetched long ago). */
+function usableMarine(fetched: { hours: MarineHour[]; fetchedAt: number; stale: boolean }): MarineFetch {
+  return { ok: true, hours: fetched.hours, fetchedAt: fetched.fetchedAt, stale: fetched.stale };
 }
 
 /** Seaward of the site, opposite its inward bearing. The distance is 3 km unless a GEBCO check stepped it out. */
@@ -122,9 +123,9 @@ export type FetchOptions = {
 };
 
 /**
- * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, it is checked again in the
- * background (R2 first on a worker, then Open-Meteo), so a page never waits on Open-Meteo for a point it has seen
- * before. A point with no cache at all waits for its first fetch, unless the caller asked not to wait.
+ * Hours for one point. A cached series is returned at once; if it is past the 6-hour TTL, a worker first reads R2
+ * (the warm-up keeps it fresh), and Open-Meteo is asked in the background, so a page never waits on Open-Meteo for a
+ * point it has seen before. A point with no cache at all waits for its first fetch, unless the caller asked not to wait.
  */
 export function fetchMarine(lat: number, lon: number, options: FetchOptions = {}): Promise<MarineFetch> {
   return marinePoints.fetch(lat, lon, options);
@@ -176,8 +177,8 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
     const known = remembered.get(name);
     if (known && withinTtl(known)) return known;
-    // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). A copy past the TTL is
-    // still served; fetchPoint checks R2 again behind the response.
+    // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). For a copy past the TTL,
+    // fetchPoint reads R2 before using it.
     const edgeText = await edgeRead(workerKey(name));
     const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
     if (local) return remember(name, local);
@@ -288,18 +289,22 @@ export function pointFetcher<T>(source: PointSource<T>) {
   }
 
   async function fetchPoint(lat: number, lon: number, options: FetchOptions = {}): Promise<PointFetch<T>> {
-    const cached = await readCached(lat, lon);
+    let cached = await readCached(lat, lon);
     if (cached) {
       const name = fileName(lat, lon);
+      // A copy past the TTL from this data centre's edge or this isolate's memory can be up to EDGE_KEEP_MS old while
+      // R2, which the hourly warm-up keeps under the TTL, holds a far newer one. R2 is read before such a copy is used
+      // (Open-Meteo is still only asked behind the response), so no page or map list is made from it.
+      if (workerEnv() && !withinTtl(cached) && !readFromR2().has(name)) cached = (await readR2(name, cached)) ?? cached;
       const age = Date.now() - cached.fetchedAt;
       const due = options.refreshOlderThanMs;
       if (due != null && age > due) {
         const latest = newest(await revalidate(lat, lon, due), cached)!;
-        return { ok: true, hours: latest.hours, fetchedAt: latest.fetchedAt, stale: false };
+        return { ok: true, hours: latest.hours, fetchedAt: latest.fetchedAt, stale: seriesOld(latest) };
       }
       const checkedLately = Date.now() - (lastRevalidated.get(name) ?? 0) < REVALIDATE_EVERY_MS;
       if (age > CACHE_TTL_MS && !checkedLately) runInBackground(revalidate(lat, lon, CACHE_TTL_MS));
-      return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: false };
+      return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: seriesOld(cached) };
     }
     const failed = failedPoints.has(fileName(lat, lon));
     if (options.wait === false || (failed && source.skipFailedPoints)) {
@@ -318,6 +323,14 @@ export function pointFetcher<T>(source: PointSource<T>) {
 /** How long an edge copy of a series is worth keeping: EDGE_KEEP_MS from its fetch (edgeWrite skips one already past it). */
 function edgeSeconds(fetchedAt: number): number {
   return (fetchedAt + EDGE_KEEP_MS - Date.now()) / 1000;
+}
+
+/**
+ * Fetched more than SERIES_STALE_MS ago, by age alone: twice the TTL, which on a worker usually means its refreshes are
+ * failing (the warm-up keeps R2 under the TTL), though a refresh may be under way. It is still used, but marked stale.
+ */
+function seriesOld(series: { fetchedAt: number }): boolean {
+  return Date.now() - series.fetchedAt > SERIES_STALE_MS;
 }
 
 function withinTtl(series: { fetchedAt: number }): boolean {
