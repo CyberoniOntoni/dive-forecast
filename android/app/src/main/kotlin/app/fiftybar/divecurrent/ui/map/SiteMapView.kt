@@ -22,6 +22,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.GlanceTone
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
@@ -65,6 +66,12 @@ enum class BaseMap {
 private const val SOURCE = "sites"
 private const val ARROWS = "site-arrows"
 private const val NAMES = "site-names"
+
+/**
+ * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
+ * MapLibre's demo server. The name is the folder there.
+ */
+private const val LABEL_FONT = "open-sans-semibold"
 
 /** The middle of the Maldives, wide enough to show the chain. */
 private val START = CameraPosition.Builder().target(LatLng(3.6, 73.3)).zoom(6.4).build()
@@ -182,7 +189,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
     SymbolLayer(NAMES, SOURCE)
       .withProperties(
         textField(get("name")),
-        textFont(arrayOf("Open Sans Semibold")),
+        textFont(arrayOf(LABEL_FONT)),
         textSize(12f),
         textColor(colors.foam.toArgb()),
         textHaloColor(colors.ink.toArgb()),
@@ -256,7 +263,7 @@ private fun styleJson(baseMap: BaseMap): String {
   return """
     {
       "version": 8,
-      "glyphs": "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+      "glyphs": "${BuildConfig.API_BASE_URL}/map-fonts/{fontstack}/{range}.pbf",
       "sources": {
         "base": {
           "type": "raster",

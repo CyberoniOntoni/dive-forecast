@@ -69,16 +69,19 @@ import app.fiftybar.divecurrent.domain.heightLabel
 import app.fiftybar.divecurrent.domain.seaBandLabel
 import app.fiftybar.divecurrent.domain.windLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
+import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SiteScreen(siteId: String, onBack: () -> Unit) {
+fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit) {
   val repository = appRepository()
-  val viewModel: SiteViewModel = viewModel(key = "site/$siteId") { SiteViewModel(siteId, repository) }
+  val account = appAccount()
+  val viewModel: SiteViewModel = viewModel(key = "site/$siteId") { SiteViewModel(siteId, repository, account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
+  val session by viewModel.session.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
   val context = LocalContext.current
   val hours = state.forecast?.hours.orEmpty()
@@ -132,6 +135,21 @@ fun SiteScreen(siteId: String, onBack: () -> Unit) {
           NoticeCard(forecast)
         }
       }
+      if (!state.notFound) {
+        ReportCard(
+          state = state,
+          nickname = session?.nickname,
+          timeOf = viewModel::reportTime,
+          onSignIn = onSignIn,
+          onQuick = viewModel::reportQuick,
+          onOther = viewModel::reportOther,
+          onDirection = viewModel::reportDirection,
+          onStrength = viewModel::reportStrength,
+          onSend = viewModel::sendReport,
+          onAsForecast = viewModel::sendAsForecast,
+        )
+        RecentReportsCard(state.reports)
+      }
       state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }
       Spacer(Modifier.height(24.dp))
     }
@@ -168,7 +186,7 @@ private fun StatusLine(state: SiteUiState) {
 }
 
 @Composable
-private fun SurfaceCard(content: @Composable () -> Unit) {
+internal fun SurfaceCard(content: @Composable () -> Unit) {
   val colors = CurrentTheme.colors
   Card(
     shape = RoundedCornerShape(24.dp),
@@ -364,7 +382,7 @@ private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
       }
     }
     Text(
-      "Reports and ratings are on the web site for now.",
+      "Ratings and reviews are on the web site for now.",
       style = MaterialTheme.typography.bodySmall,
       color = colors.foam.copy(alpha = 0.7f),
     )

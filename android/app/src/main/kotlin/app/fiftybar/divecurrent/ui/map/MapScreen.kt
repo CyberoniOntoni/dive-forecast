@@ -19,8 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -57,14 +60,16 @@ import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
+import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(onOpenSite: (String) -> Unit) {
+fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Unit) {
   val repository = appRepository()
+  val session by appAccount().sessions.session.collectAsStateWithLifecycle()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   var baseMap by rememberSaveable { mutableStateOf(BaseMap.Satellite) }
@@ -109,6 +114,17 @@ fun MapScreen(onOpenSite: (String) -> Unit) {
         colors = colors,
         onOpenSite = onOpenSite,
         modifier = Modifier.fillMaxSize(),
+      )
+      // Who is signed in, or a way to sign in: reports need it.
+      AssistChip(
+        onClick = { onAccount(session != null) },
+        label = { Text(session?.nickname ?: "Sign in", maxLines = 1) },
+        leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
+        colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam, leadingIconContentColor = colors.foam),
+        modifier =
+          Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp).heightIn(min = 44.dp).semantics {
+            contentDescription = session?.let { "Signed in as ${it.nickname}. Account" } ?: "Sign in"
+          },
       )
       Row(
         Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),

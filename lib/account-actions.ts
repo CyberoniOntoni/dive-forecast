@@ -1,6 +1,6 @@
 "use server";
 
-import { finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
+import { normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import {
   appUrl,
   authSecret,
@@ -15,14 +15,14 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { siteScouts } from "./site-scouts";
-import { hashLoginCode, newLoginCode, sameText } from "./session-token";
+import { hashLoginCode, newLoginCode } from "./session-token";
+import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
 import { listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
 
-const NOT_SET_UP = "Signing in is not set up on this server yet.";
 
 /** Emails a six-digit code (and a link that fills it in) to the address. */
 export async function requestSignIn(emailInput: unknown, next?: unknown): Promise<SignInStep> {
@@ -58,13 +58,7 @@ export async function requestSignIn(emailInput: unknown, next?: unknown): Promis
 export async function completeSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<SignInStep> {
   await ready();
   try {
-    const email = normalizeEmail(input?.email);
-    const code = typeof input?.code === "string" ? input.code.replace(/\D/g, "") : "";
-    if (code.length !== 6) return { ok: false, error: "Enter the 6-digit code from the email." };
-    const secret = authSecret();
-    if (!secret) return { ok: false, error: NOT_SET_UP };
-    const codeHash = await hashLoginCode(email, code, secret);
-    const result = await mutateStore((store) => finishLogin(store, email, codeHash, Date.now(), input?.nickname, sameText));
+    const result = await checkSignInCode(input);
     if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
     await setSessionCookie(result.user.id, result.user.nickname);
     return { ok: true, error: null };

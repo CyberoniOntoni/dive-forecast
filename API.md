@@ -1,6 +1,6 @@
 # JSON API (v1)
 
-The read API the Android app (`android/`) is built against. The routes are under `app/api/v1/` and are shaped by `lib/api-v1.ts`.
+The API the Android app (`android/`) is built against. The routes are under `app/api/v1/` and are shaped by `lib/api-v1.ts`.
 They wrap the same server actions the web pages use (`listSites`, `getSite`, `forecastSite`, `mapNowcasts`), so the
 app and the site always show the same forecast. The forecast model is untouched.
 
@@ -15,13 +15,20 @@ app and the site always show the same forecast. The forecast model is untouched.
   `fetchedAt` is Unix ms.
 - **Caching.** Successful responses send `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. The app
   should keep the last body for each site (Room) and show it with its `fetchedAt` age when it is offline.
-- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "server_error", "message": "..."}}` with the matching
-  HTTP status and `Cache-Control: no-store`. The message can be shown to the diver. A 500 never carries the internal
+- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "needs_nickname" | "server_error",
+  "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
+  by its HTTP status. The message can be shown to the diver. A 500 never carries the internal
   error.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
-- **Methods.** GET only for now. The Cloudflare worker turns away any non-GET request that is not a server action
-  (`lib/request-guard.ts`), so the write endpoints will need an exception for `/api/v1/` there.
+- **Methods.** Reads are GET. Writes are POST with an `application/json` body (anything else gets 415): a browser
+  cannot send that to this site from another one without a CORS check, which this API never passes. The Cloudflare
+  worker lets JSON posts under `/api/v1/` through (`lib/request-guard.ts`) and turns away other non-GET requests that
+  are not server actions.
+- **Signed in.** Endpoints about one diver take `Authorization: Bearer <token>` from
+  `POST /api/v1/sign-in/token`, and only that: the web's cookie never signs an API write
+  in. Without a header they answer 401 `unauthorized`; with an expired, forged or signed-out token too. Their
+  responses are `Cache-Control: private, no-store`.
 
 ## Endpoints
 
@@ -142,10 +149,80 @@ showing a saved copy later must not present it as the current hour.
 This call never waits for a first ocean fetch. A site with no cached series comes back `unavailable` until the
 warm-up has fetched it.
 
+### `GET /api/v1/sites/{id}/reports`
+
+Divers' newest reports at the site (at most 10), as the site page lists them. The words are made on the server
+(`recentReportRows` in `lib/recent-reports.ts`); `ago` is from the time of the response. Kept for 60 s.
+
+```json
+{
+  "apiVersion": 1,
+  "siteId": "banana-reef",
+  "reports": [
+    {
+      "time": "2026-11-15T08:00", "when": "Sat 15 Nov 08:00", "ago": "1 day ago", "way": "Running SE",
+      "strength": "mild", "forecast": { "way": "Running SE", "strength": "strong", "match": "close" },
+      "beforeAxis": false, "by": "Manta"
+    }
+  ]
+}
+```
+
+`forecast` is what the site showed at that hour (null for a report that saved none); `match` is `match`, `close` or
+`miss`. `by` is a nickname, null for a report from before sign-in. 404 for an unknown or hidden site.
+
+## Sign-in and writes
+
+### `POST /api/v1/sign-in/code`
+
+`{"email": "diver@example.com"}`. Emails the same six-digit code as the web's sign-in page (`requestSignIn` in
+`lib/account-actions.ts`, with its limits per address and per IP address). Answers
+`{"apiVersion": 1, "newUser": true}`: a new address picks a nickname on the next step. 400 with words for the diver
+for a bad address or too many codes.
+
+### `POST /api/v1/sign-in/token`
+
+`{"email": "...", "code": "123456", "nickname": "Manta"}` (`nickname` only for a new address). Answers
+
+```json
+{ "apiVersion": 1, "token": "eyJ1Ijo...", "nickname": "Manta", "expiresAt": 1778900000000 }
+```
+
+The token is the web's session cookie value (`signSession` in `lib/session-token.ts`), good for 180 days
+(`expiresAt`, Unix ms), and ended by "Sign out everywhere" on either side. The app keeps it out of backups and sends
+it as `Authorization: Bearer <token>`. A new address without a usable nickname gets 400 `needs_nickname`; a wrong
+or expired code 400 `bad_request`. No cookie is set.
+
+### `GET /api/v1/me`
+
+Signed in. `{"apiVersion": 1, "nickname": "Manta", "points": 40, "monthPoints": 20, "reports": 2, "monthRank": 3,
+"allRank": 7}`: never the email or the diver's id. 401 once the token no longer works, which is how the app learns it
+was signed out.
+
+### `POST /api/v1/sign-out-everywhere`
+
+Signed in, body `{}`. Ends every session of the diver: this token, other phones and the web's cookies.
+
+### `POST /api/v1/sites/{id}/reports`
+
+Signed in. `{"time": "2026-11-15T08:00", "direction": "incoming" | "outgoing", "strength": "slack" | "mild" |
+"strong" | "too_strong"}`: the dive's Maldives wall time and what the diver felt. At a wall, strait or lagoon site
+`incoming` means toward the forecast's `alongHeadingDeg`, as on the web form. Checked exactly as the web form
+(`addReport` in `lib/actions.ts`: not ahead of now, at most 14 days old, no duplicate), and saved with the prediction
+the site showed at that hour, so it counts for `npm run verify` like a web report. Answers 201
+
+```json
+{
+  "apiVersion": 1,
+  "report": { "id": "…", "siteId": "banana-reef", "time": "2026-11-15T08:00", "direction": "outgoing", "strength": "mild" },
+  "award": { "points": 15, "reasons": ["report", "fresh"], "uncounted": null }
+}
+```
+
+`award` is what the report earned (`lib/points.ts`); `uncounted` says why it earned nothing (`daily-limit`,
+`same-dive`). A report moves the next hours of the forecast, so refetch the forecast without the HTTP cache after
+one. 400 with the form's own words for a report it refuses, 404 for an unknown site.
+
 ## Next (not built yet)
 
-1. **Sign-in for the app.** The same email-code flow returns a bearer token signed like the session cookie
-   (`lib/session-token.ts`). `requireSession` accepts either one, and "sign out everywhere" (`sessionsValidFrom`)
-   ends both.
-2. **Writes.** `POST /api/v1/reports`, plus ratings and reviews. They go through the same validation as `addReport`
-   in `lib/actions.ts`, and the worker's request guard needs an exception for them.
+Ratings and reviews (with photos), dive plans, boat routes and the map layers. Each comes with its own section here.

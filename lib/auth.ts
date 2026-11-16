@@ -74,11 +74,24 @@ export async function appUrl(): Promise<string | null> {
 export async function currentSession(): Promise<Session | null> {
   const jar = await fromRequest(cookies);
   if (!jar) return null;
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const bearer = bearerToken((await fromRequest(headers))?.get("authorization") ?? null);
+  // An app request's token wins, and a bad one is not rescued by a cookie riding along.
+  const token = bearer !== undefined ? bearer : jar.get(SESSION_COOKIE)?.value;
   const secret = authSecret();
   if (!secret) return null;
   const session = token ? await verifySession(token, secret) : null;
   return session && !signedOutSince(session) ? session : null;
+}
+
+/**
+ * The app's session token from an `Authorization: Bearer <token>` header (API.md § Sign-in): the same signed token as
+ * the cookie, so "Sign out everywhere" ends both. Undefined when the request has no such header, null when it has one
+ * that is not a bearer token.
+ */
+export function bearerToken(authorization: string | null): string | null | undefined {
+  if (authorization == null) return undefined;
+  const match = /^Bearer\s+(\S+)\s*$/i.exec(authorization);
+  return match ? match[1] : null;
 }
 
 /**

@@ -58,3 +58,20 @@ export const BADGES: readonly { id: BadgeId; label: string; detail: string }[] =
   { id: "site-scout", label: "Site scout", detail: "Added a site that another diver then reported at" },
   { id: "ratings-10", label: "Reef critic", detail: "Rated 10 dive sites" },
 ];
+
+const REASON_WORDS: Record<AwardReason, string> = {
+  report: "report",
+  fresh: "filed soon after the dive",
+  pathfinder: "first report here in a month",
+};
+
+/** "+25 points: report 10, filed soon after the dive 5, first report here in a month 10." The web form and the app say it alike. */
+export function awardLine(award: Pick<ReportAward, "points" | "reasons" | "uncounted">): string {
+  if (award.points === 0) {
+    return award.uncounted === "same-dive"
+      ? "No points: you already reported this dive."
+      : "No points: today's reports already count in full.";
+  }
+  const parts = award.reasons.map((reason) => `${REASON_WORDS[reason]} ${POINTS[reason]}`);
+  return `+${award.points} points: ${parts.join(", ")}.`;
+}

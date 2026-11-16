@@ -107,7 +107,12 @@ data class ApiForecast(
   val seaState: List<ApiSeaStateHour>? = null,
   /** True when the sea state comes from an old cached wave or wind series. */
   val seaStale: Boolean = false,
+  /** The report form's words for this site; null from a server before reports came to the app. */
+  val reportWays: ApiReportWays? = null,
 )
+
+/** What the report form's two choices say here: "Incoming" / "Outgoing", or "Running NE" / "Running SW" on a wall. */
+@Serializable data class ApiReportWays(val legend: String, val incoming: String, val outgoing: String)
 
 @Serializable
 data class ApiNowcast(
@@ -131,7 +136,7 @@ data class ApiSiteNowcast(
 
 @Serializable
 data class ApiErrorDetail(
-  /** not_found | bad_request | server_error */
+  /** not_found | bad_request | unauthorized | needs_nickname | server_error; go by the HTTP status for others. */
   val code: String,
   /** Text the server says can be shown to the diver. */
   val message: String,
@@ -182,3 +187,62 @@ enum class SeaBand {
     fun of(value: String): SeaBand? = entries.firstOrNull { it.name.equals(value, ignoreCase = true) }
   }
 }
+
+/** GET /api/v1/sites/{id}/reports: divers' newest reports, in the server's words. */
+@Serializable
+data class ApiRecentReports(val apiVersion: Int, val siteId: String, val reports: List<ApiRecentReport> = emptyList())
+
+@Serializable
+data class ApiRecentReport(
+  val time: String,
+  /** "Tue 30 Sep 09:00". */
+  val `when`: String,
+  /** "2 days ago", from when the server answered. */
+  val ago: String,
+  /** "Incoming", "Outgoing", or "Running NE". */
+  val way: String,
+  val strength: String,
+  val forecast: ApiReportForecast? = null,
+  val beforeAxis: Boolean = false,
+  /** Nickname; null for reports from before sign-in. */
+  val by: String? = null,
+)
+
+/** What the site showed at the report's hour; `match` is match | close | miss. */
+@Serializable data class ApiReportForecast(val way: String, val strength: String, val match: String)
+
+@Serializable data class ApiCodeSent(val apiVersion: Int, val newUser: Boolean = false)
+
+/** The app's session: sent back as `Authorization: Bearer <token>`. `expiresAt` is Unix ms. */
+@Serializable data class ApiToken(val apiVersion: Int, val token: String, val nickname: String, val expiresAt: Long)
+
+@Serializable
+data class ApiMe(
+  val apiVersion: Int,
+  val nickname: String,
+  val points: Int = 0,
+  val monthPoints: Int = 0,
+  val reports: Int = 0,
+  val monthRank: Int? = null,
+  val allRank: Int? = null,
+)
+
+@Serializable
+data class ApiReportSaved(val apiVersion: Int, val report: ApiSavedReport, val award: ApiAward? = null)
+
+@Serializable
+data class ApiSavedReport(val id: String, val siteId: String, val time: String, val direction: String, val strength: String)
+
+/** What a report earned; `line` says it in words. */
+@Serializable
+data class ApiAward(val points: Int, val reasons: List<String> = emptyList(), val uncounted: String? = null, val line: String = "")
+
+@Serializable data class CodeRequest(val email: String)
+
+@Serializable data class TokenRequest(val email: String, val code: String, val nickname: String? = null)
+
+/** A report as the app files it: Maldives wall time, incoming | outgoing, and a Strength wire value. */
+@Serializable data class ReportRequest(val time: String, val direction: String, val strength: String)
+
+/** A write that answers with nothing more than its version. */
+@Serializable data class ApiOk(val apiVersion: Int)

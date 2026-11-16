@@ -6,6 +6,8 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import app.fiftybar.divecurrent.ui.account.AccountScreen
+import app.fiftybar.divecurrent.ui.account.SignInScreen
 import app.fiftybar.divecurrent.ui.map.MapScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
 
@@ -20,8 +22,23 @@ fun MainNavigation() {
       listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
     entryProvider =
       entryProvider {
-        entry<MapKey> { MapScreen(onOpenSite = { id -> backStack.add(SiteKey(id)) }) }
-        entry<SiteKey> { key -> SiteScreen(siteId = key.siteId, onBack = { backStack.removeLastOrNull() }) }
+        entry<MapKey> {
+          MapScreen(
+            onOpenSite = { id -> backStack.add(SiteKey(id)) },
+            onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
+          )
+        }
+        entry<SiteKey> { key ->
+          SiteScreen(
+            siteId = key.siteId,
+            onBack = { backStack.removeLastOrNull() },
+            onSignIn = { backStack.add(SignInKey) },
+          )
+        }
+        entry<SignInKey> {
+          SignInScreen(onDone = { backStack.removeLastOrNull() }, onBack = { backStack.removeLastOrNull() })
+        }
+        entry<AccountKey> { AccountScreen(onBack = { backStack.removeLastOrNull() }) }
       },
   )
 }
