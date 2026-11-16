@@ -10,6 +10,7 @@ import app.fiftybar.divecurrent.data.SignedOutException
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiReviews
 import app.fiftybar.divecurrent.data.session.Session
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,6 +44,9 @@ class ReviewsViewModel(
   private val _state = MutableStateFlow(ReviewsUiState())
   val state: StateFlow<ReviewsUiState> = _state.asStateFlow()
   val session: StateFlow<Session?> = account.sessions.session
+  private var loadJob: Job? = null
+  /** Counts writes, so a read that started before one does not put the older card back. */
+  private var writes = 0
 
   init {
     // Signing in or out changes whose review is "mine": read the card again.
@@ -52,11 +56,16 @@ class ReviewsViewModel(
   fun photoUrl(path: String): String = repository.photoUrl(path)
 
   fun load() {
-    viewModelScope.launch {
+    loadJob?.cancel()
+    loadJob = viewModelScope.launch {
       _state.update { it.copy(loading = true) }
+      val before = writes
       try {
         val card = account.reviews(siteId)
-        _state.update { it.copy(card = card, loading = false, draft = card.mine?.review.orEmpty()) }
+        _state.update {
+          if (writes != before) it.copy(loading = false)
+          else it.copy(card = card, loading = false, draft = card.mine?.review.orEmpty())
+        }
       } catch (e: ApiException) {
         _state.update { it.copy(loading = false, error = if (it.card == null) e.message else null) }
       }
@@ -96,8 +105,9 @@ class ReviewsViewModel(
         try {
           val jpeg = PhotoShrink.shrink(context, uri)
           val card = account.addReviewPhoto(siteId, jpeg)
+          writes += 1
           saved += 1
-          _state.update { it.copy(card = card) }
+          _state.update { it.copy(card = card, loading = false) }
         } catch (e: PhotoException) {
           problem = e.message
         } catch (_: SignedOutException) {
@@ -124,7 +134,8 @@ class ReviewsViewModel(
       _state.update { it.copy(busy = true, error = null, note = null) }
       try {
         val card = call()
-        _state.update { it.copy(card = card, busy = false, note = done, draft = if (keepDraft) it.draft else card.mine?.review.orEmpty()) }
+        writes += 1
+        _state.update { it.copy(card = card, loading = false, busy = false, note = done, draft = if (keepDraft) it.draft else card.mine?.review.orEmpty()) }
       } catch (_: SignedOutException) {
         _state.update { it.copy(busy = false, error = "Sign in again to rate and review.") }
       } catch (e: ApiException) {
