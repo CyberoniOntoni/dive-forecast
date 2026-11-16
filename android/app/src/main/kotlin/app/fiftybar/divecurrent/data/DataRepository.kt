@@ -10,6 +10,9 @@ import app.fiftybar.divecurrent.data.api.ApiPlan
 import app.fiftybar.divecurrent.data.api.ApiPlanLegs
 import app.fiftybar.divecurrent.data.api.ApiRecentReports
 import app.fiftybar.divecurrent.data.api.ApiSite
+import app.fiftybar.divecurrent.data.api.ApiShelter
+import app.fiftybar.divecurrent.data.api.ApiShelterPoint
+import app.fiftybar.divecurrent.data.api.ApiShelterShapes
 import app.fiftybar.divecurrent.data.api.ApiSites
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.db.CachedBody
@@ -70,6 +73,15 @@ class DataRepository(
 
   /** A boat route, always from the server: it is about where the boat is now. */
   suspend fun boatRoute(fromLat: Double, fromLon: Double, to: String): ApiBoatRoute = api.boatRoute(fromLat, fromLon, to)
+
+  /** The sheltered-water layer: always from the server, it is about one view and one hour. */
+  suspend fun shelter(south: Double, west: Double, north: Double, east: Double, time: String?): ApiShelter =
+    api.shelter(south, west, north, east, time)
+
+  /** An atoll's outline and islands; the map keeps them in memory once fetched (ShelterViewModel). */
+  suspend fun shelterShapes(wayId: String): ApiShelterShapes = api.shelterShapes(wayId)
+
+  suspend fun shelterPoint(lat: Double, lon: Double, time: String): ApiShelterPoint = api.shelterPoint(lat, lon, time)
 
   /** The phone's copy only, for showing something while the first fetch runs. */
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)

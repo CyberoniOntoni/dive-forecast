@@ -30,16 +30,16 @@ export type ShelterSource = {
 /** Below this zoom an atoll is a few pixels of shading and not worth the fetch. */
 const MIN_ZOOM = 8;
 /** Shading opacity over the satellite base: strong enough to read, light enough to see the reef through. */
-const OPACITY = 0.85;
+export const SHELTER_OPACITY = 0.85;
 /** The colour scale's top, metres of felt height; anything higher is drawn as this. */
-const SCALE_MAX_M = 2;
+export const SCALE_MAX_M = 2;
 
 /**
  * Colour stops on felt height: green while calm, through yellow and orange at the band limits, to red when rough and
  * a deeper red past it. Between stops the colour is blended, so the shading shows how much calmer one place is than
  * the next, not only which band it falls in.
  */
-const STOPS: { m: number; rgb: [number, number, number] }[] = [
+export const SCALE_STOPS: readonly { m: number; rgb: [number, number, number] }[] = [
   { m: 0, rgb: [38, 166, 120] },
   { m: SEA_BAND_LIMITS_M.calm, rgb: [226, 205, 64] },
   { m: SEA_BAND_LIMITS_M.moderate, rgb: [240, 140, 52] },
@@ -47,11 +47,19 @@ const STOPS: { m: number; rgb: [number, number, number] }[] = [
   { m: SCALE_MAX_M, rgb: [150, 20, 50] },
 ];
 
+/** The legend's named points on the scale. */
+export const SCALE_TICKS: readonly { label: string; m: number }[] = [
+  { label: "Calm", m: 0 },
+  { label: "Moderate", m: SEA_BAND_LIMITS_M.calm },
+  { label: "Choppy", m: SEA_BAND_LIMITS_M.moderate },
+  { label: "Rough", m: SEA_BAND_LIMITS_M.choppy },
+];
+
 export function feltColor(feltM: number): [number, number, number] {
   const m = Math.max(0, Math.min(SCALE_MAX_M, feltM));
-  for (let index = 1; index < STOPS.length; index += 1) {
-    const low = STOPS[index - 1];
-    const high = STOPS[index];
+  for (let index = 1; index < SCALE_STOPS.length; index += 1) {
+    const low = SCALE_STOPS[index - 1];
+    const high = SCALE_STOPS[index];
     if (m > high.m) continue;
     const share = (m - low.m) / (high.m - low.m);
     return [0, 1, 2].map((channel) => Math.round(low.rgb[channel] + (high.rgb[channel] - low.rgb[channel]) * share)) as [
@@ -60,12 +68,12 @@ export function feltColor(feltM: number): [number, number, number] {
       number,
     ];
   }
-  return STOPS[STOPS.length - 1].rgb;
+  return [...SCALE_STOPS[SCALE_STOPS.length - 1].rgb];
 }
 
 /** The legend's colour bar as a CSS gradient over 0 to SCALE_MAX_M. */
 export function scaleGradient(): string {
-  const stops = STOPS.map(({ m, rgb }) => `rgb(${rgb.join(",")}) ${Math.round((m / SCALE_MAX_M) * 100)}%`);
+  const stops = SCALE_STOPS.map(({ m, rgb }) => `rgb(${rgb.join(",")}) ${Math.round((m / SCALE_MAX_M) * 100)}%`);
   return `linear-gradient(to right, ${stops.join(", ")})`;
 }
 
@@ -167,6 +175,15 @@ function hourParts(time: string): { weekday: string; dayMonth: string; clock: st
 export function hourLabel(time: string): string {
   const { weekday, dayMonth, clock } = hourParts(time);
   return `${weekday} ${dayMonth}, ${clock}`;
+}
+
+/** The tap readout's two lines for a spot's sea state at `time` ("unknown" where no wave or wind data covers it). */
+export function shelterReadout(hour: SeaStateHour | "unknown", time: string): { head: string; body: string } {
+  if (hour === "unknown") return { head: "Sea state unknown", body: `No wave or wind data here for ${hourLabel(time)}.` };
+  return {
+    head: `${hour.band[0].toUpperCase()}${hour.band.slice(1)} · ${hour.feltM.toFixed(1)} m felt`,
+    body: `${seaDetail(hour)}. ${hourLabel(time)}.`,
+  };
 }
 
 /** A field drawn as two images, the lagoon and the sea outside, each cut to its side of the outline. */
@@ -286,7 +303,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     }
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
-    context.globalAlpha = OPACITY;
+    context.globalAlpha = SHELTER_OPACITY;
     context.drawImage(work, 0, 0);
   };
 
@@ -381,13 +398,9 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
         const head = document.createElement("p");
         head.className = "dive-shelter-popup-head";
         const body = document.createElement("p");
-        if (hour === "unknown") {
-          head.textContent = "Sea state unknown";
-          body.textContent = `No wave or wind data here for ${hourLabel(time)}.`;
-        } else {
-          head.textContent = `${hour.band[0].toUpperCase()}${hour.band.slice(1)} · ${hour.feltM.toFixed(1)} m felt`;
-          body.textContent = `${seaDetail(hour)}. ${hourLabel(time)}.`;
-        }
+        const words = shelterReadout(hour, time);
+        head.textContent = words.head;
+        body.textContent = words.body;
         box.append(head, body);
         L.popup({ maxWidth: 260 }).setLatLng([lat, lon]).setContent(box).openOn(map);
       });
@@ -424,12 +437,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
       const bar = L.DomUtil.create("div", "dive-shelter-bar", box);
       bar.style.background = scaleGradient();
       const ticks = L.DomUtil.create("div", "dive-shelter-ticks", box);
-      for (const [label, m] of [
-        ["Calm", 0],
-        ["Moderate", SEA_BAND_LIMITS_M.calm],
-        ["Choppy", SEA_BAND_LIMITS_M.moderate],
-        ["Rough", SEA_BAND_LIMITS_M.choppy],
-      ] as const) {
+      for (const { label, m } of SCALE_TICKS) {
         // On a phone only the scale's ends are named; the colours between speak for themselves.
         const tick = L.DomUtil.create("span", m > 0 && m < SEA_BAND_LIMITS_M.choppy ? "dive-shelter-tick-mid" : "", ticks);
         tick.style.left = `${(m / SCALE_MAX_M) * 100}%`;

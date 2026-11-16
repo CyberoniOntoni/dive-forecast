@@ -442,3 +442,63 @@ data class ApiRouteCurrentHour(
   /** The site forecast's band ("too_strong" is very strong); null offshore. */
   val strength: String? = null,
 )
+
+/** GET /api/v1/shelter: the "Sheltered water" layer for a map view at one hour. */
+@Serializable
+data class ApiShelter(
+  val apiVersion: Int = 1,
+  /** The hour shown, a Maldives wall hour. */
+  val time: String,
+  /** The hours that can be picked, from the current one. */
+  val hours: List<String> = emptyList(),
+  val stale: Boolean = false,
+  val atolls: List<ApiShelterAtoll> = emptyList(),
+  val scale: ApiShelterScale,
+)
+
+/** One atoll's grid: [rows] × [columns] cells from the south-west corner, one byte per cell (domain/ShelterField). */
+@Serializable
+data class ApiShelterAtoll(
+  val wayId: String,
+  /** coarse | fine */
+  val layer: String,
+  val south: Double,
+  val west: Double,
+  val stepDeg: Double,
+  val rows: Int,
+  val columns: Int,
+  /** Base64. */
+  val values: String,
+)
+
+@Serializable
+data class ApiShelterScale(
+  val maxM: Double,
+  val stops: List<ApiScaleStop> = emptyList(),
+  val ticks: List<ApiScaleTick> = emptyList(),
+  val opacity: Double = 0.85,
+)
+
+@Serializable data class ApiScaleStop(val m: Double, val color: String)
+
+@Serializable data class ApiScaleTick(val label: String, val m: Double)
+
+/** GET /api/v1/shelter/shapes/{wayId}: what the shading is cut to. */
+@Serializable
+data class ApiShelterShapes(
+  val apiVersion: Int = 1,
+  val wayId: String,
+  val outline: List<List<Double>> = emptyList(),
+  val islands: List<List<List<Double>>> = emptyList(),
+)
+
+/** GET /api/v1/shelter/point: the sea state at a tapped spot, with the words to show. */
+@Serializable
+data class ApiShelterPoint(
+  val apiVersion: Int = 1,
+  val time: String,
+  val inLayer: Boolean = false,
+  val seaState: ApiSeaStateHour? = null,
+  val head: String? = null,
+  val detail: String? = null,
+)

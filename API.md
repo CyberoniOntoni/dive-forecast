@@ -13,7 +13,8 @@ app and the site always show the same forecast. The forecast model is untouched.
   stores the prediction it was shown with that version, just like the web form.
 - **Times.** Forecast and report times are Maldives wall-clock strings `YYYY-MM-DDTHH:MM` (UTC+5, no zone suffix).
   `fetchedAt` is Unix ms.
-- **Caching.** Successful responses send `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. The app
+- **Caching.** Successful responses send `Cache-Control: public, max-age=300, stale-while-revalidate=86400`, unless
+  the endpoint's section says otherwise (a diver's own data and boat routes are never kept, atoll outlines a day). The app
   should keep the last body for each site (Room) and show it with its `fetchedAt` age when it is offline.
 - **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "forbidden" | "needs_nickname" |
   "server_error", "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
@@ -345,6 +346,66 @@ from `getBoatRoute` (`lib/boat-route.ts`, `lib/route-current-data.ts`). Satellit
 - 400 `bad_request` for a missing or bad `from` or `to`, or a start or point outside the Maldives (the message says
   which). 404 only for a site id that is not on the map.
 
+## Map layers
+
+### `GET /api/v1/shelter?south=<deg>&west=<deg>&north=<deg>&east=<deg>[&time=YYYY-MM-DDTHH:00]`
+
+The "Sheltered water" layer for a map view: each atoll's lagoon and the sea a few km round it, shaded by the felt wave
+height at one hour, as the web map draws it (`getShelter`, `lib/shelter-grid.ts`, `lib/shelter-layer.ts`).
+
+```json
+{
+  "apiVersion": 1,
+  "time": "2026-11-16T14:00",
+  "hours": ["2026-11-16T14:00", "2026-11-16T15:00"],
+  "stale": false,
+  "atolls": [
+    { "wayId": "671807044", "layer": "coarse", "south": 3.85, "west": 73.3, "stepDeg": 0.0045, "rows": 144,
+      "columns": 110, "values": "<base64>" }
+  ],
+  "scale": {
+    "maxM": 2,
+    "stops": [{ "m": 0, "color": "#26a678" }, { "m": 0.5, "color": "#e2cd40" }],
+    "ticks": [{ "label": "Calm", "m": 0 }, { "label": "Moderate", "m": 0.5 }],
+    "opacity": 0.85
+  }
+}
+```
+
+- `time` is the hour shown: the one asked for when it is in `hours`, else the current hour. `hours` are the hours that
+  can be picked, from the current one for up to three days. `stale` is true when some waves come from an old series.
+- Each entry of `atolls` is one atoll's grid: `rows` × `columns` cells of `stepDeg` degrees from the south-west corner
+  (`south`, `west`), row 0 the southernmost. `layer` is `coarse` (500 m cells, always) or `fine` (125 m cells near the
+  islands, only for a view of 0.6° or less each way, and cut to it). An atoll whose waves are not loaded yet is left out
+  (its fetch starts; ask again in a moment); with no atolls at all, say so.
+- `values` is base64, one byte per cell (`lib/shelter-field.ts`): the low 7 bits are the felt height in 0.02 m steps
+  (0 to 123), or 124 another atoll's water (that atoll draws it), 125 water with no wave or wind data this hour (left
+  clear), 126 an island, 127 past the grid (left clear, the sea fades out toward it). Bit 128 is set on water outside
+  the atoll outline. The lagoon and the sea outside are drawn apart and cut along the outline from
+  `/api/v1/shelter/shapes/{wayId}`, islands cut out, so the reef stays a sharp line; the app ports the web's drawing
+  (`fieldPixels`: islands and the other side filled from their neighbours 3 cells deep, the sea fading out over 4 cells
+  toward the grid's edge, fine cells over 2).
+- `scale` is the colour scale: blend between `stops` by felt height, anything over `maxM` takes the last; `ticks` name
+  points on the legend; draw the shading at `opacity`.
+- 400 `bad_request` for a missing or upside-down view, one over 10° either way ("Zoom in on an atoll to see it."), or
+  a malformed `time`. The web map asks from zoom 8 (MapLibre zoom 7).
+
+### `GET /api/v1/shelter/shapes/{wayId}`
+
+`{"apiVersion": 1, "wayId", "outline": [[lat, lon], …], "islands": [[[lat, lon], …], …]}`: an atoll's outline and
+the islands in and round it, for cutting the shading. Changes only with a new build, so it is kept longer than the
+other reads: `Cache-Control: public, max-age=86400, stale-while-revalidate=604800`.
+404 for an unknown outline.
+
+### `GET /api/v1/shelter/point?at=<lat>,<lon>&time=YYYY-MM-DDTHH:00`
+
+The sea state at one tapped spot, traced on its own rather than read off the grid, as the web map's popup shows it:
+`{"apiVersion": 1, "time", "inLayer": true, "seaState": {…}, "head": "Moderate · 0.7 m felt", "detail": "1.2 m swell
+from SW, 11 s · 0.4 m wind chop · wind 14 kt from W. Mon 26 Oct, 21:00."}`. `seaState` is shaped as in a site's
+forecast. Where the layer reaches but has no data that hour, `seaState` is null and the words say so. Where the layer
+has no water to read (an island, or far from any atoll), `inLayer` is false and the rest null; the app then shows
+nothing. 400 for a bad `at` or `time`.
+
 ## Next (not built yet)
 
-Ratings and reviews (with photos) and the map layers. Each comes with its own section here.
+Ratings and reviews (with photos). It comes with its own section here.

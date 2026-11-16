@@ -118,6 +118,34 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
     return decode(fetch(Request.Builder().url(url).get()))
   }
 
+  /** The sheltered-water layer for a view, at a Maldives wall hour or (null) the current one. */
+  suspend fun shelter(south: Double, west: Double, north: Double, east: Double, time: String?): ApiShelter {
+    val url =
+      url(listOf("api", "v1", "shelter"))
+        .newBuilder()
+        .addQueryParameter("south", degrees(south))
+        .addQueryParameter("west", degrees(west))
+        .addQueryParameter("north", degrees(north))
+        .addQueryParameter("east", degrees(east))
+        .apply { if (time != null) addQueryParameter("time", time) }
+        .build()
+    return decode(fetch(Request.Builder().url(url).get()))
+  }
+
+  suspend fun shelterShapes(wayId: String): ApiShelterShapes = get<ApiShelterShapes>(listOf("api", "v1", "shelter", "shapes", wayId)).first
+
+  suspend fun shelterPoint(lat: Double, lon: Double, time: String): ApiShelterPoint {
+    val url =
+      url(listOf("api", "v1", "shelter", "point"))
+        .newBuilder()
+        .addQueryParameter("at", "${degrees(lat)},${degrees(lon)}")
+        .addQueryParameter("time", time)
+        .build()
+    return decode(fetch(Request.Builder().url(url).get()))
+  }
+
+  private fun degrees(value: Double): String = "%.5f".format(Locale.ROOT, value)
+
   private fun url(segments: List<String>): HttpUrl =
     base.newBuilder().apply { segments.forEach { addPathSegment(it) } }.build()
 

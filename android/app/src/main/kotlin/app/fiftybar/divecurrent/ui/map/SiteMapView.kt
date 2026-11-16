@@ -27,6 +27,7 @@ import app.fiftybar.divecurrent.data.api.GlanceTone
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
@@ -52,8 +53,13 @@ import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
 import org.maplibre.android.style.layers.PropertyFactory.textOffset
 import org.maplibre.android.style.layers.PropertyFactory.textOptional
 import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.PropertyFactory.rasterFadeDuration
+import org.maplibre.android.style.layers.PropertyFactory.rasterOpacity
+import org.maplibre.android.style.layers.PropertyFactory.rasterResampling
+import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
 import org.maplibre.android.style.sources.GeoJsonSource
+import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.Point
@@ -84,17 +90,28 @@ private val START = CameraPosition.Builder().target(LatLng(3.6, 73.3)).zoom(6.4)
 @Composable
 fun SiteMapView(
   rows: List<SiteRow>,
-  baseMap: BaseMap,
+  layers: MapLayers,
   colors: CurrentColors,
   onOpenSite: (String) -> Unit,
   modifier: Modifier = Modifier,
   /** A long press on the map, with where: to head the boat for that point. */
   onLongPress: (lat: Double, lon: Double) -> Unit = { _, _ -> },
+  /** The sheltered-water shading, drawn under the seamarks and pins, at [shelterOpacity]. */
+  shelterImages: List<ShelterImage> = emptyList(),
+  shelterOpacity: Float = 0.85f,
+  /** The map settled on a view. */
+  onView: (MapViewBox) -> Unit = {},
+  /** A tap away from the pins; true when it was taken. */
+  onTap: (lat: Double, lon: Double) -> Boolean = { _, _ -> false },
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   val openSite by rememberUpdatedState(onOpenSite)
   val longPress by rememberUpdatedState(onLongPress)
+  val viewChanged by rememberUpdatedState(onView)
+  val tapped by rememberUpdatedState(onTap)
+  // The shading's sources and layers on the current style; a new style starts with none.
+  val shelterIds = remember { mutableListOf<String>() }
   val mapView = remember { MapView(context).apply { onCreate(null) } }
   var map by remember { mutableStateOf<MapLibreMap?>(null) }
   var style by remember { mutableStateOf<Style?>(null) }
@@ -118,8 +135,9 @@ fun SiteMapView(
         val screen = m.projection.toScreenLocation(point)
         val hit = siteAt(m, screen)
         if (hit != null) openSite(hit)
-        hit != null
+        hit != null || tapped(point.latitude, point.longitude)
       }
+      m.addOnCameraIdleListener { viewChanged(viewBox(m)) }
       m.addOnMapLongClickListener { point ->
         longPress(point.latitude, point.longitude)
         true
@@ -134,12 +152,14 @@ fun SiteMapView(
     }
   }
 
-  LaunchedEffect(map, baseMap, colors) {
+  LaunchedEffect(map, layers.base, layers.seamarks, colors) {
     val m = map ?: return@LaunchedEffect
     style = null
-    m.setStyle(Style.Builder().fromJson(styleJson(baseMap))) { loaded ->
+    m.setStyle(Style.Builder().fromJson(styleJson(layers.base, seamarks = layers.seamarks))) { loaded ->
       addSiteLayers(context, loaded, colors)
+      shelterIds.clear()
       style = loaded
+      viewChanged(viewBox(m))
     }
   }
 
@@ -148,7 +168,46 @@ fun SiteMapView(
     s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(features(rows))
   }
 
+  LaunchedEffect(style, shelterImages, shelterOpacity) {
+    val s = style ?: return@LaunchedEffect
+    showShelter(s, shelterIds, shelterImages, shelterOpacity)
+  }
+
   AndroidView(factory = { mapView }, modifier = modifier)
+}
+
+/**
+ * Puts the shading on the style afresh: the 500 m fields first, the 125 m ones over them, all under the seamarks (or
+ * the pins), so a buoy or an arrow is never hidden by it.
+ */
+private fun showShelter(style: Style, shown: MutableList<String>, images: List<ShelterImage>, opacity: Float) {
+  shown.forEach { id ->
+    style.removeLayer("shelter-layer-$id")
+    style.removeSource("shelter-source-$id")
+  }
+  shown.clear()
+  val below = if (style.getLayer(SEAMARKS) != null) SEAMARKS else ARROWS
+  for (image in images.sortedBy { it.fine }) {
+    val corners =
+      LatLngQuad(
+        LatLng(image.north, image.west),
+        LatLng(image.north, image.east),
+        LatLng(image.south, image.east),
+        LatLng(image.south, image.west),
+      )
+    style.addSource(ImageSource("shelter-source-${image.id}", corners, image.bitmap))
+    style.addLayerBelow(
+      RasterLayer("shelter-layer-${image.id}", "shelter-source-${image.id}")
+        .withProperties(rasterOpacity(opacity), rasterResampling(Property.RASTER_RESAMPLING_LINEAR), rasterFadeDuration(0f)),
+      below,
+    )
+    shown += image.id
+  }
+}
+
+private fun viewBox(map: MapLibreMap): MapViewBox {
+  val bounds = map.projection.visibleRegion.latLngBounds
+  return MapViewBox(bounds.latitudeSouth, bounds.longitudeWest, bounds.latitudeNorth, bounds.longitudeEast, map.cameraPosition.zoom)
 }
 
 private fun siteAt(map: MapLibreMap, screen: PointF): String? {
@@ -251,8 +310,13 @@ private fun dotBitmap(density: Float, fill: Int, edge: Int): Bitmap {
   return bitmap
 }
 
-/** A one-layer raster style. The source's attribution shows behind the map's (i) button. */
-internal fun styleJson(baseMap: BaseMap): String {
+private const val SEAMARKS = "seamarks"
+
+/**
+ * A raster style: the base, and OpenSeaMap's seamarks over it when [seamarks] (the web map's overlay, on by default
+ * there too). Each source's attribution shows behind the map's (i) button.
+ */
+internal fun styleJson(baseMap: BaseMap, seamarks: Boolean = false): String {
   val (tiles, attribution, maxZoom) =
     when (baseMap) {
       BaseMap.Satellite ->
@@ -268,6 +332,18 @@ internal fun styleJson(baseMap: BaseMap): String {
           19,
         )
     }
+  val seamarkSource =
+    if (seamarks)
+      """,
+        "$SEAMARKS": {
+          "type": "raster",
+          "tiles": ["https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"],
+          "tileSize": 256,
+          "maxzoom": 18,
+          "attribution": "© <a href=\"https://www.openseamap.org/\">OpenSeaMap</a> contributors"
+        }"""
+    else ""
+  val seamarkLayer = if (seamarks) """, { "id": "$SEAMARKS", "type": "raster", "source": "$SEAMARKS" }""" else ""
   return """
     {
       "version": 8,
@@ -279,9 +355,9 @@ internal fun styleJson(baseMap: BaseMap): String {
           "tileSize": 256,
           "maxzoom": $maxZoom,
           "attribution": "$attribution"
-        }
+        }$seamarkSource
       },
-      "layers": [{ "id": "base", "type": "raster", "source": "base" }]
+      "layers": [{ "id": "base", "type": "raster", "source": "base" }$seamarkLayer]
     }
   """
     .trimIndent()

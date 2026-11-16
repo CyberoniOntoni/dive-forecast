@@ -37,10 +37,18 @@ What it does:
   `domain/NavReadout.kt`), ported from `lib/boat-nav.ts` and `lib/route-current.ts` with their tests. Location comes
   from the platform `LocationManager` (no Play services), only while the screen is started. Satellite outlines, not a
   chart.
-- **Offline**: the last body of each read endpoint except boat routes (about one position, `no-store`) is kept in Room as raw JSON and shown with its age when the server
+- **Map layers**: the map's "Layers" chip picks the base (satellite or street map) and the overlays the web map has
+  so far in the app: OpenSeaMap seamarks (on by default, as on the web) and "Sheltered water", each lagoon and the sea
+  round it shaded by felt wave height, with the web legend's hour picker and a tap readout (`GET /api/v1/shelter`,
+  `/shelter/shapes/{wayId}`, `/shelter/point`). The shading is drawn as the web draws it: `domain/ShelterField.kt` ports
+  `fieldPixels` (checked pixel for pixel against it), and `ui/map/ShelterRaster.kt` scales each atoll's cells up and
+  cuts them to its outline and islands once, where the web cuts on screen. The choice is kept between launches. Reef
+  zones, bottom types, depth and the coordinate grid are on the web for now.
+- **Offline**: the last body of each read endpoint except boat routes and the sea state layer (about one position or
+  view) is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Ratings and reviews, adding sites and the extra map layers are on the web for now (API.md § Next).
+Ratings and reviews and adding sites are on the web for now (API.md § Next).
 
 ## Build and run
 
