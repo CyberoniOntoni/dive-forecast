@@ -4,7 +4,15 @@ import { appSetting } from "./cloudflare";
 import { SENDER_NAME } from "./login-email";
 import type { MailgunConfig } from "./mailgun";
 import { SIGN_IN_FIRST } from "./sign-in";
-import { hashLoginCode, SESSION_MAX_AGE_S, signSession, verifySession, type Session } from "./session-token";
+import {
+  hashLoginCode,
+  openSession,
+  sealSession,
+  SESSION_MAX_AGE_S,
+  signSession,
+  verifySession,
+  type Session,
+} from "./session-token";
 import { peekStore } from "./store";
 
 /**
@@ -75,17 +83,24 @@ export async function currentSession(): Promise<Session | null> {
   const jar = await fromRequest(cookies);
   if (!jar) return null;
   const bearer = bearerToken((await fromRequest(headers))?.get("authorization") ?? null);
-  // An app request's token wins, and a bad one is not rescued by a cookie riding along.
-  const token = bearer !== undefined ? bearer : jar.get(SESSION_COOKIE)?.value;
+  const cookie = jar.get(SESSION_COOKIE)?.value;
   const secret = authSecret();
   if (!secret) return null;
-  const session = token ? await verifySession(token, secret) : null;
+  // An app request's token wins, and a bad one is not rescued by a cookie riding along.
+  const session =
+    bearer !== undefined
+      ? bearer
+        ? await openSession(bearer, secret)
+        : null
+      : cookie
+        ? await verifySession(cookie, secret)
+        : null;
   return session && !signedOutSince(session) ? session : null;
 }
 
 /**
- * The app's session token from an `Authorization: Bearer <token>` header (API.md § Sign-in): the same signed token as
- * the cookie, so "Sign out everywhere" ends both. Undefined when the request has no such header, null when it has one
+ * The app's session token from an `Authorization: Bearer <token>` header (API.md § Sign-in): the same session as the
+ * cookie, encrypted (sealSession), so "Sign out everywhere" ends both. Undefined when the request has no such header, null when it has one
  * that is not a bearer token.
  */
 export function bearerToken(authorization: string | null): string | null | undefined {
@@ -121,6 +136,14 @@ export async function setSessionCookie(userId: string, nickname: string): Promis
     path: "/",
     maxAge: SESSION_MAX_AGE_S,
   });
+}
+
+/** The app's bearer token and when it stops working (Unix ms). The caller has checked the sign-in. */
+export async function issueAppToken(userId: string, nickname: string): Promise<{ token: string; expiresAt: number }> {
+  const secret = authSecret();
+  if (!secret) throw new Error("Signing in is not set up yet.");
+  const issuedAt = Date.now();
+  return { token: await sealSession({ userId, nickname, issuedAt }, secret), expiresAt: issuedAt + SESSION_MAX_AGE_S * 1000 };
 }
 
 /** Only from a server action. */

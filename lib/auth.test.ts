@@ -10,7 +10,7 @@ vi.mock("next/headers", () => ({
 }));
 
 const { appUrl, bearerToken, currentSession, ipGroup, SESSION_COOKIE } = await import("./auth");
-const { signSession } = await import("./session-token");
+const { sealSession, signSession } = await import("./session-token");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
@@ -92,12 +92,15 @@ describe("the app's bearer token", () => {
   });
 
   it("signs in by the token, and a bad token is not rescued by a cookie", async () => {
-    const token = await signSession({ userId: "u1", nickname: "Ann", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
+    const token = await sealSession({ userId: "u1", nickname: "Ann", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
     const cookie = await signSession({ userId: "u2", nickname: "Bob", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
     cookiesBehaviour = () => ({ get: (name: string) => (name === SESSION_COOKIE ? { name, value: cookie } : undefined) });
     headersBehaviour = () => new Headers({ authorization: `Bearer ${token}` });
     expect(await currentSession()).toMatchObject({ userId: "u1" });
     headersBehaviour = () => new Headers({ authorization: "Bearer forged.token" });
+    expect(await currentSession()).toBeNull();
+    // The cookie's own value is not an app token.
+    headersBehaviour = () => new Headers({ authorization: `Bearer ${cookie}` });
     expect(await currentSession()).toBeNull();
     headersBehaviour = () => new Headers();
     expect(await currentSession()).toMatchObject({ userId: "u2" });

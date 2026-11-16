@@ -1,3 +1,4 @@
+import { bearerToken } from "./auth";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
 import {
@@ -338,9 +339,7 @@ export async function apiJsonBody(request: Request): Promise<Record<string, unkn
  * app's token only, never the web's cookie, so a page on another site cannot file a report as a signed-in visitor.
  */
 export function apiNeedsToken(request: Request): Response | null {
-  return /^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "")
-    ? null
-    : apiError(401, "unauthorized", "Sign in first.");
+  return bearerToken(request.headers.get("authorization")) ? null : apiError(401, "unauthorized", "Sign in first.");
 }
 
 /** A diver's report as the site page lists it: words made on the server, and the nickname only. */

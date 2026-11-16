@@ -99,6 +99,10 @@ describe("API v1 sign-in", () => {
     const ok = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code, nickname: "Manta" } }));
     const { token } = await ok.json();
     expect(jar.has(SESSION_COOKIE)).toBe(false);
+    // The diver's id is not readable from the token, encoded or not.
+    const userId = readStore().users[0].id;
+    expect(token).not.toContain(userId);
+    expect(atob(token.slice(5).replace(/-/g, "+").replace(/_/g, "/"))).not.toContain(userId);
 
     const me = await getMe(call("/api/v1/me", { token }));
     const body = await me.json();

@@ -23,8 +23,8 @@ app and the site always show the same forecast. The forecast model is untouched.
   them.
 - **Methods.** Reads are GET. Writes are POST with an `application/json` body (anything else gets 415): a browser
   cannot send that to this site from another one without a CORS check, which this API never passes. The Cloudflare
-  worker lets JSON posts under `/api/v1/` through (`lib/request-guard.ts`) and turns away other non-GET requests that
-  are not server actions.
+  worker lets posts under `/api/v1/` through to the routes (`lib/request-guard.ts`), which answer the 415 themselves,
+  and turns away other non-GET requests that are not server actions.
 - **Signed in.** Endpoints about one diver take `Authorization: Bearer <token>` from
   `POST /api/v1/sign-in/token`, and only that: the web's cookie never signs an API write
   in. Without a header they answer 401 `unauthorized`; with an expired, forged or signed-out token too. Their
@@ -188,10 +188,11 @@ for a bad address or too many codes.
 { "apiVersion": 1, "token": "eyJ1Ijo...", "nickname": "Manta", "expiresAt": 1778900000000 }
 ```
 
-The token is the web's session cookie value (`signSession` in `lib/session-token.ts`), good for 180 days
-(`expiresAt`, Unix ms), and ended by "Sign out everywhere" on either side. The app keeps it out of backups and sends
-it as `Authorization: Bearer <token>`. A new address without a usable nickname gets 400 `needs_nickname`; a wrong
-or expired code 400 `bad_request`. No cookie is set.
+The token carries the same session as the web's cookie, encrypted (`sealSession` in `lib/session-token.ts`) so the
+diver's id in it cannot be read, and starts `app1.`; a cookie value does not work as a token. It is good for 180 days
+(`expiresAt`, Unix ms), and ended by "Sign out everywhere" on either side. Treat it as opaque. The app keeps it out of
+backups and sends it as `Authorization: Bearer <token>`. A new address without a usable nickname gets 400
+`needs_nickname`; a wrong or expired code 400 `bad_request`. No cookie is set.
 
 ### `GET /api/v1/me`
 

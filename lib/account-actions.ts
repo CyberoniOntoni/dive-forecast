@@ -6,6 +6,7 @@ import {
   authSecret,
   clearSessionCookie,
   currentSession,
+  issueAppToken,
   requestIpKey,
   requireSession,
   setSessionCookie,
@@ -62,6 +63,24 @@ export async function completeSignIn(input: { email: unknown; code: unknown; nic
     if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
     await setSessionCookie(result.user.id, result.user.nickname);
     return { ok: true, error: null };
+  } catch (caught) {
+    return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign in." };
+  }
+}
+
+export type AppSignInStep = SignInStep & { token?: string; nickname?: string; expiresAt?: number };
+
+/**
+ * The app's sign-in (POST /api/v1/sign-in/token): the same code check as completeSignIn, answered with the app's
+ * encrypted bearer token instead of a cookie.
+ */
+export async function completeAppSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<AppSignInStep> {
+  await ready();
+  try {
+    const result = await checkSignInCode(input);
+    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
+    const { token, expiresAt } = await issueAppToken(result.user.id, result.user.nickname);
+    return { ok: true, error: null, token, nickname: result.user.nickname, expiresAt };
   } catch (caught) {
     return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign in." };
   }
