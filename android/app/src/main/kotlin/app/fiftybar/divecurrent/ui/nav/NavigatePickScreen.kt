@@ -91,7 +91,8 @@ private fun lastPosition(context: Context): LatLon? {
   return try {
     manager
       .getProviders(true)
-      .mapNotNull { manager.getLastKnownLocation(it) }
+      // With only approximate location allowed, the GPS provider throws: skip it and keep the others.
+      .mapNotNull { provider -> runCatching { manager.getLastKnownLocation(provider) }.getOrNull() }
       .maxByOrNull { it.time }
       ?.let { LatLon(it.latitude, it.longitude) }
   } catch (_: SecurityException) {

@@ -81,6 +81,10 @@ private val LOCATION_PERMISSIONS = arrayOf(Manifest.permission.ACCESS_FINE_LOCAT
 fun hasLocationPermission(context: Context): Boolean =
   LOCATION_PERMISSIONS.any { ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED }
 
+/** Precise location allowed, not only approximate (which Android 12 and later let a diver pick). */
+fun hasPreciseLocation(context: Context): Boolean =
+  ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
 /**
  * Boat navigation to a site or a point, as the web's Navigate panel: follows the phone's GPS while the screen is open
  * (and keeps the screen on), asks the server for a route round the known reef, and shows distance left, speed, the
@@ -174,6 +178,13 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
             gps is GpsStatus.Error -> Text(gps.message, color = colors.stop)
             readout == null -> Text("Waiting for GPS…", color = colors.foam.copy(alpha = 0.8f))
             else -> Readouts(readout, state.routeError)
+          }
+          if (granted && !hasPreciseLocation(context)) {
+            Text(
+              "Only approximate location is allowed, so the boat's position can be off by a kilometre or more. Allow precise location in the app's settings.",
+              style = MaterialTheme.typography.bodySmall,
+              color = colors.outgoing,
+            )
           }
         }
       }
@@ -269,7 +280,8 @@ private fun FollowGps(context: Context, viewModel: NavigateViewModel) {
     val provider =
       when {
         manager == null -> null
-        manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
+        // GPS needs precise location; with only approximate allowed it would throw, so use the network's.
+        hasPreciseLocation(context) && manager.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
         manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
         else -> null
       }
