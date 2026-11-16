@@ -104,6 +104,8 @@ class DataRepositoryTest {
     assertEquals("stop", stop.tone)
     assertEquals(2, stop.warnings.size)
     assertNull(stop.reportTime)
+    assertTrue(stop.veryStrong)
+    assertEquals("Forecast: fairly sure", stop.confidenceLabel)
     assertEquals("North Malé week", repository.cachedPlan("Kq7vHtmWpdNrcXfa")!!.value.title)
   }
 
@@ -165,7 +167,8 @@ class DataRepositoryTest {
             "siteId": "kuda-haa", "name": "Kuda Haa", "lat": 4.31, "lon": 73.46, "facts": "Channel thila · North Malé · 5–30 m",
             "howToDive": null, "time": "09:00", "note": "Hook in on the corner.", "want": "Wanted: incoming",
             "status": "forecast", "message": null, "way": "Outgoing, toward W", "arrowBearing": 270, "strength": "Very strong",
-            "tone": "stop", "sea": "Sea moderate · 0.8 m", "seaRough": false, "confidence": "fairly sure",
+            "veryStrong": true, "tone": "stop", "sea": "Sea moderate · 0.8 m", "seaRough": false, "confidence": "fairly sure",
+            "confidenceLabel": "Forecast: fairly sure",
             "warnings": ["Very strong current at this time", "Running outgoing; you wanted incoming"],
             "better": "Better 13:00–15:00, best 14:00: incoming, toward E, mild.", "reportTime": null
           }]

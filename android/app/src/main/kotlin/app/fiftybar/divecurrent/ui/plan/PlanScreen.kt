@@ -284,10 +284,10 @@ private fun Outlook(stop: ApiPlanStop, tone: Color, colors: CurrentColors) {
       reading,
       style = MaterialTheme.typography.bodyMedium,
       fontWeight = FontWeight.Medium,
-      color = if (stop.strength == "Very strong") colors.stop else colors.foam,
+      color = if (stop.veryStrong) colors.stop else colors.foam,
     )
   }
-  val extra = listOfNotNull(stop.sea, stop.confidence?.let { "forecast: $it" })
+  val extra = listOfNotNull(stop.sea, stop.confidenceLabel)
   if (extra.isNotEmpty()) {
     Text(
       extra.joinToString(" · "),

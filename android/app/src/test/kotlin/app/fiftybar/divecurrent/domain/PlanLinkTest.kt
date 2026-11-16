@@ -21,6 +21,7 @@ class PlanLinkTest {
     assertNull(PlanLink.idOf(null))
     assertNull(PlanLink.idOf(""))
     assertNull(PlanLink.idOf("/plans/new"))
+    assertNull(PlanLink.idOf("https://50bar.app/plans/$id/edit"))
     assertNull(PlanLink.idOf("/plans/${id}x"))
     // 0, 1, I, O and l are never in an id.
     assertNull(PlanLink.idOf("/plans/Kq7vHtmWpdNrcXf0"))

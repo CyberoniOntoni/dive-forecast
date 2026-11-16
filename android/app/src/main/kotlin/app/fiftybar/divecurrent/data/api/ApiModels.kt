@@ -295,11 +295,15 @@ data class ApiPlanStop(
   val way: String? = null,
   val arrowBearing: Double? = null,
   val strength: String? = null,
+  /** Very strong: the warning colour. */
+  val veryStrong: Boolean = false,
   /** incoming | outgoing | stop | none */
   val tone: String = "none",
   val sea: String? = null,
   val seaRough: Boolean = false,
   val confidence: String? = null,
+  /** "Forecast: fairly sure". */
+  val confidenceLabel: String? = null,
   val warnings: List<String> = emptyList(),
   val better: String? = null,
   /** Set once the dive is over and still reportable: the report form's time. */

@@ -3,6 +3,8 @@ import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as getPlans } from "@/app/api/v1/plans/route";
 import { GET as getPlan } from "@/app/api/v1/plans/[id]/route";
+import { apiPlanLegs } from "@/lib/api-v1";
+import { legWords } from "@/lib/plan-words";
 import { GET as getLegs } from "@/app/api/v1/plans/[id]/days/[day]/legs/route";
 import { POST as requestCode } from "@/app/api/v1/sign-in/code/route";
 import { POST as getToken } from "@/app/api/v1/sign-in/token/route";
@@ -136,7 +138,12 @@ describe("API v1 plans", () => {
       tone: "none",
       reportTime: "2026-09-27T09:00",
     });
-    expect(plan.days[1].stops[0]).toMatchObject({ status: "beyond", message: expect.stringMatching(/^The forecast reaches this dive/) });
+    expect(plan.days[1].stops[0]).toMatchObject({
+      status: "beyond",
+      message: expect.stringMatching(/^The forecast reaches this dive/),
+      veryStrong: false,
+      confidenceLabel: null,
+    });
     expect(JSON.stringify(plan)).not.toContain(readStore().users[0].id);
     expect(plan).not.toHaveProperty("ownerId");
   });
@@ -179,5 +186,14 @@ describe("API v1 plans", () => {
   it("answers 404 for an unknown or malformed plan id", async () => {
     expect((await getPlan(call("/api/v1/plans/abcdefghijklmnop"), planParams("abcdefghijklmnop"))).status).toBe(404);
     expect((await getPlan(call("/api/v1/plans/../x"), planParams("../x"))).status).toBe(404);
+  });
+
+  it("words each leg from the dive times it carries, not from a recount of the stops", () => {
+    const leg = { from: 1, fromTime: "09:00", toTime: "11:30", points: [[4.3, 73.5], [4.31, 73.51]] as [number, number][], lengthKm: 3.704, routed: true, minutes: 15 };
+    const body = apiPlanLegs("Kq7vHtmWpdNrcXfa", 0, [leg], 8);
+    const words = legWords(leg, 8, "09:00", "11:30");
+    expect(words.leaveBy).toMatch(/^Leave by \d\d:\d\d$/);
+    expect(body.legs[0]).toMatchObject({ from: 1, ...words });
+    expect(body.legs[0]).not.toHaveProperty("fromTime");
   });
 });

@@ -9,7 +9,7 @@ import { durationText, nmFromKm } from "@/lib/plan-legs";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
 import {
   betterText,
-  CONFIDENCE_WORDS,
+  confidenceLabel,
   legWords,
   outlookMessage,
   seaWords,
@@ -117,13 +117,7 @@ export function PlanDay({
             <li key={`${stop.siteId}-${stop.time}-${at}`} className="flex min-w-0 flex-col">
               <StopCard stop={stop} number={at + 1} />
               {at + 1 < day.stops.length ? (
-                <LegLine
-                  leg={leg ?? null}
-                  loading={legs == null && !failed}
-                  speedKn={boatSpeedKn}
-                  fromTime={stop.time}
-                  toTime={day.stops[at + 1].time}
-                />
+                <LegLine leg={leg ?? null} loading={legs == null && !failed} speedKn={boatSpeedKn} />
               ) : null}
             </li>
           );
@@ -151,16 +145,12 @@ function LegLine({
   leg,
   loading,
   speedKn,
-  fromTime,
-  toTime,
 }: {
   leg: PlanLeg | null;
   loading: boolean;
   speedKn: number;
-  fromTime: string;
-  toTime: string;
 }) {
-  const words = leg ? legWords(leg, speedKn, fromTime, toTime) : null;
+  const words = leg ? legWords(leg, speedKn, leg.fromTime, leg.toTime) : null;
   const text = words?.text ?? (loading ? "Planning the boat route…" : "Boat route unavailable");
   return (
     <div className="ml-[1.0625rem] flex min-w-0 items-center gap-3 border-l-2 border-dashed border-foam/25 py-2.5 pl-6 text-sm text-foam/70">
@@ -269,7 +259,7 @@ function Outlook({ stop }: { stop: PlanStopView }) {
             {seaWords(sea.band, sea.feltM)}
           </span>
         ) : null}
-        <span className="px-1 text-xs text-foam/60">Forecast: {CONFIDENCE_WORDS[hour.confidence]}</span>
+        <span className="px-1 text-xs text-foam/60">{confidenceLabel(hour.confidence)}</span>
       </div>
       {warnings.length > 0 ? (
         <div role="note" className="flex min-w-0 flex-col gap-1 rounded-xl bg-stop/10 px-3 py-2 ring-1 ring-stop/30">

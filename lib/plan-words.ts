@@ -10,6 +10,11 @@ import type { Confidence, Direction, ForecastRoute, Strength } from "./types";
 
 export const CONFIDENCE_WORDS: Record<Confidence, string> = { high: "sure", medium: "fairly sure", low: "rough guess" };
 
+/** "Forecast: fairly sure", as a dive's outlook line shows it. */
+export function confidenceLabel(confidence: Confidence): string {
+  return `Forecast: ${CONFIDENCE_WORDS[confidence]}`;
+}
+
 /** What a dive without a forecast hour says instead. */
 export function outlookMessage(outlook: Exclude<StopOutlook, { status: "forecast" }>): string {
   if (outlook.status === "unavailable") return "No forecast for this site right now.";

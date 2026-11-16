@@ -6,7 +6,7 @@ package app.fiftybar.divecurrent.domain
  */
 object PlanLink {
   private val ID = Regex("^[A-HJ-NP-Za-km-z2-9]{16}$")
-  private val IN_PATH = Regex("(?:^|/)plans/([A-HJ-NP-Za-km-z2-9]{16})(?:[/?#].*)?$")
+  private val IN_PATH = Regex("(?:^|/)plans/([A-HJ-NP-Za-km-z2-9]{16})/?(?:[?#].*)?$")
 
   fun idOf(text: String?): String? {
     val value = text?.trim() ?: return null

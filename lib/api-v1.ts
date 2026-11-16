@@ -16,6 +16,7 @@ import type { PlanStopView, PlanView } from "./plan-view";
 import {
   betterText,
   CONFIDENCE_WORDS,
+  confidenceLabel,
   legWords,
   outlookMessage,
   seaWords,
@@ -472,15 +473,17 @@ export type ApiPlanStop = {
   /** "Incoming, toward NE"; null without a forecast hour. */
   way: string | null;
   arrowBearing: number | null;
-  /** "Very strong". */
+  /** "Very strong", and whether it is (the page's warning colour). */
   strength: string | null;
+  veryStrong: boolean;
   /** The stop colour for the marker: incoming | outgoing | stop | none. */
   tone: StopTone;
   /** "Sea rough · 1.2 m" and whether that is rough. */
   sea: string | null;
   seaRough: boolean;
-  /** "fairly sure". */
+  /** "fairly sure", and the line the page shows: "Forecast: fairly sure". */
   confidence: string | null;
+  confidenceLabel: string | null;
   warnings: string[];
   /** With warnings: the better window that day, or that there is none. */
   better: string | null;
@@ -531,10 +534,12 @@ function apiPlanStop(date: string, stop: PlanStopView): ApiPlanStop {
     way: stop.way,
     arrowBearing: forecast && forecast.hour.strength !== "slack" ? stop.arrowDeg : null,
     strength: forecast ? strengthWords(forecast.hour.strength) : null,
+    veryStrong: forecast?.hour.strength === "too_strong",
     tone: stopTone(outlook, stop.route),
     sea: forecast?.sea ? seaWords(forecast.sea.band, forecast.sea.feltM) : null,
     seaRough: forecast?.sea?.band === "rough",
     confidence: forecast ? CONFIDENCE_WORDS[forecast.hour.confidence] : null,
+    confidenceLabel: forecast ? confidenceLabel(forecast.hour.confidence) : null,
     warnings: forecast ? forecast.warnings.map((warning) => warningText(warning, forecast.hour.time)) : [],
     better: forecast && forecast.warnings.length > 0 ? betterText(forecast, stop.betterWay) : null,
     reportTime: stop.reportHref ? `${date}T${stop.time}` : null,
@@ -558,7 +563,6 @@ export function apiPlanLegs(
   planId: string,
   dayIndex: number,
   legs: readonly PlanLeg[],
-  stopTimes: readonly string[],
   speedKn: number,
 ): ApiPlanLegs {
   return {
@@ -566,7 +570,7 @@ export function apiPlanLegs(
     planId,
     dayIndex,
     legs: legs.map((leg) => ({
-      ...legWords(leg, speedKn, stopTimes[leg.from] ?? "00:00", stopTimes[leg.from + 1] ?? "00:00"),
+      ...legWords(leg, speedKn, leg.fromTime, leg.toTime),
       from: leg.from,
       lengthKm: Math.round(leg.lengthKm * 1000) / 1000,
       minutes: Number.isFinite(leg.minutes) ? Math.round(leg.minutes) : 0,

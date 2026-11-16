@@ -1,6 +1,6 @@
 import { apiError, apiHandler, apiJson, apiPlanLegs } from "@/lib/api-v1";
 import { getPlanDayLegs } from "@/lib/plan-actions";
-import { findPlan, listMergedSites } from "@/lib/store";
+import { findPlan } from "@/lib/store";
 
 /**
  * The boat legs between one plan day's dives (no current), with leave-by times, as the plan page shows them. Anyone with
@@ -13,9 +13,6 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const legs = await getPlanDayLegs(id, dayIndex);
     const plan = legs ? findPlan(id) : null;
     if (!legs || !plan) return apiError(404, "not_found", "No such plan day.");
-    // The dives the legs join: as getPlanDayLegs counts them, a site removed since the plan was saved drops out.
-    const known = new Set(listMergedSites().map((site) => site.id));
-    const times = plan.days[dayIndex].stops.filter((stop) => known.has(stop.siteId)).map((stop) => stop.time);
-    return apiJson(apiPlanLegs(id, dayIndex, legs, times, plan.boatSpeedKn), { cacheControl: "public, max-age=60" });
+    return apiJson(apiPlanLegs(id, dayIndex, legs, plan.boatSpeedKn), { cacheControl: "public, max-age=60" });
   });
 }

@@ -110,6 +110,9 @@ export async function deletePlan(id: string): Promise<{ ok: boolean; error: stri
 /** One boat leg between two dives of a day: from stop `from` to stop `from + 1`. */
 export type PlanLeg = {
   from: number;
+  /** The "HH:MM" dive times of the stops it joins, so a caller never recounts which stops are shown. */
+  fromTime: string;
+  toTime: string;
   points: [number, number][];
   lengthKm: number;
   /** False when no way round the known reef was found; the points are then the straight line. */
@@ -132,12 +135,17 @@ export async function getPlanDayLegs(id: string, dayIndex: number): Promise<Plan
   const byId = new Map(sites.map((site) => [site.id, site]));
   // The dives the page shows: a site removed since the plan was saved drops out there too, so `from` counts the same
   // stops and the boat goes straight from the dive before it to the dive after.
-  const shown = day.stops.flatMap((stop) => byId.get(stop.siteId) ?? []);
+  const shown = day.stops.flatMap((stop) => {
+    const site = byId.get(stop.siteId);
+    return site ? [{ site, time: stop.time }] : [];
+  });
   const legs: PlanLeg[] = [];
   for (let index = 0; index + 1 < shown.length; index += 1) {
-    const route = planLeg(shown[index], shown[index + 1], sites);
+    const route = planLeg(shown[index].site, shown[index + 1].site, sites);
     legs.push({
       from: index,
+      fromTime: shown[index].time,
+      toTime: shown[index + 1].time,
       points: route.points,
       lengthKm: route.lengthKm,
       routed: route.routed,

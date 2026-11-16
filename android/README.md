@@ -20,7 +20,7 @@ What it does:
   reports are listed below it. The map's top-left chip opens sign-in or the account (points, sign out, sign out
   everywhere). A 401 from the server means the token stopped working, and the app forgets it.
 - **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
-  (the app offers itself for those links; not verified, so Android asks which app to use), a pasted link on the Plans
+  (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; not verified, so Android asks which app to use), a pasted link on the Plans
   screen (calendar button on the map's list, or "My dive plans" on the account), or the diver's own plans when signed
   in. Each day lists its dives with the forecast at the dive time, warnings and a better window, the boat legs between
   them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
