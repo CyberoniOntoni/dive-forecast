@@ -69,6 +69,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.domain.LatLon
 import app.fiftybar.divecurrent.domain.MaldivesTime
+import app.fiftybar.divecurrent.domain.NewSite
 import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
@@ -217,7 +218,10 @@ fun MapScreen(
       onDismissRequest = { pressed = null },
       title = { Text(name) },
       text = {
-        Text("Navigate there by boat, round the islands and reef the app knows of, or add a dive site at this spot.")
+        Text(
+          "Navigate there by boat, round the islands and reef the app knows of" +
+            if (NewSite.inBounds(point.lat, point.lon)) ", or add a dive site at this spot." else "."
+        )
       },
       confirmButton = {
         Column(horizontalAlignment = Alignment.End) {
@@ -229,13 +233,16 @@ fun MapScreen(
           ) {
             Text("Navigate here")
           }
-          TextButton(
-            onClick = {
-              pressed = null
-              onAddSite(point.lat, point.lon)
+          // Only where the server takes a new pin: the Maldives box, a little smaller than the boat routes'.
+          if (NewSite.inBounds(point.lat, point.lon)) {
+            TextButton(
+              onClick = {
+                pressed = null
+                onAddSite(point.lat, point.lon)
+              }
+            ) {
+              Text("Add a dive site here")
             }
-          ) {
-            Text("Add a dive site here")
           }
           TextButton(onClick = { pressed = null }) { Text("Cancel") }
         }

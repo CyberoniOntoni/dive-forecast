@@ -55,7 +55,7 @@ What it does:
 
 - **Adding sites**: long-press the map on the site's spot (the list's + says so) and pick "Add a dive site here": the
   web form's name, kind of site, depths, how to dive it, the adder's rating and up to 6 photos, sent one by one after
-  the site is added (`POST /api/v1/sites`, `/sites/{id}/photos`; `domain/NewSite.kt` makes the same checks first). The
+  the site is added (`POST /api/v1/sites`, `/sites/{id}/photos`; `domain/NewSite.kt` makes the server's checks first, in its words). The
   new site's page opens in the form's place, and the map reads the list again. On a site they added, the diver can add
   more photos from its page (`addedSiteIds` from `GET /api/v1/me`).
 

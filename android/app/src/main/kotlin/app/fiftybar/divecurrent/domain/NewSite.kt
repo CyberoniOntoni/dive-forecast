@@ -5,8 +5,8 @@ import java.util.Locale
 
 /**
  * The web map's "Add a site" form (components/AddSiteForm.tsx) without the screen: the kinds a diver picks from, as
- * lib/site-details.ts words them, and the checks the server makes, so a mistake is said before anything is sent. The
- * server checks everything again.
+ * lib/site-details.ts words them, and the checks the server makes, in its words, so a mistake is said before anything
+ * is sent. The server checks everything again.
  */
 object NewSite {
   data class Kind(val type: String, val label: String, val hint: String)
@@ -19,6 +19,15 @@ object NewSite {
       Kind("lagoon", "Inside the lagoon", "A thila, giri or reef inside the atoll"),
       Kind("outer-reef", "Wall outside the atoll", "The ocean side of the rim, away from a channel"),
     )
+
+  /** The box lib/actions.ts takes pins in (requireLatitude, requireLongitude). */
+  const val LAT_MIN = -2.0
+  const val LAT_MAX = 9.0
+  const val LON_MIN = 71.0
+  const val LON_MAX = 76.0
+
+  /** A pin the server takes: inside the Maldives box. */
+  fun inBounds(lat: Double, lon: Double): Boolean = lat in LAT_MIN..LAT_MAX && lon in LON_MIN..LON_MAX
 
   const val NAME_MAX = 80
   const val HOW_TO_DIVE_MAX = 1500
@@ -49,22 +58,27 @@ object NewSite {
     howToDive: String,
     rating: Int?,
   ): Result<AddSiteBody> = runCatching {
+    // The server's own words (lib/actions.ts, lib/site-details.ts), so the app says what the web would.
     val trimmed = name.trim()
-    require(trimmed.isNotEmpty()) { "Site name is required." }
-    require(trimmed.length <= NAME_MAX) { "Site name must be 1 to $NAME_MAX characters." }
+    require(trimmed.isNotEmpty()) { "Site name is required" }
+    require(trimmed.length <= NAME_MAX) { "Site name must be 1 to $NAME_MAX characters" }
+    require(lat in LAT_MIN..LAT_MAX) { "Latitude is outside Maldives bounds [-2, 9]" }
+    require(lon in LON_MIN..LON_MAX) { "Longitude is outside Maldives bounds [71, 76]" }
+    require(kind == null || KINDS.any { it.type == kind }) { "Pick a site type from the list." }
     val topM = depth(top, "Shallowest depth")
     val maxM = depth(max, "Deepest depth")
     require(topM == null || maxM == null || topM <= maxM) { "The shallowest depth is deeper than the deepest." }
     require(howToDive.trim().length <= HOW_TO_DIVE_MAX) { "How to dive it must be at most $HOW_TO_DIVE_MAX characters." }
+    require(rating == null || rating in 1..5) { "Rating must be an integer from 1 to 5" }
     AddSiteBody(
       name = trimmed,
       lat = lat,
       lon = lon,
-      diverSiteType = kind?.takeIf { k -> KINDS.any { it.type == k } },
+      diverSiteType = kind,
       diveTopM = topM,
       diveMaxM = maxM,
       howToDive = howToDive.trim().ifEmpty { null },
-      rating = rating?.takeIf { it in 1..5 },
+      rating = rating,
     )
   }
 }

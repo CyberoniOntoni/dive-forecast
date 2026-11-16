@@ -226,7 +226,7 @@ fun AddSiteScreen(lat: Double, lon: Double, onBack: () -> Unit, onSignIn: () -> 
         Text(state.progress ?: "Add site")
       }
       Text(
-        "Everything but the name is optional. The kind of site picks the forecast; with Not sure, the pin's position decides.",
+        "Everything but the name is optional. The pin's position picks the forecast; near the atoll rim, where it could be a channel or a wall, the kind you pick decides.",
         style = MaterialTheme.typography.bodySmall,
         color = colors.foam.copy(alpha = 0.7f),
       )

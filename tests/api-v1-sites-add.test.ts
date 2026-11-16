@@ -121,7 +121,12 @@ describe("API v1 adding sites", () => {
     expect(saved).toMatchObject({ name: "Test Thila", userAdded: true, diveTopM: 8, diveMaxM: 25, howToDive: "Drop on the east side.", photoUrls: [] });
     expect(JSON.stringify(saved)).not.toMatch(/addedBy|example\.com/);
     // On the map and with its rating.
-    expect((await getSite(call(`/api/v1/sites/${saved.id}`), site(saved.id))).status).toBe(200);
+    const read = await getSite(call(`/api/v1/sites/${saved.id}`), site(saved.id));
+    expect(read.status).toBe(200);
+    // The answer reads the site as GET does: with the forecast's type, set by the pin's place.
+    const asRead = await read.json();
+    expect(saved.siteType).not.toBeNull();
+    expect(saved).toEqual(asRead);
     expect(await (await getReviews(call(`/api/v1/sites/${saved.id}/reviews`), site(saved.id))).json()).toMatchObject({ summary: { count: 1, average: 4 } });
     // The app learns it may add photos there.
     expect((await (await getMe(call("/api/v1/me", { token }))).json()).addedSiteIds).toEqual([saved.id]);

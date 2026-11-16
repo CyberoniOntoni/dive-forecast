@@ -1,4 +1,4 @@
-import { listSites, submitSite } from "@/lib/actions";
+import { getSite, listSites, submitSite } from "@/lib/actions";
 import { apiError, apiHandler, apiJson, apiJsonBody, apiNeedsToken, apiSiteSaved, apiSites, atollNameOf } from "@/lib/api-v1";
 import { SIGN_IN_FIRST } from "@/lib/sign-in";
 import { readCatalog } from "@/lib/store";
@@ -36,6 +36,8 @@ export async function POST(request: Request) {
       if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
       return apiError(400, "bad_request", result.error);
     }
-    return apiSiteSaved(result.site, atollNameOf(readCatalog().atolls, result.site.atollId), 201);
+    // As GET /api/v1/sites/{id} reads it: with the forecast's site type, which the pin's place sets.
+    const site = (await getSite(result.site.id)) ?? result.site;
+    return apiSiteSaved(site, atollNameOf(readCatalog().atolls, site.atollId), 201);
   });
 }

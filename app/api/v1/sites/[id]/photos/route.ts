@@ -23,8 +23,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const result = await addSitePhoto(site.id, photoForm(bytes));
     if (!result.ok) {
       if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
-      // A catalog site, or another diver's: not theirs to add to.
-      if (site.sourceUrl !== "user" || result.error.startsWith("Only the diver")) return apiError(403, "forbidden", result.error);
+      // A catalog site, or another diver's: not theirs to add to. Anything else (not a JPEG, full) is 400.
+      if (result.error.startsWith("Only the diver") || result.error.startsWith("Photos can only")) {
+        return apiError(403, "forbidden", result.error);
+      }
       return apiError(400, "bad_request", result.error);
     }
     const saved = await getSite(site.id);
