@@ -535,5 +535,8 @@ badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxCh
 
 ## Next (not built yet)
 
-Nothing from the web is missing from the app now, apart from the map's reef-zone, bottom-type and depth layers and
-the coordinate grid. New web features come with their own section here.
+The app's map has every web map layer now. The Allen Coral Atlas overlays (reef outline, reef zones, bottom types) read
+the same static tiles the web map does, `/overlays/<folder>/index.json` and its tiles (lib/atlas-overlays.ts), which are
+files on the server rather than API endpoints; the depth layers come straight from OpenSeaMap's and GEBCO's WMS, as on
+the web. Still web-only: a dive plan day's map, and the atoll picker on the map's site list. New web features come with
+their own section here.

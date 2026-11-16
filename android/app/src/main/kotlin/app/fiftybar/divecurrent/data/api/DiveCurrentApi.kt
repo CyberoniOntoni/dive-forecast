@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.data.api
 
+import app.fiftybar.divecurrent.domain.AtlasIndex
 import java.io.IOException
 import java.util.Locale
 import java.util.concurrent.TimeUnit
@@ -182,6 +183,12 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
         .build()
     return decode(fetch(Request.Builder().url(url).get()))
   }
+
+  /** An Atlas overlay's tile list, a static file on the server (public/overlays/<folder>/index.json). */
+  suspend fun atlasIndex(folder: String): AtlasIndex = decode(fetch(Request.Builder().url(url(listOf("overlays", folder, "index.json"))).get()))
+
+  /** One Atlas tile, as its JSON text (domain/AtlasOverlay.kt reads it). */
+  suspend fun atlasTile(folder: String, file: String): String = fetch(Request.Builder().url(url(listOf("overlays", folder, file))).get())
 
   private fun degrees(value: Double): String = "%.5f".format(Locale.ROOT, value)
 

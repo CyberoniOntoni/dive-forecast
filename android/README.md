@@ -42,13 +42,16 @@ What it does:
   changeable or removable (`/api/v1/sites/{id}/reviews`, `/rating`, `/review`, `/review/photos`). Photos come from the
   system photo picker (no storage permission) and are shrunk on the phone as the web's picker does them
   (`ui/site/PhotoShrink.kt`: turned upright, 1600 px, JPEG), then sent one by one.
-- **Map layers**: the map's "Layers" chip picks the base (satellite or street map) and the overlays the web map has
-  so far in the app: OpenSeaMap seamarks (on by default, as on the web) and "Sheltered water", each lagoon and the sea
+- **Map layers**: the map's "Layers" chip has the web map's menu: the base (satellite, street map or none) and every
+  overlay, kept between launches. Seamarks and the coordinate grid start on, as on the web. The Allen Coral Atlas reef
+  outline, reef zones and bottom types read the web map's static tiles under `/overlays/` (`domain/AtlasOverlay.kt`,
+  `ui/map/AtlasViewModel.kt`: only tiles in view, from each overlay's zoom) with the web's colour key; depth shading
+  (GEBCO), sonar depths and depth contours come from the same WMS servers as the web; the grid ports the web's spacing
+  and chart labels (`domain/CoordinateGrid.kt`). "Sheltered water" shades each lagoon and the sea
   round it shaded by felt wave height, with the web legend's hour picker and a tap readout (`GET /api/v1/shelter`,
   `/shelter/shapes/{wayId}`, `/shelter/point`). The shading is drawn as the web draws it: `domain/ShelterField.kt` ports
   `fieldPixels` (checked pixel for pixel against it), and `ui/map/ShelterRaster.kt` scales each atoll's cells up and
-  cuts them to its outline and islands once, where the web cuts on screen. The choice is kept between launches. Reef
-  zones, bottom types, depth and the coordinate grid are on the web for now.
+  cuts them to its outline and islands once, where the web cuts on screen.
 - **Offline**: the last body of each read endpoint except boat routes and the sea state layer (about one position or
   view) is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
@@ -65,7 +68,7 @@ What it does:
   every badge, how points work, About me and the nickname (`PUT /api/v1/me/about`, `/me/nickname`), and your own page.
   The words come from the server (`lib/profile-words.ts`).
 
-The map's reef-zone, bottom-type and depth layers and the coordinate grid are on the web for now (API.md § Next).
+A dive plan day's map and the atoll picker on the map's site list are on the web for now (API.md § Next).
 
 ## Build and run
 
@@ -102,7 +105,7 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `data/DataRepository.kt` | Network first, then the last copy |
 | `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
-| `ui/map/` | MapLibre map, now list |
+| `ui/map/`, `domain/AtlasOverlay.kt`, `domain/CoordinateGrid.kt`, `domain/ShelterField.kt` | MapLibre map, now list, layers (Atlas, depth, grid, sheltered water) |
 | `ui/site/`, `domain/NewSite.kt` | Site page, hour strip, report form, recent reports, reviews, adding a site |
 | `ui/account/` | Sign-in and account (About me, nickname, badges) |
 | `ui/scoreboard/` | Scoreboard and divers' public pages |

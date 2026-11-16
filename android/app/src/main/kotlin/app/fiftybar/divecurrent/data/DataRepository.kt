@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.data
 
+import app.fiftybar.divecurrent.domain.AtlasIndex
 import app.fiftybar.divecurrent.data.api.ApiBoatRoute
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
@@ -91,6 +92,10 @@ class DataRepository(
 
   /** An atoll's outline and islands; the map keeps them in memory once fetched (ShelterViewModel). */
   suspend fun shelterShapes(wayId: String): ApiShelterShapes = api.shelterShapes(wayId)
+
+  suspend fun atlasIndex(folder: String): AtlasIndex = api.atlasIndex(folder)
+
+  suspend fun atlasTile(folder: String, file: String): String = api.atlasTile(folder, file)
 
   suspend fun shelterPoint(lat: Double, lon: Double, time: String): ApiShelterPoint = api.shelterPoint(lat, lon, time)
 

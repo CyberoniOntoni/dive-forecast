@@ -1,6 +1,8 @@
 package app.fiftybar.divecurrent.ui.map
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -103,6 +105,9 @@ fun MapScreen(
     MapLayersPrefs.write(context, next)
   }
   LaunchedEffect(layers.shelter) { shelter.setOn(layers.shelter) }
+  val atlas: AtlasViewModel = viewModel { AtlasViewModel(repository) }
+  val atlasState by atlas.state.collectAsStateWithLifecycle()
+  LaunchedEffect(layers.atlas) { atlas.setOn(layers.atlas) }
   var layersOpen by remember { mutableStateOf(false) }
   var query by rememberSaveable { mutableStateOf("") }
   val scaffold = rememberBottomSheetScaffoldState()
@@ -156,8 +161,12 @@ fun MapScreen(
         onLongPress = { lat, lon -> LatLon(lat, lon).takeIf(PointDestination::inRouteArea)?.let { pressed = it } },
         shelterImages = if (layers.shelter) shelterState.images else emptyList(),
         shelterOpacity = shelterState.scale?.opacity?.toFloat() ?: 0.85f,
-        onView = shelter::onView,
+        onView = { box ->
+          shelter.onView(box)
+          atlas.onView(box)
+        },
         onTap = shelter::tap,
+        atlas = atlasState.shapes,
       )
       // Who is signed in, or a way to sign in: reports need it. The scoreboard, under it, is open to everyone; one
       // above the other, so a narrow phone has room for the Layers chip beside them.
@@ -183,7 +192,8 @@ fun MapScreen(
         )
       }
       Column(
-        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp),
+        // Several legends can be on at once: they scroll rather than run off a small screen.
+        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
@@ -204,6 +214,10 @@ fun MapScreen(
             onCloseReadout = shelter::closeReadout,
             modifier = Modifier.fillMaxWidth(),
           )
+        }
+        // In the web menu's order.
+        for (overlay in MapOverlay.entries.mapNotNull { it.atlas }.filter { it in layers.atlas }) {
+          AtlasLegend(overlay, zoomedOut = overlay in atlasState.zoomedOut)
         }
       }
     }
@@ -264,33 +278,31 @@ fun MapScreen(
   }
 }
 
-/** One base and the overlays, as the web map's layer menu; the choice is kept between launches. */
+/** One base and the overlays, as the web map's layer menu (same names, same order); the choice is kept between launches. */
 @Composable
 private fun LayersMenu(expanded: Boolean, layers: MapLayers, onChoose: (MapLayers) -> Unit, onDismiss: () -> Unit) {
   DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
     Text("Base map", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-    for ((base, label) in listOf(BaseMap.Satellite to "Satellite", BaseMap.Street to "Street map")) {
+    for (base in BaseMap.entries) {
       DropdownMenuItem(
-        text = { Text(label) },
+        text = { Text(base.label) },
         leadingIcon = { RadioButton(selected = layers.base == base, onClick = null) },
         onClick = { onChoose(layers.copy(base = base)) },
       )
     }
     HorizontalDivider()
     Text("Overlays", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-    DropdownMenuItem(
-      text = { Text("Seamarks") },
-      leadingIcon = { Checkbox(checked = layers.seamarks, onCheckedChange = null) },
-      onClick = { onChoose(layers.copy(seamarks = !layers.seamarks)) },
-    )
-    DropdownMenuItem(
-      text = { Text("Sheltered water") },
-      leadingIcon = { Checkbox(checked = layers.shelter, onCheckedChange = null) },
-      onClick = {
-        onChoose(layers.copy(shelter = !layers.shelter))
-        onDismiss()
-      },
-    )
+    for (overlay in MapOverlay.entries) {
+      DropdownMenuItem(
+        text = { Text(overlay.label) },
+        leadingIcon = { Checkbox(checked = overlay in layers.overlays, onCheckedChange = null) },
+        onClick = {
+          onChoose(layers.toggled(overlay))
+          // Sheltered water brings its own legend and hour picker: show them.
+          if (overlay == MapOverlay.Shelter) onDismiss()
+        },
+      )
+    }
   }
 }
 

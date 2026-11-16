@@ -1,34 +1,67 @@
 package app.fiftybar.divecurrent.ui.map
 
 import android.content.Context
+import app.fiftybar.divecurrent.domain.AtlasOverlay
+
+/** The base maps, as the web map's (lib/map-layers.ts BASE_LAYERS). "None" is the map's own dark background. */
+enum class BaseMap(val label: String) {
+  Satellite("Satellite"),
+  Street("Street map"),
+  None("None"),
+}
 
 /**
- * The map layers a diver can switch, as the web map's layer menu (lib/map-layers.ts): one base, and overlays on or off
- * each. Seamarks start on, as on the web; the web's other overlays are not in the app yet.
+ * The web map's overlays (lib/map-layers.ts OVERLAYS), in its menu order, with the same defaults: seamarks and the
+ * coordinate grid start on. [key] is the web's id and the saved preference's name.
  */
-data class MapLayers(val base: BaseMap = BaseMap.Satellite, val seamarks: Boolean = true, val shelter: Boolean = false)
+enum class MapOverlay(val key: String, val label: String, val defaultOn: Boolean, val atlas: AtlasOverlay? = null) {
+  Seamarks("seamarks", "Seamarks", true),
+  ReefOutline("reefOutline", "Reef outline", false, AtlasOverlay.ReefOutline),
+  ReefZones("reefZones", "Reef zones", false, AtlasOverlay.ReefZones),
+  BottomTypes("bottomTypes", "Bottom types", false, AtlasOverlay.BottomTypes),
+  DepthShading("depthShading", "Depth shading", false),
+  SonarDepths("sonarDepths", "Sonar depths", false),
+  DepthContours("depthContours", "Depth contours", false),
+  Shelter("shelter", "Sheltered water", false),
+  Grid("grid", "Coordinate grid", true),
+}
 
-/** The diver's last choice, kept between launches in shared prefs "map-layers". */
+/** The map layers a diver can switch, as the web map's layer menu: one base, and overlays on or off each. */
+data class MapLayers(
+  val base: BaseMap = BaseMap.Satellite,
+  val overlays: Set<MapOverlay> = MapOverlay.entries.filter { it.defaultOn }.toSet(),
+) {
+  val seamarks: Boolean
+    get() = MapOverlay.Seamarks in overlays
+
+  val shelter: Boolean
+    get() = MapOverlay.Shelter in overlays
+
+  val grid: Boolean
+    get() = MapOverlay.Grid in overlays
+
+  /** The Atlas overlays switched on. */
+  val atlas: Set<AtlasOverlay>
+    get() = overlays.mapNotNull { it.atlas }.toSet()
+
+  fun toggled(overlay: MapOverlay): MapLayers = copy(overlays = if (overlay in overlays) overlays - overlay else overlays + overlay)
+}
+
+/** The diver's last choice, kept between launches in shared prefs "map-layers", one boolean per overlay key. */
 object MapLayersPrefs {
   private const val PREFS = "map-layers"
 
   fun read(context: Context): MapLayers {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    val defaults = MapLayers()
     return MapLayers(
-      base = BaseMap.entries.firstOrNull { it.name == prefs.getString("base", null) } ?: defaults.base,
-      seamarks = prefs.getBoolean("seamarks", defaults.seamarks),
-      shelter = prefs.getBoolean("shelter", defaults.shelter),
+      base = BaseMap.entries.firstOrNull { it.name == prefs.getString("base", null) } ?: BaseMap.Satellite,
+      overlays = MapOverlay.entries.filter { prefs.getBoolean(it.key, it.defaultOn) }.toSet(),
     )
   }
 
   fun write(context: Context, layers: MapLayers) {
-    context
-      .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-      .edit()
-      .putString("base", layers.base.name)
-      .putBoolean("seamarks", layers.seamarks)
-      .putBoolean("shelter", layers.shelter)
-      .apply()
+    val editor = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("base", layers.base.name)
+    MapOverlay.entries.forEach { editor.putBoolean(it.key, it in layers.overlays) }
+    editor.apply()
   }
 }

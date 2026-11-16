@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.ui.map
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
@@ -22,8 +23,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import java.util.Locale
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.GlanceTone
+import app.fiftybar.divecurrent.domain.AtlasOverlay
+import app.fiftybar.divecurrent.domain.CoordinateGrid
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
 import org.maplibre.android.geometry.LatLng
@@ -31,12 +35,25 @@ import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression.eq
+import org.maplibre.android.style.expressions.Expression.geometryType
 import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.literal
+import org.maplibre.android.style.expressions.Expression.toColor
 import org.maplibre.android.style.expressions.Expression.interpolate
 import org.maplibre.android.style.expressions.Expression.linear
 import org.maplibre.android.style.expressions.Expression.stop
 import org.maplibre.android.style.expressions.Expression.zoom
+import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
+import org.maplibre.android.style.layers.PropertyFactory.fillColor
+import org.maplibre.android.style.layers.PropertyFactory.fillOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineColor
+import org.maplibre.android.style.layers.PropertyFactory.lineOpacity
+import org.maplibre.android.style.layers.PropertyFactory.lineWidth
+import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap
 import org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement
 import org.maplibre.android.style.layers.PropertyFactory.iconImage
@@ -62,12 +79,8 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
+import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
-
-enum class BaseMap {
-  Satellite,
-  Street,
-}
 
 private const val SOURCE = "sites"
 private const val ARROWS = "site-arrows"
@@ -103,6 +116,8 @@ fun SiteMapView(
   onView: (MapViewBox) -> Unit = {},
   /** A tap away from the pins; true when it was taken. */
   onTap: (lat: Double, lon: Double) -> Boolean = { _, _ -> false },
+  /** The Atlas overlays' shapes in view, by overlay (AtlasViewModel); an overlay left out is not drawn. */
+  atlas: Map<AtlasOverlay, FeatureCollection> = emptyMap(),
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -115,6 +130,8 @@ fun SiteMapView(
   val mapView = remember { MapView(context).apply { onCreate(null) } }
   var map by remember { mutableStateOf<MapLibreMap?>(null) }
   var style by remember { mutableStateOf<Style?>(null) }
+  // Where the map settled, for the coordinate grid.
+  var view by remember { mutableStateOf<MapViewBox?>(null) }
 
   DisposableEffect(lifecycle, mapView) {
     val observer = LifecycleEventObserver { _, event ->
@@ -137,7 +154,11 @@ fun SiteMapView(
         if (hit != null) openSite(hit)
         hit != null || tapped(point.latitude, point.longitude)
       }
-      m.addOnCameraIdleListener { viewChanged(viewBox(m)) }
+      m.addOnCameraIdleListener {
+        val box = viewBox(m)
+        view = box
+        viewChanged(box)
+      }
       m.addOnMapLongClickListener { point ->
         longPress(point.latitude, point.longitude)
         true
@@ -152,15 +173,31 @@ fun SiteMapView(
     }
   }
 
-  LaunchedEffect(map, layers.base, layers.seamarks, colors) {
+  // Only the raster overlays are in the style itself; the rest are drawn on it, so switching them keeps the style.
+  val rasters = layers.overlays.intersect(RASTER_OVERLAYS)
+  LaunchedEffect(map, layers.base, rasters, colors) {
     val m = map ?: return@LaunchedEffect
     style = null
-    m.setStyle(Style.Builder().fromJson(styleJson(layers.base, seamarks = layers.seamarks))) { loaded ->
+    val background = String.format(Locale.ROOT, "#%06x", colors.ink.toArgb() and 0xFFFFFF)
+    m.setStyle(Style.Builder().fromJson(styleJson(layers.base, rasters, background))) { loaded ->
       addSiteLayers(context, loaded, colors)
       shelterIds.clear()
       style = loaded
-      viewChanged(viewBox(m))
+      val box = viewBox(m)
+      view = box
+      viewChanged(box)
     }
+  }
+
+  LaunchedEffect(style, atlas) {
+    val s = style ?: return@LaunchedEffect
+    showAtlas(s, atlas, shelterIds)
+  }
+
+  LaunchedEffect(style, layers.grid, view) {
+    val s = style ?: return@LaunchedEffect
+    val box = view
+    s.getSourceAs<GeoJsonSource>(GRID)?.setGeoJson(if (layers.grid && box != null) gridFeatures(box) else FeatureCollection.fromFeatures(emptyList()))
   }
 
   LaunchedEffect(style, rows) {
@@ -205,6 +242,66 @@ private fun showShelter(style: Style, shown: MutableList<String>, images: List<S
   }
 }
 
+private val RASTER_OVERLAYS = setOf(MapOverlay.Seamarks, MapOverlay.DepthShading, MapOverlay.DepthContours, MapOverlay.SonarDepths)
+
+private fun atlasSource(overlay: AtlasOverlay) = "atlas-source-${overlay.folder}"
+
+private fun atlasLayer(overlay: AtlasOverlay) = "atlas-layer-${overlay.folder}"
+
+/**
+ * The Atlas shapes, as the web draws them: fills at 55 % in the Atlas's colours, or the reef outline as a line. They
+ * sit under the sheltered-water shading, the seamarks and the pins; each feature carries its own colour.
+ */
+private fun showAtlas(style: Style, shown: Map<AtlasOverlay, FeatureCollection>, shelterIds: List<String>) {
+  for (overlay in AtlasOverlay.entries) {
+    val shapes = shown[overlay]
+    val source = style.getSourceAs<GeoJsonSource>(atlasSource(overlay))
+    if (shapes == null) {
+      style.removeLayer(atlasLayer(overlay))
+      style.removeSource(atlasSource(overlay))
+      continue
+    }
+    if (source != null) {
+      source.setGeoJson(shapes)
+      continue
+    }
+    style.addSource(GeoJsonSource(atlasSource(overlay), shapes))
+    val layer =
+      if (overlay.outline) LineLayer(atlasLayer(overlay), atlasSource(overlay)).withProperties(lineColor(toColor(get("color"))), lineWidth(1.5f), lineOpacity(0.9f))
+      else FillLayer(atlasLayer(overlay), atlasSource(overlay)).withProperties(fillColor(toColor(get("color"))), fillOpacity(0.55f))
+    val below =
+      shelterIds.firstOrNull()?.let { "shelter-layer-$it" }
+        ?: (if (style.getLayer(SEAMARKS) != null) SEAMARKS else GRID_LINES)
+    style.addLayerBelow(layer, below)
+  }
+}
+
+/** The grid's lines across the view, latitude labels on the left edge and longitude ones along the top. */
+private fun gridFeatures(box: MapViewBox): FeatureCollection {
+  val lines = CoordinateGrid.lines(box.south, box.west, box.north, box.east)
+  val features =
+    lines.flatMap { line ->
+      if (line.axis == "lat") {
+        listOf(
+          Feature.fromGeometry(LineString.fromLngLats(listOf(Point.fromLngLat(box.west, line.value), Point.fromLngLat(box.east, line.value)))),
+          Feature.fromGeometry(Point.fromLngLat(box.west, line.value)).apply {
+            addStringProperty("label", line.label)
+            addStringProperty("anchor", Property.TEXT_ANCHOR_BOTTOM_LEFT)
+          },
+        )
+      } else {
+        listOf(
+          Feature.fromGeometry(LineString.fromLngLats(listOf(Point.fromLngLat(line.value, box.south), Point.fromLngLat(line.value, box.north)))),
+          Feature.fromGeometry(Point.fromLngLat(line.value, box.north)).apply {
+            addStringProperty("label", line.label)
+            addStringProperty("anchor", Property.TEXT_ANCHOR_TOP_LEFT)
+          },
+        )
+      }
+    }
+  return FeatureCollection.fromFeatures(features)
+}
+
 private fun viewBox(map: MapLibreMap): MapViewBox {
   val bounds = map.projection.visibleRegion.latLngBounds
   return MapViewBox(bounds.latitudeSouth, bounds.longitudeWest, bounds.latitudeNorth, bounds.longitudeEast, map.cameraPosition.zoom)
@@ -238,6 +335,29 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
   val density = context.resources.displayMetrics.density
   GlanceTone.entries.forEach { tone -> style.addImage(iconName(tone), arrowBitmap(density, colors.tone(tone).toArgb(), colors.ink.toArgb())) }
   style.addImage(ICON_NONE, dotBitmap(density, colors.foam.toArgb(), colors.ink.toArgb()))
+  // The coordinate grid, under the pins: thin white lines and chart-style labels at the view's edges.
+  style.addSource(GeoJsonSource(GRID, FeatureCollection.fromFeatures(emptyList())))
+  style.addLayer(
+    LineLayer(GRID_LINES, GRID)
+      .withProperties(lineColor(Color.WHITE), lineOpacity(0.45f), lineWidth(1f))
+      .withFilter(eq(geometryType(), literal("LineString")))
+  )
+  style.addLayer(
+    SymbolLayer(GRID_LABELS, GRID)
+      .withProperties(
+        textField(get("label")),
+        textFont(arrayOf(LABEL_FONT)),
+        textSize(11f),
+        textColor(Color.WHITE),
+        textHaloColor(colors.ink.toArgb()),
+        textHaloWidth(1.2f),
+        textAnchor(get("anchor")),
+        textOffset(arrayOf(0.3f, 0f)),
+        textAllowOverlap(true),
+        textIgnorePlacement(true),
+      )
+      .withFilter(eq(geometryType(), literal("Point")))
+  )
   style.addSource(GeoJsonSource(SOURCE, FeatureCollection.fromFeatures(emptyList())))
   style.addLayer(
     SymbolLayer(ARROWS, SOURCE)
@@ -311,53 +431,81 @@ private fun dotBitmap(density: Float, fill: Int, edge: Int): Bitmap {
 }
 
 private const val SEAMARKS = "seamarks"
+private const val GRID = "grid"
+private const val GRID_LINES = "grid-lines"
+private const val GRID_LABELS = "grid-labels"
+
+/** One raster source and its layer in the style. */
+private data class Raster(val id: String, val tiles: String, val attribution: String, val maxZoom: Int, val opacity: Double = 1.0)
+
+private const val OPENSEAMAP = "© <a href=\\\"https://www.openseamap.org/\\\">OpenSeaMap</a> contributors"
+private const val DEPTH_WMS = "https://depth.openseamap.org/geoserver/openseamap/wms"
+
+/** A WMS asked for the map's own 256 px tiles, as Leaflet's tileLayer.wms does on the web. */
+private fun wms(base: String, layers: String, version: String): String =
+  "$base?SERVICE=WMS&REQUEST=GetMap&VERSION=$version&LAYERS=$layers&STYLES=&FORMAT=image/png&TRANSPARENT=true" +
+    "&SRS=EPSG:3857&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}"
 
 /**
- * A raster style: the base, and OpenSeaMap's seamarks over it when [seamarks] (the web map's overlay, on by default
- * there too). Each source's attribution shows behind the map's (i) button.
+ * A raster style: the map's dark [background] (all that shows under base "None"), the base, then the web's raster
+ * overlays that are on in [overlays] (depth shading, depth contours, sonar depths, seamarks), from the same servers as
+ * the web map. Each source's attribution shows behind the map's (i) button. The Atlas overlays, the sheltered-water
+ * shading and the grid are drawn on top by SiteMapView.
  */
-internal fun styleJson(baseMap: BaseMap, seamarks: Boolean = false): String {
-  val (tiles, attribution, maxZoom) =
+internal fun styleJson(baseMap: BaseMap, overlays: Set<MapOverlay> = emptySet(), background: String = "#07151d"): String {
+  val base =
     when (baseMap) {
       BaseMap.Satellite ->
-        Triple(
+        Raster(
+          "base",
           "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
           "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
           18,
         )
       BaseMap.Street ->
-        Triple(
+        Raster(
+          "base",
           "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           "© <a href=\\\"https://www.openstreetmap.org/copyright\\\">OpenStreetMap</a> contributors",
           19,
         )
+      BaseMap.None -> null
     }
-  val seamarkSource =
-    if (seamarks)
-      """,
-        "$SEAMARKS": {
-          "type": "raster",
-          "tiles": ["https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png"],
-          "tileSize": 256,
-          "maxzoom": 18,
-          "attribution": "© <a href=\"https://www.openseamap.org/\">OpenSeaMap</a> contributors"
-        }"""
-    else ""
-  val seamarkLayer = if (seamarks) """, { "id": "$SEAMARKS", "type": "raster", "source": "$SEAMARKS" }""" else ""
+  val rasters =
+    listOfNotNull(
+      base,
+      // GEBCO 2021 on a 15 arc-second grid (about 450 m): the shape of the atolls and the deep water, not a pass's sill.
+      Raster(
+        MapOverlay.DepthShading.key,
+        wms("https://geoserver.openseamap.org/geoserver/gwc/service/wms", "gebco2021:gebco_2021", "1.1.1"),
+        "<a href=\\\"https://www.gebco.net/\\\">GEBCO 2021 Grid</a> via OpenSeaMap",
+        18,
+        opacity = 0.8,
+      ).takeIf { MapOverlay.DepthShading in overlays },
+      Raster(MapOverlay.DepthContours.key, wms(DEPTH_WMS, "openseamap:contour2,openseamap:contour", "1.1.0"), OPENSEAMAP, 18)
+        .takeIf { MapOverlay.DepthContours in overlays },
+      // Depths logged by boats that share their sonar tracks. Sparse in the Maldives.
+      Raster(MapOverlay.SonarDepths.key, wms(DEPTH_WMS, "openseamap:tracks_10m", "1.1.0"), OPENSEAMAP, 18)
+        .takeIf { MapOverlay.SonarDepths in overlays },
+      Raster(SEAMARKS, "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", OPENSEAMAP, 18)
+        .takeIf { MapOverlay.Seamarks in overlays },
+    )
+  val sources =
+    rasters.joinToString(",\n") {
+      """"${it.id}": { "type": "raster", "tiles": ["${it.tiles}"], "tileSize": 256, "maxzoom": ${it.maxZoom}, "attribution": "${it.attribution}" }"""
+    }
+  val layers =
+    listOf("""{ "id": "background", "type": "background", "paint": { "background-color": "$background" } }""") +
+      rasters.map {
+        val paint = if (it.opacity < 1.0) """, "paint": { "raster-opacity": ${it.opacity} }""" else ""
+        """{ "id": "${it.id}", "type": "raster", "source": "${it.id}"$paint }"""
+      }
   return """
     {
       "version": 8,
       "glyphs": "${BuildConfig.API_BASE_URL}/map-fonts/{fontstack}/{range}.pbf",
-      "sources": {
-        "base": {
-          "type": "raster",
-          "tiles": ["$tiles"],
-          "tileSize": 256,
-          "maxzoom": $maxZoom,
-          "attribution": "$attribution"
-        }$seamarkSource
-      },
-      "layers": [{ "id": "base", "type": "raster", "source": "base" }$seamarkLayer]
+      "sources": { $sources },
+      "layers": [${layers.joinToString(", ")}]
     }
   """
     .trimIndent()
