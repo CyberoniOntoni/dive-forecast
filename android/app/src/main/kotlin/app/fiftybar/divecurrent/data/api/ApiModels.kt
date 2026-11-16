@@ -502,3 +502,40 @@ data class ApiShelterPoint(
   val head: String? = null,
   val detail: String? = null,
 )
+
+/** GET /api/v1/sites/{id}/reviews, and the answer to every review write: the site page's ratings and reviews card. */
+@Serializable
+data class ApiReviews(
+  val apiVersion: Int = 1,
+  val siteId: String,
+  val summary: ApiRatingSummary = ApiRatingSummary(),
+  /** "4.2 from 5 divers", or "No ratings yet". */
+  val summaryLine: String = "",
+  /** Other divers' reviews with text or photos, newest first. */
+  val reviews: List<ApiReview> = emptyList(),
+  /** The signed-in diver's own; null signed out or not rated. */
+  val mine: ApiReview? = null,
+  val ratingPoints: Int = 3,
+  val reviewMaxChars: Int = 1500,
+  val maxPhotos: Int = 6,
+)
+
+@Serializable data class ApiRatingSummary(val average: Double? = null, val count: Int = 0, val mine: Int? = null)
+
+@Serializable
+data class ApiReview(
+  val nickname: String,
+  val score: Int,
+  val review: String? = null,
+  val photos: List<ApiReviewPhoto> = emptyList(),
+  val updatedAt: String = "",
+  /** "9 Nov 2026". */
+  val date: String = "",
+)
+
+/** [url] is a path on the server, `/site-photos/<site>/<photo>.jpg`. */
+@Serializable data class ApiReviewPhoto(val id: String, val url: String)
+
+@Serializable data class RatingBody(val score: Int)
+
+@Serializable data class ReviewBody(val text: String)

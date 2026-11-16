@@ -16,22 +16,10 @@ import {
 import { POINTS } from "@/lib/points-rules";
 import { REVIEW_MAX } from "@/lib/site-details";
 import { MAX_PHOTOS_PER_SITE } from "@/lib/site-photos-limits";
+import { reviewDate, reviewSummaryLine } from "@/lib/review-words";
 import { signInHref } from "@/lib/sign-in";
 import { PhotoPicker, uploadPhotos, type PickedPhoto } from "./PhotoPicker";
 import { ScoreButtons } from "./ScoreButtons";
-
-/** "4.2 from 5 divers". */
-function summaryLine(summary: Reviews["summary"]): string {
-  if (summary.average == null) return "No ratings yet";
-  return `${summary.average} from ${summary.count} ${summary.count === 1 ? "diver" : "divers"}`;
-}
-
-/** "9 Nov 2026", in Maldives time on the server and in the browser alike. */
-function reviewDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString("en-GB", { timeZone: "Indian/Maldives", day: "numeric", month: "short", year: "numeric" });
-}
 
 const textareaClass =
   "min-h-28 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
@@ -139,7 +127,7 @@ export function SiteReviews({
         <h2 id="reviews-heading" className="text-base font-semibold text-foam">
           Ratings and reviews
         </h2>
-        <p className="text-sm text-foam/80">{summaryLine(shown.summary)}. Reviews do not change the current.</p>
+        <p className="text-sm text-foam/80">{reviewSummaryLine(shown.summary)}. Reviews do not change the current.</p>
       </div>
 
       {signedIn ? (

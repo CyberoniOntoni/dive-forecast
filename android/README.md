@@ -37,6 +37,11 @@ What it does:
   `domain/NavReadout.kt`), ported from `lib/boat-nav.ts` and `lib/route-current.ts` with their tests. Location comes
   from the platform `LocationManager` (no Play services), only while the screen is started. Satellite outlines, not a
   chart.
+- **Ratings and reviews**: the site page's "Ratings and reviews" card, as the web's: the average, other divers'
+  reviews with their photos, and, signed in, the diver's own score 1 to 5, written review and up to 6 photos, each
+  changeable or removable (`/api/v1/sites/{id}/reviews`, `/rating`, `/review`, `/review/photos`). Photos come from the
+  system photo picker (no storage permission) and are shrunk on the phone as the web's picker does them
+  (`ui/site/PhotoShrink.kt`: turned upright, 1600 px, JPEG), then sent one by one.
 - **Map layers**: the map's "Layers" chip picks the base (satellite or street map) and the overlays the web map has
   so far in the app: OpenSeaMap seamarks (on by default, as on the web) and "Sheltered water", each lagoon and the sea
   round it shaded by felt wave height, with the web legend's hour picker and a tap readout (`GET /api/v1/shelter`,
@@ -48,7 +53,7 @@ What it does:
   view) is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Ratings and reviews and adding sites are on the web for now (API.md § Next).
+Adding sites is on the web for now (API.md § Next).
 
 ## Build and run
 
