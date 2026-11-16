@@ -221,9 +221,10 @@ export type ReviewActionResult = { ok: true; reviews: SiteReviews } | { ok: fals
 const REVIEW_PHOTOS_PER_DAY = 24;
 
 /** The site's ratings and reviews, and the signed-in diver's own (the id comes from the session, never the page). */
-export async function getSiteReviews(siteId: string): Promise<SiteReviews> {
+/** With `signedOut`, the card as anyone sees it, whoever asks (the API's answer without a token, kept a minute). */
+export async function getSiteReviews(siteId: string, options?: { signedOut?: boolean }): Promise<SiteReviews> {
   await ready();
-  const session = await currentSession();
+  const session = options?.signedOut ? null : await currentSession();
   return siteReviews(siteId, session?.userId ?? null);
 }
 

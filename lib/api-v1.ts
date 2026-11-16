@@ -368,9 +368,13 @@ export const API_NO_STORE = "private, no-store";
  * A write's JSON body as an object, or the error response to send. Only `application/json` is read: a browser cannot
  * send that to another site's address without asking first (CORS), and this API answers no such question.
  */
+/** The request body's media type, lower case and without parameters: "application/json", "image/jpeg", or "". */
+export function requestType(request: Request): string {
+  return (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+}
+
 export async function apiJsonBody(request: Request): Promise<Record<string, unknown> | Response> {
-  const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-  if (type !== "application/json") return apiError(415, "bad_request", "Send the body as application/json.");
+  if (requestType(request) !== "application/json") return apiError(415, "bad_request", "Send the body as application/json.");
   try {
     const body: unknown = await request.json();
     if (body !== null && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;

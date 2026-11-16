@@ -1,5 +1,5 @@
 import { addReviewPhoto, getSiteReviews } from "@/lib/actions";
-import { apiError, apiHandler, apiReviewResult } from "@/lib/api-v1";
+import { apiError, apiHandler, apiReviewResult, requestType } from "@/lib/api-v1";
 import { reviewWriteSite } from "@/lib/api-review-route";
 import { MAX_PHOTO_BYTES } from "@/lib/site-photos-limits";
 
@@ -11,8 +11,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   return apiHandler(async () => {
     const siteId = await reviewWriteSite(request, (await context.params).id);
     if (siteId instanceof Response) return siteId;
-    const type = (request.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (type !== "image/jpeg") return apiError(415, "bad_request", "Send the photo as image/jpeg.");
+    if (requestType(request) !== "image/jpeg") return apiError(415, "bad_request", "Send the photo as image/jpeg.");
     const declared = Number(request.headers.get("content-length") ?? Number.NaN);
     if (declared > MAX_PHOTO_BYTES) return apiError(413, "bad_request", "That photo is too large.");
     const bytes = await request.arrayBuffer();

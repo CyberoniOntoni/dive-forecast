@@ -8,6 +8,7 @@ import { PUT as writeReview } from "@/app/api/v1/sites/[id]/review/route";
 import { POST as addPhoto } from "@/app/api/v1/sites/[id]/review/photos/route";
 import { DELETE as dropPhoto } from "@/app/api/v1/sites/[id]/review/photos/[photoId]/route";
 import { GET as getReviews } from "@/app/api/v1/sites/[id]/reviews/route";
+import { setSessionCookie } from "@/lib/auth";
 import { readStore, setStorePath } from "@/lib/store";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -164,6 +165,21 @@ describe("API v1 ratings and reviews", () => {
 
     const removed = await unrate(call(`/api/v1/sites/${SITE}/rating`, { method: "DELETE", token }), site(SITE));
     expect(await removed.json()).toMatchObject({ summary: { count: 0, mine: null }, mine: null });
+  });
+
+  it("ignores the web's cookie, and answers 401 to a token it turns down", async () => {
+    const token = await signInApp("a@example.com", "Ann");
+    expect((await rate(call(`/api/v1/sites/${SITE}/rating`, { method: "PUT", body: { score: 4 }, token }), site(SITE))).status).toBe(200);
+    const ann = readStore().users.find((user) => user.nickname === "Ann")!;
+    await setSessionCookie(ann.id, ann.nickname);
+    // Only the cookie: the card anyone sees, kept a minute, without Ann's own.
+    const cookieOnly = await getReviews(call(`/api/v1/sites/${SITE}/reviews`), site(SITE));
+    expect(cookieOnly.headers.get("cache-control")).toBe("private, max-age=60");
+    expect(await cookieOnly.json()).toMatchObject({ summary: { count: 1, mine: null }, mine: null });
+    // A token the server cannot open is not rescued by the cookie.
+    const dead = await getReviews(call(`/api/v1/sites/${SITE}/reviews`, { token: "not-a-token" }), site(SITE));
+    expect(dead.status).toBe(401);
+    expect(dead.headers.get("cache-control")).toBe("no-store");
   });
 
   it("needs the token, a known site, a 1 to 5 score and a JPEG body", async () => {

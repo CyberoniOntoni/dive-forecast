@@ -23,8 +23,9 @@ app and the site always show the same forecast. The forecast model is untouched.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
 - **Methods.** Reads are GET. Writes are POST or PUT with an `application/json` body (anything else gets 415), or
-  DELETE with none: a browser cannot send any of these to this site from another one without a CORS check, which this
-  API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
+  DELETE with none. The one exception is a review photo (`POST /api/v1/sites/{id}/review/photos`), whose body is the
+  `image/jpeg` itself. A browser cannot send any of these (that photo type included) to this site from another one
+  without a CORS check, which this API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
   (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
   every other non-GET request that is not a server action. `forbidden` (403) is a change to something that is another
   diver's, such as `PUT` on their plan; deleting it answers 404, as for a plan that is gone.
@@ -437,7 +438,9 @@ stopped working, 404 for a site not on the map.
   or unrated), so send the token to get it. Nicknames only, never a diver's id or email.
 - Photo `url`s are paths on the site's host. `ratingPoints` is what a first rating earns (removing it takes them away;
   rating again gives them back, never anew).
-- Without a token `Cache-Control: private, max-age=60`; with one, `private, no-store`.
+- Without a token the answer is the same for everyone (the web's cookie is ignored here, so `mine` is null), with
+  `Cache-Control: private, max-age=60`. With one, `private, no-store`; a token the server turns down (expired, or
+  "Sign out everywhere") answers 401, so the app drops it and asks again without.
 
 ### `PUT /api/v1/sites/{id}/rating`, `DELETE /api/v1/sites/{id}/rating`
 
