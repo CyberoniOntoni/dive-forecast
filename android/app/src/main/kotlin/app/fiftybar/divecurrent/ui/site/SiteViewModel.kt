@@ -59,8 +59,11 @@ class SiteViewModel(
   private val siteId: String,
   private val repository: DataRepository,
   private val account: AccountRepository,
+  /** A plan's dive time to start the report form on, "YYYY-MM-DDTHH:MM". */
+  reportAt: String? = null,
 ) : ViewModel() {
-  private val _state = MutableStateFlow(SiteUiState())
+  private val _state =
+    MutableStateFlow(SiteUiState(report = if (reportAt != null) ReportFormState(quickHours = null, otherWall = reportAt) else ReportFormState()))
   val state: StateFlow<SiteUiState> = _state.asStateFlow()
   val session: StateFlow<Session?> = account.sessions.session
 

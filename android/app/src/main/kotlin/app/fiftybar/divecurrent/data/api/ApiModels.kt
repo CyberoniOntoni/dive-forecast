@@ -246,3 +246,99 @@ data class ApiAward(val points: Int, val reasons: List<String> = emptyList(), va
 
 /** A write that answers with nothing more than its version. */
 @Serializable data class ApiOk(val apiVersion: Int)
+
+/** GET /api/v1/plans/{id}: a dive plan in the plan page's words. Anyone with the id reads it. */
+@Serializable
+data class ApiPlan(
+  val apiVersion: Int,
+  val id: String,
+  val title: String,
+  val notes: String? = null,
+  val boatSpeedKn: Double = 8.0,
+  val span: String = "",
+  val ownerNickname: String? = null,
+  val isOwner: Boolean = false,
+  val webPath: String = "",
+  val updatedAt: String = "",
+  val nowWall: String = "",
+  val days: List<ApiPlanDay> = emptyList(),
+)
+
+@Serializable
+data class ApiPlanDay(
+  val date: String,
+  /** "Tue 17 Nov". */
+  val label: String,
+  val today: Boolean = false,
+  val past: Boolean = false,
+  /** Dives with a warning. */
+  val toCheck: Int = 0,
+  val stops: List<ApiPlanStop> = emptyList(),
+)
+
+@Serializable
+data class ApiPlanStop(
+  val siteId: String,
+  val name: String,
+  val lat: Double,
+  val lon: Double,
+  val facts: String = "",
+  val howToDive: String? = null,
+  /** "HH:MM", Maldives. */
+  val time: String,
+  val note: String? = null,
+  /** "Wanted: incoming". */
+  val want: String? = null,
+  /** forecast | unavailable | beyond | past */
+  val status: String = "unavailable",
+  val message: String? = null,
+  val way: String? = null,
+  val arrowBearing: Double? = null,
+  val strength: String? = null,
+  /** Very strong: the warning colour. */
+  val veryStrong: Boolean = false,
+  /** incoming | outgoing | stop | none */
+  val tone: String = "none",
+  val sea: String? = null,
+  val seaRough: Boolean = false,
+  val confidence: String? = null,
+  /** "Forecast: fairly sure". */
+  val confidenceLabel: String? = null,
+  val warnings: List<String> = emptyList(),
+  val better: String? = null,
+  /** Set once the dive is over and still reportable: the report form's time. */
+  val reportTime: String? = null,
+)
+
+/** GET /api/v1/plans/{id}/days/{day}/legs: the boat between one day's dives. */
+@Serializable
+data class ApiPlanLegs(val apiVersion: Int, val planId: String, val dayIndex: Int, val legs: List<ApiPlanLeg> = emptyList())
+
+@Serializable
+data class ApiPlanLeg(
+  /** Index of the dive it leaves from. */
+  val from: Int,
+  /** "2.1 nm · about 20 min at 8 kn", or "Same spot". */
+  val text: String,
+  /** "Leave by 10:35". */
+  val leaveBy: String? = null,
+  val tight: Boolean = false,
+  val tightNote: String? = null,
+  /** "Straight line: no way round the reef found". */
+  val note: String? = null,
+  val routed: Boolean = true,
+)
+
+/** GET /api/v1/plans: the signed-in diver's own plans. */
+@Serializable data class ApiPlanSummaries(val apiVersion: Int, val plans: List<ApiPlanSummary> = emptyList())
+
+@Serializable
+data class ApiPlanSummary(
+  val id: String,
+  val title: String,
+  val span: String = "",
+  /** "4 days · 11 dives". */
+  val size: String = "",
+  val first: String = "",
+  val last: String = "",
+)

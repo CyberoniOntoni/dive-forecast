@@ -1,7 +1,9 @@
 package app.fiftybar.divecurrent.ui.site
 
 import android.content.Intent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +42,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,15 +79,25 @@ import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit) {
+fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit, reportAt: String? = null) {
   val repository = appRepository()
   val account = appAccount()
-  val viewModel: SiteViewModel = viewModel(key = "site/$siteId") { SiteViewModel(siteId, repository, account) }
+  val viewModel: SiteViewModel = viewModel(key = "site/$siteId/${reportAt.orEmpty()}") { SiteViewModel(siteId, repository, account, reportAt) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val session by viewModel.session.collectAsStateWithLifecycle()
+  // Opened from a plan's "Report the current": show the form, once the forecast above it has laid out.
+  val reportFocus = remember { BringIntoViewRequester() }
+  val forecastShown = state.forecast != null
+  LaunchedEffect(reportAt, forecastShown) {
+    if (reportAt != null && forecastShown) {
+      delay(300)
+      reportFocus.bringIntoView()
+    }
+  }
   val colors = CurrentTheme.colors
   val context = LocalContext.current
   val hours = state.forecast?.hours.orEmpty()
@@ -136,6 +152,7 @@ fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit) {
         }
       }
       if (!state.notFound) {
+        Box(Modifier.bringIntoViewRequester(reportFocus)) {
         ReportCard(
           state = state,
           nickname = session?.nickname,
@@ -148,6 +165,7 @@ fun SiteScreen(siteId: String, onBack: () -> Unit, onSignIn: () -> Unit) {
           onSend = viewModel::sendReport,
           onAsForecast = viewModel::sendAsForecast,
         )
+        }
         RecentReportsCard(state.reports, state.reportsSavedAt)
       }
       state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }

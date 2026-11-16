@@ -21,6 +21,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
@@ -67,7 +68,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Unit) {
+fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Unit, onPlans: () -> Unit) {
   val repository = appRepository()
   val session by appAccount().sessions.session.collectAsStateWithLifecycle()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
@@ -104,6 +105,7 @@ fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Un
         onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
+        onPlans = onPlans,
       )
     },
   ) { padding ->
@@ -152,6 +154,7 @@ private fun NowList(
   onSearchFocus: () -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
+  onPlans: () -> Unit,
 ) {
   val colors = CurrentTheme.colors
   val focus = LocalFocusManager.current
@@ -176,6 +179,9 @@ private fun NowList(
             if (state.fromCache && state.error != null) add("offline copy")
           }
         Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+      }
+      IconButton(onClick = onPlans, modifier = Modifier.size(48.dp)) {
+        Icon(Icons.Filled.DateRange, contentDescription = "Dive plans")
       }
       IconButton(onClick = onRefresh, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Refresh, contentDescription = "Refresh the forecast")

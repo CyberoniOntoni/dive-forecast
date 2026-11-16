@@ -225,6 +225,57 @@ the site showed at that hour, so it counts for `npm run verify` like a web repor
 `same-dive`). A report moves the next hours of the forecast, so refetch the forecast without the HTTP cache after
 one. 400 with the form's own words for a report it refuses, 404 for an unknown site.
 
+## Dive plans
+
+A plan's id is its share link's (`https://50bar.app/plans/<id>`): anyone with it reads the plan. The words come from
+the plan page's own rules (`lib/plan-words.ts`), so the app and the page say the same thing. Making and changing plans
+stays on the web for now.
+
+### `GET /api/v1/plans`
+
+Signed in. The diver's own plans, newest change first:
+`{"apiVersion": 1, "plans": [{"id", "title", "span": "17–23 Nov 2026", "size": "4 days · 11 dives", "first", "last", "updatedAt"}]}`.
+
+### `GET /api/v1/plans/{id}`
+
+The plan as its page shows it (`apiPlan` in `lib/api-v1.ts`). `private, max-age=60`, since `isOwner` depends on the
+token sent.
+
+```json
+{
+  "apiVersion": 1, "id": "Kq7vHtmWpdNrcXfa", "title": "North Malé week", "notes": null, "boatSpeedKn": 8,
+  "span": "17–23 Nov 2026", "ownerNickname": "Ann", "isOwner": false, "webPath": "/plans/Kq7vHtmWpdNrcXfa",
+  "updatedAt": "2026-11-15T03:00:00.000Z", "nowWall": "2026-11-17T07:12",
+  "days": [{
+    "date": "2026-11-17", "label": "Tue 17 Nov", "today": true, "past": false, "toCheck": 1,
+    "stops": [{
+      "siteId": "kuda-haa", "name": "Kuda Haa", "lat": 4.31, "lon": 73.46, "facts": "Channel thila · North Malé · 5–30 m",
+      "howToDive": null, "time": "09:00", "note": "Hook in on the corner.", "want": "Wanted: incoming",
+      "status": "forecast", "message": null, "way": "Outgoing, toward W", "arrowBearing": 270, "strength": "Very strong",
+      "veryStrong": true, "tone": "stop", "sea": "Sea moderate · 0.8 m", "seaRough": false, "confidence": "fairly sure",
+      "confidenceLabel": "Forecast: fairly sure",
+      "warnings": ["Very strong current at this time", "Running outgoing; you wanted incoming"],
+      "better": "Better 13:00–15:00, best 14:00: incoming, toward E, mild.", "reportTime": null
+    }]
+  }]
+}
+```
+
+`status` is `forecast`, `unavailable`, `beyond` (further ahead than the forecast reaches) or `past`; without a forecast
+hour `message` says so. `veryStrong` and `seaRough` say when to show `strength` and `sea` in the warning colour, so a client never reads the
+words. `tone` is the dive's marker colour: `incoming`, `outgoing`, `stop` (a warning) or `none`.
+`reportTime` is set once the dive is over and still reportable (14 days): send it as the report's `time`. No diver id.
+404 for an unknown id.
+
+### `GET /api/v1/plans/{id}/days/{day}/legs`
+
+The boat legs between day `day`'s dives (0-based), at the plan's boat speed with no current, as the plan page shows
+them: `{"apiVersion": 1, "planId", "dayIndex", "legs": [{"from": 0, "text": "2.1 nm · about 20 min at 8 kn",
+"leaveBy": "Leave by 10:35", "tight": false, "tightNote": null, "note": null, "lengthKm", "minutes", "routed",
+"points": [[lat, lon], …]}]}`. `from` counts the day's dives as the plan body lists them. Each day is a separate call,
+since routing takes about a tenth of a second per leg. 404 for an unknown plan or day.
+
 ## Next (not built yet)
 
-Ratings and reviews (with photos), dive plans, boat routes and the map layers. Each comes with its own section here.
+Making and editing plans, ratings and reviews (with photos), boat routes and the map layers. Each comes with its own
+section here.

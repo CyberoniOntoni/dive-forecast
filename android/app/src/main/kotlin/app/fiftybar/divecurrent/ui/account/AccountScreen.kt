@@ -83,7 +83,7 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
 /** The signed-in diver: nickname, points, sign out. The rest of the account (About me, nickname) is on the web. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(onBack: () -> Unit) {
+fun AccountScreen(onBack: () -> Unit, onPlans: () -> Unit) {
   val account = appAccount()
   val viewModel: AccountViewModel = viewModel { AccountViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -122,6 +122,7 @@ fun AccountScreen(onBack: () -> Unit) {
         Text(lines.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = colors.foam)
       }
       state.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
+      OutlinedButton(onClick = onPlans, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("My dive plans") }
       OutlinedButton(
         onClick = { uri.openUri("${BuildConfig.WEB_URL}/scoreboard") },
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),

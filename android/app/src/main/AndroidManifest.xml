@@ -22,6 +22,15 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Shared dive plan links open in the app when the diver picks it: only /plans/<16-letter id>, so the web
+                 editor's /plans/new and /plans/<id>/edit (the app's "on the web" buttons) still open in the browser. Not autoVerify: that needs
+                 /.well-known/assetlinks.json with the release signing key, which is not set up yet. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="50bar.app" android:pathPattern="/plans/................" />
+            </intent-filter>
         </activity>
     </application>
 
