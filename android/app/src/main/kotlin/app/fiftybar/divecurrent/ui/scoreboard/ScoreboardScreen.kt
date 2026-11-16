@@ -75,9 +75,9 @@ class ScoreboardViewModel(private val account: AccountRepository) : ViewModel() 
   private var load: Job? = null
 
   init {
-    // Signing in or out changes which row is "you": read the boards again.
+    // Signing in or out changes which row is "you", and a new nickname changes its name: read the boards again.
     viewModelScope.launch {
-      account.sessions.session.map { it?.token }.distinctUntilChanged().collect {
+      account.sessions.session.map { it?.token to it?.nickname }.distinctUntilChanged().collect {
         _state.update { s -> s.copy(boards = emptyMap()) }
         show(_state.value.board)
       }
