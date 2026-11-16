@@ -34,7 +34,13 @@ data class AddSiteUiState(
   /** Added, but some photos did not go up: the screen stays to say so. */
   val added: ApiSite? = null,
   val note: String? = null,
-)
+) {
+  /** Something typed or picked that leaving would lose. */
+  val dirty: Boolean
+    get() =
+      added == null &&
+        (name.isNotBlank() || kind != null || top.isNotBlank() || max.isNotBlank() || howToDive.isNotBlank() || rating != null || photos.isNotEmpty())
+}
 
 /**
  * The web map's "Add a site" form (components/AddSiteForm.tsx) for a pin: name, kind, depths, how to dive it, the

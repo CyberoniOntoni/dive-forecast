@@ -1,6 +1,7 @@
 package app.fiftybar.divecurrent.ui.site
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,8 +9,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -31,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -41,10 +43,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -86,13 +92,20 @@ fun AddSiteScreen(lat: Double, lon: Double, onBack: () -> Unit, onSignIn: () -> 
       if (uris.isNotEmpty()) viewModel.pick(uris)
     }
   val locked = state.busy || state.added != null
+  // Leaving while the site or its photos are being sent would cancel the sending half way, unseen: stay until done.
+  // Leaving a filled-in form asks first, as the plan editor does.
+  var confirmLeave by remember { mutableStateOf(false) }
+  val leave: () -> Unit = { if (state.dirty) confirmLeave = true else onBack() }
+  BackHandler(enabled = state.busy || state.dirty) { if (!state.busy) confirmLeave = true }
 
   Scaffold(
     containerColor = colors.ink,
     topBar = {
       TopAppBar(
         title = { Text("Add a dive site") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } },
+        navigationIcon = {
+          IconButton(onClick = leave, enabled = !state.busy) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") }
+        },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
     },
@@ -233,6 +246,26 @@ fun AddSiteScreen(lat: Double, lon: Double, onBack: () -> Unit, onSignIn: () -> 
       Spacer(Modifier.height(24.dp))
     }
   }
+  if (confirmLeave) {
+    LeaveDialog(
+      onLeave = {
+        confirmLeave = false
+        onBack()
+      },
+      onStay = { confirmLeave = false },
+    )
+  }
+}
+
+@Composable
+private fun LeaveDialog(onLeave: () -> Unit, onStay: () -> Unit) {
+  AlertDialog(
+    onDismissRequest = onStay,
+    title = { Text("Leave without adding?") },
+    text = { Text("What you filled in for this site will be lost.") },
+    confirmButton = { TextButton(onClick = onLeave) { Text("Leave") } },
+    dismissButton = { TextButton(onClick = onStay) { Text("Keep editing") } },
+  )
 }
 
 /** The photos picked for the new site, each with a × to drop it before sending. */
