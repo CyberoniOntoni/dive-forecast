@@ -10,6 +10,7 @@ import androidx.navigation3.ui.NavDisplay
 import app.fiftybar.divecurrent.ui.account.AccountScreen
 import app.fiftybar.divecurrent.ui.account.SignInScreen
 import app.fiftybar.divecurrent.ui.map.MapScreen
+import app.fiftybar.divecurrent.ui.plan.PlanEditScreen
 import app.fiftybar.divecurrent.ui.plan.PlanScreen
 import app.fiftybar.divecurrent.ui.plan.PlansScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
@@ -49,7 +50,12 @@ fun MainNavigation(startPlanId: String? = null) {
         }
         entry<AccountKey> { AccountScreen(onBack = leave, onPlans = { backStack.add(PlansKey) }) }
         entry<PlansKey> {
-          PlansScreen(onBack = leave, onOpenPlan = { id -> backStack.add(PlanKey(id)) }, onSignIn = { backStack.add(SignInKey) })
+          PlansScreen(
+            onBack = leave,
+            onOpenPlan = { id -> backStack.add(PlanKey(id)) },
+            onNewPlan = { backStack.add(PlanEditKey()) },
+            onSignIn = { backStack.add(SignInKey) },
+          )
         }
         entry<PlanKey> { key ->
           PlanScreen(
@@ -57,6 +63,28 @@ fun MainNavigation(startPlanId: String? = null) {
             onBack = leave,
             onOpenSite = { id -> backStack.add(SiteKey(id)) },
             onReport = { id, time -> backStack.add(SiteKey(id, reportAt = time)) },
+            onEdit = { backStack.add(PlanEditKey(key.planId)) },
+          )
+        }
+        entry<PlanEditKey> { key ->
+          PlanEditScreen(
+            planId = key.planId,
+            onBack = leave,
+            // A new plan opens its page in the editor's place; a changed one goes back to its page, which reloads.
+            onSaved = { id ->
+              if (backStack.lastOrNull() == key) {
+                leave()
+                if (key.planId == null) backStack.add(PlanKey(id))
+              }
+            },
+            // The deleted plan's page goes too.
+            onDeleted = {
+              if (backStack.lastOrNull() == key) {
+                leave()
+                if (backStack.lastOrNull() == key.planId?.let(::PlanKey)) leave()
+              }
+            },
+            onSignIn = { backStack.add(SignInKey) },
           )
         }
       },

@@ -31,7 +31,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -42,20 +41,20 @@ import app.fiftybar.divecurrent.domain.PlanLink
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 
-/** Dive plans: open one from a shared link, and the signed-in diver's own. Making plans is on the web for now. */
+/** Dive plans: open one from a shared link, and the signed-in diver's own, with a new one in the app's editor. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onSignIn: () -> Unit) {
+fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onNewPlan: () -> Unit, onSignIn: () -> Unit) {
   val account = appAccount()
   val viewModel: PlansViewModel = viewModel { PlansViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val session by viewModel.session.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
-  val uri = LocalUriHandler.current
   val linkId = PlanLink.idOf(state.link)
 
   // Signed in on the sign-in screen and back here: load the list.
   LaunchedEffect(session) { if (session != null && state.plans == null && !state.loading) viewModel.refresh() }
+  LaunchedEffect(Unit) { viewModel.shown() }
 
   Scaffold(
     containerColor = colors.ink,
@@ -98,6 +97,7 @@ fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onSignIn: () -
         Text("Sign in to see the plans you made.", style = MaterialTheme.typography.bodyMedium, color = colors.foam)
         OutlinedButton(onClick = onSignIn, modifier = Modifier.heightIn(min = 44.dp)) { Text("Sign in") }
       } else {
+        Button(onClick = onNewPlan, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("New plan") }
         if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         state.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
         val plans = state.plans
@@ -117,12 +117,6 @@ fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onSignIn: () -
           }
           HorizontalDivider(color = colors.foam.copy(alpha = 0.08f))
         }
-      }
-      OutlinedButton(
-        onClick = { uri.openUri("${BuildConfig.WEB_URL}/plans/new") },
-        modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
-      ) {
-        Text("Make a plan on the web")
       }
     }
   }

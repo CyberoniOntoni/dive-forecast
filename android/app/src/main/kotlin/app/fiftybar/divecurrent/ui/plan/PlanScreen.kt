@@ -42,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -50,7 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -82,14 +82,16 @@ fun PlanScreen(
   onBack: () -> Unit,
   onOpenSite: (siteId: String) -> Unit,
   onReport: (siteId: String, time: String) -> Unit,
+  onEdit: () -> Unit,
 ) {
   val repository = appRepository()
   val account = appAccount()
   val viewModel: PlanViewModel = viewModel(key = "plan/$planId") { PlanViewModel(planId, repository, account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
+  // Back from the editor (or a report): the plan may have changed, so it reloads.
+  LaunchedEffect(Unit) { viewModel.shown() }
   val context = LocalContext.current
-  val uri = LocalUriHandler.current
   val plan = state.plan
   val webUrl = "${BuildConfig.WEB_URL}/plans/$planId"
 
@@ -129,7 +131,7 @@ fun PlanScreen(
           when {
             state.notFound -> Text("No plan at this link. It may have been deleted.", color = colors.stop)
             plan == null -> if (!state.loading) Text(state.error ?: "Could not load the plan.", color = colors.stop)
-            else -> PlanHeader(plan, state, onEdit = { uri.openUri("$webUrl/edit") })
+            else -> PlanHeader(plan, state, onEdit = onEdit)
           }
         }
       }
@@ -166,7 +168,7 @@ private fun PlanHeader(plan: ApiPlan, state: PlanUiState, onEdit: () -> Unit) {
   }
   plan.notes?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.foam) }
   if (plan.isOwner) {
-    OutlinedButton(onClick = onEdit, modifier = Modifier.heightIn(min = 44.dp)) { Text("Edit on the web") }
+    OutlinedButton(onClick = onEdit, modifier = Modifier.heightIn(min = 44.dp)) { Text("Edit plan") }
   }
 }
 

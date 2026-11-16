@@ -8,7 +8,12 @@ import {
   isPlanId,
   newPlanId,
   planDateSpan,
+  PLAN_GONE,
+  PLAN_NOT_YOURS,
+  PLAN_NOT_YOURS_OR_GONE,
+  PLAN_UNKNOWN,
   PLANS_PER_DIVER_MAX,
+  plansFullMessage,
   requirePlanInput,
 } from "./dive-plan";
 import { legMinutes } from "./plan-legs";
@@ -69,7 +74,7 @@ export async function savePlan(id: string | null, input: unknown): Promise<SaveP
   try {
     await ready();
     const session = await requireSession();
-    if (id !== null && !isPlanId(id)) return { ok: false, error: "Unknown plan." };
+    if (id !== null && !isPlanId(id)) return { ok: false, error: PLAN_UNKNOWN };
     const known = new Set(listMergedSites().map((site) => site.id));
     const body = requirePlanInput(input, (siteId) => known.has(siteId));
     const now = new Date().toISOString();
@@ -78,15 +83,15 @@ export async function savePlan(id: string | null, input: unknown): Promise<SaveP
       const plan: DivePlan = { id: newPlanId(), ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
       const added = await addPlanRecord(plan, PLANS_PER_DIVER_MAX);
       if (added === "full") {
-        return { ok: false, error: `You can keep up to ${PLANS_PER_DIVER_MAX} plans. Delete an old one first.` };
+        return { ok: false, error: plansFullMessage(PLANS_PER_DIVER_MAX) };
       }
       if (added === "taken") return { ok: false, error: "Could not save the plan. Try again." };
       return { ok: true, id: plan.id };
     }
     const plan: DivePlan = { id, ownerId: session.userId, ...body, createdAt: now, updatedAt: now };
     const updated = await updatePlanRecord(plan);
-    if (updated === "missing") return { ok: false, error: "That plan is gone." };
-    if (updated === "not-yours") return { ok: false, error: "Only the diver who made this plan can change it." };
+    if (updated === "missing") return { ok: false, error: PLAN_GONE };
+    if (updated === "not-yours") return { ok: false, error: PLAN_NOT_YOURS };
     return { ok: true, id: plan.id };
   } catch (error) {
     rethrowIfNextError(error);
@@ -98,9 +103,9 @@ export async function deletePlan(id: string): Promise<{ ok: boolean; error: stri
   try {
     await ready();
     const session = await requireSession();
-    if (!isPlanId(id)) return { ok: false, error: "Unknown plan." };
+    if (!isPlanId(id)) return { ok: false, error: PLAN_UNKNOWN };
     const removed = await deletePlanRecord(id, session.userId);
-    return removed ? { ok: true, error: null } : { ok: false, error: "That plan is not yours, or it is gone." };
+    return removed ? { ok: true, error: null } : { ok: false, error: PLAN_NOT_YOURS_OR_GONE };
   } catch (error) {
     rethrowIfNextError(error);
     return { ok: false, error: error instanceof Error && error.message ? error.message : "Could not delete the plan." };

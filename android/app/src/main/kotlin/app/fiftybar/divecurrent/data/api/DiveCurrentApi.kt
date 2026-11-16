@@ -74,6 +74,21 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   suspend fun myPlans(token: String): ApiPlanSummaries = get<ApiPlanSummaries>(listOf("api", "v1", "plans"), token).first
 
+  /** Every site the plan editor can pick. */
+  suspend fun planSites(): Pair<ApiPlanSites, String> = get(listOf("api", "v1", "plan-sites"))
+
+  /** The diver's own plan for the editor. */
+  suspend fun editablePlan(token: String, id: String): ApiEditablePlan =
+    get<ApiEditablePlan>(listOf("api", "v1", "plans", id, "edit"), token).first
+
+  suspend fun createPlan(token: String, plan: PlanBody): ApiPlanSaved =
+    send("POST", listOf("api", "v1", "plans"), ApiJson.encodeToString(plan), token)
+
+  suspend fun updatePlan(token: String, id: String, plan: PlanBody): ApiPlanSaved =
+    send("PUT", listOf("api", "v1", "plans", id), ApiJson.encodeToString(plan), token)
+
+  suspend fun deletePlan(token: String, id: String): ApiPlanDeleted = send("DELETE", listOf("api", "v1", "plans", id), null, token)
+
   /** Emails a sign-in code. */
   suspend fun requestCode(email: String): ApiCodeSent =
     post(listOf("api", "v1", "sign-in", "code"), ApiJson.encodeToString(CodeRequest(email)), token = null)
@@ -100,7 +115,11 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
   }
 
   private suspend inline fun <reified T> post(segments: List<String>, json: String, token: String?): T =
-    decode(fetch(Request.Builder().url(url(segments)).post(json.toRequestBody(JSON)).withToken(token)))
+    send("POST", segments, json, token)
+
+  /** A write: POST or PUT with a JSON body, or DELETE without one. */
+  private suspend inline fun <reified T> send(method: String, segments: List<String>, json: String?, token: String?): T =
+    decode(fetch(Request.Builder().url(url(segments)).method(method, json?.toRequestBody(JSON)).withToken(token)))
 
   private inline fun <reified T> decode(text: String): T =
     try {

@@ -1,8 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET as getPlans } from "@/app/api/v1/plans/route";
-import { GET as getPlan } from "@/app/api/v1/plans/[id]/route";
+import { GET as getPlans, POST as createPlan } from "@/app/api/v1/plans/route";
+import { GET as getEditable } from "@/app/api/v1/plans/[id]/edit/route";
+import { DELETE as deletePlanRoute, GET as getPlan, PUT as updatePlan } from "@/app/api/v1/plans/[id]/route";
+import { GET as getPlanSites } from "@/app/api/v1/plan-sites/route";
 import { apiPlanLegs } from "@/lib/api-v1";
 import { legWords } from "@/lib/plan-words";
 import { GET as getLegs } from "@/app/api/v1/plans/[id]/days/[day]/legs/route";
@@ -157,6 +159,7 @@ describe("API v1 plans", () => {
     const list = await getPlans(call("/api/v1/plans", { token }));
     expect(await list.json()).toEqual({
       apiVersion: 1,
+      limits: expect.objectContaining({ plansMax: 40 }),
       plans: [
         {
           id,
@@ -195,5 +198,99 @@ describe("API v1 plans", () => {
     expect(words.leaveBy).toMatch(/^Leave by \d\d:\d\d$/);
     expect(body.legs[0]).toMatchObject({ from: 1, ...words });
     expect(body.legs[0]).not.toHaveProperty("fromTime");
+  });
+
+  describe("the editor", () => {
+    const body = {
+      title: "Ari weekend",
+      notes: null,
+      boatSpeedKn: 10,
+      days: [
+        {
+          date: "2026-10-03",
+          stops: [
+            { siteId: "banana-reef", time: "14:00", note: null, want: null },
+            { siteId: "furana-south", time: "09:00", note: "Early slack", want: "incoming" },
+          ],
+        },
+      ],
+    };
+
+    it("makes a plan from the app, in the editor's order, and lists it", async () => {
+      const token = await signInApp("a@example.com", "Ann");
+      const response = await createPlan(call("/api/v1/plans", { token, body }));
+      expect(response.status).toBe(201);
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      const { id } = await response.json();
+      expect(id).toMatch(/^[A-HJ-NP-Za-km-z2-9]{16}$/);
+
+      const editable = await (await getEditable(call(`/api/v1/plans/${id}/edit`, { token }), planParams(id))).json();
+      expect(editable).toMatchObject({
+        apiVersion: 1,
+        id,
+        title: "Ari weekend",
+        notes: null,
+        boatSpeedKn: 10,
+        days: [
+          {
+            date: "2026-10-03",
+            stops: [
+              { siteId: "furana-south", time: "09:00", note: "Early slack", want: "incoming" },
+              { siteId: "banana-reef", time: "14:00", note: null, want: null },
+            ],
+          },
+        ],
+        limits: { titleMax: 80, divesPerDayMax: 6, boatSpeedDefaultKn: 8, yearMin: 2020, yearMax: 2100 },
+      });
+      expect(editable).not.toHaveProperty("ownerId");
+
+      const list = await (await getPlans(call("/api/v1/plans", { token }))).json();
+      expect(list.plans.map((plan: { id: string }) => plan.id)).toEqual([id]);
+      expect(list.limits.daysMax).toBe(16);
+    });
+
+    it("needs the app's token and JSON, and answers in the editor's words", async () => {
+      const token = await signInApp("a@example.com", "Ann");
+      expect((await createPlan(call("/api/v1/plans", { body }))).status).toBe(401);
+      expect((await createPlan(call("/api/v1/plans", { token, body: "x", type: "text/plain" }))).status).toBe(415);
+      const refused = await createPlan(call("/api/v1/plans", { token, body: { ...body, title: " " } }));
+      expect(refused.status).toBe(400);
+      expect(await refused.json()).toEqual({ error: { code: "bad_request", message: "Give the plan a title" } });
+      expect(readStore().plans).toHaveLength(0);
+    });
+
+    it("lets only the owner read, change and delete it", async () => {
+      const { id, token } = await annPlan();
+      const ben = await signInApp("b@example.com", "Ben");
+
+      expect((await getEditable(call(`/api/v1/plans/${id}/edit`), planParams(id))).status).toBe(401);
+      expect((await getEditable(call(`/api/v1/plans/${id}/edit`, { token: ben }), planParams(id))).status).toBe(404);
+      const taken = await updatePlan(call(`/api/v1/plans/${id}`, { method: "PUT", token: ben, body }), planParams(id));
+      expect(taken.status).toBe(403);
+      expect((await deletePlanRoute(call(`/api/v1/plans/${id}`, { method: "DELETE", token: ben }), planParams(id))).status).toBe(404);
+      expect(readStore().plans[0].title).toBe("North Malé week");
+
+      const changed = await updatePlan(call(`/api/v1/plans/${id}`, { method: "PUT", token, body }), planParams(id));
+      expect(changed.status).toBe(200);
+      expect(await changed.json()).toEqual({ apiVersion: 1, id });
+      expect(readStore().plans[0]).toMatchObject({ id, title: "Ari weekend", boatSpeedKn: 10 });
+
+      const gone = await deletePlanRoute(call(`/api/v1/plans/${id}`, { method: "DELETE", token }), planParams(id));
+      expect(await gone.json()).toEqual({ apiVersion: 1, id, deleted: true });
+      expect((await getPlan(call(`/api/v1/plans/${id}`), planParams(id))).status).toBe(404);
+      const again = await updatePlan(call(`/api/v1/plans/${id}`, { method: "PUT", token, body }), planParams(id));
+      expect(again.status).toBe(404);
+      expect((await updatePlan(call("/api/v1/plans/new", { method: "PUT", token, body }), planParams("new"))).status).toBe(404);
+    });
+  });
+
+  it("gives the editor's site picker with channels marked and today's Maldives date", async () => {
+    const response = await getPlanSites();
+    const body = await response.json();
+    expect(body.today).toBe("2026-09-28");
+    expect(body.sites.length).toBeGreaterThan(100);
+    expect(body.sites.find((site: { id: string }) => site.id === "furana-south")).toMatchObject({ channel: true, atoll: expect.any(String) });
+    expect(body.sites.find((site: { id: string }) => site.id === "banana-reef")).toMatchObject({ channel: false });
+    expect(response.headers.get("cache-control")).toBe("public, max-age=300");
   });
 });

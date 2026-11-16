@@ -20,3 +20,6 @@ import kotlinx.serialization.Serializable
 
 /** One plan by its share id. */
 @Serializable data class PlanKey(val planId: String) : NavKey
+
+/** The plan editor: the diver's own plan, or a new one when `planId` is null. */
+@Serializable data class PlanEditKey(val planId: String? = null) : NavKey

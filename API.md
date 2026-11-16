@@ -15,16 +15,18 @@ app and the site always show the same forecast. The forecast model is untouched.
   `fetchedAt` is Unix ms.
 - **Caching.** Successful responses send `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. The app
   should keep the last body for each site (Room) and show it with its `fetchedAt` age when it is offline.
-- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "needs_nickname" | "server_error",
-  "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
+- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "forbidden" | "needs_nickname" |
+  "server_error", "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
   by its HTTP status. The message can be shown to the diver. A 500 never carries the internal
   error.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
-- **Methods.** Reads are GET. Writes are POST with an `application/json` body (anything else gets 415): a browser
-  cannot send that to this site from another one without a CORS check, which this API never passes. The Cloudflare
-  worker lets posts under `/api/v1/` through to the routes (`lib/request-guard.ts`), which answer the 415 themselves,
-  and turns away other non-GET requests that are not server actions.
+- **Methods.** Reads are GET. Writes are POST or PUT with an `application/json` body (anything else gets 415), or
+  DELETE with none: a browser cannot send any of these to this site from another one without a CORS check, which this
+  API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
+  (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
+  every other non-GET request that is not a server action. `forbidden` (403) is a change to something that is another
+  diver's, such as `PUT` on their plan; deleting it answers 404, as for a plan that is gone.
 - **Signed in.** Endpoints about one diver take `Authorization: Bearer <token>` from
   `POST /api/v1/sign-in/token`, and only that: the web's cookie never signs an API write
   in. Without a header they answer 401 `unauthorized`; with an expired, forged or signed-out token too. Their
@@ -228,13 +230,38 @@ one. 400 with the form's own words for a report it refuses, 404 for an unknown s
 ## Dive plans
 
 A plan's id is its share link's (`https://50bar.app/plans/<id>`): anyone with it reads the plan. The words come from
-the plan page's own rules (`lib/plan-words.ts`), so the app and the page say the same thing. Making and changing plans
-stays on the web for now.
+the plan page's own rules (`lib/plan-words.ts`), so the app and the page say the same thing. The signed-in owner makes,
+changes and deletes plans with the bearer token; every write is checked by the web editor's own rules
+(`requirePlanInput` in `lib/dive-plan.ts`) and refused in its words.
 
 ### `GET /api/v1/plans`
 
 Signed in. The diver's own plans, newest change first:
-`{"apiVersion": 1, "plans": [{"id", "title", "span": "17–23 Nov 2026", "size": "4 days · 11 dives", "first", "last", "updatedAt"}]}`.
+`{"apiVersion": 1, "limits": {…}, "plans": [{"id", "title", "span": "17–23 Nov 2026", "size": "4 days · 11 dives", "first", "last", "updatedAt"}]}`.
+`limits` is what the editor allows: `{"titleMax": 80, "notesMax": 1500, "diveNoteMax": 300, "daysMax": 16,
+"divesPerDayMax": 6, "plansMax": 40, "boatSpeedMinKn": 3, "boatSpeedMaxKn": 40, "boatSpeedDefaultKn": 8,
+"yearMin": 2020, "yearMax": 2100}`.
+
+### `GET /api/v1/plan-sites`
+
+Every site the editor can pick, by name, and the Maldives date a new plan starts on:
+`{"apiVersion": 1, "today": "2026-11-17", "sites": [{"id": "kuda-haa", "name": "Kuda Haa", "atoll": "North Malé", "channel": true}]}`.
+Only a `channel` dive takes a wanted way. `public, max-age=300`.
+
+### `GET /api/v1/plans/{id}/edit`
+
+Signed in, owner only (anyone else, or an unknown id: 404). The plan in the shape `POST` and `PUT` take, plus `id`,
+`updatedAt` and `limits`:
+`{"apiVersion": 1, "id", "title", "notes": null, "boatSpeedKn": 8, "days": [{"date": "2026-11-17", "stops": [{"siteId", "time": "09:00", "note": null, "want": "incoming"}]}], "updatedAt", "limits": {…}}`.
+
+### `POST /api/v1/plans`, `PUT /api/v1/plans/{id}`, `DELETE /api/v1/plans/{id}`
+
+Signed in. `POST` makes a plan from `{"title", "notes", "boatSpeedKn", "days": [{"date", "stops": [{"siteId", "time",
+"note", "want"}]}]}` (a `null` reads as left out; days and dives are sorted on save; `want` is `incoming`, `outgoing` or
+absent) and answers 201 `{"apiVersion": 1, "id"}`; the server picks the id. `PUT` replaces the owner's plan with the
+same body (200, same answer); `DELETE` removes it (`{"apiVersion": 1, "id", "deleted": true}`) and its link stops
+working. A body the editor refuses is 400 with its words (`"Give the plan a title"`, a full plan list), someone
+else's plan 403 `forbidden` on `PUT` and 404 on `DELETE`, a deleted or unknown plan 404.
 
 ### `GET /api/v1/plans/{id}`
 
@@ -277,5 +304,5 @@ since routing takes about a tenth of a second per leg. 404 for an unknown plan o
 
 ## Next (not built yet)
 
-Making and editing plans, ratings and reviews (with photos), boat routes and the map layers. Each comes with its own
+Ratings and reviews (with photos), boat routes and the map layers. Each comes with its own
 section here.

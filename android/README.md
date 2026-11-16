@@ -24,11 +24,13 @@ What it does:
   screen (calendar button on the map's list, or "My dive plans" on the account), or the diver's own plans when signed
   in. Each day lists its dives with the forecast at the dive time, warnings and a better window, the boat legs between
   them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
-  of a plan is kept for use out of signal. Making and editing plans is on the web for now.
+  of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
+  open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
+  note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
 - **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Ratings and reviews, adding sites, making and editing dive plans, boat navigation and the extra map layers are on the web for now (API.md
+Ratings and reviews, adding sites, boat navigation and the extra map layers are on the web for now (API.md
 § Next).
 
 ## Build and run
