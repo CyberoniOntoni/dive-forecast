@@ -78,7 +78,8 @@ private val START = CameraPosition.Builder().target(LatLng(3.6, 73.3)).zoom(6.4)
 
 /**
  * The site map: a raster base (Esri imagery or OpenStreetMap, the same sources as the web map) and an arrow per site
- * pointing the way the water runs this hour, coloured and faded like the web pins. Tapping an arrow opens the site.
+ * pointing the way the water runs this hour, coloured and faded like the web pins. Tapping an arrow opens the site;
+ * a long press offers boat navigation to that point.
  */
 @Composable
 fun SiteMapView(
@@ -87,10 +88,13 @@ fun SiteMapView(
   colors: CurrentColors,
   onOpenSite: (String) -> Unit,
   modifier: Modifier = Modifier,
+  /** A long press on the map, with where: to head the boat for that point. */
+  onLongPress: (lat: Double, lon: Double) -> Unit = { _, _ -> },
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   val openSite by rememberUpdatedState(onOpenSite)
+  val longPress by rememberUpdatedState(onLongPress)
   val mapView = remember { MapView(context).apply { onCreate(null) } }
   var map by remember { mutableStateOf<MapLibreMap?>(null) }
   var style by remember { mutableStateOf<Style?>(null) }
@@ -115,6 +119,10 @@ fun SiteMapView(
         val hit = siteAt(m, screen)
         if (hit != null) openSite(hit)
         hit != null
+      }
+      m.addOnMapLongClickListener { point ->
+        longPress(point.latitude, point.longitude)
+        true
       }
       map = m
     }
@@ -244,7 +252,7 @@ private fun dotBitmap(density: Float, fill: Int, edge: Int): Bitmap {
 }
 
 /** A one-layer raster style. The source's attribution shows behind the map's (i) button. */
-private fun styleJson(baseMap: BaseMap): String {
+internal fun styleJson(baseMap: BaseMap): String {
   val (tiles, attribution, maxZoom) =
     when (baseMap) {
       BaseMap.Satellite ->

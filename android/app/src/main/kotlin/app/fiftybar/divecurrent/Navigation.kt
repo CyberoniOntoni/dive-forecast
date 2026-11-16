@@ -10,6 +10,8 @@ import androidx.navigation3.ui.NavDisplay
 import app.fiftybar.divecurrent.ui.account.AccountScreen
 import app.fiftybar.divecurrent.ui.account.SignInScreen
 import app.fiftybar.divecurrent.ui.map.MapScreen
+import app.fiftybar.divecurrent.ui.nav.NavigatePickScreen
+import app.fiftybar.divecurrent.ui.nav.NavigateScreen
 import app.fiftybar.divecurrent.ui.plan.PlanEditScreen
 import app.fiftybar.divecurrent.ui.plan.PlanScreen
 import app.fiftybar.divecurrent.ui.plan.PlansScreen
@@ -35,6 +37,8 @@ fun MainNavigation(startPlanId: String? = null) {
             onOpenSite = { id -> backStack.add(SiteKey(id)) },
             onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
             onPlans = { backStack.add(PlansKey) },
+            onNavigate = { backStack.add(NavigatePickKey) },
+            onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
           )
         }
         entry<SiteKey> { key ->
@@ -43,8 +47,22 @@ fun MainNavigation(startPlanId: String? = null) {
             reportAt = key.reportAt,
             onBack = leave,
             onSignIn = { backStack.add(SignInKey) },
+            onNavigate = { site -> backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon)) },
           )
         }
+        entry<NavigatePickKey> { key ->
+          NavigatePickScreen(
+            onBack = leave,
+            // The list makes way for the trip, so Back from navigating goes to the map.
+            onPick = { site ->
+              if (backStack.lastOrNull() == key) {
+                leave()
+                backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon))
+              }
+            },
+          )
+        }
+        entry<NavigateKey> { key -> NavigateScreen(key.destinationId, key.name, key.lat, key.lon, onBack = leave) }
         entry<SignInKey> {
           SignInScreen(onDone = leave, onBack = leave)
         }

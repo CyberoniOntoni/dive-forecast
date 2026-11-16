@@ -22,7 +22,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -36,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -57,7 +60,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.fiftybar.divecurrent.domain.LatLon
 import app.fiftybar.divecurrent.domain.MaldivesTime
+import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
@@ -68,7 +73,13 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Unit, onPlans: () -> Unit) {
+fun MapScreen(
+  onOpenSite: (String) -> Unit,
+  onAccount: (signedIn: Boolean) -> Unit,
+  onPlans: () -> Unit,
+  onNavigate: () -> Unit,
+  onNavigateTo: (id: String, name: String, lat: Double, lon: Double) -> Unit,
+) {
   val repository = appRepository()
   val session by appAccount().sessions.session.collectAsStateWithLifecycle()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
@@ -78,6 +89,8 @@ fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Un
   val scaffold = rememberBottomSheetScaffoldState()
   val scope = rememberCoroutineScope()
   val colors = CurrentTheme.colors
+  // A point long-pressed on the map, waiting for "Navigate here".
+  var pressed by remember { mutableStateOf<LatLon?>(null) }
   LifecycleResumeEffect(viewModel) {
     viewModel.refreshIfHourPassed()
     onPauseOrDispose {}
@@ -106,6 +119,7 @@ fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Un
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
         onPlans = onPlans,
+        onNavigate = onNavigate,
       )
     },
   ) { padding ->
@@ -116,6 +130,8 @@ fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Un
         colors = colors,
         onOpenSite = onOpenSite,
         modifier = Modifier.fillMaxSize(),
+        // Only where a route can go: far outside the Maldives the server would refuse it.
+        onLongPress = { lat, lon -> LatLon(lat, lon).takeIf(PointDestination::inRouteArea)?.let { pressed = it } },
       )
       // Who is signed in, or a way to sign in: reports need it.
       AssistChip(
@@ -143,6 +159,25 @@ fun MapScreen(onOpenSite: (String) -> Unit, onAccount: (signedIn: Boolean) -> Un
       }
     }
   }
+  pressed?.let { point ->
+    val name = PointDestination.name(point)
+    AlertDialog(
+      onDismissRequest = { pressed = null },
+      title = { Text("Navigate by boat?") },
+      text = { Text("Head for $name, round the islands and reef the app knows of.") },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            pressed = null
+            onNavigateTo(PointDestination.id(point), name, point.lat, point.lon)
+          }
+        ) {
+          Text("Navigate here")
+        }
+      },
+      dismissButton = { TextButton(onClick = { pressed = null }) { Text("Cancel") } },
+    )
+  }
 }
 
 @Composable
@@ -155,6 +190,7 @@ private fun NowList(
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
   onPlans: () -> Unit,
+  onNavigate: () -> Unit,
 ) {
   val colors = CurrentTheme.colors
   val focus = LocalFocusManager.current
@@ -179,6 +215,9 @@ private fun NowList(
             if (state.fromCache && state.error != null) add("offline copy")
           }
         Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+      }
+      IconButton(onClick = onNavigate, modifier = Modifier.size(48.dp)) {
+        Icon(Icons.Filled.LocationOn, contentDescription = "Navigate by boat")
       }
       IconButton(onClick = onPlans, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.DateRange, contentDescription = "Dive plans")
