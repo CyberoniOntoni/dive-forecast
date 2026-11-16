@@ -26,11 +26,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -53,13 +57,22 @@ class DiverViewModel(private val nickname: String, private val account: AccountR
   val state: StateFlow<DiverUiState> = _state.asStateFlow()
 
   init {
+    load()
+  }
+
+  /**
+   * Reads the page again, as on coming back from editing About me. The diver's own page follows their nickname, so a
+   * rename made meanwhile does not turn it into "nobody goes by that".
+   */
+  fun load() {
+    val name = if (_state.value.diver?.isMe == true) account.sessions.current()?.nickname ?: nickname else nickname
     viewModelScope.launch {
       try {
-        val diver = account.diver(nickname)
+        val diver = account.diver(name)
         _state.update { it.copy(diver = diver, loading = false) }
       } catch (e: ApiException) {
         val gone = e is ApiException.Server && e.code == "not_found"
-        _state.update { it.copy(loading = false, error = if (gone) "No diver goes by $nickname now." else e.message) }
+        _state.update { it.copy(loading = false, error = if (gone) "No diver goes by $name now." else e.message) }
       }
     }
   }
@@ -73,6 +86,12 @@ fun DiverScreen(nickname: String, onBack: () -> Unit, onAccount: () -> Unit) {
   val viewModel: DiverViewModel = viewModel(key = "diver/$nickname") { DiverViewModel(nickname, account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
+  // Back from the account screen: show the About me or nickname just saved.
+  var shownOnce by remember { mutableStateOf(false) }
+  LifecycleResumeEffect(viewModel) {
+    if (shownOnce) viewModel.load() else shownOnce = true
+    onPauseOrDispose {}
+  }
 
   Scaffold(
     containerColor = colors.ink,

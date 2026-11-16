@@ -102,7 +102,16 @@ fun MainNavigation(startPlanId: String? = null) {
             onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
           )
         }
-        entry<DiverKey> { key -> DiverScreen(key.nickname, onBack = leave, onAccount = { backStack.add(AccountKey) }) }
+        entry<DiverKey> { key ->
+          DiverScreen(
+            key.nickname,
+            onBack = leave,
+            // Opened from the account screen ("My public page"): go back to it rather than stack a second one.
+            onAccount = {
+              if (backStack.getOrNull(backStack.size - 2) == AccountKey) leave() else backStack.add(AccountKey)
+            },
+          )
+        }
         entry<PlansKey> {
           PlansScreen(
             onBack = leave,

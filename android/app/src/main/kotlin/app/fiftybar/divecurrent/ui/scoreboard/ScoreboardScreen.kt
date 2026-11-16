@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.scoreboard
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -208,7 +209,8 @@ private fun ScoreRow(row: ApiScoreRow, onClick: () -> Unit) {
     Modifier.fillMaxWidth()
       .heightIn(min = 56.dp)
       .clickable(onClick = onClick)
-      .then(if (row.isMe) Modifier.padding(horizontal = 8.dp) else Modifier)
+      // Your own row lit, as the web's.
+      .then(if (row.isMe) Modifier.background(colors.incoming.copy(alpha = 0.15f)) else Modifier)
       .padding(horizontal = 16.dp, vertical = 8.dp)
       .semantics(mergeDescendants = true) { contentDescription = spoken },
     verticalAlignment = Alignment.CenterVertically,
