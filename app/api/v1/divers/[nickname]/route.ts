@@ -1,6 +1,6 @@
 import { getDiverProfile } from "@/lib/account-actions";
 import { API_VERSION, apiError, apiHandler, apiJson, apiViewer, viewerCache, type ApiDiver } from "@/lib/api-v1";
-import { monthLabel } from "@/lib/profile-words";
+import { sinceLine } from "@/lib/profile-words";
 import { ready } from "@/lib/ready";
 import { readStore } from "@/lib/store";
 
@@ -29,7 +29,7 @@ export async function GET(request: Request, context: { params: Promise<{ nicknam
       apiVersion: API_VERSION,
       nickname: diver.nickname,
       about: diver.about,
-      sinceLine: `Diving with us since ${monthLabel(diver.since)}${diver.allRank ? ` · #${diver.allRank} all time` : ""}`,
+      sinceLine: sinceLine(diver.since, diver.allRank),
       points: diver.stats.points,
       reports: diver.stats.reports,
       reportSites: diver.stats.sites,

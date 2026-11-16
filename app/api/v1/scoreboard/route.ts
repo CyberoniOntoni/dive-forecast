@@ -1,6 +1,6 @@
 import { getLeaderboard, getSiteScouts } from "@/lib/account-actions";
 import { API_VERSION, apiHandler, apiJson, apiViewer, viewerCache, type ApiScoreboard } from "@/lib/api-v1";
-import { reporterDetail, scoutDetail } from "@/lib/profile-words";
+import { boardWords, reporterDetail, scoutDetail, sitesUnit } from "@/lib/profile-words";
 
 /**
  * The web's scoreboard (app/scoreboard): `?board=month` (default), `all` or `sites`. Nicknames only; with the app's
@@ -19,15 +19,13 @@ export async function GET(request: Request) {
       body = {
         apiVersion: API_VERSION,
         board,
-        title: "Site scouts",
-        note: "Divers who added dive sites to the map, and how many of those other divers have since reported at.",
-        empty: "No sites added yet. Know a site that is missing? Long-press the map where it is to add it.",
+        ...boardWords(board),
         rows: scouts.map((row) => ({
           rank: row.rank,
           nickname: row.nickname,
           detail: scoutDetail(row),
           score: row.sites,
-          unit: row.sites === 1 ? "site" : "sites",
+          unit: sitesUnit(row.sites),
           isMe: row.userId === me,
         })),
         newest: newest.map((site) => ({ siteId: site.id, name: site.name, nickname: site.nickname })),
@@ -37,9 +35,7 @@ export async function GET(request: Request) {
       body = {
         apiVersion: API_VERSION,
         board,
-        title: "Current reporters",
-        note: "Points for each report, more for reporting soon after the dive and at sites nobody has reported lately, and for rating the sites you dived.",
-        empty: `No reports ${board === "month" ? "this month " : ""}yet. Be the first: open a site after your dive and report the current.`,
+        ...boardWords(board),
         rows: rows.map((row) => ({
           rank: row.rank,
           nickname: row.nickname,

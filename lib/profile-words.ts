@@ -42,3 +42,32 @@ export function pointsRuleLines(): string[] {
     `Up to ${REPORTS_PER_DAY} reports a day count, and one per dive. Agreeing with the forecast earns nothing: report what you felt.`,
   ];
 }
+
+export type BoardId = "month" | "all" | "sites";
+
+/** A board's heading, the line under it, and what it says with no rows yet. */
+export function boardWords(board: BoardId): { title: string; note: string; empty: string } {
+  if (board === "sites") {
+    return {
+      title: "Site scouts",
+      note: "Divers who added dive sites to the map, and how many of those other divers have since reported at.",
+      // Said so it fits both the web map's Add site panel and the app's long-press.
+      empty: "No sites added yet. Know a site that is missing? Add it on the map.",
+    };
+  }
+  return {
+    title: "Current reporters",
+    note: "Points for each report, more for reporting soon after the dive and at sites nobody has reported lately, and for rating the sites you dived.",
+    empty: `No reports ${board === "month" ? "this month " : ""}yet. Be the first: open a site after your dive and report the current.`,
+  };
+}
+
+/** "site" or "sites" after a scout's count. */
+export function sitesUnit(sites: number): string {
+  return sites === 1 ? "site" : "sites";
+}
+
+/** "Diving with us since Oct 2026 · #3 all time" under a diver's nickname. */
+export function sinceLine(since: string, allRank: number | null): string {
+  return `Diving with us since ${monthLabel(since)}${allRank ? ` · #${allRank} all time` : ""}`;
+}
