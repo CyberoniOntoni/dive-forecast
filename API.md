@@ -121,7 +121,7 @@ showing a saved copy later must not present it as the current hour.
 ```json
 {
   "apiVersion": 1,
-  "modelVersion": "tide+throughflow+head+alongreef+lagoon+strait/23",
+  "modelVersion": "tide+throughflow+head+alongreef+lagoon+strait/24",
   "maldivesWall": "2026-11-15T09:12",
   "nowcasts": [
     {
