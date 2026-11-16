@@ -17,6 +17,10 @@ import app.fiftybar.divecurrent.data.api.ApiSites
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.db.CachedBody
 import app.fiftybar.divecurrent.data.db.CachedBodyDao
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationException
 
@@ -41,6 +45,13 @@ class DataRepository(
   private val cache: CachedBodyDao,
   private val now: () -> Long = System::currentTimeMillis,
 ) {
+  private val _sitesChanged = MutableStateFlow(0)
+
+  /** Counts sites added on this phone, so the map reads the list again. */
+  val sitesChanged: StateFlow<Int> = _sitesChanged.asStateFlow()
+
+  fun markSitesChanged() = _sitesChanged.update { it + 1 }
+
   suspend fun sites(): Loaded<ApiSites> = load("sites", ApiSites.serializer()) { api.sites().second }
 
   suspend fun nowcast(): Loaded<ApiNowcast> = load("nowcast", ApiNowcast.serializer()) { api.nowcast().second }

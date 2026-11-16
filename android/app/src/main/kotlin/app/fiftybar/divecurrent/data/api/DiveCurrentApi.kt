@@ -131,17 +131,16 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   /** One photo for the diver's review: [jpeg] already shrunk (PhotoShrink), at most 1.5 MB. */
   suspend fun addReviewPhoto(token: String, siteId: String, jpeg: ByteArray): ApiReviews =
-    decode(
-      fetch(
-        Request.Builder()
-          .url(url(listOf("api", "v1", "sites", siteId, "review", "photos")))
-          .post(jpeg.toRequestBody(JPEG))
-          .withToken(token)
-      )
-    )
+    postJpeg(listOf("api", "v1", "sites", siteId, "review", "photos"), jpeg, token)
 
   suspend fun removeReviewPhoto(token: String, siteId: String, photoId: String): ApiReviews =
     send("DELETE", listOf("api", "v1", "sites", siteId, "review", "photos", photoId), null, token)
+
+  suspend fun addSite(token: String, site: AddSiteBody): ApiSiteSaved =
+    post(listOf("api", "v1", "sites"), ApiJson.encodeToString(site), token)
+
+  /** One photo for a site the diver added: [jpeg] already shrunk (PhotoShrink), at most 1.5 MB. */
+  suspend fun addSitePhoto(token: String, siteId: String, jpeg: ByteArray): ApiSiteSaved = postJpeg(listOf("api", "v1", "sites", siteId, "photos"), jpeg, token)
 
   /** The sheltered-water layer for a view, at a Maldives wall hour or (null) the current one. */
   suspend fun shelter(south: Double, west: Double, north: Double, east: Double, time: String?): ApiShelter {
@@ -181,6 +180,10 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   private suspend inline fun <reified T> post(segments: List<String>, json: String, token: String?): T =
     send("POST", segments, json, token)
+
+  /** A photo upload: the JPEG itself as the body. */
+  private suspend inline fun <reified T> postJpeg(segments: List<String>, jpeg: ByteArray, token: String): T =
+    decode(fetch(Request.Builder().url(url(segments)).post(jpeg.toRequestBody(JPEG)).withToken(token)))
 
   /** A write: POST or PUT with a JSON body, or DELETE without one. */
   private suspend inline fun <reified T> send(method: String, segments: List<String>, json: String?, token: String?): T =

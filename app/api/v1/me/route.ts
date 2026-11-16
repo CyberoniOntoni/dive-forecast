@@ -1,4 +1,5 @@
 import { getAccount } from "@/lib/account-actions";
+import { readStore } from "@/lib/store";
 import { API_NO_STORE, API_VERSION, apiError, apiHandler, apiJson, apiNeedsToken } from "@/lib/api-v1";
 
 /**
@@ -20,6 +21,10 @@ export async function GET(request: Request) {
         reports: account.stats.reports,
         monthRank: account.monthRank,
         allRank: account.allRank,
+        // Sites this diver added in the app, so the app offers them "Add photos" there (only the adder adds them).
+        addedSiteIds: readStore()
+          .sites.filter((site) => site.addedBy === account.userId && !site.hidden)
+          .map((site) => site.id),
       },
       { cacheControl: API_NO_STORE },
     );

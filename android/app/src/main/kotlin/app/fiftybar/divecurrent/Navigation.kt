@@ -15,6 +15,7 @@ import app.fiftybar.divecurrent.ui.nav.NavigateScreen
 import app.fiftybar.divecurrent.ui.plan.PlanEditScreen
 import app.fiftybar.divecurrent.ui.plan.PlanScreen
 import app.fiftybar.divecurrent.ui.plan.PlansScreen
+import app.fiftybar.divecurrent.ui.site.AddSiteScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
 
 @Composable
@@ -39,6 +40,22 @@ fun MainNavigation(startPlanId: String? = null) {
             onPlans = { backStack.add(PlansKey) },
             onNavigate = { backStack.add(NavigatePickKey) },
             onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
+            onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
+          )
+        }
+        entry<AddSiteKey> { key ->
+          AddSiteScreen(
+            lat = key.lat,
+            lon = key.lon,
+            onBack = leave,
+            onSignIn = { backStack.add(SignInKey) },
+            // The new site's page takes the form's place, so Back goes to the map.
+            onAdded = { site ->
+              if (backStack.lastOrNull() == key) {
+                leave()
+                backStack.add(SiteKey(site.id))
+              }
+            },
           )
         }
         entry<SiteKey> { key ->

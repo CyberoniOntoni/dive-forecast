@@ -1,6 +1,10 @@
 package app.fiftybar.divecurrent.ui.site
 
 import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,7 +55,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -179,7 +185,15 @@ fun SiteScreen(
         }
         RecentReportsCard(state.reports, state.reportsSavedAt)
       }
-      state.site?.let { AboutCard(it, photoUrl = viewModel::photoUrl) }
+      state.site?.let { site ->
+        val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
+        val photosState by photos.state.collectAsStateWithLifecycle()
+        AboutCard(site, photoUrl = viewModel::photoUrl) {
+          if (site.userAdded && photosState.isAdder && session != null) {
+            AdderPhotos(site, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
+          }
+        }
+      }
       if (!state.notFound) {
         val reviews: ReviewsViewModel = viewModel(key = "reviews/$siteId") { ReviewsViewModel(siteId, repository, account) }
         val reviewsState by reviews.state.collectAsStateWithLifecycle()
@@ -375,7 +389,7 @@ private fun UnavailableCard(forecast: ApiForecast) {
 }
 
 @Composable
-private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
+private fun AboutCard(site: ApiSite, photoUrl: (String) -> String, adder: @Composable () -> Unit = {}) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
   SurfaceCard {
@@ -407,6 +421,7 @@ private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
         }
       }
     }
+    adder()
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
         Text("Open on the web")
@@ -417,3 +432,32 @@ private fun AboutCard(site: ApiSite, photoUrl: (String) -> String) {
     }
   }
 }
+
+/** The adder's "Add photos" on their own site, up to 6, with how the sending went. */
+@Composable
+private fun AdderPhotos(site: ApiSite, state: SitePhotosUiState, onPick: (List<Uri>, Int) -> Unit) {
+  val colors = CurrentTheme.colors
+  val room = SITE_MAX_PHOTOS - site.photoUrls.size
+  val pick =
+    rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(SITE_MAX_PHOTOS)) { uris ->
+      if (uris.isNotEmpty()) onPick(uris, room)
+    }
+  if (room > 0) {
+    OutlinedButton(
+      onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+      enabled = !state.busy,
+      modifier = Modifier.heightIn(min = 48.dp),
+    ) {
+      Text(state.progress ?: if (site.photoUrls.isEmpty()) "Add photos (up to $room)" else "Add more photos (up to $room)")
+    }
+  }
+  state.error?.let {
+    Text(it, color = colors.stop, style = MaterialTheme.typography.bodySmall, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+  }
+  state.note?.takeIf { state.error == null }?.let {
+    Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.85f), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+  }
+}
+
+/** As MAX_PHOTOS_PER_SITE in lib/site-photos-limits.ts. */
+private const val SITE_MAX_PHOTOS = AddSiteViewModel.MAX_PHOTOS

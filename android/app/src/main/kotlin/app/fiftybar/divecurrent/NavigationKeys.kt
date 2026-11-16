@@ -32,3 +32,6 @@ import kotlinx.serialization.Serializable
  * The name and position come along, so the screen starts at once.
  */
 @Serializable data class NavigateKey(val destinationId: String, val name: String, val lat: Double, val lon: Double) : NavKey
+
+/** "Add a dive site" at a pin long-pressed on the map. */
+@Serializable data class AddSiteKey(val lat: Double, val lon: Double) : NavKey
