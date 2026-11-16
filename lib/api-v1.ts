@@ -7,6 +7,7 @@ import {
   PLAN_GONE,
   PLAN_NOT_YOURS,
   PLAN_NOT_YOURS_OR_GONE,
+  PLAN_UNKNOWN,
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
   PLAN_TITLE_MAX,
@@ -717,7 +718,9 @@ export function apiPlanSaved(result: SavePlanResult, created: boolean): Response
 /** A refused plan write: who may not, what is gone, or what to fix, in the web editor's words. */
 export function apiPlanRefused(message: string): Response {
   if (message === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
-  if (message === PLAN_GONE || message === PLAN_NOT_YOURS_OR_GONE) return apiError(404, "not_found", message);
+  if (message === PLAN_GONE || message === PLAN_NOT_YOURS_OR_GONE || message === PLAN_UNKNOWN) {
+    return apiError(404, "not_found", message);
+  }
   if (message === PLAN_NOT_YOURS) return apiError(403, "forbidden", message);
   return apiError(400, "bad_request", message);
 }

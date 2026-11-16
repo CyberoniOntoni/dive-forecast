@@ -25,6 +25,11 @@ export const BOAT_SPEED_MAX_KN = 40;
 export const PLAN_GONE = "That plan is gone.";
 export const PLAN_NOT_YOURS = "Only the diver who made this plan can change it.";
 export const PLAN_NOT_YOURS_OR_GONE = "That plan is not yours, or it is gone.";
+export const PLAN_UNKNOWN = "Unknown plan.";
+/** A new plan when the diver keeps the most already (the app says the same before it sends). */
+export function plansFullMessage(max: number): string {
+  return `You can keep up to ${max} plans. Delete an old one first.`;
+}
 /** A dhoni's usual cruising speed. */
 export const DEFAULT_BOAT_SPEED_KN = 8;
 /** The first and last hours a day dive starts, for the suggested window. Night dives keep the planned time. */

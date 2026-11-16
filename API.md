@@ -25,8 +25,8 @@ app and the site always show the same forecast. The forecast model is untouched.
   DELETE with none: a browser cannot send any of these to this site from another one without a CORS check, which this
   API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
   (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
-  every other non-GET request that is not a server action. `forbidden` (403) is a write to something that is another
-  diver's, such as their plan.
+  every other non-GET request that is not a server action. `forbidden` (403) is a change to something that is another
+  diver's, such as `PUT` on their plan; deleting it answers 404, as for a plan that is gone.
 - **Signed in.** Endpoints about one diver take `Authorization: Bearer <token>` from
   `POST /api/v1/sign-in/token`, and only that: the web's cookie never signs an API write
   in. Without a header they answer 401 `unauthorized`; with an expired, forged or signed-out token too. Their

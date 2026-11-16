@@ -105,14 +105,22 @@ class PlanEditViewModel(
     val draft = state.draft ?: return
     if (state.saving) return
     val known = state.sites.associateBy { it.id }
-    val full = if (planId == null) state.planCount?.let { PlanDraft.listFull(it, state.limits) } else null
-    (full ?: draft.problem(state.limits) { it in known })?.let { problem ->
+    draft.problem(state.limits) { it in known }?.let { problem ->
       _state.update { it.copy(error = problem) }
       return
     }
     _state.update { it.copy(saving = true, error = null) }
     viewModelScope.launch {
       try {
+        if (planId == null) {
+          // The plan count from opening the editor, or asked again now if that failed; the server checks anyway.
+          val count = state.planCount ?: runCatching { account.myPlans()?.plans?.size }.getOrNull()
+          val listFullProblem = count?.let { PlanDraft.listFull(it, state.limits) }
+          if (listFullProblem != null) {
+            _state.update { it.copy(saving = false, error = listFullProblem, planCount = count) }
+            return@launch
+          }
+        }
         val id = account.savePlan(planId, draft.body { known[it]?.channel == true })
         _state.update { it.copy(saving = false, savedId = id, original = draft) }
       } catch (_: SignedOutException) {
