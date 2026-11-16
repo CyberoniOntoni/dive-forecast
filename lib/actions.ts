@@ -11,6 +11,7 @@ import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
+import { WALL_HOUR } from "./shelter-limits";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
@@ -665,8 +666,6 @@ function slugFromName(name: string): string {
 }
 
 export type { ShelterAtoll, ShelterView } from "./shelter-grid";
-
-const WALL_HOUR = /^\d{4}-\d{2}-\d{2}T\d{2}:00$/;
 
 /** The sheltered-water layer's felt height for the view, at `time` (a Maldives wall hour) or now. */
 export async function getShelter(

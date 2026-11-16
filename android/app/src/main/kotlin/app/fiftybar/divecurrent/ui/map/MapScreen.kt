@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
@@ -28,19 +29,23 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -65,9 +71,9 @@ import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
-import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
+import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import kotlinx.coroutines.launch
 
@@ -84,7 +90,16 @@ fun MapScreen(
   val session by appAccount().sessions.session.collectAsStateWithLifecycle()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
   val state by viewModel.state.collectAsStateWithLifecycle()
-  var baseMap by rememberSaveable { mutableStateOf(BaseMap.Satellite) }
+  val shelter: ShelterViewModel = viewModel { ShelterViewModel(repository) }
+  val shelterState by shelter.state.collectAsStateWithLifecycle()
+  val context = LocalContext.current
+  var layers by remember { mutableStateOf(MapLayersPrefs.read(context)) }
+  fun choose(next: MapLayers) {
+    layers = next
+    MapLayersPrefs.write(context, next)
+  }
+  LaunchedEffect(layers.shelter) { shelter.setOn(layers.shelter) }
+  var layersOpen by remember { mutableStateOf(false) }
   var query by rememberSaveable { mutableStateOf("") }
   val scaffold = rememberBottomSheetScaffoldState()
   val scope = rememberCoroutineScope()
@@ -126,12 +141,16 @@ fun MapScreen(
     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
       SiteMapView(
         rows = shown,
-        baseMap = baseMap,
+        layers = layers,
         colors = colors,
         onOpenSite = onOpenSite,
         modifier = Modifier.fillMaxSize(),
         // Only where a route can go: far outside the Maldives the server would refuse it.
         onLongPress = { lat, lon -> LatLon(lat, lon).takeIf(PointDestination::inRouteArea)?.let { pressed = it } },
+        shelterImages = if (layers.shelter) shelterState.images else emptyList(),
+        shelterOpacity = shelterState.scale?.opacity?.toFloat() ?: 0.85f,
+        onView = shelter::onView,
+        onTap = shelter::tap,
       )
       // Who is signed in, or a way to sign in: reports need it.
       AssistChip(
@@ -144,16 +163,27 @@ fun MapScreen(
             contentDescription = session?.let { "Signed in as ${it.nickname}. Account" } ?: "Sign in"
           },
       )
-      Row(
-        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+      Column(
+        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        BaseMap.entries.forEach { option ->
-          FilterChip(
-            selected = baseMap == option,
-            onClick = { baseMap = option },
-            label = { Text(option.name) },
-            modifier = Modifier.heightIn(min = 44.dp),
+        Box {
+          AssistChip(
+            onClick = { layersOpen = true },
+            label = { Text("Layers") },
+            colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam),
+            modifier = Modifier.heightIn(min = 44.dp).semantics { contentDescription = "Map layers" },
+          )
+          LayersMenu(expanded = layersOpen, layers = layers, onChoose = ::choose, onDismiss = { layersOpen = false })
+        }
+        if (layers.shelter) {
+          ShelterLegend(
+            state = shelterState,
+            onStep = shelter::step,
+            onNow = shelter::backToNow,
+            onCloseReadout = shelter::closeReadout,
+            modifier = Modifier.fillMaxWidth(),
           )
         }
       }
@@ -176,6 +206,36 @@ fun MapScreen(
         }
       },
       dismissButton = { TextButton(onClick = { pressed = null }) { Text("Cancel") } },
+    )
+  }
+}
+
+/** One base and the overlays, as the web map's layer menu; the choice is kept between launches. */
+@Composable
+private fun LayersMenu(expanded: Boolean, layers: MapLayers, onChoose: (MapLayers) -> Unit, onDismiss: () -> Unit) {
+  DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+    Text("Base map", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    for ((base, label) in listOf(BaseMap.Satellite to "Satellite", BaseMap.Street to "Street map")) {
+      DropdownMenuItem(
+        text = { Text(label) },
+        leadingIcon = { RadioButton(selected = layers.base == base, onClick = null) },
+        onClick = { onChoose(layers.copy(base = base)) },
+      )
+    }
+    HorizontalDivider()
+    Text("Overlays", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    DropdownMenuItem(
+      text = { Text("Seamarks") },
+      leadingIcon = { Checkbox(checked = layers.seamarks, onCheckedChange = null) },
+      onClick = { onChoose(layers.copy(seamarks = !layers.seamarks)) },
+    )
+    DropdownMenuItem(
+      text = { Text("Sheltered water") },
+      leadingIcon = { Checkbox(checked = layers.shelter, onCheckedChange = null) },
+      onClick = {
+        onChoose(layers.copy(shelter = !layers.shelter))
+        onDismiss()
+      },
     )
   }
 }

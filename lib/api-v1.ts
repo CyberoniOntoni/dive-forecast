@@ -31,6 +31,9 @@ import {
   type GlanceTone,
 } from "./nowcast-glance";
 import type { BoatTrip } from "./boat-route-data";
+import type { RimRing } from "./rim";
+import type { ShelterAtoll, ShelterView } from "./shelter-grid";
+import { SCALE_MAX_M, SCALE_STOPS, SCALE_TICKS, SHELTER_OPACITY, shelterReadout } from "./shelter-layer";
 import type { PlanLeg, PlanSummary, SavePlanResult } from "./plan-actions";
 import type { PlanStopView, PlanView } from "./plan-view";
 import {
@@ -796,5 +799,88 @@ export function apiBoatRoute(trip: BoatTrip): ApiBoatRoute {
           })),
         }
       : null,
+  };
+}
+
+/** One atoll's field on one of its grids: the bytes as lib/shelter-field.ts sets them out, in base64. */
+export type ApiShelterAtoll = ShelterAtoll;
+
+export type ApiShelterScale = {
+  /** The top of the colour scale, metres of felt height; anything higher takes the last colour. */
+  maxM: number;
+  /** Colours at these heights, blended in between. */
+  stops: { m: number; color: string }[];
+  /** The legend's named points. */
+  ticks: { label: string; m: number }[];
+  /** How opaque the shading is drawn over the map. */
+  opacity: number;
+};
+
+export type ApiShelter = {
+  apiVersion: number;
+  time: string;
+  hours: string[];
+  stale: boolean;
+  atolls: ApiShelterAtoll[];
+  scale: ApiShelterScale;
+};
+
+function hex(rgb: readonly number[]): string {
+  return `#${rgb.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+}
+
+/** The sheltered-water layer for a view, as getShelter gives the web map, with the colour scale its legend draws. */
+export function apiShelter(view: ShelterView): ApiShelter {
+  return {
+    apiVersion: API_VERSION,
+    time: view.time,
+    hours: [...view.hours],
+    stale: view.stale,
+    atolls: view.atolls.map((atoll) => ({ ...atoll })),
+    scale: {
+      maxM: SCALE_MAX_M,
+      stops: SCALE_STOPS.map(({ m, rgb }) => ({ m, color: hex(rgb) })),
+      ticks: SCALE_TICKS.map((tick) => ({ ...tick })),
+      opacity: SHELTER_OPACITY,
+    },
+  };
+}
+
+export type ApiShelterShapes = {
+  apiVersion: number;
+  wayId: string;
+  /** The atoll outline, [lat, lon]. */
+  outline: number[][];
+  /** The islands in and round it, each a ring of [lat, lon]. */
+  islands: number[][][];
+};
+
+export function apiShelterShapes(wayId: string, shapes: { outline: RimRing; islands: RimRing[] }): ApiShelterShapes {
+  const ring = (points: RimRing) => points.map(([lat, lon]) => [roundCoord(lat), roundCoord(lon)]);
+  return { apiVersion: API_VERSION, wayId, outline: ring(shapes.outline), islands: shapes.islands.map(ring) };
+}
+
+export type ApiShelterPoint = {
+  apiVersion: number;
+  time: string;
+  /** False where the layer does not reach (far from any atoll); the rest is then null. */
+  inLayer: boolean;
+  /** The traced sea state, or null where the layer reaches but has no wave or wind data that hour. */
+  seaState: SeaStateHour | null;
+  /** The readout as the web map's popup words it: "Moderate · 0.7 m felt", then the detail and the hour. */
+  head: string | null;
+  detail: string | null;
+};
+
+export function apiShelterPoint(time: string, hour: SeaStateHour | "unknown" | null): ApiShelterPoint {
+  if (hour == null) return { apiVersion: API_VERSION, time, inLayer: false, seaState: null, head: null, detail: null };
+  const words = shelterReadout(hour, time);
+  return {
+    apiVersion: API_VERSION,
+    time,
+    inLayer: true,
+    seaState: hour === "unknown" ? null : hour,
+    head: words.head,
+    detail: words.body,
   };
 }
