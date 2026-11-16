@@ -34,8 +34,13 @@ object ShelterField {
   private val SQRT2 = Math.sqrt(2.0)
   private val NEIGHBOURS = listOf(-1 to 0, 1 to 0, 0 to -1, 0 to 1, -1 to -1, -1 to 1, 1 to -1, 1 to 1)
 
-  /** The cells' bytes, 0 to 255 each. */
-  fun decode(base64: String): IntArray = Base64.getDecoder().decode(base64).map { it.toInt() and 0xff }.toIntArray()
+  /** The cells' bytes, 0 to 255 each, or null when the text is not base64 (that atoll is skipped, not the app). */
+  fun decode(base64: String): IntArray? =
+    try {
+      Base64.getDecoder().decode(base64).map { it.toInt() and 0xff }.toIntArray()
+    } catch (_: IllegalArgumentException) {
+      null
+    }
 
   /** Some water in the field has no wave or wind data this hour. */
   fun hasUnknown(values: IntArray): Boolean = values.any { (it and 0x7f) == UNKNOWN }

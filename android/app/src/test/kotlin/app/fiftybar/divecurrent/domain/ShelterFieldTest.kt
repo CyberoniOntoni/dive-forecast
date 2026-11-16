@@ -5,6 +5,7 @@ import app.fiftybar.divecurrent.data.api.ApiShelterScale
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -115,8 +116,9 @@ class ShelterFieldTest {
   @Test
   fun `decodes the bytes and spots water with no data`() {
     // 10, 50|128, 125|128.
-    val values = ShelterField.decode("CrL9")
+    val values = ShelterField.decode("CrL9")!!
     assertArrayEquals(intArrayOf(10, 178, 253), values)
+    assertNull(ShelterField.decode("not base64!"))
     assertTrue(ShelterField.hasUnknown(values))
     assertFalse(ShelterField.hasUnknown(intArrayOf(10, ShelterField.LAND, ShelterField.NONE, ShelterField.OTHER)))
   }

@@ -81,11 +81,13 @@ class ShelterViewModel(private val repository: DataRepository) : ViewModel() {
     if (at < 0) return
     val target = hours.getOrNull(at + by) ?: return
     chosen = target
+    closeReadout()
     refresh(0)
   }
 
   fun backToNow() {
     chosen = null
+    closeReadout()
     refresh(0)
   }
 
@@ -132,18 +134,35 @@ class ShelterViewModel(private val repository: DataRepository) : ViewModel() {
             _state.update { it.copy(loading = false, note = "Sea state is unavailable right now.") }
             return@launch
           }
-        val images = images(body)
+        val drawn = draw(body)
         _state.update {
-          it.copy(images = images, time = body.time, hours = body.hours, scale = body.scale, loading = false, note = note(body))
+          it.copy(
+            images = drawn.images,
+            time = body.time,
+            hours = body.hours,
+            scale = body.scale,
+            loading = false,
+            note = note(body, drawn.unknown),
+          )
         }
       }
   }
 
-  private suspend fun images(body: ApiShelter): List<ShelterImage> {
+  private class Drawn(val images: List<ShelterImage>, val unknown: Boolean)
+
+  /** Each atoll's image, off the main thread, and whether any water has no data this hour. */
+  private suspend fun draw(body: ApiShelter): Drawn {
     val outlines = body.atolls.map { shapesFor(it.wayId) }.awaitAll()
     val color = ShelterField.palette(body.scale)
     return withContext(Dispatchers.Default) {
-      body.atolls.zip(outlines).mapNotNull { (field, outline) -> outline?.let { ShelterRaster.render(field, it, color) } }
+      val decoded = body.atolls.map { ShelterField.decode(it.values) }
+      val images =
+        body.atolls.indices.mapNotNull { index ->
+          val values = decoded[index] ?: return@mapNotNull null
+          val outline = outlines[index] ?: return@mapNotNull null
+          ShelterRaster.render(body.atolls[index], values, outline, color)
+        }
+      Drawn(images, decoded.any { it != null && ShelterField.hasUnknown(it) })
     }
   }
 
@@ -167,12 +186,12 @@ class ShelterViewModel(private val repository: DataRepository) : ViewModel() {
     return asked
   }
 
-  private fun note(body: ApiShelter): String =
+  private fun note(body: ApiShelter, unknown: Boolean): String =
     if (body.atolls.isEmpty()) "Waves for this area are still loading. Move the map in a moment."
     else
       listOfNotNull(
           "From old wave data.".takeIf { body.stale },
-          "Clear patches: no wave or wind data for that hour.".takeIf { body.atolls.any { ShelterField.hasUnknown(ShelterField.decode(it.values)) } },
+          "Clear patches: no wave or wind data for that hour.".takeIf { unknown },
           "Tap the water for details.",
         )
         .joinToString(" ")

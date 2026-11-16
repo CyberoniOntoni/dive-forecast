@@ -10,7 +10,11 @@ import { SHELTER_MAX_VIEW_DEG, WALL_HOUR } from "@/lib/shelter-limits";
 export async function GET(request: Request) {
   return apiHandler(async () => {
     const params = new URL(request.url).searchParams;
-    const [south, west, north, east] = ["south", "west", "north", "east"].map((name) => Number(params.get(name) ?? Number.NaN));
+    // Number("") is 0, so an empty value is read as missing, not as the equator or the meridian.
+    const [south, west, north, east] = ["south", "west", "north", "east"].map((name) => {
+      const raw = params.get(name)?.trim();
+      return raw ? Number(raw) : Number.NaN;
+    });
     const finite = [south, west, north, east].every(Number.isFinite);
     if (!finite || south >= north || west >= east || Math.abs(south) > 90 || Math.abs(north) > 90 || Math.abs(west) > 180 || Math.abs(east) > 180) {
       return apiError(400, "bad_request", "Give the view as south, west, north and east in degrees.");

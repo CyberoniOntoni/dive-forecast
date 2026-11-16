@@ -34,12 +34,11 @@ object ShelterRaster {
   /** Pixels per cell at most: past this the cut along the coast is finer than the satellite outline anyway. */
   private const val MAX_PX_PER_CELL = 8
 
-  fun render(field: ApiShelterAtoll, shapes: ApiShelterShapes, color: (Double) -> Int): ShelterImage? {
+  /** [values] are the field's decoded bytes; null when they do not fit its grid or the outline is too short to cut. */
+  fun render(field: ApiShelterAtoll, values: IntArray, shapes: ApiShelterShapes, color: (Double) -> Int): ShelterImage? {
     val rows = field.rows
     val columns = field.columns
-    if (rows <= 0 || columns <= 0 || shapes.outline.size < 3) return null
-    val values = ShelterField.decode(field.values)
-    if (values.size != rows * columns) return null
+    if (rows <= 0 || columns <= 0 || values.size != rows * columns || shapes.outline.size < 3) return null
     val fine = field.layer == "fine"
     val sea = cells(rows, columns, values, outside = true, fadeSteps = if (fine) ShelterField.FINE_FADE_STEPS else ShelterField.SEA_FADE_STEPS, color)
     val lagoon = cells(rows, columns, values, outside = false, fadeSteps = if (fine) ShelterField.FINE_FADE_STEPS else 0, color)

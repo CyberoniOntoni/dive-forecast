@@ -66,6 +66,7 @@ describe("GET /api/v1/shelter", () => {
       "?south=4&west=73.2&north=4.6",
       "?south=4.6&west=73.2&north=4&east=73.8",
       "?south=x&west=73.2&north=4.6&east=73.8",
+      "?south=&west=73.2&north=4.6&east=73.8",
       "?south=-5&west=70&north=8&east=78",
       "?south=4&west=73.2&north=4.6&east=73.8&time=2026-11-16T15:30",
     ]) {

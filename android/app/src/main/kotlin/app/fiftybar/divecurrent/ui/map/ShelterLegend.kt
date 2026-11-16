@@ -56,7 +56,7 @@ fun ShelterLegend(
         TextButton(onClick = onNow, enabled = at > 0) { Text("Now") }
       }
       Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onStep(-1) }, enabled = at > 0, modifier = Modifier.size(44.dp)) {
+        IconButton(onClick = { onStep(-1) }, enabled = at > 0, modifier = Modifier.size(44.dp).semantics { contentDescription = "Earlier hour" }) {
           Text("‹", style = MaterialTheme.typography.titleLarge)
         }
         Text(
@@ -65,7 +65,11 @@ fun ShelterLegend(
           fontWeight = FontWeight.SemiBold,
           modifier = Modifier.weight(1f).semantics { contentDescription = "Hour shown: ${state.time?.let(MaldivesTime::label) ?: "loading"}" },
         )
-        IconButton(onClick = { onStep(1) }, enabled = at >= 0 && at < state.hours.size - 1, modifier = Modifier.size(44.dp)) {
+        IconButton(
+          onClick = { onStep(1) },
+          enabled = at >= 0 && at < state.hours.size - 1,
+          modifier = Modifier.size(44.dp).semantics { contentDescription = "Later hour" },
+        ) {
           Text("›", style = MaterialTheme.typography.titleLarge)
         }
       }
