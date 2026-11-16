@@ -2,6 +2,7 @@ package app.fiftybar.divecurrent
 
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -9,11 +10,15 @@ import androidx.navigation3.ui.NavDisplay
 import app.fiftybar.divecurrent.ui.account.AccountScreen
 import app.fiftybar.divecurrent.ui.account.SignInScreen
 import app.fiftybar.divecurrent.ui.map.MapScreen
+import app.fiftybar.divecurrent.ui.plan.PlanScreen
+import app.fiftybar.divecurrent.ui.plan.PlansScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
 
 @Composable
-fun MainNavigation() {
-  val backStack = rememberNavBackStack(MapKey)
+fun MainNavigation(startPlanId: String? = null) {
+  // A plan link the app was opened with goes on top of the map, so Back still reaches the map.
+  val start: List<NavKey> = listOfNotNull(MapKey, startPlanId?.let(::PlanKey))
+  val backStack = rememberNavBackStack(*start.toTypedArray())
   // A screen that leaves by itself (signed in, signed out) never pops the map: an empty back stack would crash.
   val leave: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
 
@@ -28,11 +33,13 @@ fun MainNavigation() {
           MapScreen(
             onOpenSite = { id -> backStack.add(SiteKey(id)) },
             onAccount = { signedIn -> backStack.add(if (signedIn) AccountKey else SignInKey) },
+            onPlans = { backStack.add(PlansKey) },
           )
         }
         entry<SiteKey> { key ->
           SiteScreen(
             siteId = key.siteId,
+            reportAt = key.reportAt,
             onBack = leave,
             onSignIn = { backStack.add(SignInKey) },
           )
@@ -40,7 +47,18 @@ fun MainNavigation() {
         entry<SignInKey> {
           SignInScreen(onDone = leave, onBack = leave)
         }
-        entry<AccountKey> { AccountScreen(onBack = leave) }
+        entry<AccountKey> { AccountScreen(onBack = leave, onPlans = { backStack.add(PlansKey) }) }
+        entry<PlansKey> {
+          PlansScreen(onBack = leave, onOpenPlan = { id -> backStack.add(PlanKey(id)) }, onSignIn = { backStack.add(SignInKey) })
+        }
+        entry<PlanKey> { key ->
+          PlanScreen(
+            planId = key.planId,
+            onBack = leave,
+            onOpenSite = { id -> backStack.add(SiteKey(id)) },
+            onReport = { id, time -> backStack.add(SiteKey(id, reportAt = time)) },
+          )
+        }
       },
   )
 }

@@ -4,6 +4,8 @@ import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiJson
 import app.fiftybar.divecurrent.data.api.ApiNowcast
+import app.fiftybar.divecurrent.data.api.ApiPlan
+import app.fiftybar.divecurrent.data.api.ApiPlanLegs
 import app.fiftybar.divecurrent.data.api.ApiRecentReports
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.ApiSites
@@ -48,6 +50,18 @@ class DataRepository(
 
   suspend fun cachedReports(siteId: String): Loaded<ApiRecentReports>? =
     cached("reports/$siteId", ApiRecentReports.serializer(), null)
+
+  /**
+   * A plan and its legs, kept for offline use like the forecast: a plan is read on the boat, often out of signal. The
+   * copy is per plan, whoever is signed in; it holds nothing private but `isOwner`.
+   */
+  suspend fun plan(id: String, token: String?): Loaded<ApiPlan> =
+    load("plan/$id", ApiPlan.serializer()) { api.plan(id, token).second }
+
+  suspend fun cachedPlan(id: String): Loaded<ApiPlan>? = cached("plan/$id", ApiPlan.serializer(), null)
+
+  suspend fun planLegs(id: String, dayIndex: Int): Loaded<ApiPlanLegs> =
+    load("plan/$id/legs/$dayIndex", ApiPlanLegs.serializer()) { api.planLegs(id, dayIndex).second }
 
   /** The phone's copy only, for showing something while the first fetch runs. */
   suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)

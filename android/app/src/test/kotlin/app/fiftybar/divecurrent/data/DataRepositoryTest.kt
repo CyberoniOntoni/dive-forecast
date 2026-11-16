@@ -92,6 +92,32 @@ class DataRepositoryTest {
     assertNull(repository.forecast("banana-reef").value.seaState)
   }
 
+  @Test
+  fun `reads the API_md plan example, sends the token and keeps a copy for offline`() = runTest {
+    server.enqueue(reply(200, PLAN))
+    val plan = repository.plan("Kq7vHtmWpdNrcXfa", token = "app1.abc").value
+    val request = server.takeRequest()
+    assertEquals("/api/v1/plans/Kq7vHtmWpdNrcXfa", request.path)
+    assertEquals("Bearer app1.abc", request.getHeader("Authorization"))
+    val stop = plan.days.single().stops.single()
+    assertEquals("Tue 17 Nov", plan.days.single().label)
+    assertEquals("stop", stop.tone)
+    assertEquals(2, stop.warnings.size)
+    assertNull(stop.reportTime)
+    assertEquals("North Malé week", repository.cachedPlan("Kq7vHtmWpdNrcXfa")!!.value.title)
+  }
+
+  @Test
+  fun `reads a day's boat legs without a token`() = runTest {
+    server.enqueue(reply(200, LEGS))
+    val legs = repository.planLegs("Kq7vHtmWpdNrcXfa", 0).value
+    val request = server.takeRequest()
+    assertEquals("/api/v1/plans/Kq7vHtmWpdNrcXfa/days/0/legs", request.path)
+    assertNull(request.getHeader("Authorization"))
+    assertEquals("Leave by 10:35", legs.legs.single().leaveBy)
+    assertTrue(legs.legs.single().routed)
+  }
+
   private class FakeDao : CachedBodyDao {
     val rows = mutableMapOf<String, CachedBody>()
 
@@ -126,6 +152,30 @@ class DataRepositoryTest {
       }
       """
         .trimIndent()
+
+    val PLAN =
+      """
+      {
+        "apiVersion": 1, "id": "Kq7vHtmWpdNrcXfa", "title": "North Malé week", "notes": null, "boatSpeedKn": 8,
+        "span": "17–23 Nov 2026", "ownerNickname": "Ann", "isOwner": false, "webPath": "/plans/Kq7vHtmWpdNrcXfa",
+        "updatedAt": "2026-11-15T03:00:00.000Z", "nowWall": "2026-11-17T07:12",
+        "days": [{
+          "date": "2026-11-17", "label": "Tue 17 Nov", "today": true, "past": false, "toCheck": 1,
+          "stops": [{
+            "siteId": "kuda-haa", "name": "Kuda Haa", "lat": 4.31, "lon": 73.46, "facts": "Channel thila · North Malé · 5–30 m",
+            "howToDive": null, "time": "09:00", "note": "Hook in on the corner.", "want": "Wanted: incoming",
+            "status": "forecast", "message": null, "way": "Outgoing, toward W", "arrowBearing": 270, "strength": "Very strong",
+            "tone": "stop", "sea": "Sea moderate · 0.8 m", "seaRough": false, "confidence": "fairly sure",
+            "warnings": ["Very strong current at this time", "Running outgoing; you wanted incoming"],
+            "better": "Better 13:00–15:00, best 14:00: incoming, toward E, mild.", "reportTime": null
+          }]
+        }]
+      }
+      """
+        .trimIndent()
+
+    const val LEGS =
+      """{ "apiVersion": 1, "planId": "Kq7vHtmWpdNrcXfa", "dayIndex": 0, "legs": [{ "from": 0, "text": "2.1 nm · about 20 min at 8 kn", "leaveBy": "Leave by 10:35", "tight": false, "tightNote": null, "note": null, "lengthKm": 3.9, "minutes": 20, "routed": true, "points": [[4.31, 73.46], [4.33, 73.48]] }] }"""
 
     const val SITE =
       """{ "id": "hp-reef", "name": "HP Reef", "atollId": "north-male", "lat": 4.3, "lon": 73.6, "siteType": "pass", "siteTypeLabel": "Rim pass", "atollName": "North Malé" }"""

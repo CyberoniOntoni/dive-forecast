@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.data
 import app.fiftybar.divecurrent.data.api.ApiCodeSent
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiMe
+import app.fiftybar.divecurrent.data.api.ApiPlanSummaries
 import app.fiftybar.divecurrent.data.api.ApiReportSaved
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.api.ReportRequest
@@ -33,6 +34,12 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
     val me = authed { api.me(session.token) }
     sessions.rename(me.nickname)
     return me
+  }
+
+  /** The diver's own plans; null when signed out. */
+  suspend fun myPlans(): ApiPlanSummaries? {
+    val session = sessions.current() ?: return null
+    return authed { api.myPlans(session.token) }
   }
 
   suspend fun fileReport(siteId: String, report: ReportRequest): ApiReportSaved {

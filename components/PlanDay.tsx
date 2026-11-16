@@ -3,26 +3,32 @@
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { PlanMap, type PlanMapStop } from "@/components/PlanMap";
-import {
-  capital,
-  countOf,
-  dayLabel,
-  warnedCount,
-  type StopOutlook,
-  type StopWarning,
-} from "@/lib/dive-plan";
+import { countOf, dayLabel, warnedCount, type StopOutlook } from "@/lib/dive-plan";
 import { getPlanDayLegs, type PlanLeg } from "@/lib/plan-actions";
-import { DIVE_TURNAROUND_MIN, durationText, legDeparture, nmFromKm, type LegDeparture } from "@/lib/plan-legs";
+import { durationText, nmFromKm } from "@/lib/plan-legs";
 import type { PlanDayView, PlanStopView } from "@/lib/plan-view";
-import { strengthLabel } from "@/lib/nowcast-glance";
-import type { Confidence } from "@/lib/types";
+import {
+  betterText,
+  CONFIDENCE_WORDS,
+  legWords,
+  outlookMessage,
+  seaWords,
+  stopTone,
+  strengthWords,
+  warningText,
+  type StopTone,
+} from "@/lib/plan-words";
+
+const TONE_COLOR: Record<StopTone, string> = {
+  incoming: "var(--incoming)",
+  outgoing: "var(--outgoing)",
+  stop: "var(--stop)",
+  none: "var(--foam)",
+};
 
 /** The marker colour: the stop token for a warned dive, else incoming teal or outgoing amber, else plain. */
 function stopColor(stop: PlanStopView): string {
-  if (stop.outlook.status !== "forecast") return "var(--foam)";
-  if (stop.outlook.warnings.length > 0) return "var(--stop)";
-  if (stop.route !== "channel" || stop.outlook.hour.strength === "slack") return "var(--foam)";
-  return stop.outlook.hour.direction === "incoming" ? "var(--incoming)" : "var(--outgoing)";
+  return TONE_COLOR[stopTone(stop.outlook, stop.route)];
 }
 
 /**
@@ -154,43 +160,26 @@ function LegLine({
   fromTime: string;
   toTime: string;
 }) {
-  let text: string;
-  let note: string | null = null;
-  let departure: LegDeparture | null = null;
-  if (leg) {
-    const nm = nmFromKm(leg.lengthKm);
-    const same = nm < 0.1;
-    text = same ? "Same spot" : `${nm.toFixed(1)} nm · about ${durationText(leg.minutes)} at ${speedKn} kn`;
-    if (!same) departure = legDeparture(fromTime, toTime, leg.minutes);
-    if (!leg.routed) note = "Straight line: no way round the reef found";
-  } else {
-    text = loading ? "Planning the boat route…" : "Boat route unavailable";
-  }
+  const words = leg ? legWords(leg, speedKn, fromTime, toTime) : null;
+  const text = words?.text ?? (loading ? "Planning the boat route…" : "Boat route unavailable");
   return (
     <div className="ml-[1.0625rem] flex min-w-0 items-center gap-3 border-l-2 border-dashed border-foam/25 py-2.5 pl-6 text-sm text-foam/70">
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
         <path d="M3 15h18l-3 4H6zM12 4v9M12 4l5 7h-5" />
       </svg>
       <span className={`min-w-0 ${loading && !leg ? "animate-pulse" : ""}`}>
-        {departure ? (
-          <span className={`block font-semibold ${departure.tight ? "text-stop" : "text-foam"}`}>
-            Leave by {departure.leaveBy}
-            {departure.tight ? (
-              <span className="font-normal">
-                {" "}
-                · tight: the {fromTime} dive needs about {DIVE_TURNAROUND_MIN} min
-              </span>
-            ) : null}
+        {words?.leaveBy ? (
+          <span className={`block font-semibold ${words.tight ? "text-stop" : "text-foam"}`}>
+            {words.leaveBy}
+            {words.tightNote ? <span className="font-normal"> · {words.tightNote}</span> : null}
           </span>
         ) : null}
         <span className="block">{text}</span>
-        {note ? <span className="block text-xs text-foam/60">{note}</span> : null}
+        {words?.note ? <span className="block text-xs text-foam/60">{words.note}</span> : null}
       </span>
     </div>
   );
 }
-
-const CONFIDENCE_WORDS: Record<Confidence, string> = { high: "sure", medium: "fairly sure", low: "rough guess" };
 
 function StopCard({ stop, number }: { stop: PlanStopView; number: number }) {
   const color = stopColor(stop);
@@ -250,16 +239,8 @@ const PILL = "inline-flex min-h-7 items-center gap-1.5 rounded-full px-2.5 text-
 
 function Outlook({ stop }: { stop: PlanStopView }) {
   const outlook: StopOutlook = stop.outlook;
-  if (outlook.status !== "forecast") {
-    const text =
-      outlook.status === "unavailable"
-        ? "No forecast for this site right now."
-        : outlook.status === "past"
-          ? "No forecast this far back."
-          : `The forecast reaches this dive ${outlook.opensOn ? `on ${dayLabel(outlook.opensOn)}` : "closer to the day"}.`;
-    return <p className="text-sm text-foam/65">{text}</p>;
-  }
-  const { hour, sea, warnings, better } = outlook;
+  if (outlook.status !== "forecast") return <p className="text-sm text-foam/65">{outlookMessage(outlook)}</p>;
+  const { hour, sea, warnings } = outlook;
   const strong = hour.strength === "too_strong";
   const color = stopColor(stop);
   return (
@@ -281,11 +262,11 @@ function Outlook({ stop }: { stop: PlanStopView }) {
           {stop.way}
         </span>
         <span className={`${PILL} font-medium ${strong ? "bg-stop/20 text-stop" : "bg-foam/10 text-foam"}`}>
-          {capital(strengthLabel(hour.strength))}
+          {strengthWords(hour.strength)}
         </span>
         {sea ? (
           <span className={`${PILL} ${sea.band === "rough" ? "bg-stop/20 text-stop" : "bg-foam/10 text-foam/85"}`}>
-            Sea {sea.band} · {sea.feltM.toFixed(1)} m
+            {seaWords(sea.band, sea.feltM)}
           </span>
         ) : null}
         <span className="px-1 text-xs text-foam/60">Forecast: {CONFIDENCE_WORDS[hour.confidence]}</span>
@@ -300,32 +281,10 @@ function Outlook({ stop }: { stop: PlanStopView }) {
               {warningText(warning, hour.time)}
             </p>
           ))}
-          <p className="pl-6 text-sm text-foam/85">
-            {better
-              ? `Better ${better.from === better.to ? `at ${clock(better.from)}` : `${clock(better.from)}–${clock(better.to)}`}${
-                  stop.betterWay ? `, best ${clock(better.best.time)}: ${lower(stop.betterWay)}, ${strengthLabel(better.best.strength)}` : ""
-                }.`
-              : "No better daylight hour that day."}
-          </p>
+          <p className="pl-6 text-sm text-foam/85">{betterText(outlook, stop.betterWay)}</p>
         </div>
       ) : null}
     </div>
   );
 }
 
-/** `diveHour`: the forecast hour the dive starts in. */
-function warningText(warning: StopWarning, diveHour: string): string {
-  if (warning.kind === "very-strong") {
-    return warning.time === diveHour ? "Very strong current at this time" : `Very strong current from ${clock(warning.time)}`;
-  }
-  if (warning.kind === "wrong-way") return `Running ${warning.direction}; you wanted ${warning.want}`;
-  return "Rough sea forecast here";
-}
-
-function clock(time: string): string {
-  return time.slice(11, 16);
-}
-
-function lower(words: string): string {
-  return words.charAt(0).toLowerCase() + words.slice(1);
-}

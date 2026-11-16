@@ -1,4 +1,5 @@
 import { bearerToken } from "./auth";
+import { planSize, warnedCount } from "./dive-plan";
 import { FORECAST_MODEL_VERSION } from "./forecast";
 import type { SiteNowcast } from "./nowcast";
 import {
@@ -10,6 +11,21 @@ import {
   type GlanceBearings,
   type GlanceTone,
 } from "./nowcast-glance";
+import type { PlanLeg, PlanSummary } from "./plan-actions";
+import type { PlanStopView, PlanView } from "./plan-view";
+import {
+  betterText,
+  CONFIDENCE_WORDS,
+  legWords,
+  outlookMessage,
+  seaWords,
+  stopTone,
+  strengthWords,
+  wantWords,
+  warningText,
+  type LegWords,
+  type StopTone,
+} from "./plan-words";
 import { awardLine, type ReportAward } from "./points-rules";
 import type { RecentReportRow } from "./recent-reports";
 import { photoUrl } from "./site-photos-limits";
@@ -402,5 +418,181 @@ export function apiReportSaved(report: Report, award: ReportAward | null): ApiRe
     award: award
       ? { points: award.points, reasons: [...award.reasons], uncounted: award.uncounted ?? null, line: awardLine(award) }
       : null,
+  };
+}
+
+/** A dive plan as the app shows it (GET /api/v1/plans/{id}): every word made here, from the plan page's own rules. */
+export type ApiPlan = {
+  apiVersion: number;
+  id: string;
+  title: string;
+  notes: string | null;
+  boatSpeedKn: number;
+  /** "17–23 Nov 2026". */
+  span: string;
+  ownerNickname: string | null;
+  /** The signed-in diver made it: only they change it (on the web for now). */
+  isOwner: boolean;
+  /** The public page, to share. */
+  webPath: string;
+  updatedAt: string;
+  /** Maldives wall time the plan was read. */
+  nowWall: string;
+  days: ApiPlanDay[];
+};
+
+export type ApiPlanDay = {
+  date: string;
+  /** "Tue 17 Nov". */
+  label: string;
+  today: boolean;
+  past: boolean;
+  /** Dives with a warning. */
+  toCheck: number;
+  stops: ApiPlanStop[];
+};
+
+export type ApiPlanStop = {
+  siteId: string;
+  name: string;
+  lat: number;
+  lon: number;
+  /** "Pass · South Male · 5–30 m". */
+  facts: string;
+  howToDive: string | null;
+  /** "HH:MM". */
+  time: string;
+  note: string | null;
+  /** "Wanted: incoming" at a channel, or null. */
+  want: string | null;
+  /** forecast | unavailable | beyond | past. */
+  status: string;
+  /** Without a forecast hour: what to say instead. */
+  message: string | null;
+  /** "Incoming, toward NE"; null without a forecast hour. */
+  way: string | null;
+  arrowBearing: number | null;
+  /** "Very strong". */
+  strength: string | null;
+  /** The stop colour for the marker: incoming | outgoing | stop | none. */
+  tone: StopTone;
+  /** "Sea rough · 1.2 m" and whether that is rough. */
+  sea: string | null;
+  seaRough: boolean;
+  /** "fairly sure". */
+  confidence: string | null;
+  warnings: string[];
+  /** With warnings: the better window that day, or that there is none. */
+  better: string | null;
+  /** Once the dive is over and still reportable: its wall time, for the report form. */
+  reportTime: string | null;
+};
+
+export function apiPlan(view: PlanView): ApiPlan {
+  const today = view.nowWall.slice(0, 10);
+  return {
+    apiVersion: API_VERSION,
+    id: view.id,
+    title: view.title,
+    notes: view.notes,
+    boatSpeedKn: view.boatSpeedKn,
+    span: view.span,
+    ownerNickname: view.ownerNickname,
+    isOwner: view.isOwner,
+    webPath: `/plans/${view.id}`,
+    updatedAt: view.updatedAt,
+    nowWall: view.nowWall,
+    days: view.days.map((day) => ({
+      date: day.date,
+      label: day.label,
+      today: day.date === today,
+      past: day.date < today,
+      toCheck: warnedCount(day.stops),
+      stops: day.stops.map((stop) => apiPlanStop(day.date, stop)),
+    })),
+  };
+}
+
+function apiPlanStop(date: string, stop: PlanStopView): ApiPlanStop {
+  const outlook = stop.outlook;
+  const forecast = outlook.status === "forecast" ? outlook : null;
+  return {
+    siteId: stop.siteId,
+    name: stop.name,
+    lat: stop.lat,
+    lon: stop.lon,
+    facts: stop.facts,
+    howToDive: stop.howToDive,
+    time: stop.time,
+    note: stop.note,
+    want: wantWords(stop.want),
+    status: outlook.status,
+    message: outlook.status === "forecast" ? null : outlookMessage(outlook),
+    way: stop.way,
+    arrowBearing: forecast && forecast.hour.strength !== "slack" ? stop.arrowDeg : null,
+    strength: forecast ? strengthWords(forecast.hour.strength) : null,
+    tone: stopTone(outlook, stop.route),
+    sea: forecast?.sea ? seaWords(forecast.sea.band, forecast.sea.feltM) : null,
+    seaRough: forecast?.sea?.band === "rough",
+    confidence: forecast ? CONFIDENCE_WORDS[forecast.hour.confidence] : null,
+    warnings: forecast ? forecast.warnings.map((warning) => warningText(warning, forecast.hour.time)) : [],
+    better: forecast && forecast.warnings.length > 0 ? betterText(forecast, stop.betterWay) : null,
+    reportTime: stop.reportHref ? `${date}T${stop.time}` : null,
+  };
+}
+
+/** One day's boat legs (GET /api/v1/plans/{id}/days/{index}/legs), in words, with the track to draw. */
+export type ApiPlanLeg = LegWords & {
+  /** Index of the dive the leg leaves from, among the day's dives. */
+  from: number;
+  lengthKm: number;
+  minutes: number;
+  routed: boolean;
+  /** [lat, lon] pairs. */
+  points: [number, number][];
+};
+
+export type ApiPlanLegs = { apiVersion: number; planId: string; dayIndex: number; legs: ApiPlanLeg[] };
+
+export function apiPlanLegs(
+  planId: string,
+  dayIndex: number,
+  legs: readonly PlanLeg[],
+  stopTimes: readonly string[],
+  speedKn: number,
+): ApiPlanLegs {
+  return {
+    apiVersion: API_VERSION,
+    planId,
+    dayIndex,
+    legs: legs.map((leg) => ({
+      ...legWords(leg, speedKn, stopTimes[leg.from] ?? "00:00", stopTimes[leg.from + 1] ?? "00:00"),
+      from: leg.from,
+      lengthKm: Math.round(leg.lengthKm * 1000) / 1000,
+      minutes: Number.isFinite(leg.minutes) ? Math.round(leg.minutes) : 0,
+      routed: leg.routed,
+      points: leg.points.map(([lat, lon]) => [Math.round(lat * 1e5) / 1e5, Math.round(lon * 1e5) / 1e5]),
+    })),
+  };
+}
+
+/** The signed-in diver's plans (GET /api/v1/plans). */
+export type ApiPlanSummaries = {
+  apiVersion: number;
+  plans: { id: string; title: string; span: string; size: string; first: string; last: string; updatedAt: string }[];
+};
+
+export function apiPlanSummaries(plans: readonly PlanSummary[]): ApiPlanSummaries {
+  return {
+    apiVersion: API_VERSION,
+    plans: plans.map((plan) => ({
+      id: plan.id,
+      title: plan.title,
+      span: plan.span,
+      size: planSize(plan.days, plan.dives),
+      first: plan.first,
+      last: plan.last,
+      updatedAt: plan.updatedAt,
+    })),
   };
 }

@@ -66,6 +66,14 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
   suspend fun reports(siteId: String): Pair<ApiRecentReports, String> =
     get(listOf("api", "v1", "sites", siteId, "reports"))
 
+  /** A plan by its share id; with the diver's token the answer says whether they made it. */
+  suspend fun plan(id: String, token: String?): Pair<ApiPlan, String> = get(listOf("api", "v1", "plans", id), token)
+
+  suspend fun planLegs(id: String, dayIndex: Int): Pair<ApiPlanLegs, String> =
+    get(listOf("api", "v1", "plans", id, "days", dayIndex.toString(), "legs"))
+
+  suspend fun myPlans(token: String): ApiPlanSummaries = get<ApiPlanSummaries>(listOf("api", "v1", "plans"), token).first
+
   /** Emails a sign-in code. */
   suspend fun requestCode(email: String): ApiCodeSent =
     post(listOf("api", "v1", "sign-in", "code"), ApiJson.encodeToString(CodeRequest(email)), token = null)

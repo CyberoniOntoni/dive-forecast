@@ -19,10 +19,16 @@ What it does:
   tap or which way and how strong, in the site's own words (`reportWays`); what it earned comes back in words. Recent
   reports are listed below it. The map's top-left chip opens sign-in or the account (points, sign out, sign out
   everywhere). A 401 from the server means the token stopped working, and the app forgets it.
+- **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
+  (the app offers itself for those links; not verified, so Android asks which app to use), a pasted link on the Plans
+  screen (calendar button on the map's list, or "My dive plans" on the account), or the diver's own plans when signed
+  in. Each day lists its dives with the forecast at the dive time, warnings and a better window, the boat legs between
+  them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
+  of a plan is kept for use out of signal. Making and editing plans is on the web for now.
 - **Offline**: the last body of each endpoint is kept in Room as raw JSON and shown with its age when the server
   cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
 
-Ratings and reviews, adding sites, dive plans, boat navigation and the extra map layers are on the web for now (API.md
+Ratings and reviews, adding sites, making and editing dive plans, boat navigation and the extra map layers are on the web for now (API.md
 § Next).
 
 ## Build and run
@@ -63,6 +69,7 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `ui/map/` | MapLibre map, now list |
 | `ui/site/` | Site page, hour strip, report form, recent reports |
 | `ui/account/` | Sign-in and account |
+| `ui/plan/`, `domain/PlanLink.kt` | Plan pages, my plans, reading a plan id from a link |
 
 The display rules live only on the server (`lib/nowcast-glance.ts`, put on every hour by `lib/api-v1.ts`): the app
 draws the glance it is given, so a wording change ships with the server. Site kinds come as `siteTypeLabel`.
