@@ -863,7 +863,7 @@ export function apiShelterShapes(wayId: string, shapes: { outline: RimRing; isla
 export type ApiShelterPoint = {
   apiVersion: number;
   time: string;
-  /** False where the layer does not reach (far from any atoll); the rest is then null. */
+  /** False where the layer has no water to read (an island, or far from any atoll); the rest is then null. */
   inLayer: boolean;
   /** The traced sea state, or null where the layer reaches but has no wave or wind data that hour. */
   seaState: SeaStateHour | null;
