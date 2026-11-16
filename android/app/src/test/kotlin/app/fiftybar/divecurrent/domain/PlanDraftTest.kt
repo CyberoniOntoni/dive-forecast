@@ -64,6 +64,14 @@ class PlanDraftTest {
     val twice = ok.addDay("2026-11-17").let { it.setDate(it.days.last().key, "2026-11-17") }
     assertEquals("Tue 17 Nov is in the plan twice", twice.problem(limits) { it in known })
     assertEquals("Add at least one day", ok.removeDay(day).problem(limits) { it in known })
+    assertEquals("Each day needs a date", ok.setDate(day, "2019-12-31").problem(limits) { it in known })
+    assertEquals("Each day needs a date", ok.setDate(day, "2026-02-30").problem(limits) { it in known })
+  }
+
+  @Test
+  fun `refuses a new plan when the diver keeps the most plans already`() {
+    assertNull(PlanDraft.listFull(39, limits))
+    assertEquals("You can keep up to 40 plans. Delete an old one first.", PlanDraft.listFull(40, limits))
   }
 
   @Test

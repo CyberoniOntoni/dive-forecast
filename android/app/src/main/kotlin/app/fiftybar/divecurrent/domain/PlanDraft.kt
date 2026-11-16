@@ -82,6 +82,8 @@ data class PlanDraft(
     if (days.size > limits.daysMax) return "A plan has at most ${limits.daysMax} days"
     val seen = mutableSetOf<String>()
     for (day in days) {
+      val year = runCatching { LocalDate.parse(day.date).year }.getOrNull()
+      if (year == null || year < limits.yearMin || year > limits.yearMax) return "Each day needs a date"
       if (!seen.add(day.date)) return "${dayLabel(day.date)} is in the plan twice"
       if (day.stops.size > limits.divesPerDayMax) return "${dayLabel(day.date)} has more than ${limits.divesPerDayMax} dives"
       for (stop in day.stops) {
@@ -143,6 +145,10 @@ data class PlanDraft(
         }
       return PlanDraft(plan.title, plan.notes ?: "", trimNumber(plan.boatSpeedKn), days, key)
     }
+
+    /** Why a new plan cannot be saved when the diver already keeps [count] plans, in the server's words, or null. */
+    fun listFull(count: Int, limits: ApiPlanLimits): String? =
+      if (count >= limits.plansMax) "You can keep up to ${limits.plansMax} plans. Delete an old one first." else null
 
     fun trimNumber(value: Double): String = if (value == Math.floor(value)) value.toLong().toString() else value.toString()
 

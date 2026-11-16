@@ -15,16 +15,18 @@ app and the site always show the same forecast. The forecast model is untouched.
   `fetchedAt` is Unix ms.
 - **Caching.** Successful responses send `Cache-Control: public, max-age=300, stale-while-revalidate=86400`. The app
   should keep the last body for each site (Room) and show it with its `fetchedAt` age when it is offline.
-- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "needs_nickname" | "server_error",
-  "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
+- **Errors.** `{"error": {"code": "not_found" | "bad_request" | "unauthorized" | "forbidden" | "needs_nickname" |
+  "server_error", "message": "..."}}` with the matching HTTP status and `Cache-Control: no-store`. An app must treat an unknown code
   by its HTTP status. The message can be shown to the diver. A 500 never carries the internal
   error.
 - **Privacy.** No email or diver id is ever in a response. Sites added in the app show `userAdded: true`, not who added
   them.
-- **Methods.** Reads are GET. Writes are POST with an `application/json` body (anything else gets 415): a browser
-  cannot send that to this site from another one without a CORS check, which this API never passes. The Cloudflare
-  worker lets posts under `/api/v1/` through to the routes (`lib/request-guard.ts`), which answer the 415 themselves,
-  and turns away other non-GET requests that are not server actions.
+- **Methods.** Reads are GET. Writes are POST or PUT with an `application/json` body (anything else gets 415), or
+  DELETE with none: a browser cannot send any of these to this site from another one without a CORS check, which this
+  API never passes. The Cloudflare worker lets POST, PUT and DELETE under `/api/v1/` through to the routes
+  (`lib/request-guard.ts`), which answer the 415 (or a 405 for a method they do not take) themselves, and turns away
+  every other non-GET request that is not a server action. `forbidden` (403) is a write to something that is another
+  diver's, such as their plan.
 - **Signed in.** Endpoints about one diver take `Authorization: Bearer <token>` from
   `POST /api/v1/sign-in/token`, and only that: the web's cookie never signs an API write
   in. Without a header they answer 401 `unauthorized`; with an expired, forged or signed-out token too. Their
@@ -237,7 +239,8 @@ changes and deletes plans with the bearer token; every write is checked by the w
 Signed in. The diver's own plans, newest change first:
 `{"apiVersion": 1, "limits": {…}, "plans": [{"id", "title", "span": "17–23 Nov 2026", "size": "4 days · 11 dives", "first", "last", "updatedAt"}]}`.
 `limits` is what the editor allows: `{"titleMax": 80, "notesMax": 1500, "diveNoteMax": 300, "daysMax": 16,
-"divesPerDayMax": 6, "plansMax": 40, "boatSpeedMinKn": 3, "boatSpeedMaxKn": 40, "boatSpeedDefaultKn": 8}`.
+"divesPerDayMax": 6, "plansMax": 40, "boatSpeedMinKn": 3, "boatSpeedMaxKn": 40, "boatSpeedDefaultKn": 8,
+"yearMin": 2020, "yearMax": 2100}`.
 
 ### `GET /api/v1/plan-sites`
 

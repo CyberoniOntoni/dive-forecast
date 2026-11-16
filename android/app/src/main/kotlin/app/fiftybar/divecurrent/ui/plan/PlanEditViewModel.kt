@@ -24,6 +24,8 @@ data class PlanEditUiState(
   val original: PlanDraft? = null,
   val sites: List<ApiPickerSite> = emptyList(),
   val limits: ApiPlanLimits = ApiPlanLimits(),
+  /** How many plans the diver keeps, for a new plan's limit; null when unknown (the server checks anyway). */
+  val planCount: Int? = null,
   /** Maldives date today, "YYYY-MM-DD". */
   val today: String = MaldivesTime.nowWall().take(10),
   val loading: Boolean = true,
@@ -63,16 +65,27 @@ class PlanEditViewModel(
       try {
         val picker = repository.planSites().value
         val today = picker.today.ifBlank { _state.value.today }
+        var count: Int? = null
         val (draft, limits) =
           if (planId == null) {
-            val limits = runCatching { account.myPlans()?.limits }.getOrNull() ?: ApiPlanLimits()
+            val mine = runCatching { account.myPlans() }.getOrNull()
+            count = mine?.plans?.size
+            val limits = mine?.limits ?: ApiPlanLimits()
             PlanDraft.new(today, limits) to limits
           } else {
             val plan = account.editablePlan(planId)
             PlanDraft.from(plan) to plan.limits
           }
         _state.update {
-          it.copy(draft = draft, original = draft, sites = picker.sites, limits = limits, today = today, loading = false)
+          it.copy(
+            draft = draft,
+            original = draft,
+            sites = picker.sites,
+            limits = limits,
+            planCount = count,
+            today = today,
+            loading = false,
+          )
         }
       } catch (_: SignedOutException) {
         _state.update { it.copy(loading = false, loadError = "Sign in again to change this plan.", signedOut = true) }
@@ -92,7 +105,8 @@ class PlanEditViewModel(
     val draft = state.draft ?: return
     if (state.saving) return
     val known = state.sites.associateBy { it.id }
-    draft.problem(state.limits) { it in known }?.let { problem ->
+    val full = if (planId == null) state.planCount?.let { PlanDraft.listFull(it, state.limits) } else null
+    (full ?: draft.problem(state.limits) { it in known })?.let { problem ->
       _state.update { it.copy(error = problem) }
       return
     }

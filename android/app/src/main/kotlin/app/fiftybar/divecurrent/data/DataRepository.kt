@@ -64,7 +64,7 @@ class DataRepository(
   suspend fun planLegs(id: String, dayIndex: Int): Loaded<ApiPlanLegs> =
     load("plan/$id/legs/$dayIndex", ApiPlanLegs.serializer()) { api.planLegs(id, dayIndex).second }
 
-  /** The plan editor's site list, kept so a plan can be started out of signal and saved later. */
+  /** The plan editor's site list, kept like every other read so the editor opens on the last copy when the server is slow. */
   suspend fun planSites(): Loaded<ApiPlanSites> = load("plan-sites", ApiPlanSites.serializer()) { api.planSites().second }
 
   /** The phone's copy only, for showing something while the first fetch runs. */

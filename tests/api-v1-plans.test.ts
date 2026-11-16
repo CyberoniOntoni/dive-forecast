@@ -240,7 +240,7 @@ describe("API v1 plans", () => {
             ],
           },
         ],
-        limits: { titleMax: 80, divesPerDayMax: 6, boatSpeedDefaultKn: 8 },
+        limits: { titleMax: 80, divesPerDayMax: 6, boatSpeedDefaultKn: 8, yearMin: 2020, yearMax: 2100 },
       });
       expect(editable).not.toHaveProperty("ownerId");
 

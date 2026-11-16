@@ -37,6 +37,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -146,6 +147,7 @@ fun PlanEditScreen(
           index = draft.days.indexOf(day),
           canRemove = draft.days.size > 1,
           canAddDive = day.stops.size < state.limits.divesPerDayMax,
+          years = state.limits.yearMin..state.limits.yearMax,
           sites = state.sites,
           site = state::site,
           colors = colors,
@@ -240,6 +242,7 @@ private fun DayEditor(
   index: Int,
   canRemove: Boolean,
   canAddDive: Boolean,
+  years: IntRange,
   sites: List<ApiPickerSite>,
   site: (String) -> ApiPickerSite?,
   colors: CurrentColors,
@@ -289,6 +292,7 @@ private fun DayEditor(
   if (pickDate) {
     PlanDateDialog(
       initial = runCatching { LocalDate.parse(day.date) }.getOrElse { LocalDate.now() },
+      years = years,
       onPicked = { date ->
         pickDate = false
         onEdit { it.setDate(day.key, date.toString()) }
@@ -403,11 +407,25 @@ private fun SitePickerDialog(sites: List<ApiPickerSite>, onPicked: (ApiPickerSit
   )
 }
 
-/** Any day: plans can be made ahead, and past days kept for reports. The picker's dates are UTC midnights. */
+/**
+ * Any day in the years the server takes: plans can be made ahead, and past days kept for reports. The picker's dates
+ * are UTC midnights.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PlanDateDialog(initial: LocalDate, onPicked: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-  val picker = rememberDatePickerState(initialSelectedDateMillis = initial.toEpochDay() * DAY_MS)
+private fun PlanDateDialog(initial: LocalDate, years: IntRange, onPicked: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+  val picker =
+    rememberDatePickerState(
+      initialSelectedDateMillis = initial.toEpochDay() * DAY_MS,
+      yearRange = years,
+      selectableDates =
+        object : SelectableDates {
+          override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+            LocalDate.ofEpochDay(Math.floorDiv(utcTimeMillis, DAY_MS)).year in years
+
+          override fun isSelectableYear(year: Int): Boolean = year in years
+        },
+    )
   DatePickerDialog(
     onDismissRequest = onDismiss,
     confirmButton = {

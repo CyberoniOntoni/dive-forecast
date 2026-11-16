@@ -10,6 +10,8 @@ import {
   PLAN_NOTES_MAX,
   PLAN_STOPS_PER_DAY_MAX,
   PLAN_TITLE_MAX,
+  PLAN_YEAR_MAX,
+  PLAN_YEAR_MIN,
   PLANS_PER_DIVER_MAX,
   type PickerSite,
   planSize,
@@ -633,6 +635,9 @@ export type ApiPlanLimits = {
   boatSpeedMinKn: number;
   boatSpeedMaxKn: number;
   boatSpeedDefaultKn: number;
+  /** The years a day may fall in. */
+  yearMin: number;
+  yearMax: number;
 };
 
 export const PLAN_LIMITS: ApiPlanLimits = {
@@ -645,6 +650,8 @@ export const PLAN_LIMITS: ApiPlanLimits = {
   boatSpeedMinKn: BOAT_SPEED_MIN_KN,
   boatSpeedMaxKn: BOAT_SPEED_MAX_KN,
   boatSpeedDefaultKn: DEFAULT_BOAT_SPEED_KN,
+  yearMin: PLAN_YEAR_MIN,
+  yearMax: PLAN_YEAR_MAX,
 };
 
 /**

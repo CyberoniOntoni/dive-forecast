@@ -337,7 +337,10 @@ data class ApiPlanSummaries(
   val limits: ApiPlanLimits = ApiPlanLimits(),
 )
 
-/** What the plan editor allows (server lib/dive-plan.ts); the defaults match it for a server that sends none. */
+/**
+ * What the plan editor allows (server lib/dive-plan.ts). The server sends these with every plan list and editable plan,
+ * so the editor uses its numbers; the defaults are only a fallback when that list could not load.
+ */
 @Serializable
 data class ApiPlanLimits(
   val titleMax: Int = 80,
@@ -349,6 +352,8 @@ data class ApiPlanLimits(
   val boatSpeedMinKn: Double = 3.0,
   val boatSpeedMaxKn: Double = 40.0,
   val boatSpeedDefaultKn: Double = 8.0,
+  val yearMin: Int = 2020,
+  val yearMax: Int = 2100,
 )
 
 /**

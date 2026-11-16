@@ -16,6 +16,9 @@ export const PLAN_DAYS_MAX = 16;
 export const PLAN_STOPS_PER_DAY_MAX = 6;
 /** Plans one diver keeps; delete an old one to make room. */
 export const PLANS_PER_DIVER_MAX = 40;
+/** The years a plan's days may fall in. */
+export const PLAN_YEAR_MIN = 2020;
+export const PLAN_YEAR_MAX = 2100;
 export const BOAT_SPEED_MIN_KN = 3;
 export const BOAT_SPEED_MAX_KN = 40;
 /** Why a plan write was refused, shared by lib/plan-actions.ts and the app's API (which picks a status from them). */
@@ -109,7 +112,7 @@ function requireDay(input: unknown, knownSite: (id: string) => boolean): PlanDay
   if (!isPlanDate(day.date)) throw new Error("Each day needs a date");
   const date = day.date;
   const year = Number(date.slice(0, 4));
-  if (year < 2020 || year > 2100) throw new Error("Each day needs a date");
+  if (year < PLAN_YEAR_MIN || year > PLAN_YEAR_MAX) throw new Error("Each day needs a date");
   if (!Array.isArray(day.stops)) throw new Error("Bad day");
   if (day.stops.length > PLAN_STOPS_PER_DAY_MAX) {
     throw new Error(`${dayLabel(date)} has more than ${PLAN_STOPS_PER_DAY_MAX} dives`);
