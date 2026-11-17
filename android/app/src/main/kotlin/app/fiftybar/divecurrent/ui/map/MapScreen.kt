@@ -149,12 +149,14 @@ fun MapScreen(
       state.rows.filter { (atollId.isEmpty() || it.site.atollId == atollId) && SiteSearch.matches(it.site.name, it.site.atollName, query) }
     }
   val counts = remember(inAtoll) { NowCounts.of(inAtoll.map { it.glance }) }
-  val shown = remember(inAtoll, strength) { inAtoll.filter { NowCounts.matches(it.glance, strength) } }
+  // An outdated offline copy shows no arrows, so no strengths: a strength kept from before must not hide every site.
+  val picked = strength.takeIf { state.outdatedWall == null }
+  val shown = remember(inAtoll, picked) { inAtoll.filter { NowCounts.matches(it.glance, picked) } }
   // The map keeps every atoll's pins when one is picked, as the web map does: the pick narrows the list and frames the
   // atoll. A search or a strength still narrows the pins too.
   val pins =
-    remember(state.rows, query, strength) {
-      state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) && NowCounts.matches(it.glance, strength) }
+    remember(state.rows, query, picked) {
+      state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) && NowCounts.matches(it.glance, picked) }
     }
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
@@ -189,7 +191,7 @@ fun MapScreen(
         rows = shown,
         total = state.rows.size,
         counts = counts,
-        strength = strength,
+        strength = picked,
         onStrength = { strength = if (strength == it) null else it },
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
@@ -379,8 +381,8 @@ private fun NowList(
         Icon(Icons.Filled.Refresh, contentDescription = "Refresh the forecast")
       }
     }
-    // How many sites run each strength now; tap one to show only those, again to show all.
-    Row(
+    // How many sites run each strength now; tap one to show only those, again to show all. None without a current hour.
+    if (state.outdatedWall == null) Row(
       Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).selectableGroup(),
       horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
