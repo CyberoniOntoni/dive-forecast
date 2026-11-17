@@ -67,6 +67,23 @@ class MapRowsTest {
     assertNull(MapViewModel.rows(sites, nowcast, nowMs = now).single().glance)
   }
 
+  @Test
+  fun `a map fetched just before the hour is for that hour and still current in it`() {
+    // Fetched at 09:59, the server's map is the 10:00 one: at 10:00 it is not an earlier hour.
+    val late = nowcast.copy(maldivesWall = "2026-11-15T09:59")
+    assertNull(MapViewModel.outdated(late, maldivesMs("2026-11-15T10:00")))
+    assertNull(MapViewModel.outdated(late, maldivesMs("2026-11-15T10:59")))
+    assertEquals("2026-11-15T09:59", MapViewModel.outdated(late, maldivesMs("2026-11-15T11:00")))
+  }
+
+  @Test
+  fun `a map fetched at exactly half past is for the earlier hour`() {
+    // As the server picks: 09:30 keeps 09:00, so at 10:00 the map is for an earlier hour.
+    val half = nowcast.copy(maldivesWall = "2026-11-15T09:30")
+    assertNull(MapViewModel.outdated(half, maldivesMs("2026-11-15T09:59")))
+    assertEquals("2026-11-15T09:30", MapViewModel.outdated(half, maldivesMs("2026-11-15T10:00")))
+  }
+
   /** A saved atoll's week: the 09:00 hour of the nowcast above, then 10:00 running outgoing. */
   private val week =
     ApiForecast(

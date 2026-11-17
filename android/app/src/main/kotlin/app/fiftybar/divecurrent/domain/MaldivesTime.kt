@@ -39,6 +39,12 @@ object MaldivesTime {
   fun nearestHour(nowMs: Long = System.currentTimeMillis()): String =
     nowHour(Math.floorDiv(nowMs + HALF_HOUR_MS - 1, HOUR_MS) * HOUR_MS)
 
+  /**
+   * The hour nearest a wall time, "YYYY-MM-DDTHH:00": the hour the server's map fetched at [wall] is for (20:59 is the
+   * 21:00 map). Null when [wall] does not parse.
+   */
+  fun nearestHourOf(wall: String): String? = parse(wall)?.let { nearestHour(it.toInstant(OFFSET).toEpochMilli()) }
+
   private const val HOUR_MS = 3_600_000L
   private const val HALF_HOUR_MS = HOUR_MS / 2
 

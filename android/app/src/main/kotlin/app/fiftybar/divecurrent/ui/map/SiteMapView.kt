@@ -151,6 +151,8 @@ fun SiteMapView(
   highlight: String? = null,
   /** Saved atolls' boxes, where our imagery lies under the satellite base for use without signal. */
   imagery: List<ApiBounds> = emptyList(),
+  /** The phone reaches the internet (rememberOnline); without, a saved atoll's imagery shows through the base. */
+  online: Boolean = true,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -255,6 +257,12 @@ fun SiteMapView(
   LaunchedEffect(style, highlight) {
     val s = style ?: return@LaunchedEffect
     s.getLayerAs<CircleLayer>(HIGHLIGHT)?.setFilter(eq(get("id"), literal(highlight ?: "")))
+  }
+
+  LaunchedEffect(style, online, imagery, view) {
+    val m = map ?: return@LaunchedEffect
+    val s = style ?: return@LaunchedEffect
+    holdBaseOverSavedImagery(m, s, online, imagery)
   }
 
   // The badges breathe: each arrow nudges along its own heading, further the stronger the water runs (not at slack),
@@ -579,6 +587,29 @@ private const val GRID = "grid"
 private const val GRID_LINES = "grid-lines"
 private const val GRID_LABELS = "grid-labels"
 
+/** The base map's source and layer id in [styleJson]. */
+internal const val BASE = "base"
+
+/** Parent tiles may stand in from any zoom out: MapLibre's own behaviour, for a source not held to its zoom. */
+private const val ANY_PARENT = 24
+
+/**
+ * Without signal, Esri cannot load the tiles for the zoom shown, and MapLibre stretches a coarser one it kept in their
+ * place: blurry, and drawn over our sharper saved imagery under it. So with no signal and a saved atoll in view, the
+ * base keeps to tiles of the zoom shown (those the diver has looked at) and the saved imagery fills the rest. With
+ * signal, or away from saved atolls, a stretched tile is better than none and stays.
+ */
+internal fun holdBaseOverSavedImagery(map: MapLibreMap, style: Style, online: Boolean, imagery: List<ApiBounds>) {
+  val base = style.getSource(BASE) ?: return
+  val v = map.projection.visibleRegion.latLngBounds
+  val held = !online && overlapsAny(v.latitudeSouth, v.longitudeWest, v.latitudeNorth, v.longitudeEast, imagery)
+  base.maxOverscaleFactorForParentTiles = if (held) 0 else ANY_PARENT
+}
+
+/** Whether the box south/west/north/east overlaps any of [boxes]. */
+internal fun overlapsAny(south: Double, west: Double, north: Double, east: Double, boxes: List<ApiBounds>): Boolean =
+  boxes.any { it.south < north && it.north > south && it.west < east && it.east > west }
+
 /** One raster source and its layer in the style. */
 private data class Raster(
   val id: String,
@@ -631,14 +662,14 @@ internal fun styleJson(
     when (baseMap) {
       BaseMap.Satellite ->
         Raster(
-          "base",
+          BASE,
           "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
           "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community",
           18,
         )
       BaseMap.Street ->
         Raster(
-          "base",
+          BASE,
           "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
           "© <a href=\\\"https://www.openstreetmap.org/copyright\\\">OpenStreetMap</a> contributors",
           19,

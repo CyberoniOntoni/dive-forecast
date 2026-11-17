@@ -15,7 +15,10 @@ import app.fiftybar.divecurrent.domain.Glance
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.domain.glanceRank
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -100,30 +103,45 @@ class MapViewModel(private val repository: DataRepository, private val offline: 
     // Saved weeks move on with the clock, signal or not.
     lastSites?.let { sites -> _state.update { withRows(it, sites, lastNowcast) } }
     val wall = _state.value.maldivesWall ?: return
-    if (!_state.value.loading && wall.take(13) < MaldivesTime.nowHour(nowMs).take(13)) refresh()
+    if (!_state.value.loading && isEarlierHour(wall, nowMs)) refresh()
   }
 
-  /** The phone has a network again (any thread): refresh if the last load failed, so the offline copy gives way. */
+  private var networkBack: Job? = null
+
+  /**
+   * The phone reaches the internet again: refresh if the last load failed, so the offline copy gives way. A first try
+   * can still fail (the network up a moment before its names resolve), so a failed one is tried again a little later.
+   */
   fun onNetworkBack() {
-    viewModelScope.launch {
-      val s = _state.value
-      if (s.error != null && !s.loading) refresh()
-    }
+    networkBack?.cancel()
+    networkBack =
+      viewModelScope.launch {
+        for (wait in NETWORK_BACK_TRIES_MS) {
+          delay(wait)
+          val s = _state.value
+          if (s.error == null) return@launch
+          if (!s.loading) load()
+        }
+      }
   }
 
   fun refresh() {
-    viewModelScope.launch {
-      _state.update { it.copy(loading = true) }
-      val sitesJob = async { runCatching { repository.sites() } }
-      val nowcastJob = async { runCatching { repository.nowcast() } }
-      val sites = sitesJob.await()
-      val nowcast = nowcastJob.await()
-      sites.getOrNull()?.let { lastSites = it.value }
-      nowcast.getOrNull()?.let { lastNowcast = it.value }
-      _state.update { current -> next(current, sites, nowcast) }
-      // Signal: a good moment to bring saved atolls up to date.
-      if (nowcast.getOrNull()?.fromCache == false) offline?.refreshStale()
-    }
+    viewModelScope.launch { load() }
+  }
+
+  private suspend fun load() {
+    _state.update { it.copy(loading = true) }
+    val (sites, nowcast) =
+      coroutineScope {
+        val sitesJob = async { runCatching { repository.sites() } }
+        val nowcastJob = async { runCatching { repository.nowcast() } }
+        sitesJob.await() to nowcastJob.await()
+      }
+    sites.getOrNull()?.let { lastSites = it.value }
+    nowcast.getOrNull()?.let { lastNowcast = it.value }
+    _state.update { current -> next(current, sites, nowcast) }
+    // Signal: a good moment to bring saved atolls up to date.
+    if (nowcast.getOrNull()?.fromCache == false) offline?.refreshStale()
   }
 
   private fun next(
@@ -150,10 +168,23 @@ class MapViewModel(private val repository: DataRepository, private val offline: 
   }
 
   companion object {
+    /** Tries after the network comes back: at once, then twice more while the load keeps failing. */
+    private val NETWORK_BACK_TRIES_MS = listOf(0L, 4_000L, 15_000L)
+
     /** The nowcast's wall time when it is for an earlier Maldives hour than [nowMs]; null when it is current. */
     fun outdated(nowcast: ApiNowcast?, nowMs: Long = System.currentTimeMillis()): String? {
       val wall = nowcast?.maldivesWall ?: return null
-      return if (wall.take(13) < MaldivesTime.nowHour(nowMs).take(13)) wall else null
+      return if (isEarlierHour(wall, nowMs)) wall else null
+    }
+
+    /**
+     * Whether the map fetched at [wall] is for an earlier hour than the clock's. The map is for the hour nearest
+     * [wall] (the server's nearestForecastHour), so one fetched at 20:59 is the 21:00 map and still current at 21:00;
+     * one fetched at 20:12 is the 20:00 map and runs out at 21:00.
+     */
+    private fun isEarlierHour(wall: String, nowMs: Long): Boolean {
+      val shown = MaldivesTime.nearestHourOf(wall) ?: wall
+      return shown.take(13) < MaldivesTime.nowHour(nowMs).take(13)
     }
 
     /**
