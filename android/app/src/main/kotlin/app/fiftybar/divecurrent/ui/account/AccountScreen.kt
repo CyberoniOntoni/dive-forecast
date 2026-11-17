@@ -133,7 +133,13 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(onBack: () -> Unit, onPlans: () -> Unit, onScoreboard: () -> Unit, onMyPage: (String) -> Unit) {
+fun AccountScreen(
+  onBack: (() -> Unit)?,
+  onSignedOut: () -> Unit,
+  onPlans: () -> Unit,
+  onScoreboard: () -> Unit,
+  onMyPage: (String) -> Unit,
+) {
   val account = appAccount()
   val viewModel: AccountViewModel = viewModel { AccountViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -142,14 +148,14 @@ fun AccountScreen(onBack: () -> Unit, onPlans: () -> Unit, onScoreboard: () -> U
   var confirmEverywhere by remember { mutableStateOf(false) }
 
   // Signed out here, everywhere, or by the server: nothing left to show.
-  LaunchedEffect(session) { if (session == null) onBack() }
+  LaunchedEffect(session) { if (session == null) onSignedOut() }
 
   Scaffold(
     containerColor = colors.ink,
     topBar = {
       TopAppBar(
         title = { Text(session?.nickname ?: "Account") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+        navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
     },

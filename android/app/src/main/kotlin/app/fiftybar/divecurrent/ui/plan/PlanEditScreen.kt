@@ -1,6 +1,7 @@
 package app.fiftybar.divecurrent.ui.plan
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -252,7 +253,8 @@ private fun DayEditor(
   var pickDate by rememberSaveable(day.key) { mutableStateOf(false) }
   Card(
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = colors.glass, contentColor = colors.foam),
+    colors = CardDefaults.cardColors(containerColor = colors.deep, contentColor = colors.foam),
+    border = BorderStroke(1.dp, colors.line),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

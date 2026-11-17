@@ -40,7 +40,7 @@ import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 /** Sign in with an emailed code, as on the web. Goes back where it came from once signed in. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignInScreen(onDone: () -> Unit, onBack: () -> Unit) {
+fun SignInScreen(onDone: () -> Unit, onBack: (() -> Unit)?, onScoreboard: (() -> Unit)? = null) {
   val account = appAccount()
   val viewModel: SignInViewModel = viewModel { SignInViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -53,7 +53,7 @@ fun SignInScreen(onDone: () -> Unit, onBack: () -> Unit) {
     topBar = {
       TopAppBar(
         title = { Text("Sign in") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+        navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
     },
@@ -132,6 +132,10 @@ fun SignInScreen(onDone: () -> Unit, onBack: () -> Unit) {
         }
       }
       state.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
+      // As the You tab, signed out: the scoreboard is open to everyone, so it stays one tap away.
+      onScoreboard?.let { open ->
+        TextButton(onClick = open, modifier = Modifier.heightIn(min = 48.dp)) { Text("See the scoreboard") }
+      }
     }
   }
 }
