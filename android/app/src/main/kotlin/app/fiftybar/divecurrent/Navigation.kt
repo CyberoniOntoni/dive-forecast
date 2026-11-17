@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent
 
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import app.fiftybar.divecurrent.data.api.ApiSite
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -88,6 +89,8 @@ fun MainNavigation(startPlanId: String? = null) {
     // The map is drawn once, under every screen, rather than as the stack's first entry: it stays alive (no reload on
     // the way back) and shows through a site page pulled down to it. Its entry in the stack draws nothing.
     Box(Modifier.fillMaxSize().padding(barPadding).consumeWindowInsets(barPadding)) {
+    // Covered, the map's search, chips and list are out of TalkBack's reach: only the screen on top is there.
+    Box(if (backStack.lastOrNull() != MapKey) Modifier.fillMaxSize().clearAndSetSemantics {} else Modifier.fillMaxSize()) {
     MapScreen(
       onOpenSite = { id -> backStack.add(SiteKey(id)) },
       onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
@@ -97,6 +100,7 @@ fun MainNavigation(startPlanId: String? = null) {
       peekSite = peekOnMap,
       covered = backStack.lastOrNull() != MapKey,
     )
+    }
     NavDisplay(
       backStack = backStack,
       modifier = Modifier.fillMaxSize(),

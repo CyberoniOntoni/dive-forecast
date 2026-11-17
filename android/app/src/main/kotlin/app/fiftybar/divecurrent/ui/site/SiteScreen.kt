@@ -187,6 +187,8 @@ fun SiteScreen(
       if (site != null) {
         Row(
           Modifier.fillMaxWidth()
+            // Holds still through the pull, then leaves with the page as it slides away to the map.
+            .graphicsLayer { translationY = (pull.offset - pull.threshold * PULL_STRETCH).coerceAtLeast(0f) }
             .background(colors.ink)
             .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
@@ -562,7 +564,7 @@ internal fun rememberMapPull(enabled: Boolean, reducedMotion: Boolean, onStart: 
             if (!on || source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
             val before = pull.offset
             begin()
-            val after = (before + available.y * 0.5f).coerceAtMost(threshold * 1.6f)
+            val after = (before + available.y * 0.5f).coerceAtMost(threshold * PULL_STRETCH)
             if (before < threshold && after >= threshold) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             pull.offset = after
             return Offset(0f, available.y)
@@ -619,3 +621,6 @@ private fun PullHint(pull: MapPull, modifier: Modifier = Modifier) {
 
 /** How far the page is pulled down before letting go opens the map. */
 private val PULL_TO_MAP = 96.dp
+
+/** How far past [PULL_TO_MAP] the page can be dragged, as a multiple of it. */
+private const val PULL_STRETCH = 1.6f
