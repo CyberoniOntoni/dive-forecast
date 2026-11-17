@@ -359,7 +359,8 @@ private fun StopEditor(
     )
   }
   if (pickTime) {
-    PlanTimeDialog(
+    ClockDialog(
+      title = "Time in the water, Maldives time",
       initial = runCatching { LocalTime.parse(stop.time) }.getOrElse { LocalTime.of(9, 0) },
       onPicked = { time ->
         pickTime = false
@@ -442,7 +443,3 @@ private fun PlanDateDialog(initial: LocalDate, years: IntRange, onPicked: (Local
     DatePicker(state = picker, title = { Text("Day of the dives", Modifier.padding(start = 24.dp, top = 16.dp)) })
   }
 }
-
-@Composable
-private fun PlanTimeDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit, onDismiss: () -> Unit) =
-  ClockDialog("Time in the water, Maldives time", initial, onPicked, onDismiss)

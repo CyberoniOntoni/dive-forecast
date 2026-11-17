@@ -16,13 +16,11 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import app.fiftybar.divecurrent.ui.components.ClockDialog
 import app.fiftybar.divecurrent.data.api.ApiRecentReport
 import app.fiftybar.divecurrent.domain.ReportTime
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import java.time.LocalDate
-import java.time.LocalTime
 
 private const val DAY_MS = 24L * 60 * 60 * 1000
 
@@ -60,10 +58,6 @@ internal fun ReportDateDialog(initial: LocalDate, onPicked: (LocalDate) -> Unit,
     DatePicker(state = picker, title = { Text("Day of the dive", Modifier.padding(start = 24.dp, top = 16.dp)) })
   }
 }
-
-@Composable
-internal fun ReportClockDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit, onDismiss: () -> Unit) =
-  ClockDialog("Time in the water, Maldives time", initial, onPicked, onDismiss)
 
 /** Divers' newest reports, as the site page lists them, with what the forecast said at that hour. */
 @Composable

@@ -28,7 +28,7 @@ import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import java.time.LocalTime
 
 /**
- * A 24-hour clock in a dialog: the dive time on a plan and on a report.
+ * A 24-hour clock in a full-width dialog: the dive time on a plan and on a report.
  *
  * The stock TimePicker draws its hour and minute in displayLarge inside fixed 96 x 80 dp boxes. Tideline's
  * displayLarge is 84 sp (the site page's answer), which does not fit there: the digits were cut to slivers of "0".
@@ -44,7 +44,14 @@ fun ClockDialog(title: String, initial: LocalTime, onPicked: (LocalTime) -> Unit
   MaterialTheme(typography = type.copy(displayLarge = type.displayLarge.copy(fontSize = 57.sp, lineHeight = 64.sp, letterSpacing = 0.sp))) {
     // Not the platform's narrow dialog width: the clock face alone is 256 dp, plus its padding.
     BasicAlertDialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false), modifier = Modifier.padding(16.dp)) {
-      Surface(shape = RoundedCornerShape(28.dp), color = colors.deep, contentColor = colors.foam, border = BorderStroke(1.dp, colors.line)) {
+      // As wide as the screen allows (the dialog caps it at 560 dp), the clock centred in it.
+      Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = colors.deep,
+        contentColor = colors.foam,
+        border = BorderStroke(1.dp, colors.line),
+        modifier = Modifier.fillMaxWidth(),
+      ) {
         // Scrolls on a short screen rather than cutting off Done.
         Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
           Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.fillMaxWidth().padding(bottom = 20.dp))
