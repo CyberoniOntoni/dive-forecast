@@ -30,6 +30,8 @@ from rasterio.windows import Window, from_bounds
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 STAC = "https://earth-search.aws.element84.com/v1/search"
 SCENES_PER_TILE = 8
+# Rows of a composite worked on at once: 8 scenes x 1024 rows x a full 10,980-pixel tile is about 1 GB.
+STRIP_ROWS = 1024
 # Scene classification values left out of the median: no data, saturated, cloud shadow, cloud, cirrus.
 MASKED = [0, 1, 3, 8, 9, 10]
 PAD_DEG = 0.03
@@ -74,32 +76,37 @@ def composite(work):
             continue
         south, west, north, east = box
         for tile, features in sorted(scenes(box).items()):
-            stack, profile, shape = [], None, None
-            for feature in features:
-                with rasterio.open(feature["assets"]["visual"]["href"]) as src:
-                    bounds = transform_bounds("EPSG:4326", src.crs, west, south, east, north)
-                    win = from_bounds(*bounds, transform=src.transform).round_offsets().round_lengths()
-                    win = win.intersection(Window(0, 0, src.width, src.height))
-                    rgb = src.read(window=win).astype(np.float32)
-                    win_bounds = src.window_bounds(win)
-                    if profile is None:
-                        shape = (win.height, win.width)
-                        profile = src.profile.copy()
-                        profile.update(width=win.width, height=win.height, transform=src.window_transform(win), driver="GTiff",
-                                       compress="deflate", tiled=True, count=3, nodata=0)
-                with rasterio.open(feature["assets"]["scl"]["href"]) as scl_src:
-                    scl = scl_src.read(1, window=from_bounds(*win_bounds, transform=scl_src.transform), out_shape=shape,
-                                       resampling=Resampling.nearest, boundless=True, fill_value=0)
-                rgb = rgb[:, : shape[0], : shape[1]]
-                rgb[:, np.isin(scl, MASKED) | (rgb.sum(0) == 0)] = np.nan
-                stack.append(rgb)
-                years.add(feature["properties"]["datetime"][:4])
-            with np.errstate(all="ignore"):
-                median = np.nanmedian(np.stack(stack), axis=0)
-            out = np.nan_to_num(median, nan=0).clip(0, 255).astype(np.uint8)
-            with rasterio.open(os.path.join(work, f"{way}-{tile}.tif"), "w", **profile) as dst:
-                dst.write(out)
-            print(way, tile, len(stack), "scenes", flush=True)
+            # Scenes of one MGRS tile share its grid, so the first one sets the window.
+            with rasterio.open(features[0]["assets"]["visual"]["href"]) as src:
+                bounds = transform_bounds("EPSG:4326", src.crs, west, south, east, north)
+                win = from_bounds(*bounds, transform=src.transform).round_offsets().round_lengths()
+                win = win.intersection(Window(0, 0, src.width, src.height))
+                profile = src.profile.copy()
+                profile.update(width=win.width, height=win.height, transform=src.window_transform(win), driver="GTiff",
+                               compress="deflate", tiled=True, count=3, nodata=0)
+            path = os.path.join(work, f"{way}-{tile}.tif")
+            # In strips of rows: a big atoll's eight full scenes would not fit in memory at once.
+            with rasterio.open(path + ".part", "w", **profile) as dst:
+                for row in range(0, win.height, STRIP_ROWS):
+                    strip = Window(win.col_off, win.row_off + row, win.width, min(STRIP_ROWS, win.height - row))
+                    stack = []
+                    for feature in features:
+                        with rasterio.open(feature["assets"]["visual"]["href"]) as src:
+                            rgb = src.read(window=strip, boundless=True, fill_value=0).astype(np.float32)
+                            strip_bounds = src.window_bounds(strip)
+                        with rasterio.open(feature["assets"]["scl"]["href"]) as scl_src:
+                            scl = scl_src.read(1, window=from_bounds(*strip_bounds, transform=scl_src.transform),
+                                               out_shape=rgb.shape[1:], resampling=Resampling.nearest, boundless=True,
+                                               fill_value=0)
+                        rgb[:, np.isin(scl, MASKED) | (rgb.sum(0) == 0)] = np.nan
+                        stack.append(rgb)
+                    with np.errstate(all="ignore"):
+                        median = np.nanmedian(np.stack(stack), axis=0)
+                    out = np.nan_to_num(median, nan=0).clip(0, 255).astype(np.uint8)
+                    dst.write(out, window=Window(0, row, win.width, strip.height))
+            os.replace(path + ".part", path)
+            years.update(feature["properties"]["datetime"][:4] for feature in features)
+            print(way, tile, len(features), "scenes", flush=True)
         open(done, "w").close()
     print("years", sorted(years))
 
