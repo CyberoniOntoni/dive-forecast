@@ -6,7 +6,7 @@ import { localPath } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Sign in · Dive current" };
+export const metadata: Metadata = { title: "Sign in · 50bar" };
 
 function text(value: string | string[] | undefined): string {
   return typeof value === "string" ? value : "";
