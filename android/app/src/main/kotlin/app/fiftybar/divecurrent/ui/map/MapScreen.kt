@@ -135,7 +135,11 @@ fun MapScreen(
   val savedAreas by offline.areas.collectAsStateWithLifecycle()
   val saving by offline.saving.collectAsStateWithLifecycle()
   val saveErrors by offline.errors.collectAsStateWithLifecycle()
-  val offlineChoice = OfflineChoice(savedAreas, saving, saveErrors, onSave = { offline.save(it) }, onRemove = offline::remove)
+  // Remembered, so the top bar is not composed again for a new but equal value on every frame.
+  val offlineChoice =
+    remember(offline, savedAreas, saving, saveErrors) {
+      OfflineChoice(savedAreas, saving, saveErrors, onSave = { offline.save(it) }, onRemove = offline::remove)
+    }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val shelter: ShelterViewModel = viewModel { ShelterViewModel(repository) }
   val shelterState by shelter.state.collectAsStateWithLifecycle()
@@ -689,13 +693,15 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
             Column {
               Text(
                 when {
-                  share != null -> "Saving for offline… ${(share * 100).toInt()} %"
+                  share != null -> "Saving for offline… ${(share * 100).toInt()}%"
                   area != null -> "Update offline copy"
                   else -> "Save ${chosen.name} for offline"
                 }
               )
               Text(
-                offline.line(chosen.id) ?: "Forecasts, site pages and reef shapes, for use without signal",
+                // While saving, the title already says how far it is.
+                if (share != null) "Goes on if you leave the map"
+                else offline.line(chosen.id) ?: "Forecasts, site pages and reef shapes, for use without signal",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.mist,
               )
@@ -799,9 +805,9 @@ private data class OfflineChoice(
   val onSave: (String) -> Unit,
   val onRemove: (String) -> Unit,
 ) {
-  /** "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40 %", or the last failure; null when never saved. */
+  /** "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure; null when never saved. */
   fun line(atollId: String): String? {
-    saving[atollId]?.let { return "Saving for offline… ${(it * 100).toInt()} %" }
+    saving[atollId]?.let { return "Saving for offline… ${(it * 100).toInt()}%" }
     errors[atollId]?.let { return it }
     val area = saved[atollId] ?: return null
     return buildString {

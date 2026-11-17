@@ -106,7 +106,8 @@ class OfflineAreas(
   suspend fun savedForecasts(): Map<String, ApiForecast> {
     read.await()
     val ids = _areas.value.values.flatMap { it.siteIds }.distinct()
-    return ids.mapNotNull { id -> repository.cachedForecast(id)?.value?.let { id to it } }.toMap()
+    // A hundred weeks of hours to decode: off the main thread the map calls this from.
+    return withContext(Dispatchers.Default) { ids.mapNotNull { id -> repository.cachedForecast(id)?.value?.let { id to it } }.toMap() }
   }
 
   private suspend fun run(atollId: String, quiet: Boolean) {
@@ -193,8 +194,9 @@ class OfflineAreas(
   private suspend fun update(change: (Map<String, SavedArea>) -> Map<String, SavedArea>) {
     writing.withLock {
       val next = change(_areas.value)
-      _areas.value = next
+      // On disk first: whoever sees the new list can count on it being there after a restart.
       withContext(Dispatchers.IO) { writeFile(next.values.toList()) }
+      _areas.value = next
     }
   }
 
