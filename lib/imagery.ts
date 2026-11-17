@@ -47,7 +47,8 @@ export async function readImageryTile(tile: { z: number; x: number; y: number })
     return object ? new Uint8Array(await object.arrayBuffer()) : null;
   }
   try {
-    return new Uint8Array(await fs.readFile(path.join(imageryDir(), key(tile).slice("imagery/".length))));
+    const file = path.join(/*turbopackIgnore: true*/ imageryDir(), `${IMAGERY_VERSION}/${tile.z}/${tile.x}/${tile.y}.webp`);
+    return new Uint8Array(await fs.readFile(/*turbopackIgnore: true*/ file));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw error;

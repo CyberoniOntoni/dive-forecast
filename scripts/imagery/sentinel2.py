@@ -120,6 +120,8 @@ def tile_xy(lat, lon, z):
 
 def tiles(work, out):
     sources = [rasterio.open(path) for path in sorted(glob.glob(os.path.join(work, "*.tif")))]
+    # Each composite's box in Web Mercator, so a tile only reads the few that reach it.
+    reach = [transform_bounds(src.crs, "EPSG:3857", *src.bounds) for src in sources]
     boxes = [box for _, box in atoll_boxes()]
     wanted = set()
     for south, west, north, east in boxes:
@@ -134,7 +136,10 @@ def tiles(work, out):
             continue
         transform = transform_from_bounds(*tile_bounds_3857(MAX_ZOOM, x, y), TILE, TILE)
         pixels = np.zeros((3, TILE, TILE), np.uint8)
-        for src in sources:
+        west, south, east, north = tile_bounds_3857(MAX_ZOOM, x, y)
+        for src, (w, s_, e, n) in zip(sources, reach):
+            if w > east or e < west or s_ > north or n < south:
+                continue
             part = np.zeros((3, TILE, TILE), np.uint8)
             reproject(rasterio.band(src, [1, 2, 3]), part, src_transform=src.transform, src_crs=src.crs, dst_transform=transform,
                       dst_crs="EPSG:3857", resampling=Resampling.bilinear, src_nodata=0, dst_nodata=0)
