@@ -18,9 +18,14 @@ What it does:
   Satellite (Esri World Imagery) or OpenStreetMap base. Tap an arrow to open the site.
 - **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with the web's search (every word starts a word of the site's or atoll's name; `domain/SiteSearch.kt`) and its atoll
   picker, which also moves the map to that atoll.
-- **Site page**: a slider over the week, opened on the current Maldives hour; strength bars, residual tide and sea
-  state for every hour; the hour's direction, strength, confidence and sea state; the server's `notice` and `siteNote`;
-  depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
+- **Site page** (`ui/site/SiteHero.kt`, `SiteForecast.kt`, `domain/SiteOutlook.kt`), opened on the current Maldives
+  hour: a satellite header round the pin (Esri World Imagery tiles at zoom 16) with faint streaks drifting the way the
+  hour's water runs; the hour's strength in its colour, the arrow on a compass (it swings to a new heading), the way
+  and a confidence meter; beside it the tide (rising or falling, next high or low, read from the hours' residual sea
+  level) and when the flow next changes. Day chips over a 24-hour chart: bars for the flow and the residual tide as a
+  line with its highs and lows, a sea-state band under them; tap or drag to pick an hour (TalkBack can step it). Sea,
+  swell and wind as tiles; "Report current" and "Go by boat" stay at the bottom. Motion stops when the phone's
+  animations are off. Then the server's `notice` and `siteNote`; depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
   not `?at=`, which on the web only fills the report form's dive time).
 - **Sign-in and reports**: the web's email-code sign-in (a new diver picks a nickname) gives the app its own token
   (`POST /api/v1/sign-in/token`), kept in shared prefs file `session`, out of backups. On a site page, "Report the
@@ -117,7 +122,7 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
 | `ui/map/`, `domain/AtlasOverlay.kt`, `domain/CoordinateGrid.kt`, `domain/ShelterField.kt` | MapLibre map, now list, layers (Atlas, depth, grid, sheltered water) |
-| `ui/site/`, `domain/NewSite.kt` | Site page, hour strip, report form, recent reports, reviews, adding a site |
+| `ui/site/`, `domain/NewSite.kt` | Site page, day chart, report form, recent reports, reviews, adding a site |
 | `ui/account/` | Sign-in and account (About me, nickname, badges) |
 | `ui/scoreboard/` | Scoreboard and divers' public pages |
 | `ui/plan/`, `domain/PlanLink.kt` | Plan pages, my plans, reading a plan id from a link |
