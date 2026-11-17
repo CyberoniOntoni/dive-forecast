@@ -44,7 +44,7 @@
     "@opennextjs/cloudflare": "^1.20.14",
     "leaflet": "^1.9.4",
     "leaflet.markercluster": "^1.5.3",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -57,7 +57,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^10.13.0",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "pbf": "^4.0.2",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
