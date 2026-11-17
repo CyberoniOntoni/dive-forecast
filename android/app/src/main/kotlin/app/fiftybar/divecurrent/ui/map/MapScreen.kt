@@ -5,6 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.selection.selectable
@@ -172,7 +175,8 @@ fun MapScreen(
 
   // The search pill and atoll chip float over the map and over the list; the list stops below them.
   BoxWithConstraints(Modifier.fillMaxSize()) {
-  val sheetMax = maxHeight - TOP_BAR_ROOM
+  // The pill and chip sit under the status bar, so the list stops below both.
+  val sheetMax = maxHeight - TOP_BAR_ROOM - WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
   BottomSheetScaffold(
     scaffoldState = scaffold,
     sheetPeekHeight = 148.dp,
@@ -183,7 +187,7 @@ fun MapScreen(
       NowList(
         state = state,
         rows = shown,
-        total = inAtoll.size,
+        total = state.rows.size,
         counts = counts,
         strength = strength,
         onStrength = { strength = if (strength == it) null else it },
@@ -355,7 +359,7 @@ private fun NowList(
           text =
             when {
               state.outdatedWall != null -> "No current hour offline"
-              state.maldivesWall != null -> "Now · ${MaldivesTime.clock(state.maldivesWall)}"
+              state.maldivesWall != null -> "Now · ${MaldivesTime.label(state.maldivesWall)}"
               else -> "Now"
             },
           style = MaterialTheme.typography.titleLarge,
@@ -589,7 +593,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
 }
 
 /** Room the floating search pill and atoll chip take under the status bar. */
-private val TOP_BAR_ROOM = 120.dp
+private val TOP_BAR_ROOM = 128.dp
 
 /** Two stacked sheets: the layers button. */
 private val LayersIcon: ImageVector by lazy {

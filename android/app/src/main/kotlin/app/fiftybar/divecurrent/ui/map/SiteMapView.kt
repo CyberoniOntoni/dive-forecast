@@ -266,7 +266,7 @@ fun SiteMapView(
         if (frame++ % 2 == 0L) {
           val nudge = 3.5f * (0.5f - 0.5f * cos(t * 2f * PI.toFloat() / 1.6f))
           arrows.setProperties(
-            iconOffset(interpolate(linear(), get("speed"), stop(0, literal(arrayOf(0f, 0f))), stop(1, literal(arrayOf(0f, -nudge)))))
+            iconOffset(interpolate(linear(), get("nudge"), stop(0, literal(arrayOf(0f, 0f))), stop(1, literal(arrayOf(0f, -nudge)))))
           )
         }
       }
@@ -400,9 +400,10 @@ private fun features(rows: List<SiteRow>): FeatureCollection =
         addNumberProperty("bearing", g?.arrowBearing ?: 0.0)
         addNumberProperty("opacity", g?.opacity ?: 0.9f)
         addStringProperty("tone", g?.tone?.name?.lowercase() ?: "none")
-        // How far the arrow nudges: the day chart's strength scale, none at slack.
-        addNumberProperty("speed", g?.strength?.takeIf { it != Strength.Slack }?.let(::strengthLevel) ?: 0f)
-        addBooleanProperty("pulse", g?.strength == Strength.TooStrong)
+        // How far the arrow nudges, 0 to 1: the day chart's strength scale, none at slack.
+        addNumberProperty("nudge", g?.strength?.takeIf { it != Strength.Slack }?.let(::strengthLevel) ?: 0f)
+        // The ring follows the server's glance tone, as the badge's colour does.
+        addBooleanProperty("pulse", g?.tone == GlanceTone.Stop)
       }
     }
   )
