@@ -533,10 +533,14 @@ working, and no web cookie is set. A refusal is 400 with the web form's words ("
 `GET /api/v1/me` also carries what the web's account page shows: `about`, `ratings`, `reportSites`, `atolls`, every
 badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxChars`.
 
+## Map layers
+
+The app's map has every web map layer. The Allen Coral Atlas overlays (reef outline, reef zones, bottom types) read the
+same static tiles the web map does, `/overlays/<folder>/index.json` and its tiles (lib/atlas-overlays.ts), which are
+files on the server rather than API endpoints; the depth layers come straight from OpenSeaMap's and GEBCO's WMS, as on
+the web.
+
 ## Next (not built yet)
 
-The app's map has every web map layer now. The Allen Coral Atlas overlays (reef outline, reef zones, bottom types) read
-the same static tiles the web map does, `/overlays/<folder>/index.json` and its tiles (lib/atlas-overlays.ts), which are
-files on the server rather than API endpoints; the depth layers come straight from OpenSeaMap's and GEBCO's WMS, as on
-the web. Still web-only: a dive plan day's map, and the atoll picker on the map's site list. New web features come with
-their own section here.
+Still web-only: a dive plan day's map, and the atoll picker on the map's site list. New web features come with their
+own section here.

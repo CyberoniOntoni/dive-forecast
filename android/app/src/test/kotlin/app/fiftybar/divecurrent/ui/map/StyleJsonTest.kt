@@ -28,14 +28,14 @@ class StyleJsonTest {
   }
 
   @Test
-  fun `no base leaves the background, and the depth layers sit under the seamarks`() {
+  fun `no base leaves the background, and the rasters stack as the web tile pane: seamarks, depth shading, sonar, contours`() {
     val style = parse(styleJson(BaseMap.None, MapOverlay.entries.toSet(), background = "#07151d"))
-    assertEquals(listOf("background", "depthShading", "depthContours", "sonarDepths", "seamarks"), layerIds(style))
+    assertEquals(listOf("background", "seamarks", "depthShading", "sonarDepths", "depthContours"), layerIds(style))
     assertEquals("#07151d", style["layers"]!!.jsonArray[0].jsonObject["paint"]!!.jsonObject["background-color"]!!.jsonPrimitive.content)
     val shading = style["sources"]!!.jsonObject["depthShading"]!!.jsonObject
     val tiles = shading["tiles"]!!.jsonArray[0].jsonPrimitive.content
     assertTrue(tiles.contains("LAYERS=gebco2021:gebco_2021") && tiles.contains("BBOX={bbox-epsg-3857}"))
     assertTrue(shading["attribution"]!!.jsonPrimitive.content.contains("GEBCO"))
-    assertEquals("0.8", style["layers"]!!.jsonArray[1].jsonObject["paint"]!!.jsonObject["raster-opacity"]!!.jsonPrimitive.content)
+    assertEquals("0.8", style["layers"]!!.jsonArray[2].jsonObject["paint"]!!.jsonObject["raster-opacity"]!!.jsonPrimitive.content)
   }
 }

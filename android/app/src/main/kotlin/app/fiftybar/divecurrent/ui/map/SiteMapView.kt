@@ -174,7 +174,7 @@ fun SiteMapView(
   }
 
   // Only the raster overlays are in the style itself; the rest are drawn on it, so switching them keeps the style.
-  val rasters = layers.overlays.intersect(RASTER_OVERLAYS)
+  val rasters = layers.overlays.intersect(RASTER_ORDER.toSet())
   LaunchedEffect(map, layers.shownBase, rasters, colors) {
     val m = map ?: return@LaunchedEffect
     style = null
@@ -214,8 +214,8 @@ fun SiteMapView(
 }
 
 /**
- * Puts the shading on the style afresh: the 500 m fields first, the 125 m ones over them, all under the seamarks (or
- * the grid and the pins), so a buoy, a grid line or an arrow is never hidden by it.
+ * Puts the shading on the style afresh: the 500 m fields first, the 125 m ones over them, over the raster overlays and
+ * the Atlas shapes and under the grid and the pins, as the web stacks them.
  */
 private fun showShelter(style: Style, shown: MutableList<String>, images: List<ShelterImage>, opacity: Float) {
   shown.forEach { id ->
@@ -223,8 +223,7 @@ private fun showShelter(style: Style, shown: MutableList<String>, images: List<S
     style.removeSource("shelter-source-$id")
   }
   shown.clear()
-  // Under the grid too (its layers sit just under the arrows), so the lines and labels show over the shading.
-  val below = if (style.getLayer(SEAMARKS) != null) SEAMARKS else GRID_LINES
+  val below = drawnUnder(shelterIds = emptyList())
   for (image in images.sortedBy { it.fine }) {
     val corners =
       LatLngQuad(
@@ -243,7 +242,17 @@ private fun showShelter(style: Style, shown: MutableList<String>, images: List<S
   }
 }
 
-private val RASTER_OVERLAYS = setOf(MapOverlay.Seamarks, MapOverlay.DepthShading, MapOverlay.DepthContours, MapOverlay.SonarDepths)
+/**
+ * The raster overlays, bottom to top, as the web's tile pane stacks them (added in its menu order: seamarks, depth
+ * shading, sonar depths, depth contours). They are in the style itself; everything else is drawn over them.
+ */
+private val RASTER_ORDER = listOf(MapOverlay.Seamarks, MapOverlay.DepthShading, MapOverlay.SonarDepths, MapOverlay.DepthContours)
+
+/**
+ * Where a drawn overlay goes, as the web's overlay pane stacks them over every tile layer: the Atlas shapes, then the
+ * sheltered-water shading, then the grid and the pins. Atlas shapes pass the shading on screen, to stay under it.
+ */
+private fun drawnUnder(shelterIds: List<String>): String = shelterIds.firstOrNull()?.let { "shelter-layer-$it" } ?: GRID_LINES
 
 private fun atlasSource(overlay: AtlasOverlay) = "atlas-source-${overlay.folder}"
 
@@ -251,7 +260,8 @@ private fun atlasLayer(overlay: AtlasOverlay) = "atlas-layer-${overlay.folder}"
 
 /**
  * The Atlas shapes, as the web draws them: fills at 55 % in the Atlas's colours, or the reef outline as a line. They
- * sit under the sheltered-water shading, the seamarks and the pins; each feature carries its own colour.
+ * sit over the raster overlays (seamarks included) and under the sheltered-water shading, the grid and the pins; each
+ * feature carries its own colour.
  */
 private fun showAtlas(style: Style, shown: Map<AtlasOverlay, FeatureCollection>, shelterIds: List<String>) {
   for (overlay in AtlasOverlay.entries) {
@@ -270,10 +280,7 @@ private fun showAtlas(style: Style, shown: Map<AtlasOverlay, FeatureCollection>,
     val layer =
       if (overlay.outline) LineLayer(atlasLayer(overlay), atlasSource(overlay)).withProperties(lineColor(toColor(get("color"))), lineWidth(1.5f), lineOpacity(0.9f))
       else FillLayer(atlasLayer(overlay), atlasSource(overlay)).withProperties(fillColor(toColor(get("color"))), fillOpacity(0.55f))
-    val below =
-      shelterIds.firstOrNull()?.let { "shelter-layer-$it" }
-        ?: (if (style.getLayer(SEAMARKS) != null) SEAMARKS else GRID_LINES)
-    style.addLayerBelow(layer, below)
+    style.addLayerBelow(layer, drawnUnder(shelterIds))
   }
 }
 
@@ -282,7 +289,7 @@ private fun gridFeatures(box: MapViewBox): FeatureCollection {
   val lines = CoordinateGrid.lines(box.south, box.west, box.north, box.east)
   val features =
     lines.flatMap { line ->
-      if (line.axis == "lat") {
+      if (line.axis == CoordinateGrid.Axis.Lat) {
         listOf(
           Feature.fromGeometry(LineString.fromLngLats(listOf(Point.fromLngLat(box.west, line.value), Point.fromLngLat(box.east, line.value)))),
           Feature.fromGeometry(Point.fromLngLat(box.west, line.value)).apply {
@@ -449,7 +456,7 @@ private fun wms(base: String, layers: String, version: String): String =
 
 /**
  * A raster style: the map's dark [background] (all that shows under base "None"), the base, then the web's raster
- * overlays that are on in [overlays] (depth shading, depth contours, sonar depths, seamarks), from the same servers as
+ * overlays that are on in [overlays], in the web's order (seamarks, depth shading, sonar depths, depth contours), from the same servers as
  * the web map. Each source's attribution shows behind the map's (i) button. The Atlas overlays, the sheltered-water
  * shading and the grid are drawn on top by SiteMapView.
  */
@@ -473,24 +480,25 @@ internal fun styleJson(baseMap: BaseMap, overlays: Set<MapOverlay> = emptySet(),
       BaseMap.None -> null
     }
   val rasters =
-    listOfNotNull(
-      base,
-      // GEBCO 2021 on a 15 arc-second grid (about 450 m): the shape of the atolls and the deep water, not a pass's sill.
-      Raster(
-        MapOverlay.DepthShading.key,
-        wms("https://geoserver.openseamap.org/geoserver/gwc/service/wms", "gebco2021:gebco_2021", "1.1.1"),
-        "<a href=\\\"https://www.gebco.net/\\\">GEBCO 2021 Grid</a> via OpenSeaMap",
-        18,
-        opacity = 0.8,
-      ).takeIf { MapOverlay.DepthShading in overlays },
-      Raster(MapOverlay.DepthContours.key, wms(DEPTH_WMS, "openseamap:contour2,openseamap:contour", "1.1.0"), OPENSEAMAP, 18)
-        .takeIf { MapOverlay.DepthContours in overlays },
-      // Depths logged by boats that share their sonar tracks. Sparse in the Maldives.
-      Raster(MapOverlay.SonarDepths.key, wms(DEPTH_WMS, "openseamap:tracks_10m", "1.1.0"), OPENSEAMAP, 18)
-        .takeIf { MapOverlay.SonarDepths in overlays },
-      Raster(SEAMARKS, "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", OPENSEAMAP, 18)
-        .takeIf { MapOverlay.Seamarks in overlays },
-    )
+    listOfNotNull(base) +
+      RASTER_ORDER.filter { it in overlays }.map { overlay ->
+        when (overlay) {
+          MapOverlay.Seamarks -> Raster(SEAMARKS, "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", OPENSEAMAP, 18)
+          // GEBCO 2021 on a 15 arc-second grid (about 450 m): the shape of the atolls and the deep water, not a pass's sill.
+          MapOverlay.DepthShading ->
+            Raster(
+              overlay.key,
+              wms("https://geoserver.openseamap.org/geoserver/gwc/service/wms", "gebco2021:gebco_2021", "1.1.1"),
+              "<a href=\\\"https://www.gebco.net/\\\">GEBCO 2021 Grid</a> via OpenSeaMap",
+              18,
+              opacity = 0.8,
+            )
+          // Depths logged by boats that share their sonar tracks. Sparse in the Maldives.
+          MapOverlay.SonarDepths -> Raster(overlay.key, wms(DEPTH_WMS, "openseamap:tracks_10m", "1.1.0"), OPENSEAMAP, 18)
+          MapOverlay.DepthContours -> Raster(overlay.key, wms(DEPTH_WMS, "openseamap:contour2,openseamap:contour", "1.1.0"), OPENSEAMAP, 18)
+          else -> error("${overlay.key} is not a raster overlay")
+        }
+      }
   val sources =
     rasters.joinToString(",\n") {
       """"${it.id}": { "type": "raster", "tiles": ["${it.tiles}"], "tileSize": 256, "maxzoom": ${it.maxZoom}, "attribution": "${it.attribution}" }"""

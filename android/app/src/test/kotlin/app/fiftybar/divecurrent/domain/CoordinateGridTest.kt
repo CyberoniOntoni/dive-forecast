@@ -24,18 +24,18 @@ class CoordinateGridTest {
 
   @Test
   fun `labels in degrees and minutes with the hemisphere`() {
-    assertEquals("4°10′N", CoordinateGrid.label(4 + 10.0 / 60, "lat"))
-    assertEquals("0°36′S", CoordinateGrid.label(-0.6, "lat"))
-    assertEquals("73°30′E", CoordinateGrid.label(73.5, "lon"))
-    assertEquals("0°00′", CoordinateGrid.label(0.0, "lat"))
+    assertEquals("4°10′N", CoordinateGrid.label(4 + 10.0 / 60, CoordinateGrid.Axis.Lat))
+    assertEquals("0°36′S", CoordinateGrid.label(-0.6, CoordinateGrid.Axis.Lat))
+    assertEquals("73°30′E", CoordinateGrid.label(73.5, CoordinateGrid.Axis.Lon))
+    assertEquals("0°00′", CoordinateGrid.label(0.0, CoordinateGrid.Axis.Lat))
   }
 
   @Test
   fun `a view gets its latitude and longitude lines`() {
     // An atoll's width (1.2°): 10′ lines.
     val lines = CoordinateGrid.lines(3.9, 73.0, 4.9, 74.2)
-    assertEquals(listOf("4°00′N", "4°10′N", "4°20′N", "4°30′N", "4°40′N", "4°50′N"), lines.filter { it.axis == "lat" }.map { it.label })
-    val lon = lines.filter { it.axis == "lon" }.map { it.label }
+    assertEquals(listOf("4°00′N", "4°10′N", "4°20′N", "4°30′N", "4°40′N", "4°50′N"), lines.filter { it.axis == CoordinateGrid.Axis.Lat }.map { it.label })
+    val lon = lines.filter { it.axis == CoordinateGrid.Axis.Lon }.map { it.label }
     assertEquals(listOf("73°00′E", "74°10′E"), listOf(lon.first(), lon.last()))
     assertEquals(8, lon.size)
   }

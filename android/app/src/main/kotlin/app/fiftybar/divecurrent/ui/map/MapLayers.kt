@@ -34,9 +34,6 @@ data class MapLayers(
   val base: BaseMap = BaseMap.Satellite,
   val overlays: Set<MapOverlay> = MapOverlay.entries.filter { it.defaultOn }.toSet(),
 ) {
-  val seamarks: Boolean
-    get() = MapOverlay.Seamarks in overlays
-
   val shelter: Boolean
     get() = MapOverlay.Shelter in overlays
 
