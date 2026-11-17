@@ -11,4 +11,4 @@ The digits are Space Grotesk Bold (OFL, `android/licenses/`) converted to outlin
 | `../components/BrandMark.tsx` | Mark in the web header. |
 | `../android/app/src/main/res/drawable/ic_launcher_*.xml` | Android adaptive icon: background (sky and sea), foreground (digits and wave), monochrome (themed icon). |
 
-All of them share the same paths: change the master and regenerate the rest together, so the wave lines up between the background and foreground layers.
+The web icons, the header mark and the Android background and foreground share the master's paths exactly, so the wave lines up between the two Android layers. The monochrome layer is the one deliberate exception: its digit clips are moved 1.9 units off the wave (to 53.6 above, 57.4 below) and its wave stroke is 1.0 instead of 1.3, so the gap keeps the shifted digits readable in one colour. Change the master and regenerate the rest together.
