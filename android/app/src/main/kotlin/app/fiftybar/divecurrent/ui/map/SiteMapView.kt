@@ -175,11 +175,11 @@ fun SiteMapView(
 
   // Only the raster overlays are in the style itself; the rest are drawn on it, so switching them keeps the style.
   val rasters = layers.overlays.intersect(RASTER_OVERLAYS)
-  LaunchedEffect(map, layers.base, rasters, colors) {
+  LaunchedEffect(map, layers.shownBase, rasters, colors) {
     val m = map ?: return@LaunchedEffect
     style = null
     val background = String.format(Locale.ROOT, "#%06x", colors.ink.toArgb() and 0xFFFFFF)
-    m.setStyle(Style.Builder().fromJson(styleJson(layers.base, rasters, background))) { loaded ->
+    m.setStyle(Style.Builder().fromJson(styleJson(layers.shownBase, rasters, background))) { loaded ->
       addSiteLayers(context, loaded, colors)
       shelterIds.clear()
       style = loaded
@@ -215,7 +215,7 @@ fun SiteMapView(
 
 /**
  * Puts the shading on the style afresh: the 500 m fields first, the 125 m ones over them, all under the seamarks (or
- * the pins), so a buoy or an arrow is never hidden by it.
+ * the grid and the pins), so a buoy, a grid line or an arrow is never hidden by it.
  */
 private fun showShelter(style: Style, shown: MutableList<String>, images: List<ShelterImage>, opacity: Float) {
   shown.forEach { id ->
@@ -223,7 +223,8 @@ private fun showShelter(style: Style, shown: MutableList<String>, images: List<S
     style.removeSource("shelter-source-$id")
   }
   shown.clear()
-  val below = if (style.getLayer(SEAMARKS) != null) SEAMARKS else ARROWS
+  // Under the grid too (its layers sit just under the arrows), so the lines and labels show over the shading.
+  val below = if (style.getLayer(SEAMARKS) != null) SEAMARKS else GRID_LINES
   for (image in images.sortedBy { it.fine }) {
     val corners =
       LatLngQuad(

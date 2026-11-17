@@ -13,10 +13,11 @@ data class AtlasClass(val name: String, val color: String)
 /**
  * The Allen Coral Atlas overlays, as the web's lib/atlas-overlays.ts: static tiles under public/overlays/ on the app's
  * server (npm run atlas-overlays), each folder with an index.json. Drawn from [minZoom]; below it too many tiles would
- * load at once.
+ * load at once. [minZoom] is MapLibre's: its tiles are twice Leaflet's, so it is one less than the web's (10, 11, 12)
+ * for the same scale on screen.
  */
 enum class AtlasOverlay(val title: String, val folder: String, val classes: List<AtlasClass>, val outline: Boolean, val minZoom: Double) {
-  ReefOutline("Reef outline", "reef-outline", listOf(AtlasClass("Reef", "#ffd166")), outline = true, minZoom = 10.0),
+  ReefOutline("Reef outline", "reef-outline", listOf(AtlasClass("Reef", "#ffd166")), outline = true, minZoom = 9.0),
   ReefZones(
     "Reef zones",
     "reef-zones",
@@ -32,7 +33,7 @@ enum class AtlasOverlay(val title: String, val folder: String, val classes: List
       AtlasClass("Deep Lagoon", "#2ca2f9"),
     ),
     outline = false,
-    minZoom = 11.0,
+    minZoom = 10.0,
   ),
   BottomTypes(
     "Bottom types",
@@ -46,7 +47,7 @@ enum class AtlasOverlay(val title: String, val folder: String, val classes: List
       AtlasClass("Microalgal Mats", "#9bcc4f"),
     ),
     outline = false,
-    minZoom = 12.0,
+    minZoom = 11.0,
   );
 
   companion object {

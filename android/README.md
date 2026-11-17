@@ -43,7 +43,8 @@ What it does:
   system photo picker (no storage permission) and are shrunk on the phone as the web's picker does them
   (`ui/site/PhotoShrink.kt`: turned upright, 1600 px, JPEG), then sent one by one.
 - **Map layers**: the map's "Layers" chip has the web map's menu: the base (satellite, street map or none) and every
-  overlay, kept between launches. Seamarks and the coordinate grid start on, as on the web. The Allen Coral Atlas reef
+  overlay, kept between launches. Seamarks and the coordinate grid start on, as on the web, and depth shading or
+  contours over satellite show the street map instead. The Allen Coral Atlas reef
   outline, reef zones and bottom types read the web map's static tiles under `/overlays/` (`domain/AtlasOverlay.kt`,
   `ui/map/AtlasViewModel.kt`: only tiles in view, from each overlay's zoom) with the web's colour key; depth shading
   (GEBCO), sonar depths and depth contours come from the same WMS servers as the web; the grid ports the web's spacing

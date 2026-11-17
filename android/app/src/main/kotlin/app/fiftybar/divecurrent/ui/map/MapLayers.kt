@@ -26,6 +26,9 @@ enum class MapOverlay(val key: String, val label: String, val defaultOn: Boolean
   Grid("grid", "Coordinate grid", true),
 }
 
+/** Overlays drawn as colour fills or labels that clash with satellite imagery (lib/map-layers.ts NEEDS_STREET_BASE). */
+private val NEEDS_STREET_BASE = setOf(MapOverlay.DepthShading, MapOverlay.DepthContours)
+
 /** The map layers a diver can switch, as the web map's layer menu: one base, and overlays on or off each. */
 data class MapLayers(
   val base: BaseMap = BaseMap.Satellite,
@@ -43,6 +46,13 @@ data class MapLayers(
   /** The Atlas overlays switched on. */
   val atlas: Set<AtlasOverlay>
     get() = overlays.mapNotNull { it.atlas }.toSet()
+
+  /**
+   * The base to show, as the web's readableBase: depth shading or contours over satellite move to the street map,
+   * since they read badly over imagery. The choice itself stays satellite; None stays none.
+   */
+  val shownBase: BaseMap
+    get() = if (base == BaseMap.Satellite && overlays.any { it in NEEDS_STREET_BASE }) BaseMap.Street else base
 
   fun toggled(overlay: MapOverlay): MapLayers = copy(overlays = if (overlay in overlays) overlays - overlay else overlays + overlay)
 }
