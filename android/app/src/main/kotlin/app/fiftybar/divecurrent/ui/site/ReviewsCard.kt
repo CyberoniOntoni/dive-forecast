@@ -157,7 +157,7 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
             append("Remove your rating")
             if (mine.review != null) append(", review")
             if (mine.photos.isNotEmpty()) append(" and photos")
-            append("? You lose its ${card?.ratingPoints ?: 3} points; rating the site again gives them back.")
+            append("? You lose its ${card.ratingPoints} points; rating the site again gives them back.")
           }
         )
       },

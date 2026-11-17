@@ -167,7 +167,7 @@ fun ScoreboardScreen(onBack: () -> Unit, onDiver: (String) -> Unit, onSite: (Str
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
           )
         }
-        items(shown?.newest.orEmpty(), key = { "site/${it.siteId}" }) { site ->
+        items(shown.newest.orEmpty(), key = { "site/${it.siteId}" }) { site ->
           Row(
             Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { onSite(site.siteId) }.padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
