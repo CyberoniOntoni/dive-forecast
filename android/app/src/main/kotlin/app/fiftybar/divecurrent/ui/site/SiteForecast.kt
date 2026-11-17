@@ -16,6 +16,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -71,6 +73,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiSeaStateHour
@@ -147,7 +150,7 @@ internal fun HourCard(week: WeekView, selected: Int, reducedMotion: Boolean) {
           verticalAlignment = Alignment.CenterVertically,
           horizontalArrangement = Arrangement.spacedBy(18.dp),
           modifier =
-            Modifier.padding(start = 20.dp, end = 20.dp, top = 22.dp, bottom = 16.dp).semantics(mergeDescendants = true) {
+            Modifier.padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 16.dp).semantics(mergeDescendants = true) {
               contentDescription = "${g.wayToward}, ${g.label}, ${confidenceLabel(g.confidence)} confidence"
             },
         ) {
@@ -216,7 +219,13 @@ private fun StrengthWord(g: Glance, reducedMotion: Boolean) {
     },
     label = "strength",
   ) { (label, tone) ->
-    Text(label.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.displaySmall, color = colors.tone(tone), maxLines = 1)
+    // "Very strong" at full size is wider than the space beside the compass on most phones: shrink to fit, one line.
+    BasicText(
+      label.replaceFirstChar { it.uppercase() },
+      style = MaterialTheme.typography.displaySmall.copy(color = colors.tone(tone)),
+      maxLines = 1,
+      autoSize = TextAutoSize.StepBased(minFontSize = 22.sp, maxFontSize = MaterialTheme.typography.displaySmall.fontSize),
+    )
   }
 }
 
@@ -288,7 +297,9 @@ private fun FlowNextCell(week: WeekView, selected: Int, modifier: Modifier) {
       Text(
         next.label.replaceFirstChar { it.uppercase() } + if (turns) ", ${next.way}" else "",
         style = MaterialTheme.typography.titleMedium,
-        maxLines = 1,
+        // "Very strong, running SW" does not fit half the card on one line.
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier.padding(top = 4.dp),
       )
       Text(
