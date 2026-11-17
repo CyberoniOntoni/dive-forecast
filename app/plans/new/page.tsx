@@ -9,7 +9,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "New dive plan · Dive current" };
+export const metadata: Metadata = { title: "New dive plan · 50bar" };
 
 export default async function NewPlanPage() {
   await ready();

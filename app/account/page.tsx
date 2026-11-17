@@ -10,7 +10,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Your account · Dive current" };
+export const metadata: Metadata = { title: "Your account · 50bar" };
 
 export default async function AccountPage() {
   const account = await getAccount();
