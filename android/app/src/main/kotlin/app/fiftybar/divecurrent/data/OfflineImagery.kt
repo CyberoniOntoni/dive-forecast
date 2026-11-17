@@ -3,12 +3,15 @@ package app.fiftybar.divecurrent.data
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import app.fiftybar.divecurrent.data.api.ApiBounds
 import java.io.IOException
 import kotlin.math.abs
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.maplibre.android.geometry.LatLngBounds
@@ -29,7 +32,7 @@ interface OfflineImagery {
 /**
  * Our Sentinel-2 tiles (lib/imagery.ts) in a MapLibre offline region per atoll, read from [styleUrl]. A region is kept
  * once complete: the tiles never change under one imagery version, so a saved atoll's 6-hourly refresh costs nothing
- * here. A region from another version (its style URL differs) or over another box is dropped and the new one
+ * here. A region from another version (the version is in [styleUrl]) or over another box is dropped and the new one
  * downloaded.
  */
 class MapLibreOfflineImagery(
@@ -49,6 +52,8 @@ class MapLibreOfflineImagery(
       stale.forEach { delete(it) }
       kept.drop(1).forEach { delete(it) }
       val region = kept.firstOrNull() ?: create(atollId, box)
+      // Stopped while the region was being made: it is left for the remove that follows, not downloaded.
+      ensureActive()
       download(region, progress)
     }
 
@@ -73,8 +78,12 @@ class MapLibreOfflineImagery(
       )
     }
 
+  /**
+   * Not cancellable: MapLibre makes the region whatever happens, so a stopped save waits until it has, and the
+   * remove that follows (OfflineAreas.remove joins the save) finds it.
+   */
   private suspend fun create(atollId: String, box: ApiBounds): OfflineRegion =
-    suspendCancellableCoroutine { cont ->
+    suspendCoroutine { cont ->
       val definition =
         OfflineTilePyramidRegionDefinition(
           styleUrl,
@@ -116,7 +125,7 @@ class MapLibreOfflineImagery(
     suspendCancellableCoroutine { cont ->
       var failures = 0
       var lastDone = -1L
-      var checkedDone = -1L
+      var progressAt = SystemClock.elapsedRealtime()
       val handler = Handler(Looper.getMainLooper())
       lateinit var watchdog: Runnable
       fun stop() {
@@ -125,15 +134,14 @@ class MapLibreOfflineImagery(
         region.setDownloadState(OfflineRegion.STATE_INACTIVE)
       }
       // A download can also stall with no error at all (a link that takes requests and never answers): no tile for
-      // [STALL_MS] stops it the same way.
+      // [STALL_MS] stops it the same way (checked every [STALL_CHECK_MS], so within that of the minute).
       watchdog = Runnable {
         if (!cont.isActive) return@Runnable
-        if (lastDone == checkedDone) {
+        if (SystemClock.elapsedRealtime() - progressAt >= STALL_MS) {
           stop()
           cont.resumeWithException(IOException("No signal: the satellite imagery stopped part way. Save again with signal."))
         } else {
-          checkedDone = lastDone
-          handler.postDelayed(watchdog, STALL_MS)
+          handler.postDelayed(watchdog, STALL_CHECK_MS)
         }
       }
       region.setObserver(
@@ -142,6 +150,7 @@ class MapLibreOfflineImagery(
             if (!cont.isActive) return
             if (status.completedResourceCount != lastDone) {
               lastDone = status.completedResourceCount
+              progressAt = SystemClock.elapsedRealtime()
               failures = 0
             }
             if (status.requiredResourceCount > 0) progress(status.completedResourceCount.toFloat() / status.requiredResourceCount)
@@ -168,12 +177,13 @@ class MapLibreOfflineImagery(
       // Cancelled from any thread; MapLibre's region is the main thread's.
       cont.invokeOnCancellation { handler.post { stop() } }
       region.setDownloadState(OfflineRegion.STATE_ACTIVE)
-      handler.postDelayed(watchdog, STALL_MS)
+      handler.postDelayed(watchdog, STALL_CHECK_MS)
     }
 
   private companion object {
     const val GIVE_UP_AFTER = 5
     const val STALL_MS = 60_000L
+    const val STALL_CHECK_MS = 5_000L
     /** Degrees: the server rounds outline boxes to 4 decimals, so a real change is far bigger. */
     const val BOX_EPS = 1e-6
   }

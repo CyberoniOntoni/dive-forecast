@@ -48,6 +48,8 @@ class StyleJsonTest {
     val source = style["sources"]!!.jsonObject["sentinel2-0"]!!.jsonObject
     assertEquals(SENTINEL2_TILES, source["tiles"]!!.jsonArray[0].jsonPrimitive.content)
     assertTrue(SENTINEL2_TILES.endsWith("/imagery/s2-v1/{z}/{x}/{y}.webp"))
+    // lib/imagery.ts serves the style of its IMAGERY_VERSION at this path.
+    assertTrue(SENTINEL2_STYLE.endsWith("/map-styles/sentinel2/s2-v1.json"))
     assertEquals(listOf("73.2", "4.1", "73.7", "4.7"), source["bounds"]!!.jsonArray.map { it.jsonPrimitive.content })
     assertEquals("8", source["minzoom"]!!.jsonPrimitive.content)
     assertEquals("14", source["maxzoom"]!!.jsonPrimitive.content)

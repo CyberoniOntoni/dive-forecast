@@ -92,7 +92,7 @@ What it does:
   OpenStreetMap are never downloaded ahead of time: Esri's World Imagery terms and the OSM tile policy forbid it.
   Instead, saving an atoll also downloads our own Sentinel-2 imagery over its box (zoom 8 to 14, about 10 m a pixel;
   `lib/imagery.ts` on the server, `data/OfflineImagery.kt` here) as a MapLibre offline region read from
-  `/map-styles/sentinel2.json`. On the satellite base the map draws it under Esri's tiles inside each saved atoll's
+  `/map-styles/sentinel2/<version>.json` (a new imagery version is a new style URL, so saved atolls download it). On the satellite base the map draws it under Esri's tiles inside each saved atoll's
   box, so it shows where Esri's cannot load. The tile URL in `SENTINEL2_TILES` must match the server's style.
 
 - **Adding sites**: long-press the map on the site's spot (the list's + says so) and pick "Add a dive site here": the

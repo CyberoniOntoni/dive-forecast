@@ -8,15 +8,16 @@ instead. Two steps, each safe to run again (finished parts are skipped):
               (true-colour "visual" band, cloud mask from the scene classification), one GeoTIFF per MGRS tile.
               Reads the Sentinel-2 COGs on AWS (earth-search STAC). Takes about an hour for all atolls.
   tiles       Web Mercator tiles, zoom 8-14 (z14 is about 9.5 m a pixel, the imagery's own 10 m), as WebP, under
-              <out>/{z}/{x}/{y}.webp. Only tiles over an atoll's box are made.
+              <out>/{z}/{x}/{y}.webp, transparent where no scene reached. Only tiles over an atoll's box are made, and
+              of those not one under 1% covered (a sliver of an atoll's edge; the server answers 204 there).
 
   pip install rasterio pillow numpy
   python3 scripts/imagery/sentinel2.py composite <work dir>
   python3 scripts/imagery/sentinel2.py tiles <work dir> <out dir>
   npm run imagery:upload -- <out dir>        # to R2 (scripts/imagery-upload.ts)
 
-Credit: "Contains modified Copernicus Sentinel data <years>", the years the composite step prints (now 2023–2026,
-IMAGERY_ATTRIBUTION in lib/imagery.ts).
+Credit: "Contains modified Copernicus Sentinel data 2023–2026" (IMAGERY_ATTRIBUTION in lib/imagery.ts); a rebuild
+uses the years the composite step prints.
 """
 import glob, json, math, os, sys, urllib.request
 
@@ -56,16 +57,27 @@ def scenes(box):
         "bbox": [west, south, east, north],
         "limit": 200,
         "query": {"eo:cloud_cover": {"lt": 20}},
-        "datetime": "2023-01-01T00:00:00Z/2026-11-01T00:00:00Z",
+        "datetime": "2023-01-01T00:00:00Z/..",
         "sortby": [{"field": "properties.eo:cloud_cover", "direction": "asc"}],
     }
-    request = urllib.request.Request(STAC, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
     by_tile = {}
-    for feature in json.load(urllib.request.urlopen(request))["features"]:
-        if feature["properties"].get("s2:nodata_pixel_percentage", 0) > 60:
-            continue
-        by_tile.setdefault(feature["properties"]["grid:code"], []).append(feature)
-    return {tile: features[:SCENES_PER_TILE] for tile, features in by_tile.items()}
+    # Every page, not just the first: the clearest scenes over a big atoll can all fall on one or two of its MGRS tiles.
+    url, method = STAC, "POST"
+    while url:
+        request = urllib.request.Request(url, data=json.dumps(body).encode() if method == "POST" else None,
+                                         headers={"Content-Type": "application/json"}, method=method)
+        page = json.load(urllib.request.urlopen(request))
+        for feature in page["features"]:
+            if feature["properties"].get("s2:nodata_pixel_percentage", 0) > 60:
+                continue
+            by_tile.setdefault(feature["properties"]["grid:code"], []).append(feature)
+        following = next((link for link in page.get("links", []) if link.get("rel") == "next"), None)
+        url, method = (following["href"], following.get("method", "GET")) if following else (None, None)
+        if following and following.get("body"):
+            body = following["body"] if not following.get("merge") else {**body, **following["body"]}
+    # Each tile's clearest first (pages arrive in cloud order, but a stable sort costs nothing).
+    return {tile: sorted(features, key=lambda f: f["properties"]["eo:cloud_cover"])[:SCENES_PER_TILE]
+            for tile, features in by_tile.items()}
 
 
 def composite(work):

@@ -594,10 +594,14 @@ private data class Raster(
  * The app server's Sentinel-2 tiles (lib/imagery.ts): the one satellite imagery a saved atoll may download. The version
  * in the path is the server's IMAGERY_VERSION.
  */
-internal val SENTINEL2_TILES = "${BuildConfig.API_BASE_URL}/imagery/s2-v1/{z}/{x}/{y}.webp"
+internal const val SENTINEL2_VERSION = "s2-v1"
+internal val SENTINEL2_TILES = "${BuildConfig.API_BASE_URL}/imagery/$SENTINEL2_VERSION/{z}/{x}/{y}.webp"
 
-/** The style the offline download reads (it needs a style URL); its tile URL is [SENTINEL2_TILES]. */
-internal val SENTINEL2_STYLE = "${BuildConfig.API_BASE_URL}/map-styles/sentinel2.json"
+/**
+ * The style the offline download reads (it needs a style URL); its tile URL is [SENTINEL2_TILES]. The version is in the
+ * URL: MapLibreOfflineImagery keeps a saved region while the style URL is the same, so a new version downloads anew.
+ */
+internal val SENTINEL2_STYLE = "${BuildConfig.API_BASE_URL}/map-styles/sentinel2/$SENTINEL2_VERSION.json"
 internal const val SENTINEL2_MIN_ZOOM = 8
 internal const val SENTINEL2_MAX_ZOOM = 14
 private const val SENTINEL2_CREDIT = "Contains modified Copernicus Sentinel data 2023–2026"
