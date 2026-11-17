@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.LocationOn
@@ -41,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -73,6 +75,7 @@ import app.fiftybar.divecurrent.domain.LatLon
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.NewSite
 import app.fiftybar.divecurrent.domain.PointDestination
+import app.fiftybar.divecurrent.domain.SiteSearch
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.appAccount
@@ -110,6 +113,9 @@ fun MapScreen(
   LaunchedEffect(layers.atlas) { atlas.setOn(layers.atlas) }
   var layersOpen by remember { mutableStateOf(false) }
   var query by rememberSaveable { mutableStateOf("") }
+  // The web list's atoll picker: "" for all atolls. Picking one also moves the map there.
+  var atollId by rememberSaveable { mutableStateOf("") }
+  var focus by remember { mutableStateOf<MapFocus?>(null) }
   val scaffold = rememberBottomSheetScaffoldState()
   val scope = rememberCoroutineScope()
   val colors = CurrentTheme.colors
@@ -123,11 +129,28 @@ fun MapScreen(
   }
 
   val shown =
-    remember(state.rows, query) {
-      val q = query.trim().lowercase()
-      if (q.isEmpty()) state.rows
-      else state.rows.filter { it.site.name.lowercase().contains(q) || it.site.atollName?.lowercase()?.contains(q) == true }
+    remember(state.rows, query, atollId) {
+      state.rows.filter { (atollId.isEmpty() || it.site.atollId == atollId) && SiteSearch.matches(it.site.name, it.site.atollName, query) }
     }
+  // The map keeps every atoll's pins when one is picked, as the web map does: the pick narrows the list and frames the
+  // atoll. A search still narrows the pins too, as it did before.
+  val pins = remember(state.rows, query) { state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) } }
+  val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
+  fun pickAtoll(id: String) {
+    atollId = id
+    val sites = state.rows.filter { it.site.atollId == id }
+    if (id.isEmpty() || sites.isEmpty()) return
+    focus =
+      MapFocus(
+        (focus?.count ?: 0) + 1,
+        sites.minOf { it.site.lat },
+        sites.minOf { it.site.lon },
+        sites.maxOf { it.site.lat },
+        sites.maxOf { it.site.lon },
+      )
+    // The open list covers half the map: fold it down to show the atoll.
+    scope.launch { scaffold.bottomSheetState.partialExpand() }
+  }
 
   BottomSheetScaffold(
     scaffoldState = scaffold,
@@ -140,6 +163,9 @@ fun MapScreen(
         rows = shown,
         query = query,
         onQuery = { query = it },
+        atolls = atolls,
+        atollId = atollId,
+        onAtoll = ::pickAtoll,
         // The keyboard would cover a sheet left at its peek height, field and results with it.
         onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
         onOpenSite = onOpenSite,
@@ -152,7 +178,7 @@ fun MapScreen(
   ) { padding ->
     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
       SiteMapView(
-        rows = shown,
+        rows = pins,
         layers = layers,
         colors = colors,
         onOpenSite = onOpenSite,
@@ -167,6 +193,7 @@ fun MapScreen(
         },
         onTap = shelter::tap,
         atlas = atlasState.shapes,
+        focus = focus,
       )
       // Who is signed in, or a way to sign in: reports need it. The scoreboard, under it, is open to everyone; one
       // above the other, so a narrow phone has room for the Layers chip beside them.
@@ -312,6 +339,9 @@ private fun NowList(
   rows: List<SiteRow>,
   query: String,
   onQuery: (String) -> Unit,
+  atolls: List<SiteSearch.AtollChoice>,
+  atollId: String,
+  onAtoll: (String) -> Unit,
   onSearchFocus: () -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
@@ -383,10 +413,45 @@ private fun NowList(
           .padding(horizontal = 16.dp, vertical = 8.dp)
           .onFocusChanged { if (it.isFocused) onSearchFocus() },
     )
+    AtollPicker(atolls, atollId, onAtoll)
     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
         HorizontalDivider(color = colors.foam.copy(alpha = 0.08f))
+      }
+    }
+  }
+}
+
+/** The web list's atoll select: all atolls, or one with its site count. */
+@Composable
+private fun AtollPicker(atolls: List<SiteSearch.AtollChoice>, atollId: String, onAtoll: (String) -> Unit) {
+  var open by remember { mutableStateOf(false) }
+  val chosen = atolls.firstOrNull { it.id == atollId }
+  Box(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+    OutlinedButton(
+      onClick = { open = true },
+      modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = "Atoll: ${chosen?.name ?: "all atolls"}" },
+    ) {
+      Text(chosen?.let { "${it.name} (${it.count})" } ?: "All atolls", modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+    }
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      DropdownMenuItem(
+        text = { Text("All atolls") },
+        onClick = {
+          open = false
+          onAtoll("")
+        },
+      )
+      for (atoll in atolls) {
+        DropdownMenuItem(
+          text = { Text("${atoll.name} (${atoll.count})") },
+          onClick = {
+            open = false
+            onAtoll(atoll.id)
+          },
+        )
       }
     }
   }

@@ -8,7 +8,8 @@ What it does:
 - **Map**: every site with an arrow pointing the way the water runs at the current Maldives hour, coloured and faded like
   the web pins (incoming teal, outgoing amber, along a reef foam, very strong the stop colour; low confidence fainter).
   Satellite (Esri World Imagery) or OpenStreetMap base. Tap an arrow to open the site.
-- **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with a search by site or atoll.
+- **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with the web's search (every word starts a word of the site's or atoll's name; `domain/SiteSearch.kt`) and its atoll
+  picker, which also moves the map to that atoll.
 - **Site page**: a slider over the week, opened on the current Maldives hour; strength bars, residual tide and sea
   state for every hour; the hour's direction, strength, confidence and sea state; the server's `notice` and `siteNote`;
   depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
@@ -22,8 +23,9 @@ What it does:
 - **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
   (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; not verified, so Android asks which app to use), a pasted link on the Plans
   screen (calendar button on the map's list, or "My dive plans" on the account), or the diver's own plans when signed
-  in. Each day lists its dives with the forecast at the dive time, warnings and a better window, the boat legs between
-  them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
+  in. Each day shows its dives on a small satellite map, numbered and coloured as on the web with the boat route between
+  them (`ui/plan/PlanDayMap.kt`), then lists them with the forecast at the dive time, warnings and a better window, the
+  boat legs between them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
   of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
   open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
   note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
@@ -69,7 +71,7 @@ What it does:
   every badge, how points work, About me and the nickname (`PUT /api/v1/me/about`, `/me/nickname`), and your own page.
   The words come from the server (`lib/profile-words.ts`).
 
-A dive plan day's map and the atoll picker on the map's site list are on the web for now (API.md § Next).
+Nothing from the web is missing from the app now (API.md § Next).
 
 ## Build and run
 

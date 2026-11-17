@@ -49,6 +49,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -73,7 +74,8 @@ import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 
 /**
  * A dive plan as its web page shows it: each day's dives with the forecast at the dive time and its warnings, and the
- * boat legs with when to leave. Kept on the phone, so it still opens out of signal. Changing it is on the web for now.
+ * boat legs with when to leave, and each day on a small map. Kept on the phone, so it still opens out of signal (the
+ * map's imagery needs signal).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,6 +143,7 @@ fun PlanScreen(
             index = index,
             day = day,
             legs = state.legs[index],
+            total = state.totals[index],
             legsFailed = index in state.legsFailed,
             colors = colors,
             onOpenSite = onOpenSite,
@@ -180,6 +183,7 @@ private fun DayCard(
   index: Int,
   day: ApiPlanDay,
   legs: List<ApiPlanLeg>?,
+  total: String?,
   legsFailed: Boolean,
   colors: CurrentColors,
   onOpenSite: (String) -> Unit,
@@ -202,6 +206,21 @@ private fun DayCard(
         else if (day.past) Badge("Done", colors.foam.copy(alpha = 0.7f))
         if (day.toCheck > 0) Badge(if (day.toCheck == 1) "1 dive to check" else "${day.toCheck} dives to check", colors.stop)
       }
+      // The web day's line under the heading: how many dives, and the boat between them.
+      if (day.stops.isNotEmpty()) {
+        Text(
+          listOfNotNull(if (day.stops.size == 1) "1 dive" else "${day.stops.size} dives", total).joinToString(" · "),
+          style = MaterialTheme.typography.bodyMedium,
+          color = colors.foam.copy(alpha = 0.75f),
+        )
+        PlanDayMap(
+          day.stops,
+          legs.orEmpty(),
+          colors,
+          Modifier.fillMaxWidth().height(if (day.stops.size == 1) 176.dp else 256.dp).clip(RoundedCornerShape(16.dp)),
+        )
+        Text(PLAN_MAP_CREDIT, style = MaterialTheme.typography.labelSmall, color = colors.foam.copy(alpha = 0.6f))
+      }
       if (day.stops.isEmpty()) Text("No dives planned yet.", style = MaterialTheme.typography.bodyMedium)
       day.stops.forEachIndexed { at, stop ->
         StopRow(at + 1, stop, colors, onOpenSite = { onOpenSite(stop.siteId) }, onReport = { t -> onReport(stop.siteId, t) })
@@ -222,7 +241,8 @@ private fun Badge(text: String, color: Color) {
   )
 }
 
-private fun toneColor(tone: String, colors: CurrentColors): Color =
+/** A dive's marker colour from its outlook (`tone`), in the list and on the day map alike. */
+internal fun toneColor(tone: String, colors: CurrentColors): Color =
   when (tone) {
     "incoming" -> colors.incoming
     "outgoing" -> colors.outgoing

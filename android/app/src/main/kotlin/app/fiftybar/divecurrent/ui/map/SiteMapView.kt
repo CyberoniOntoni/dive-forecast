@@ -30,7 +30,9 @@ import app.fiftybar.divecurrent.domain.AtlasOverlay
 import app.fiftybar.divecurrent.domain.CoordinateGrid
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
@@ -82,6 +84,9 @@ import org.maplibre.geojson.FeatureCollection
 import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
+/** A box for the map to frame; [count] makes picking the same atoll again move it again. */
+data class MapFocus(val count: Int, val south: Double, val west: Double, val north: Double, val east: Double)
+
 private const val SOURCE = "sites"
 private const val ARROWS = "site-arrows"
 private const val NAMES = "site-names"
@@ -90,7 +95,7 @@ private const val NAMES = "site-names"
  * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
  * MapLibre's demo server. The name is the folder there.
  */
-private const val LABEL_FONT = "open-sans-semibold"
+internal const val LABEL_FONT = "open-sans-semibold"
 
 /** The middle of the Maldives, wide enough to show the chain. */
 private val START = CameraPosition.Builder().target(LatLng(3.6, 73.3)).zoom(6.4).build()
@@ -118,6 +123,8 @@ fun SiteMapView(
   onTap: (lat: Double, lon: Double) -> Boolean = { _, _ -> false },
   /** The Atlas overlays' shapes in view, by overlay (AtlasViewModel); an overlay left out is not drawn. */
   atlas: Map<AtlasOverlay, FeatureCollection> = emptyMap(),
+  /** A box to frame, as when an atoll is picked; each new [MapFocus.count] moves the map once. */
+  focus: MapFocus? = null,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -186,6 +193,17 @@ fun SiteMapView(
       val box = viewBox(m)
       view = box
       viewChanged(box)
+    }
+  }
+
+  LaunchedEffect(map, focus) {
+    val m = map ?: return@LaunchedEffect
+    val f = focus ?: return@LaunchedEffect
+    if (f.north - f.south < 1e-3 && f.east - f.west < 1e-3) {
+      m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(f.south, f.west), 12.0))
+    } else {
+      val pad = (48 * context.resources.displayMetrics.density).toInt()
+      m.animateCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds.from(f.north, f.east, f.south, f.west), pad))
     }
   }
 
