@@ -119,6 +119,9 @@ fun MapScreen(
   // Sent from a site page to see where the site is: the map moves there and rings it, once.
   showSite: ShowOnMap? = null,
   onShown: () -> Unit = {},
+  // A site page being pulled down over the map: the map previews the site (moves there, rings it, hides the list)
+  // without changing anything, and goes back as it was if the pull is let go short.
+  peekSite: ShowOnMap? = null,
   // Another screen is on top: the map stays alive under it (so it is there at once on the way back, and shows through
   // a site page being pulled down), but holds still and leaves Back to that screen.
   covered: Boolean = false,
@@ -176,18 +179,53 @@ fun MapScreen(
       state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) && NowCounts.matches(it.glance, picked) }
     }
   var highlight by rememberSaveable { mutableStateOf<String?>(null) }
+  // A site sent here whose search or strength check waits for the sites to load.
+  var reveal by rememberSaveable { mutableStateOf<String?>(null) }
+  // Where the map last settled, and where it was before a pull-down preview moved it.
+  var settled by remember { mutableStateOf<MapViewBox?>(null) }
+  var beforePeek by remember { mutableStateOf<MapViewBox?>(null) }
+  fun moveTo(lat: Double, lon: Double, zoom: Double) {
+    focus = MapFocus((focus?.count ?: 0) + 1, lat, lon, lat, lon, zoom = zoom)
+  }
+  // Before the preview's effect below, so a pull let go past the point keeps the map on the site.
   LaunchedEffect(showSite) {
     val show = showSite ?: return@LaunchedEffect
+    beforePeek = null
     listOpen = false
-    // A search or a strength that hides this site would leave the map with nothing to ring: show everything again.
-    if (state.rows.isNotEmpty() && pins.none { it.site.id == show.siteId }) {
-      query = ""
-      strength = null
-    }
+    reveal = show.siteId
     highlight = show.siteId
-    focus = MapFocus((focus?.count ?: 0) + 1, show.lat, show.lon, show.lat, show.lon, zoom = 13.5)
+    moveTo(show.lat, show.lon, 13.5)
     onShown()
   }
+  LaunchedEffect(peekSite) {
+    val peek = peekSite
+    if (peek != null) {
+      if (beforePeek == null) beforePeek = settled
+      moveTo(peek.lat, peek.lon, 13.5)
+    } else {
+      val was = beforePeek ?: return@LaunchedEffect
+      beforePeek = null
+      if (showSite == null) moveTo((was.south + was.north) / 2, (was.west + was.east) / 2, was.zoom)
+    }
+  }
+  // A search or a strength (even one not applied while the copy is outdated) that hides the site would leave the map
+  // with nothing to ring: they go. Waits for the sites if they are still loading.
+  LaunchedEffect(reveal, state.rows) {
+    val id = reveal ?: return@LaunchedEffect
+    if (state.rows.isEmpty()) return@LaunchedEffect
+    state.rows.firstOrNull { it.site.id == id }?.let { row ->
+      if (!SiteSearch.matches(row.site.name, row.site.atollName, query)) query = ""
+      if (!NowCounts.matches(row.glance, strength)) strength = null
+    }
+    reveal = null
+  }
+  // While previewing, the list steps aside and the site is on the map even if a search or strength hides it.
+  val listShown = listOpen && peekSite == null
+  val pinsShown =
+    remember(pins, peekSite, state.rows) {
+      val id = peekSite?.siteId
+      if (id == null || pins.any { it.site.id == id }) pins else pins + state.rows.filter { it.site.id == id }
+    }
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
     atollId = id
@@ -207,7 +245,7 @@ fun MapScreen(
   Box(Modifier.fillMaxSize()) {
     Box(Modifier.fillMaxSize()) {
       SiteMapView(
-        rows = pins,
+        rows = pinsShown,
         layers = layers,
         colors = colors,
         onOpenSite = onOpenSite,
@@ -217,6 +255,7 @@ fun MapScreen(
         shelterImages = if (layers.shelter) shelterState.images else emptyList(),
         shelterOpacity = shelterState.scale?.opacity?.toFloat() ?: 0.85f,
         onView = { box ->
+          settled = box
           shelter.onView(box)
           atlas.onView(box)
         },
@@ -224,8 +263,8 @@ fun MapScreen(
         atlas = atlasState.shapes,
         focus = focus,
         // Under the list the map is hidden: its arrows hold still rather than animate unseen.
-        reducedMotion = reducedMotion || listOpen || covered,
-        highlight = highlight,
+        reducedMotion = reducedMotion || listShown || covered,
+        highlight = peekSite?.siteId ?: highlight,
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
@@ -249,7 +288,7 @@ fun MapScreen(
       }
     }
     AnimatedVisibility(
-      visible = listOpen,
+      visible = listShown,
       enter = if (reducedMotion) EnterTransition.None else fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 },
       exit = if (reducedMotion) ExitTransition.None else fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 12 },
     ) {
@@ -277,7 +316,7 @@ fun MapScreen(
       onQuery = { query = it },
       // Matches show in the list, above the keyboard.
       onSearchFocus = { listOpen = true },
-      listOpen = listOpen,
+      listOpen = listShown,
       onToggleList = { listOpen = !listOpen },
       loading = state.loading,
       // Over the map nothing else says the data is old or missing, so a chip does, with the list header's words.

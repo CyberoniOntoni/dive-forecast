@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent
 
+import app.fiftybar.divecurrent.data.api.ApiSite
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import app.fiftybar.divecurrent.ui.map.ShowOnMap
@@ -51,6 +52,8 @@ fun MainNavigation(startPlanId: String? = null) {
   val sessions = appAccount().sessions
   // A site page's "see it on the map": the map takes it once it is on top again.
   var showOnMap by remember { mutableStateOf<ShowOnMap?>(null) }
+  // A site page being pulled down: the map under it previews the site until the pull is let go.
+  var peekOnMap by remember { mutableStateOf<ShowOnMap?>(null) }
   // A tab's top screen sits right on the map (Back from it goes to the map); only there is the bar shown.
   val tab = tabOf(backStack)
   fun isTabRoot(key: NavKey) = backStack.size == 2 && backStack[1] == key
@@ -91,6 +94,7 @@ fun MainNavigation(startPlanId: String? = null) {
       onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
       showSite = showOnMap,
       onShown = { showOnMap = null },
+      peekSite = peekOnMap,
       covered = backStack.lastOrNull() != MapKey,
     )
     NavDisplay(
@@ -124,11 +128,12 @@ fun MainNavigation(startPlanId: String? = null) {
               onBack = leave,
               onSignIn = { backStack.add(SignInKey) },
               onNavigate = { site -> backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon)) },
-              // Pulled down: the map under the page moves to the site while the pull goes on.
-              onPeekMap = { site -> showOnMap = ShowOnMap(site.id, site.lat, site.lon) },
+              // Pulled down: the map under the page previews the site while the pull goes on (null: let go short).
+              onPeekMap = { site -> peekOnMap = site?.onMap() },
               // Wherever the page was opened from (map, list, plan, Navigate), the map is the stack's root.
               onShowOnMap = { site ->
-                showOnMap = ShowOnMap(site.id, site.lat, site.lon)
+                peekOnMap = null
+                showOnMap = site.onMap()
                 while (backStack.size > 1) backStack.removeLastOrNull()
               },
             )
@@ -252,3 +257,5 @@ internal fun rootOf(tab: Tab, signedIn: Boolean): NavKey? {
   val roots = tabRoots(tab)
   return if (tab == Tab.You && !signedIn) roots.getOrNull(1) else roots.firstOrNull()
 }
+
+private fun ApiSite.onMap() = ShowOnMap(id, lat, lon)

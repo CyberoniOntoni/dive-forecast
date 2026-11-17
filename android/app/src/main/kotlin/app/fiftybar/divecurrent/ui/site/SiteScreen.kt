@@ -1,5 +1,7 @@
 package app.fiftybar.divecurrent.ui.site
 
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.graphics.Color
@@ -116,7 +118,7 @@ fun SiteScreen(
   onSignIn: () -> Unit,
   onNavigate: (ApiSite) -> Unit,
   onShowOnMap: (ApiSite) -> Unit,
-  onPeekMap: (ApiSite) -> Unit,
+  onPeekMap: (ApiSite?) -> Unit,
   reportAt: String? = null,
 ) {
   val repository = appRepository()
@@ -167,8 +169,14 @@ fun SiteScreen(
   val pastHero by remember { derivedStateOf { scroll.value > heroPx * 0.7f } }
   // Pulled down past the top of the page, the header gives way to the map, centred on this site.
   val showOnMap by rememberUpdatedState(site?.let { s -> { onShowOnMap(s) } })
-  val peekMap by rememberUpdatedState(site?.let { s -> { onPeekMap(s) } })
-  val pull = rememberMapPull(enabled = site != null, onStart = { peekMap?.invoke() }) { showOnMap?.invoke() }
+  val peekMap by rememberUpdatedState(onPeekMap)
+  val pull =
+    rememberMapPull(
+      enabled = site != null,
+      reducedMotion = reducedMotion,
+      onStart = { site?.let(peekMap) },
+      onCancel = { peekMap(null) },
+    ) { showOnMap?.invoke() }
 
   Scaffold(
     // See-through: the map lives under every screen, and a pull down shows it above the page. The page and its
@@ -496,25 +504,46 @@ internal class MapPull(val threshold: Float) {
   /** The page's height, so a pull let go past the threshold can carry the page off the bottom of the screen. */
   var pageHeight = 0f
 
+  /** The map under the page is previewing the site: put back if the pull ends short (or the page goes mid-pull). */
+  internal var peeking = false
+
   lateinit var connection: NestedScrollConnection
     internal set
 }
 
 /**
  * Over-scrolling down at the top of the page drags it down (at half the finger's speed, like a rubber band), showing
- * the live map behind it; [onStart] runs as the pull begins, so the map can move to the site. Let go past
- * [PULL_TO_MAP] and the page slides away off the bottom, then [onPulled] runs; short of it the page springs back. A
- * tick of haptics marks the point.
+ * the live map behind it; [onStart] runs as the pull begins, so the map can preview the site. Let go past
+ * [PULL_TO_MAP] and the page slides away off the bottom, then [onPulled] runs; short of it the page springs back and
+ * [onCancel] puts the map back as it was. A tick of haptics marks the point. With the phone's animations off the page
+ * snaps rather than slides or springs.
  */
 @Composable
-internal fun rememberMapPull(enabled: Boolean, onStart: () -> Unit, onPulled: () -> Unit): MapPull {
+internal fun rememberMapPull(enabled: Boolean, reducedMotion: Boolean, onStart: () -> Unit, onCancel: () -> Unit, onPulled: () -> Unit): MapPull {
   val threshold = with(LocalDensity.current) { PULL_TO_MAP.toPx() }
   val haptics = LocalHapticFeedback.current
   val pulled by rememberUpdatedState(onPulled)
   val started by rememberUpdatedState(onStart)
+  val cancelled by rememberUpdatedState(onCancel)
   val on by rememberUpdatedState(enabled)
-  return remember(threshold) {
+  val still by rememberUpdatedState(reducedMotion)
+  val pull = remember(threshold) {
     MapPull(threshold).also { pull ->
+      fun begin() {
+        if (!pull.peeking) {
+          pull.peeking = true
+          started()
+        }
+      }
+      fun end() {
+        if (pull.peeking) {
+          pull.peeking = false
+          cancelled()
+        }
+      }
+      suspend fun moveTo(target: Float, spec: AnimationSpec<Float>) {
+        if (still) pull.offset = target else animate(pull.offset, target, animationSpec = spec) { value, _ -> pull.offset = value }
+      }
       pull.connection =
         object : NestedScrollConnection {
           override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -522,6 +551,8 @@ internal fun rememberMapPull(enabled: Boolean, onStart: () -> Unit, onPulled: ()
             if (pull.offset > 0f && available.y < 0f) {
               val used = maxOf(available.y, -pull.offset)
               pull.offset += used
+              // Pushed all the way back: the map goes back as it was.
+              if (pull.offset <= 0f) end()
               return Offset(0f, used)
             }
             return Offset.Zero
@@ -530,7 +561,7 @@ internal fun rememberMapPull(enabled: Boolean, onStart: () -> Unit, onPulled: ()
           override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
             if (!on || source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
             val before = pull.offset
-            if (before == 0f) started()
+            begin()
             val after = (before + available.y * 0.5f).coerceAtMost(threshold * 1.6f)
             if (before < threshold && after >= threshold) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             pull.offset = after
@@ -542,16 +573,22 @@ internal fun rememberMapPull(enabled: Boolean, onStart: () -> Unit, onPulled: ()
             if (was <= 0f) return Velocity.Zero
             if (was >= threshold) {
               // The page carries on down and off the screen, leaving the map it was covering; then the stack pops.
-              animate(was, maxOf(pull.pageHeight, was), animationSpec = tween(220)) { value, _ -> pull.offset = value }
+              // No longer a preview: the map keeps the site.
+              pull.peeking = false
+              moveTo(maxOf(pull.pageHeight, was), tween(220))
               pulled()
             } else {
-              animate(was, 0f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ -> pull.offset = value }
+              end()
+              moveTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
             }
             return available
           }
         }
     }
   }
+  // The page leaving mid-pull (a back gesture) must not leave the map previewing.
+  DisposableEffect(pull) { onDispose { if (pull.peeking) { pull.peeking = false; cancelled() } } }
+  return pull
 }
 
 /** "Pull down for the map", then "Release for the map": fades in with the pull, so it is gone when not pulling. */
