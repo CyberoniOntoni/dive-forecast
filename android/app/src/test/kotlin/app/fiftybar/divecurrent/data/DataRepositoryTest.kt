@@ -3,7 +3,6 @@ package app.fiftybar.divecurrent.data
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.db.CachedBody
-import app.fiftybar.divecurrent.data.db.CachedBodyDao
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -19,7 +18,7 @@ import org.junit.Test
 
 class DataRepositoryTest {
   private val server = MockWebServer()
-  private val dao = FakeDao()
+  private val dao = FakeCacheDao()
   private lateinit var repository: DataRepository
 
   @Before
@@ -44,6 +43,25 @@ class DataRepositoryTest {
     assertEquals("along", n.hour.glance.tone)
     assertEquals("/api/v1/nowcast", server.takeRequest().path)
     assertNotNull(dao.rows["nowcast"])
+  }
+
+  @Test
+  fun `keeps each Atlas tile and draws it again without signal`() = runTest {
+    server.enqueue(reply(200, "[]"))
+    assertEquals("[]", repository.atlasTile("reef-outline", "4.00_73.25.json"))
+    assertEquals("/overlays/reef-outline/4.00_73.25.json", server.takeRequest().path)
+    assertTrue(repository.hasCopy("atlas/reef-outline/4.00_73.25.json"))
+    server.enqueue(reply(503, "down"))
+    assertEquals("[]", repository.atlasTile("reef-outline", "4.00_73.25.json"))
+  }
+
+  @Test
+  fun `drops copies and sizes what is left`() = runTest {
+    server.enqueue(reply(200, NOWCAST))
+    repository.nowcast()
+    assertEquals(NOWCAST.length.toLong(), repository.copySize(listOf("nowcast", "nothing")))
+    repository.deleteCopies(listOf("nowcast"))
+    assertNull(repository.cachedNowcast())
   }
 
   @Test
@@ -145,16 +163,6 @@ class DataRepositoryTest {
     assertNull(request.getHeader("Authorization"))
     assertEquals("Leave by 10:35", legs.legs.single().leaveBy)
     assertTrue(legs.legs.single().routed)
-  }
-
-  private class FakeDao : CachedBodyDao {
-    val rows = mutableMapOf<String, CachedBody>()
-
-    override suspend fun get(key: String) = rows[key]
-
-    override suspend fun put(body: CachedBody) {
-      rows[body.key] = body
-    }
   }
 
   private companion object {

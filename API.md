@@ -45,7 +45,7 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 ```json
 {
   "apiVersion": 1,
-  "atolls": [{ "id": "north-male", "name": "North Malé" }],
+  "atolls": [{ "id": "north-male", "name": "North Malé", "bounds": { "south": 4.15, "west": 73.27, "north": 4.71, "east": 73.72 } }],
   "sites": [
     {
       "id": "banana-reef",
@@ -71,6 +71,8 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
 classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `photoUrls` are paths on this server.
+An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
+(the app then pads the box round the atoll's sites).
 
 ### `GET /api/v1/sites/{id}`
 

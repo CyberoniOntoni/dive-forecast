@@ -28,6 +28,16 @@ interface CachedBodyDao {
   @Query("SELECT * FROM cached_body WHERE `key` = :key") suspend fun get(key: String): CachedBody?
 
   @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(body: CachedBody)
+
+  /** Callers pass at most [MAX_KEYS] keys at a time (SQLite's limit on bound values). */
+  @Query("DELETE FROM cached_body WHERE `key` IN (:keys)") suspend fun delete(keys: List<String>)
+
+  /** The characters stored under these keys, about their size on the phone. At most [MAX_KEYS] keys. */
+  @Query("SELECT COALESCE(SUM(LENGTH(json)), 0) FROM cached_body WHERE `key` IN (:keys)") suspend fun size(keys: List<String>): Long
+
+  companion object {
+    const val MAX_KEYS = 500
+  }
 }
 
 @Database(entities = [CachedBody::class], version = 1, exportSchema = true)

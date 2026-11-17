@@ -53,20 +53,20 @@ class DataRepository(
 
   fun markSitesChanged() = _sitesChanged.update { it + 1 }
 
-  suspend fun sites(): Loaded<ApiSites> = load("sites", ApiSites.serializer()) { api.sites().second }
+  suspend fun sites(): Loaded<ApiSites> = load(Keys.SITES, ApiSites.serializer()) { api.sites().second }
 
   suspend fun nowcast(): Loaded<ApiNowcast> = load("nowcast", ApiNowcast.serializer()) { api.nowcast().second }
 
-  suspend fun site(siteId: String): Loaded<ApiSite> = load("site/$siteId", ApiSite.serializer()) { api.site(siteId).second }
+  suspend fun site(siteId: String): Loaded<ApiSite> = load(Keys.site(siteId), ApiSite.serializer()) { api.site(siteId).second }
 
   suspend fun forecast(siteId: String): Loaded<ApiForecast> =
-    load("forecast/$siteId", ApiForecast.serializer()) { api.forecast(siteId).second }
+    load(Keys.forecast(siteId), ApiForecast.serializer()) { api.forecast(siteId).second }
 
   suspend fun reports(siteId: String): Loaded<ApiRecentReports> =
-    load("reports/$siteId", ApiRecentReports.serializer()) { api.reports(siteId).second }
+    load(Keys.reports(siteId), ApiRecentReports.serializer()) { api.reports(siteId).second }
 
   suspend fun cachedReports(siteId: String): Loaded<ApiRecentReports>? =
-    cached("reports/$siteId", ApiRecentReports.serializer(), null)
+    cached(Keys.reports(siteId), ApiRecentReports.serializer(), null)
 
   /**
    * A plan and its legs, kept for offline use like the forecast: a plan is read on the boat, often out of signal. The
@@ -93,26 +93,56 @@ class DataRepository(
   /** An atoll's outline and islands; the map keeps them in memory once fetched (ShelterViewModel). */
   suspend fun shelterShapes(wayId: String): ApiShelterShapes = api.shelterShapes(wayId)
 
-  suspend fun atlasIndex(folder: String): AtlasIndex = api.atlasIndex(folder)
+  /** An Atlas overlay's tile list: kept like the forecast, so reef shapes draw offline. */
+  suspend fun atlasIndex(folder: String): AtlasIndex =
+    load(Keys.atlas(folder, "index.json"), AtlasIndex.serializer()) { api.atlasIndexText(folder) }.value
 
-  suspend fun atlasTile(folder: String, file: String): String = api.atlasTile(folder, file)
+  /**
+   * One Atlas tile's text. Each tile seen is kept (the three overlays are about 30 MB for the whole Maldives, far less
+   * for what one diver looks at), so reef shapes once drawn draw again without signal.
+   */
+  suspend fun atlasTile(folder: String, file: String): String = loadText(Keys.atlas(folder, file)) { api.atlasTile(folder, file) }
+
+  /** Whether the phone holds a copy under each key; for saving an area, so a static tile already kept is not fetched again. */
+  suspend fun hasCopy(key: String): Boolean = cache.get(key) != null
+
+  /** Drops the copies under [keys]: an offline area removed. */
+  suspend fun deleteCopies(keys: Collection<String>) {
+    keys.chunked(CachedBodyDao.MAX_KEYS).forEach { cache.delete(it) }
+  }
+
+  /** About how much the copies under [keys] take on the phone, in bytes (their text, one byte a character). */
+  suspend fun copySize(keys: Collection<String>): Long = keys.chunked(CachedBodyDao.MAX_KEYS).sumOf { cache.size(it) }
 
   suspend fun shelterPoint(lat: Double, lon: Double, time: String): ApiShelterPoint = api.shelterPoint(lat, lon, time)
 
   /** The phone's copy only, for showing something while the first fetch runs. */
-  suspend fun cachedSites(): Loaded<ApiSites>? = cached("sites", ApiSites.serializer(), null)
+  suspend fun cachedSites(): Loaded<ApiSites>? = cached(Keys.SITES, ApiSites.serializer(), null)
 
   suspend fun cachedNowcast(): Loaded<ApiNowcast>? = cached("nowcast", ApiNowcast.serializer(), null)
 
   /** This site's own copy, else its row in the copy of the whole list. */
   suspend fun cachedSite(siteId: String): ApiSite? =
-    cached("site/$siteId", ApiSite.serializer(), null)?.value
+    cached(Keys.site(siteId), ApiSite.serializer(), null)?.value
       ?: cachedSites()?.value?.sites?.firstOrNull { it.id == siteId }
 
   suspend fun cachedForecast(siteId: String): Loaded<ApiForecast>? =
-    cached("forecast/$siteId", ApiForecast.serializer(), null)
+    cached(Keys.forecast(siteId), ApiForecast.serializer(), null)
 
   fun photoUrl(path: String): String = api.absolute(path)
+
+  /** Network first, then the last copy, as [load], for a body kept as plain text. */
+  private suspend fun loadText(key: String, fetch: suspend () -> String): String {
+    val text =
+      try {
+        fetch()
+      } catch (e: ApiException) {
+        if (e is ApiException.Server && e.code == "not_found") throw e
+        return cache.get(key)?.json ?: throw e
+      }
+    cache.put(CachedBody(key, text, now()))
+    return text
+  }
 
   private suspend fun <T> load(key: String, serializer: KSerializer<T>, fetch: suspend () -> String): Loaded<T> {
     val text =
@@ -138,5 +168,18 @@ class DataRepository(
         return null
       }
     return Loaded(value, body.savedAt, error)
+  }
+
+  /** The phone's copy keys, one per endpoint; an offline area lists the ones it saved. */
+  object Keys {
+    const val SITES = "sites"
+
+    fun site(id: String) = "site/$id"
+
+    fun forecast(id: String) = "forecast/$id"
+
+    fun reports(id: String) = "reports/$id"
+
+    fun atlas(folder: String, file: String) = "atlas/$folder/$file"
   }
 }

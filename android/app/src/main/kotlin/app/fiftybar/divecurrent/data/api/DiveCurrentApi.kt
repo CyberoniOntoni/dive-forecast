@@ -185,7 +185,11 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
   }
 
   /** An Atlas overlay's tile list, a static file on the server (public/overlays/<folder>/index.json). */
-  suspend fun atlasIndex(folder: String): AtlasIndex = decode(fetch(Request.Builder().url(url(listOf("overlays", folder, "index.json"))).get()))
+  suspend fun atlasIndex(folder: String): AtlasIndex = decode(atlasIndexText(folder))
+
+  /** The same as its text, to keep a copy of. Checked to read as an index, so a broken body is never kept. */
+  suspend fun atlasIndexText(folder: String): String =
+    fetch(Request.Builder().url(url(listOf("overlays", folder, "index.json"))).get()).also { decode<AtlasIndex>(it) }
 
   /** One Atlas tile, as its JSON text (domain/AtlasOverlay.kt reads it). */
   suspend fun atlasTile(folder: String, file: String): String = fetch(Request.Builder().url(url(listOf("overlays", folder, file))).get())

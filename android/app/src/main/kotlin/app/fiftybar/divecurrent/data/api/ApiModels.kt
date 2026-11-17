@@ -16,7 +16,14 @@ data class ApiSites(
   val sites: List<ApiSite> = emptyList(),
 )
 
-@Serializable data class ApiAtoll(val id: String, val name: String)
+/**
+ * An atoll. [bounds] is the box round its outline, for saving it offline; null from an older server or when the server
+ * has no outline (the app then pads the box round the atoll's sites).
+ */
+@Serializable data class ApiAtoll(val id: String, val name: String, val bounds: ApiBounds? = null)
+
+/** A lat/lon box, degrees. */
+@Serializable data class ApiBounds(val south: Double, val west: Double, val north: Double, val east: Double)
 
 @Serializable
 data class ApiSite(
