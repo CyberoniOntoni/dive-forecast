@@ -145,8 +145,6 @@ private fun Form(state: SiteUiState, nickname: String, actions: ReportActions, o
   val ways = state.forecast?.reportWays
   val incoming = ways?.incoming ?: "Incoming"
   val outgoing = ways?.outgoing ?: "Outgoing"
-  // Along a reef "incoming" means toward the reef's heading, not into an atoll: no in/out colours there.
-  val along = hours.firstNotNullOfOrNull { glance(it) }?.tone == GlanceTone.Along
   val time = actions.timeOf(form)
   val shown = time?.let { ReportTime.forecastAt(hours, it) }
   val busy = form.sending
@@ -158,13 +156,8 @@ private fun Form(state: SiteUiState, nickname: String, actions: ReportActions, o
 
     shown?.let { hour ->
       val label = asForecastLabel(hour, incoming, outgoing) ?: return@let
-      val tone =
-        when {
-          along -> colors.foam
-          hour.strength == Strength.TooStrong.wire -> colors.stop
-          hour.direction == "incoming" -> colors.incoming
-          else -> colors.outgoing
-        }
+      // The hour's own glance colour from the server: red when very strong, foam along a reef, else in or out.
+      val tone = glance(hour)?.let { colors.tone(it.tone) } ?: colors.foam
       Button(
         onClick = actions.onAsForecast,
         enabled = !busy,
@@ -187,9 +180,11 @@ private fun Form(state: SiteUiState, nickname: String, actions: ReportActions, o
     Text((ways?.legend ?: "Incoming or outgoing").uppercase(), style = Eyebrow, color = colors.dim)
     Row(Modifier.selectableGroup(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
       listOf("incoming" to incoming, "outgoing" to outgoing).forEach { (value, words) ->
-        val tone = if (along) colors.foam else if (value == "incoming") colors.incoming else colors.outgoing
-        // The arrow this site shows for that way, from any hour of the week that runs it.
-        val bearing = hours.firstOrNull { it.direction == value }?.let { glance(it)?.arrowBearing }
+        // The arrow and colour this site shows for that way, from an hour of the week that runs it. A very strong hour
+        // is red whatever the way, so the colour comes from one that is not; foam if the week has none.
+        val runs = hours.filter { it.direction == value }.mapNotNull { glance(it) }
+        val bearing = runs.firstOrNull()?.arrowBearing
+        val tone = runs.firstOrNull { it.tone != GlanceTone.Stop }?.let { colors.tone(it.tone) } ?: colors.foam
         WayHalf(words, tone, bearing, selected = form.direction == value, modifier = Modifier.weight(1f)) { actions.onDirection(value) }
       }
     }
@@ -283,7 +278,7 @@ private fun WayHalf(words: String, tone: Color, bearing: Double?, selected: Bool
     horizontalArrangement = Arrangement.spacedBy(10.dp),
   ) {
     if (bearing != null) CurrentArrow(bearing = bearing, color = tone, alpha = 0.5f + 0.5f * lift, size = 28.dp, edge = colors.ink)
-    Text(words.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleMedium, color = if (selected) tone else colors.foam)
+    Text(words, style = MaterialTheme.typography.titleMedium, color = if (selected) tone else colors.foam)
   }
 }
 
