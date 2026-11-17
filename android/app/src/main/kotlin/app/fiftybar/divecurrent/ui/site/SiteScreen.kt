@@ -1,5 +1,8 @@
 package app.fiftybar.divecurrent.ui.site
 
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.Color
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableFloatStateOf
@@ -30,7 +33,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import app.fiftybar.divecurrent.ui.components.TabIcons
 import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
@@ -114,6 +116,7 @@ fun SiteScreen(
   onSignIn: () -> Unit,
   onNavigate: (ApiSite) -> Unit,
   onShowOnMap: (ApiSite) -> Unit,
+  onPeekMap: (ApiSite) -> Unit,
   reportAt: String? = null,
 ) {
   val repository = appRepository()
@@ -164,16 +167,19 @@ fun SiteScreen(
   val pastHero by remember { derivedStateOf { scroll.value > heroPx * 0.7f } }
   // Pulled down past the top of the page, the header gives way to the map, centred on this site.
   val showOnMap by rememberUpdatedState(site?.let { s -> { onShowOnMap(s) } })
-  val pull = rememberMapPull(enabled = site != null) { showOnMap?.invoke() }
+  val peekMap by rememberUpdatedState(site?.let { s -> { onPeekMap(s) } })
+  val pull = rememberMapPull(enabled = site != null, onStart = { peekMap?.invoke() }) { showOnMap?.invoke() }
 
   Scaffold(
-    containerColor = colors.ink,
+    // See-through: the map lives under every screen, and a pull down shows it above the page. The page and its
+    // bottom bar paint their own ink.
+    containerColor = Color.Transparent,
     contentWindowInsets = WindowInsets(0),
     bottomBar = {
       if (site != null) {
         Row(
           Modifier.fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(colors.ink.copy(alpha = 0f), colors.ink, colors.ink)))
+            .background(colors.ink)
             .navigationBarsPadding()
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
           horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -230,8 +236,8 @@ fun SiteScreen(
         onDismiss = close,
       )
     }
-    Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()).nestedScroll(pull.connection)) {
-      Column(Modifier.fillMaxSize().graphicsLayer { translationY = pull.offset }.verticalScroll(scroll)) {
+    Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()).onSizeChanged { pull.pageHeight = it.height.toFloat() }.nestedScroll(pull.connection)) {
+      Column(Modifier.fillMaxSize().graphicsLayer { translationY = pull.offset }.background(colors.ink).verticalScroll(scroll)) {
         // The streaks stop once the header has scrolled away, so the page does not draw every frame for nothing.
         SiteHero(site = state.site, glance = selectedGlance, reducedMotion = reducedMotion || pastHero)
         Column(
@@ -487,19 +493,25 @@ internal class MapPull(val threshold: Float) {
   val ready: Boolean
     get() = offset >= threshold
 
+  /** The page's height, so a pull let go past the threshold can carry the page off the bottom of the screen. */
+  var pageHeight = 0f
+
   lateinit var connection: NestedScrollConnection
     internal set
 }
 
 /**
- * Over-scrolling down at the top of the page drags it down (at half the finger's speed, like a rubber band); let go
- * past [PULL_TO_MAP] and [onPulled] runs, short of it the page springs back. A tick of haptics marks the point.
+ * Over-scrolling down at the top of the page drags it down (at half the finger's speed, like a rubber band), showing
+ * the live map behind it; [onStart] runs as the pull begins, so the map can move to the site. Let go past
+ * [PULL_TO_MAP] and the page slides away off the bottom, then [onPulled] runs; short of it the page springs back. A
+ * tick of haptics marks the point.
  */
 @Composable
-internal fun rememberMapPull(enabled: Boolean, onPulled: () -> Unit): MapPull {
+internal fun rememberMapPull(enabled: Boolean, onStart: () -> Unit, onPulled: () -> Unit): MapPull {
   val threshold = with(LocalDensity.current) { PULL_TO_MAP.toPx() }
   val haptics = LocalHapticFeedback.current
   val pulled by rememberUpdatedState(onPulled)
+  val started by rememberUpdatedState(onStart)
   val on by rememberUpdatedState(enabled)
   return remember(threshold) {
     MapPull(threshold).also { pull ->
@@ -518,6 +530,7 @@ internal fun rememberMapPull(enabled: Boolean, onPulled: () -> Unit): MapPull {
           override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
             if (!on || source != NestedScrollSource.UserInput || available.y <= 0f) return Offset.Zero
             val before = pull.offset
+            if (before == 0f) started()
             val after = (before + available.y * 0.5f).coerceAtMost(threshold * 1.6f)
             if (before < threshold && after >= threshold) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             pull.offset = after
@@ -527,8 +540,13 @@ internal fun rememberMapPull(enabled: Boolean, onPulled: () -> Unit): MapPull {
           override suspend fun onPreFling(available: Velocity): Velocity {
             val was = pull.offset
             if (was <= 0f) return Velocity.Zero
-            if (was >= threshold) pulled()
-            animate(was, 0f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ -> pull.offset = value }
+            if (was >= threshold) {
+              // The page carries on down and off the screen, leaving the map it was covering; then the stack pops.
+              animate(was, maxOf(pull.pageHeight, was), animationSpec = tween(220)) { value, _ -> pull.offset = value }
+              pulled()
+            } else {
+              animate(was, 0f, animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { value, _ -> pull.offset = value }
+            }
             return available
           }
         }
@@ -540,13 +558,14 @@ internal fun rememberMapPull(enabled: Boolean, onPulled: () -> Unit): MapPull {
 @Composable
 private fun PullHint(pull: MapPull, modifier: Modifier = Modifier) {
   val colors = CurrentTheme.colors
-  val shown = (pull.offset / pull.threshold).coerceIn(0f, 1f)
+  // Fully there by a third of the way, so it reads over the busy header from early on.
+  val shown = (pull.offset / (pull.threshold / 3f)).coerceIn(0f, 1f)
   if (shown <= 0f) return
   Row(
     modifier
       .graphicsLayer { alpha = shown }
       .clip(CircleShape)
-      .background(colors.glass)
+      .background(colors.ink.copy(alpha = 0.92f))
       .border(1.dp, if (pull.ready) colors.incoming else colors.line, CircleShape)
       .padding(horizontal = 16.dp, vertical = 10.dp),
     verticalAlignment = Alignment.CenterVertically,

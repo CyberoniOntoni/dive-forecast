@@ -119,6 +119,9 @@ fun MapScreen(
   // Sent from a site page to see where the site is: the map moves there and rings it, once.
   showSite: ShowOnMap? = null,
   onShown: () -> Unit = {},
+  // Another screen is on top: the map stays alive under it (so it is there at once on the way back, and shows through
+  // a site page being pulled down), but holds still and leaves Back to that screen.
+  covered: Boolean = false,
 ) {
   val repository = appRepository()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
@@ -142,7 +145,7 @@ fun MapScreen(
   var focus by remember { mutableStateOf<MapFocus?>(null) }
   // Map or list, one at a time, switched by the pill over the map: no sheet under the tab bar to compete with it.
   var listOpen by rememberSaveable { mutableStateOf(false) }
-  BackHandler(enabled = listOpen) { listOpen = false }
+  BackHandler(enabled = listOpen && !covered) { listOpen = false }
   // Kept out here: the list leaves composition while the map shows, and should come back where it was.
   val listState = rememberLazyListState()
   val colors = CurrentTheme.colors
@@ -221,7 +224,7 @@ fun MapScreen(
         atlas = atlasState.shapes,
         focus = focus,
         // Under the list the map is hidden: its arrows hold still rather than animate unseen.
-        reducedMotion = reducedMotion || listOpen,
+        reducedMotion = reducedMotion || listOpen || covered,
         highlight = highlight,
       )
       Column(

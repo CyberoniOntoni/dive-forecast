@@ -1,5 +1,7 @@
 package app.fiftybar.divecurrent
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import app.fiftybar.divecurrent.ui.map.ShowOnMap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -80,23 +82,26 @@ fun MainNavigation(startPlanId: String? = null) {
       }
     },
   ) { barPadding ->
+    // The map is drawn once, under every screen, rather than as the stack's first entry: it stays alive (no reload on
+    // the way back) and shows through a site page pulled down to it. Its entry in the stack draws nothing.
+    Box(Modifier.fillMaxSize().padding(barPadding).consumeWindowInsets(barPadding)) {
+    MapScreen(
+      onOpenSite = { id -> backStack.add(SiteKey(id)) },
+      onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
+      onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
+      showSite = showOnMap,
+      onShown = { showOnMap = null },
+      covered = backStack.lastOrNull() != MapKey,
+    )
     NavDisplay(
       backStack = backStack,
-      modifier = Modifier.padding(barPadding).consumeWindowInsets(barPadding),
+      modifier = Modifier.fillMaxSize(),
       onBack = { backStack.removeLastOrNull() },
       entryDecorators =
         listOf(rememberSaveableStateHolderNavEntryDecorator(), rememberViewModelStoreNavEntryDecorator()),
       entryProvider =
         entryProvider {
-          entry<MapKey> {
-            MapScreen(
-              onOpenSite = { id -> backStack.add(SiteKey(id)) },
-              onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
-              onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
-              showSite = showOnMap,
-              onShown = { showOnMap = null },
-            )
-          }
+          entry<MapKey> {}
           entry<AddSiteKey> { key ->
             AddSiteScreen(
               lat = key.lat,
@@ -119,6 +124,8 @@ fun MainNavigation(startPlanId: String? = null) {
               onBack = leave,
               onSignIn = { backStack.add(SignInKey) },
               onNavigate = { site -> backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon)) },
+              // Pulled down: the map under the page moves to the site while the pull goes on.
+              onPeekMap = { site -> showOnMap = ShowOnMap(site.id, site.lat, site.lon) },
               // Wherever the page was opened from (map, list, plan, Navigate), the map is the stack's root.
               onShowOnMap = { site ->
                 showOnMap = ShowOnMap(site.id, site.lat, site.lon)
@@ -216,6 +223,7 @@ fun MainNavigation(startPlanId: String? = null) {
           }
         },
     )
+    }
   }
 }
 

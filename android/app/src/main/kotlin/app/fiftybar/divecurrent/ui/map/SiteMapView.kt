@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.map
 
+import org.maplibre.android.maps.MapLibreMapOptions
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -156,7 +157,10 @@ fun SiteMapView(
   val tapped by rememberUpdatedState(onTap)
   // The shading's sources and layers on the current style; a new style starts with none.
   val shelterIds = remember { mutableListOf<String>() }
-  val mapView = remember { MapView(context).apply { onCreate(null) } }
+  // A TextureView, not the default SurfaceView: the map now stays alive under other screens (some with maps of their
+  // own), and a SurfaceView's window hole and z-order would fight them. It also shows through a site page as it is
+  // pulled down.
+  val mapView = remember { MapView(context, MapLibreMapOptions.createFromAttributes(context).textureMode(true)).apply { onCreate(null) } }
   var map by remember { mutableStateOf<MapLibreMap?>(null) }
   var style by remember { mutableStateOf<Style?>(null) }
   // Where the map settled, for the coordinate grid.
