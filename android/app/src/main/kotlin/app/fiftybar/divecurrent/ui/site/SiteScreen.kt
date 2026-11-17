@@ -130,12 +130,13 @@ fun SiteScreen(
   val scroll = rememberScrollState()
   val forecast = state.forecast
   val hours = forecast?.hours.orEmpty()
-  // "Now" moves on while the page stays open (a boat day): the week is re-read when the Maldives hour changes.
-  var nowHour by remember { mutableStateOf(MaldivesTime.nowHour()) }
+  // "Now" moves on while the page stays open (a boat day): the week is re-read when the nearest Maldives hour (the
+  // one the map shows) changes, at half past.
+  var nowHour by remember { mutableStateOf(MaldivesTime.nearestHour()) }
   LaunchedEffect(Unit) {
     while (true) {
       delay(60_000)
-      nowHour = MaldivesTime.nowHour()
+      nowHour = MaldivesTime.nearestHour()
     }
   }
   val week = remember(forecast, nowHour) { forecast?.takeIf { it.hours.isNotEmpty() }?.let { WeekView(it) } }

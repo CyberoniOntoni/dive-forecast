@@ -10,10 +10,8 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -43,14 +41,16 @@ fun MainNavigation(startPlanId: String? = null) {
   val backStack = rememberNavBackStack(*start.toTypedArray())
   // A screen that leaves by itself (signed in, signed out) never pops the map: an empty back stack would crash.
   val leave: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
-  val session by appAccount().sessions.session.collectAsStateWithLifecycle()
+  val sessions = appAccount().sessions
   // A tab's top screen sits right on the map (Back from it goes to the map); only there is the bar shown.
   val tab = tabOf(backStack)
   fun isTabRoot(key: NavKey) = backStack.size == 2 && backStack[1] == key
+  // Reads the stack and the session at the tap, not values from the composition it was made in: Compose keeps the
+  // bar's onSelect from the first composition, so a captured `tab` stayed Now and made the Now tab do nothing.
   fun select(next: Tab) {
-    if (next == tab) return
+    if (next == tabOf(backStack)) return
     while (backStack.size > 1) backStack.removeLastOrNull()
-    rootOf(next, signedIn = session != null)?.let(backStack::add)
+    rootOf(next, signedIn = sessions.current() != null)?.let(backStack::add)
   }
   // Swap the You tab's screen between sign-in and the account without a trip through the map.
   fun swapYou(to: NavKey) {

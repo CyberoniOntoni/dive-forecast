@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,6 +30,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,6 +48,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.tan
 import kotlin.random.Random
@@ -111,18 +113,32 @@ private fun SatelliteBackdrop(lat: Double, lon: Double, modifier: Modifier) {
     val rows = (maxHeight / tile / 2).toInt() + 2
     val x0 = floor(fx).toInt()
     val y0 = floor(fy).toInt()
+    // Each tile's edges are rounded to whole pixels, and a tile ends where the next begins: fractional offsets left
+    // hairline gaps between tiles that showed the dark background through as a grid.
+    val density = LocalDensity.current
+    val tilePx = with(density) { tile.toPx() }
+    val widthPx = constraints.maxWidth
+    val heightPx = constraints.maxHeight
+    fun edgeX(t: Int) = (widthPx / 2f + tilePx * (t - fx).toFloat()).roundToInt()
+    fun edgeY(t: Int) = (heightPx / 2f + tilePx * (t - fy).toFloat()).roundToInt()
     for (dx in -cols..cols) {
       for (dy in -rows..rows) {
         val tx = x0 + dx
         val ty = y0 + dy
-        val left = maxWidth / 2 + tile * (tx - fx).toFloat()
-        val top = maxHeight / 2 + tile * (ty - fy).toFloat()
-        if (left > maxWidth || top > maxHeight || left + tile < 0.dp || top + tile < 0.dp) continue
+        val left = edgeX(tx)
+        val top = edgeY(ty)
+        val w = edgeX(tx + 1) - left
+        val h = edgeY(ty + 1) - top
+        if (left > widthPx || top > heightPx || left + w < 0 || top + h < 0) continue
         AsyncImage(
           model = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$zoom/$ty/$tx",
           contentDescription = null,
           contentScale = ContentScale.FillBounds,
-          modifier = Modifier.offset(left, top).size(tile),
+          modifier =
+            Modifier.layout { measurable, _ ->
+              val placeable = measurable.measure(Constraints.fixed(w, h))
+              layout(w, h) { placeable.place(left, top) }
+            },
         )
       }
     }
