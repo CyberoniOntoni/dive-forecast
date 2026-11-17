@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.scoreboard
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -196,6 +197,7 @@ internal fun ProfileCard(modifier: Modifier = Modifier, content: @Composable () 
   Card(
     shape = RoundedCornerShape(16.dp),
     colors = CardDefaults.cardColors(containerColor = colors.deep, contentColor = colors.foam),
+    border = BorderStroke(1.dp, colors.line),
     modifier = modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) { content() }

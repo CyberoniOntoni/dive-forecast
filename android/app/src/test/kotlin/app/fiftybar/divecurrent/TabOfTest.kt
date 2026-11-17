@@ -28,4 +28,17 @@ class TabOfTest {
     // Plans opened from the account screen are a step inside You, not the Plans tab.
     assertNull(tabOf(listOf(MapKey, AccountKey, PlansKey)))
   }
+
+  @Test
+  fun `each tab opens on a root that tabOf maps back to it`() {
+    for (tab in Tab.entries) {
+      for (signedIn in listOf(true, false)) {
+        val root = rootOf(tab, signedIn)
+        val stack = listOfNotNull(MapKey, root)
+        assertEquals(tab, tabOf(stack))
+      }
+    }
+    assertEquals(AccountKey, rootOf(Tab.You, signedIn = true))
+    assertEquals(SignInKey, rootOf(Tab.You, signedIn = false))
+  }
 }

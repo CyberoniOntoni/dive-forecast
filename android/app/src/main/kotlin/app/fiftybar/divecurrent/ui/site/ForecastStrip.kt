@@ -101,7 +101,7 @@ fun ForecastStrip(
     }
     // A dark casing so the line still reads over foam bars along a reef.
     drawPath(tide, colors.ink, style = Stroke(width = 3.5.dp.toPx()))
-    drawPath(tide, colors.foam, style = Stroke(width = 1.5.dp.toPx()))
+    drawPath(tide, colors.tide, style = Stroke(width = 1.5.dp.toPx()))
 
     val sx = selected.coerceIn(0, count - 1) * step + step / 2
     drawLine(colors.foam, Offset(sx, 0f), Offset(sx, size.height), strokeWidth = 2.dp.toPx())

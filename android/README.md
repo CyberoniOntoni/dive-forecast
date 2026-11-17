@@ -6,8 +6,9 @@ so it shows exactly what the site shows and never runs the model itself.
 What it does:
 
 - **Look and layout** ("Tideline", `ui/theme/`): deep navy behind everything, the current's colours carry the answer
-  (incoming teal, outgoing amber, very strong red, along a reef foam) and a pale blue is kept for the tide. Numbers and
-  headings are set in Space Grotesk with tabular figures, words in Inter; both are bundled (`res/font/`) under the SIL
+  (incoming teal, outgoing amber, very strong red, along a reef foam) and a pale blue is kept for the tide. The Material
+  display, headline and titleLarge styles (the answer, big numbers, screen titles) are set in Space Grotesk with
+  tabular figures, every other style in Inter; both are bundled (`res/font/`) under the SIL
   Open Font License (`licenses/`). A bottom bar (`ui/components/TabBar.kt`) holds the four top screens: Now (the map),
   Plans, Navigate and You (sign-in or the account). It shows only on those screens, each sitting right on the map, so
   Back from any of them goes to the map.

@@ -10,8 +10,9 @@ import androidx.compose.ui.unit.sp
 import app.fiftybar.divecurrent.R
 
 /*
- * Two families, both under the SIL Open Font License (android/licenses/): Space Grotesk for the answer, numbers and
- * headings, Inter for words, lists and forms. Numbers in Space Grotesk use tabular figures so readouts do not jump.
+ * Two families, both under the SIL Open Font License (android/licenses/): Space Grotesk, with tabular figures so
+ * readouts do not jump, for the display, headline and titleLarge styles (the answer, big numbers, screen titles);
+ * Inter for every other style (section titles, body, labels, lists and forms).
  */
 
 val SpaceGrotesk =
@@ -60,9 +61,3 @@ val Typography =
     labelMedium = text(12.0, 16, FontWeight.SemiBold),
     labelSmall = text(11.0, 16, FontWeight.SemiBold, 0.1),
   )
-
-/** The small capitals over a card or readout ("TIDE", "STEER"). */
-val Eyebrow = text(11.5, 14, FontWeight.SemiBold, 0.12)
-
-/** A number set in Space Grotesk with tabular figures, for readouts outside the Material scale. */
-fun readout(size: Int, weight: FontWeight = FontWeight.SemiBold) = display(size, (size * 1.1).toInt(), weight)

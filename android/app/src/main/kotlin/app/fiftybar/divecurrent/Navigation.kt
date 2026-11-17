@@ -47,12 +47,7 @@ fun MainNavigation(startPlanId: String? = null) {
   fun select(next: Tab) {
     if (next == tab) return
     while (backStack.size > 1) backStack.removeLastOrNull()
-    when (next) {
-      Tab.Now -> Unit
-      Tab.Plans -> backStack.add(PlansKey)
-      Tab.Navigate -> backStack.add(NavigatePickKey)
-      Tab.You -> backStack.add(if (session != null) AccountKey else SignInKey)
-    }
+    rootOf(next, signedIn = session != null)?.let(backStack::add)
   }
   // Swap the You tab's screen between sign-in and the account without a trip through the map.
   fun swapYou(to: NavKey) {
@@ -209,13 +204,24 @@ fun MainNavigation(startPlanId: String? = null) {
 internal fun tabOf(stack: List<NavKey>): Tab? =
   when {
     stack.size == 1 && stack[0] == MapKey -> Tab.Now
-    stack.size == 2 && stack[0] == MapKey ->
-      when (stack[1]) {
-        PlansKey -> Tab.Plans
-        NavigatePickKey -> Tab.Navigate
-        AccountKey,
-        SignInKey -> Tab.You
-        else -> null
-      }
+    stack.size == 2 && stack[0] == MapKey -> Tab.entries.firstOrNull { stack[1] in tabRoots(it) }
     else -> null
   }
+
+/**
+ * The one table of each tab's top screen, kept on the map: none for Now (the map itself); You has two, the account
+ * when signed in and sign-in when not.
+ */
+internal fun tabRoots(tab: Tab): List<NavKey> =
+  when (tab) {
+    Tab.Now -> emptyList()
+    Tab.Plans -> listOf(PlansKey)
+    Tab.Navigate -> listOf(NavigatePickKey)
+    Tab.You -> listOf(AccountKey, SignInKey)
+  }
+
+/** The screen a tab opens on: the first of its roots, or for You the second when signed out. */
+internal fun rootOf(tab: Tab, signedIn: Boolean): NavKey? {
+  val roots = tabRoots(tab)
+  return if (tab == Tab.You && !signedIn) roots.getOrNull(1) else roots.firstOrNull()
+}
