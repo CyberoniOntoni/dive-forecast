@@ -106,7 +106,7 @@ private fun lastPosition(context: Context): LatLon? {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NavigatePickScreen(onBack: () -> Unit, onPick: (Destination) -> Unit) {
+fun NavigatePickScreen(onBack: (() -> Unit)?, onPick: (Destination) -> Unit) {
   val repository = appRepository()
   val viewModel: NavigatePickViewModel = viewModel { NavigatePickViewModel(repository) }
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -131,7 +131,7 @@ fun NavigatePickScreen(onBack: () -> Unit, onPick: (Destination) -> Unit) {
     topBar = {
       TopAppBar(
         title = { Text("Navigate by boat") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } },
+        navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
     },

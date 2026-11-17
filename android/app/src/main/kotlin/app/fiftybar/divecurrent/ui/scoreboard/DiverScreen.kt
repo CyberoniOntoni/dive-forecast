@@ -195,7 +195,7 @@ internal fun ProfileCard(modifier: Modifier = Modifier, content: @Composable () 
   val colors = CurrentTheme.colors
   Card(
     shape = RoundedCornerShape(16.dp),
-    colors = CardDefaults.cardColors(containerColor = colors.glass, contentColor = colors.foam),
+    colors = CardDefaults.cardColors(containerColor = colors.deep, contentColor = colors.foam),
     modifier = modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) { content() }

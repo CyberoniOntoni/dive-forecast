@@ -191,7 +191,7 @@ private fun DayCard(
 ) {
   Card(
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = colors.glass, contentColor = colors.foam),
+    colors = CardDefaults.cardColors(containerColor = colors.deep, contentColor = colors.foam),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

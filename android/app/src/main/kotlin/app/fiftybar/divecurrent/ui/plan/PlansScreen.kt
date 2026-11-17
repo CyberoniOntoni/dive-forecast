@@ -44,7 +44,7 @@ import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 /** Dive plans: open one from a shared link, and the signed-in diver's own, with a new one in the app's editor. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onNewPlan: () -> Unit, onSignIn: () -> Unit) {
+fun PlansScreen(onBack: (() -> Unit)?, onOpenPlan: (String) -> Unit, onNewPlan: () -> Unit, onSignIn: () -> Unit) {
   val account = appAccount()
   val viewModel: PlansViewModel = viewModel { PlansViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
@@ -61,7 +61,7 @@ fun PlansScreen(onBack: () -> Unit, onOpenPlan: (String) -> Unit, onNewPlan: () 
     topBar = {
       TopAppBar(
         title = { Text("Dive plans") },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
+        navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
     },

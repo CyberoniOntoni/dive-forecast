@@ -5,6 +5,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -238,7 +239,8 @@ internal fun SurfaceCard(content: @Composable () -> Unit) {
   val colors = CurrentTheme.colors
   Card(
     shape = RoundedCornerShape(24.dp),
-    colors = CardDefaults.cardColors(containerColor = colors.glass, contentColor = colors.foam),
+    colors = CardDefaults.cardColors(containerColor = colors.deep, contentColor = colors.foam),
+    border = BorderStroke(1.dp, colors.line),
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }

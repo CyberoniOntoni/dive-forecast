@@ -5,6 +5,13 @@ so it shows exactly what the site shows and never runs the model itself.
 
 What it does:
 
+- **Look and layout** ("Tideline", `ui/theme/`): deep navy behind everything, the current's colours carry the answer
+  (incoming teal, outgoing amber, very strong red, along a reef foam) and a pale blue is kept for the tide. Numbers and
+  headings are set in Space Grotesk with tabular figures, words in Inter; both are bundled (`res/font/`) under the SIL
+  Open Font License (`licenses/`). A bottom bar (`ui/components/TabBar.kt`) holds the four top screens: Now (the map),
+  Plans, Navigate and You (sign-in or the account). It shows only on those screens, each sitting right on the map, so
+  Back from any of them goes to the map.
+
 - **Map**: every site with an arrow pointing the way the water runs at the current Maldives hour, coloured and faded like
   the web pins (incoming teal, outgoing amber, along a reef foam, very strong the stop colour; low confidence fainter).
   Satellite (Esri World Imagery) or OpenStreetMap base. Tap an arrow to open the site.
@@ -18,18 +25,18 @@ What it does:
   (`POST /api/v1/sign-in/token`), kept in shared prefs file `session`, out of backups. On a site page, "Report the
   current" as on the web: this hour or up to 3 h ago in one tap or another day and time, then "As forecast" in one
   tap or which way and how strong, in the site's own words (`reportWays`); what it earned comes back in words. Recent
-  reports are listed below it. The map's top-left chip opens sign-in or the account (points, sign out, sign out
+  reports are listed below it. The You tab opens sign-in or the account (points, sign out, sign out
   everywhere). A 401 from the server means the token stopped working, and the app forgets it.
 - **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
   (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; not verified, so Android asks which app to use), a pasted link on the Plans
-  screen (calendar button on the map's list, or "My dive plans" on the account), or the diver's own plans when signed
+  screen (the Plans tab, or "My dive plans" on the account), or the diver's own plans when signed
   in. Each day shows its dives on a small satellite map, numbered and coloured as on the web with the boat route between
   them (`ui/plan/PlanDayMap.kt`), then lists them with the forecast at the dive time, warnings and a better window, the
   boat legs between them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
   of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
   open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
   note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
-- **Boat navigation**: "Navigate here by boat" on a site page, the map list's pin button (sites nearest first, with a
+- **Boat navigation**: "Navigate here by boat" on a site page, the Navigate tab (sites nearest first, with a
   search), or a long press on the map for a point. The screen follows the phone's GPS while it is open (and keeps the
   screen on), asks the server for a route round the islands and reef (`GET /api/v1/boat-route`, the web's route and
   its forecast current), and shows distance left, speed, the steer allowing for the current, the ETA with the current
@@ -65,7 +72,7 @@ What it does:
   new site's page opens in the form's place, and the map reads the list again. On a site they added, the diver can add
   more photos from its page (`addedSiteIds` from `GET /api/v1/me`).
 
-- **Scoreboard and divers**: the map's Scoreboard chip opens the web's three boards (this month, all time, new sites;
+- **Scoreboard and divers**: the account screen, or "See the scoreboard" on the signed-out You tab, opens the web's three boards (this month, all time, new sites;
   `GET /api/v1/scoreboard`), your own row marked; a nickname opens that diver's public page (`/api/v1/divers/{nickname}`:
   found by nickname, so no diver id reaches the app). The account screen has what the web's account page has: numbers,
   every badge, how points work, About me and the nickname (`PUT /api/v1/me/about`, `/me/nickname`), and your own page.

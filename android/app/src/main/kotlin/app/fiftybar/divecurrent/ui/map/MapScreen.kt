@@ -22,12 +22,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -78,7 +75,6 @@ import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.SiteSearch
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
-import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -88,15 +84,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun MapScreen(
   onOpenSite: (String) -> Unit,
-  onAccount: (signedIn: Boolean) -> Unit,
-  onPlans: () -> Unit,
-  onNavigate: () -> Unit,
   onNavigateTo: (id: String, name: String, lat: Double, lon: Double) -> Unit,
   onAddSite: (lat: Double, lon: Double) -> Unit,
-  onScoreboard: () -> Unit,
 ) {
   val repository = appRepository()
-  val session by appAccount().sessions.session.collectAsStateWithLifecycle()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val shelter: ShelterViewModel = viewModel { ShelterViewModel(repository) }
@@ -170,8 +161,6 @@ fun MapScreen(
         onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
-        onPlans = onPlans,
-        onNavigate = onNavigate,
         onAddSite = { addHint = true },
       )
     },
@@ -195,29 +184,6 @@ fun MapScreen(
         atlas = atlasState.shapes,
         focus = focus,
       )
-      // Who is signed in, or a way to sign in: reports need it. The scoreboard, under it, is open to everyone; one
-      // above the other, so a narrow phone has room for the Layers chip beside them.
-      Column(
-        Modifier.align(Alignment.TopStart).statusBarsPadding().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-      ) {
-        AssistChip(
-          onClick = { onAccount(session != null) },
-          label = { Text(session?.nickname ?: "Sign in", maxLines = 1) },
-          leadingIcon = { Icon(Icons.Filled.AccountCircle, contentDescription = null) },
-          colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam, leadingIconContentColor = colors.foam),
-          modifier =
-            Modifier.heightIn(min = 44.dp).widthIn(max = 160.dp).semantics {
-              contentDescription = session?.let { "Signed in as ${it.nickname}. Account" } ?: "Sign in"
-            },
-        )
-        AssistChip(
-          onClick = onScoreboard,
-          label = { Text("Scoreboard") },
-          colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam),
-          modifier = Modifier.heightIn(min = 44.dp),
-        )
-      }
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
         Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
@@ -345,8 +311,6 @@ private fun NowList(
   onSearchFocus: () -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
-  onPlans: () -> Unit,
-  onNavigate: () -> Unit,
   onAddSite: () -> Unit,
 ) {
   val colors = CurrentTheme.colors
@@ -375,12 +339,6 @@ private fun NowList(
       }
       IconButton(onClick = onAddSite, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Add, contentDescription = "Add a dive site")
-      }
-      IconButton(onClick = onNavigate, modifier = Modifier.size(48.dp)) {
-        Icon(Icons.Filled.LocationOn, contentDescription = "Navigate by boat")
-      }
-      IconButton(onClick = onPlans, modifier = Modifier.size(48.dp)) {
-        Icon(Icons.Filled.DateRange, contentDescription = "Dive plans")
       }
       IconButton(onClick = onRefresh, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Refresh, contentDescription = "Refresh the forecast")
