@@ -56,6 +56,18 @@ class DataRepositoryTest {
   }
 
   @Test
+  fun `never draws an Atlas tile the server no longer has from an old copy`() = runTest {
+    dao.rows["atlas/reef-outline/gone.json"] = CachedBody("atlas/reef-outline/gone.json", "[]", savedAt = 500L)
+    server.enqueue(reply(404, "Not Found"))
+    try {
+      repository.atlasTile("reef-outline", "gone.json")
+      fail("a 404 must not fall back to the copy")
+    } catch (e: ApiException.Server) {
+      assertEquals("not_found", e.code)
+    }
+  }
+
+  @Test
   fun `drops copies and sizes what is left`() = runTest {
     server.enqueue(reply(200, NOWCAST))
     repository.nowcast()

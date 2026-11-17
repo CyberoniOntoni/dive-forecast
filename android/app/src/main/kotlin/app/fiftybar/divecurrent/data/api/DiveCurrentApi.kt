@@ -237,7 +237,8 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
           val detail = runCatching { ApiJson.decodeFromString<ApiErrorBody>(body).error }.getOrNull()
           throw ApiException.Server(
             status = response.code,
-            code = detail?.code ?: "server_error",
+            // A 404 with no JSON body (a static file such as an Atlas tile) is still not found, so never shown from an old copy.
+            code = detail?.code ?: if (response.code == 404) "not_found" else "server_error",
             message = detail?.message ?: "The forecast server had a problem (${response.code}).",
           )
         }

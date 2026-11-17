@@ -150,8 +150,8 @@ class MapViewModel(private val repository: DataRepository, private val offline: 
 
     /**
      * Strongest first, as the web list sorts, then by name. A nowcast for an earlier hour gives every row no glance,
-     * so an offline copy never draws last hour's water as now's. A site with no current hour from the nowcast takes
-     * this hour from its atoll's saved week in [saved], if the atoll was saved.
+     * so an offline copy never draws last hour's water as now's. With no current nowcast (none, or one for an earlier
+     * hour), a site takes this hour from its atoll's saved week in [saved], if the atoll was saved.
      */
     fun rows(
       sites: ApiSites,
@@ -165,7 +165,9 @@ class MapViewModel(private val repository: DataRepository, private val offline: 
         .map { site ->
           val n = byId[site.id]
           val g = glance(n?.hour)
-          if (g != null) return@map SiteRow(site, g, stale = n?.stale == true)
+          // The saved week only stands in when the server's map is missing or for an earlier hour: a current map that
+          // leaves a site out (no data for it this hour) is the server's word.
+          if (g != null || current != null) return@map SiteRow(site, g, stale = n?.stale == true)
           val week = saved[site.id]
           val fromWeek = glance(OfflineArea.hourNow(week, nowMs))
           if (fromWeek != null) SiteRow(site, fromWeek, stale = week?.stale == true, fromSaved = true)

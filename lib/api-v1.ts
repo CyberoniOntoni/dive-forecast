@@ -248,12 +248,8 @@ function boundsOf(ring: RimRing | null): ApiBounds | null {
   return { south: round(box.south), west: round(box.west), north: round(box.north), east: round(box.east) };
 }
 
-/** `outline` finds an atoll's outline; the route passes rimForAtoll, tests a stub. */
-export function apiSites(
-  sites: readonly Site[],
-  atolls: readonly Atoll[],
-  outline: (atoll: Atoll) => RimRing | null = () => null,
-): ApiSites {
+/** `outline` finds an atoll's outline (the route passes rimForAtoll), so no caller can leave `bounds` out by mistake. */
+export function apiSites(sites: readonly Site[], atolls: readonly Atoll[], outline: (atoll: Atoll) => RimRing | null): ApiSites {
   return {
     apiVersion: API_VERSION,
     atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),

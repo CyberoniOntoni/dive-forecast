@@ -106,6 +106,14 @@ class MapRowsTest {
   }
 
   @Test
+  fun `keeps to a current nowcast that leaves a site out`() {
+    val empty = nowcast.copy(nowcasts = emptyList())
+    val row = MapViewModel.rows(sites, empty, mapOf("a" to week), maldivesMs("2026-11-15T09:20")).single()
+    assertNull(row.glance)
+    assertFalse(row.fromSaved)
+  }
+
+  @Test
   fun `draws nothing once the saved week has run out`() {
     val row = MapViewModel.rows(sites, null, mapOf("a" to week), maldivesMs("2026-11-15T13:00")).single()
     assertNull(row.glance)

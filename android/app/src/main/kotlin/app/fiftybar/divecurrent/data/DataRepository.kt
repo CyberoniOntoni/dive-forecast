@@ -132,29 +132,36 @@ class DataRepository(
   fun photoUrl(path: String): String = api.absolute(path)
 
   /** Network first, then the last copy, as [load], for a body kept as plain text. */
-  private suspend fun loadText(key: String, fetch: suspend () -> String): String {
-    val text =
-      try {
-        fetch()
-      } catch (e: ApiException) {
-        if (e is ApiException.Server && e.code == "not_found") throw e
-        return cache.get(key)?.json ?: throw e
-      }
-    cache.put(CachedBody(key, text, now()))
-    return text
-  }
+  private suspend fun loadText(key: String, fetch: suspend () -> String): String =
+    fetchOrCopy(key, fetch) { error -> cache.get(key)?.json ?: throw error }
 
   private suspend fun <T> load(key: String, serializer: KSerializer<T>, fetch: suspend () -> String): Loaded<T> {
+    var savedAt = 0L
+    val text = fetchOrCopy(key, fetch, onFresh = { savedAt = it }) { error -> return cached(key, serializer, error) ?: throw error }
+    return Loaded(ApiJson.decodeFromString(serializer, text), savedAt)
+  }
+
+  /**
+   * The one network-first rule: a fetch that works replaces the copy under [key] and is returned; any other failure
+   * goes to [onFailure], which falls back to the copy. A 404 (`not_found`) is never hidden behind an old copy.
+   */
+  private suspend inline fun fetchOrCopy(
+    key: String,
+    noinline fetch: suspend () -> String,
+    onFresh: (savedAt: Long) -> Unit = {},
+    onFailure: (ApiException) -> String,
+  ): String {
     val text =
       try {
         fetch()
       } catch (e: ApiException) {
         if (e is ApiException.Server && e.code == "not_found") throw e
-        return cached(key, serializer, e) ?: throw e
+        return onFailure(e)
       }
     val savedAt = now()
     cache.put(CachedBody(key, text, savedAt))
-    return Loaded(ApiJson.decodeFromString(serializer, text), savedAt)
+    onFresh(savedAt)
+    return text
   }
 
   private suspend fun <T> cached(key: String, serializer: KSerializer<T>, error: ApiException?): Loaded<T>? {

@@ -60,7 +60,7 @@ describe("API v1 shapes", () => {
   });
 
   it("leaves hidden pins out of the list", () => {
-    const body = apiSites([userPin, { ...userPin, id: "spam", hidden: true }], [{ id: "north-male", name: "North Malé" } as never]);
+    const body = apiSites([userPin, { ...userPin, id: "spam", hidden: true }], [{ id: "north-male", name: "North Malé" } as never], () => null);
     expect(body.sites.map((site) => site.id)).toEqual(["my-reef-1a2b3c4d"]);
     expect(body.sites[0].atollName).toBe("North Malé");
     expect(body.apiVersion).toBe(API_VERSION);

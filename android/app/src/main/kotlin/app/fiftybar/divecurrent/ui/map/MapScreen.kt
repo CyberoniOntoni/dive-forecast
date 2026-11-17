@@ -825,7 +825,8 @@ private enum class DataStatus(val words: String) {
 private fun MapUiState.dataStatus(): DataStatus? =
   when {
     rows.isEmpty() && error != null -> DataStatus.CouldNotLoad
-    outdatedWall != null && savedRows > 0 -> DataStatus.SavedForecast
+    // Arrows from saved weeks only show with no current map: none at all, or one for an earlier hour.
+    savedRows > 0 -> DataStatus.SavedForecast
     outdatedWall != null -> DataStatus.NoCurrentHour
     fromCache && error != null -> DataStatus.OfflineCopy
     else -> null
