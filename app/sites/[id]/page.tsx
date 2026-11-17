@@ -29,7 +29,7 @@ export async function generateMetadata({
   const { id } = await params;
   const site = await getSite(id);
   return {
-    title: site ? `${site.name} · Dive current` : "Site not found · Dive current",
+    title: site ? `${site.name} · 50bar` : "Site not found · 50bar",
   };
 }
 

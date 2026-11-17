@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const plan = await loadPlanView(id);
   // Shared by link only: search engines leave it out.
   return {
-    title: plan ? `${plan.title} · Dive plan` : "Plan not found · Dive current",
+    title: plan ? `${plan.title} · Dive plan` : "Plan not found · 50bar",
     robots: { index: false, follow: false },
     ...(plan ? { description: `Dive plan, ${plan.span}: dives with the forecast current at each dive time and the boat route between them.` } : {}),
   };

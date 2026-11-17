@@ -7,7 +7,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Dive plans · Dive current" };
+export const metadata: Metadata = { title: "Dive plans · 50bar" };
 
 const PRIMARY =
   "inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-incoming px-5 text-base font-semibold text-[#07151d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam";

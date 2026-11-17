@@ -88,7 +88,7 @@ nickname the first time. Only the nickname is ever shown. `APP_URL`, `EMAIL_FROM
 | `AUTH_SECRET` (secret) | Signs the session cookie and code hashes. Any long random string, e.g. `openssl rand -base64 48`. Changing it signs everyone out. | |
 | `MAILGUN_API_KEY` (secret) | Mailgun → Account → API Security → a sending or private API key. | |
 | `MAILGUN_DOMAIN` | The verified Mailgun sending domain. | `mailgun.50bar.app` |
-| `MAILGUN_FROM` | Optional sender. Defaults to `Dive current <login@MAILGUN_DOMAIN>`. | `Dive current <login@mailgun.50bar.app>` |
+| `MAILGUN_FROM` | Optional sender. Defaults to `50bar <login@MAILGUN_DOMAIN>`. | `50bar <login@mailgun.50bar.app>` |
 | `MAILGUN_REGION` | `eu` for an EU Mailgun account; otherwise leave unset. | |
 | `APP_URL` | The site's address, for the link in the email. Without it the email has the code only. | `https://50bar.app` |
 | `EMAIL_FROM` | Sender for Cloudflare Email Sending (worker only, with the `EMAIL` binding). Without it the worker uses Mailgun alone. | `login@50bar.app` |

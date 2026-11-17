@@ -8,7 +8,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Scoreboard · Dive current" };
+export const metadata: Metadata = { title: "Scoreboard · 50bar" };
 
 type Board = "month" | "all" | "sites";
 
