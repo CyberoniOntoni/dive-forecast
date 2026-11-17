@@ -81,3 +81,14 @@ object MapLayersPrefs {
     editor.apply()
   }
 }
+
+/** The atoll picked on the map, kept between launches in shared prefs "map-atoll"; "" for all atolls. */
+object MapAtollPrefs {
+  private const val PREFS = "map-atoll"
+
+  fun read(context: Context): String = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString("atoll", null) ?: ""
+
+  fun write(context: Context, atollId: String) {
+    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("atoll", atollId).apply()
+  }
+}

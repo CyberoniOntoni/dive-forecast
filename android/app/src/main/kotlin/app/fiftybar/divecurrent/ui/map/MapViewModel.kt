@@ -103,6 +103,14 @@ class MapViewModel(private val repository: DataRepository, private val offline: 
     if (!_state.value.loading && wall.take(13) < MaldivesTime.nowHour(nowMs).take(13)) refresh()
   }
 
+  /** The phone has a network again (any thread): refresh if the last load failed, so the offline copy gives way. */
+  fun onNetworkBack() {
+    viewModelScope.launch {
+      val s = _state.value
+      if (s.error != null && !s.loading) refresh()
+    }
+  }
+
   fun refresh() {
     viewModelScope.launch {
       _state.update { it.copy(loading = true) }
