@@ -1,13 +1,14 @@
 import { getSite, listSites, submitSite } from "@/lib/actions";
 import { apiError, apiHandler, apiJson, apiJsonBody, apiNeedsToken, apiSiteSaved, apiSites, atollNameOf } from "@/lib/api-v1";
 import { SIGN_IN_FIRST } from "@/lib/sign-in";
+import { rimForAtoll } from "@/lib/rim";
 import { readCatalog } from "@/lib/store";
 
 /** Every site on the map (catalog and pins added in the app) and the atolls' names. API.md § GET /api/v1/sites. */
 export async function GET() {
   return apiHandler(async () => {
     const sites = await listSites();
-    return apiJson(apiSites(sites, readCatalog().atolls));
+    return apiJson(apiSites(sites, readCatalog().atolls, rimForAtoll));
   });
 }
 

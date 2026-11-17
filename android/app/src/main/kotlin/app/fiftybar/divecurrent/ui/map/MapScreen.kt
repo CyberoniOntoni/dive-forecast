@@ -106,7 +106,10 @@ import app.fiftybar.divecurrent.domain.PointDestination
 import app.fiftybar.divecurrent.domain.SiteSearch
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
+import app.fiftybar.divecurrent.ui.appOffline
 import app.fiftybar.divecurrent.ui.appRepository
+import app.fiftybar.divecurrent.domain.OfflineArea
+import app.fiftybar.divecurrent.domain.SavedArea
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 
@@ -127,7 +130,16 @@ fun MapScreen(
   covered: Boolean = false,
 ) {
   val repository = appRepository()
-  val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
+  val offline = appOffline()
+  val viewModel: MapViewModel = viewModel { MapViewModel(repository, offline) }
+  val savedAreas by offline.areas.collectAsStateWithLifecycle()
+  val saving by offline.saving.collectAsStateWithLifecycle()
+  val saveErrors by offline.errors.collectAsStateWithLifecycle()
+  // Remembered, so the top bar is not composed again for a new but equal value on every frame.
+  val offlineChoice =
+    remember(offline, savedAreas, saving, saveErrors) {
+      OfflineChoice(savedAreas, saving, saveErrors, onSave = { offline.save(it) }, onRemove = offline::remove)
+    }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val shelter: ShelterViewModel = viewModel { ShelterViewModel(repository) }
   val shelterState by shelter.state.collectAsStateWithLifecycle()
@@ -169,8 +181,10 @@ fun MapScreen(
       state.rows.filter { (atollId.isEmpty() || it.site.atollId == atollId) && SiteSearch.matches(it.site.name, it.site.atollName, query) }
     }
   val counts = remember(inAtoll) { NowCounts.of(inAtoll.map { it.glance }) }
-  // An outdated offline copy shows no arrows, so no strengths: a strength kept from before must not hide every site.
-  val picked = strength.takeIf { state.outdatedWall == null }
+  // An outdated offline copy shows no arrows (but saved atolls' weeks do), so no strengths: a strength kept from before
+  // must not hide every site.
+  val hasHour = state.outdatedWall == null || state.savedRows > 0
+  val picked = strength.takeIf { hasHour }
   val shown = remember(inAtoll, picked) { inAtoll.filter { NowCounts.matches(it.glance, picked) } }
   // The map keeps every atoll's pins when one is picked, as the web map does: the pick narrows the list and frames the
   // atoll. A search or a strength still narrows the pins too.
@@ -294,6 +308,7 @@ fun MapScreen(
     ) {
       NowList(
         state = state,
+        offlineLine = atollId.takeIf { it.isNotEmpty() }?.let { offlineChoice.line(it) },
         rows = shown,
         total = state.rows.size,
         strength = picked,
@@ -324,7 +339,8 @@ fun MapScreen(
       atolls = atolls,
       atollId = atollId,
       onAtoll = ::pickAtoll,
-      counts = counts.takeIf { state.outdatedWall == null },
+      offline = offlineChoice,
+      counts = counts.takeIf { hasHour },
       strength = picked,
       onStrength = { strength = if (strength == it) null else it },
       onLayers = { layersOpen = true },
@@ -419,6 +435,8 @@ private fun LayersMenu(expanded: Boolean, layers: MapLayers, onChoose: (MapLayer
 @Composable
 private fun NowList(
   state: MapUiState,
+  /** The picked atoll's offline state in words; null with all atolls. */
+  offlineLine: String?,
   rows: List<SiteRow>,
   total: Int,
   strength: Strength?,
@@ -459,9 +477,14 @@ private fun NowList(
       }
     }
     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
+    offlineLine?.let {
+      Text(it, style = MaterialTheme.typography.bodySmall, color = colors.mist, modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp))
+    }
     state.outdatedWall?.let {
       Text(
-        "The last map saved was for ${MaldivesTime.label(it)}. Open a site for its saved week, or refresh when online.",
+        if (state.savedRows > 0)
+          "No signal for the latest map (the last was for ${MaldivesTime.label(it)}). Saved atolls show this hour from their saved week; other sites need signal."
+        else "The last map saved was for ${MaldivesTime.label(it)}. Open a site for its saved week, or refresh when online.",
         style = MaterialTheme.typography.bodySmall,
         color = colors.foam.copy(alpha = 0.85f),
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -527,6 +550,7 @@ private fun TopBar(
   atolls: List<SiteSearch.AtollChoice>,
   atollId: String,
   onAtoll: (String) -> Unit,
+  offline: OfflineChoice,
   onLayers: () -> Unit,
   layersMenu: @Composable () -> Unit,
   counts: NowCounts?,
@@ -583,7 +607,7 @@ private fun TopBar(
       verticalAlignment = Alignment.CenterVertically,
     ) {
       status?.let { StatusChip(it) }
-      AtollChip(atolls, atollId, onAtoll)
+      AtollChip(atolls, atollId, onAtoll, offline)
       if (counts != null) for (s in NowCounts.ORDER) {
         CountChip(s, counts.of(s), selected = strength == s) { onStrength(s) }
       }
@@ -630,9 +654,12 @@ private fun StatusChip(text: String) {
   }
 }
 
-/** The web list's atoll select as a chip: all atolls, or one with its site count; picking one frames it. */
+/**
+ * The web list's atoll select as a chip: all atolls, or one with its site count; picking one frames it. With an atoll
+ * picked, the menu also saves it for use without signal, saves it again, or removes it; saved atolls are marked.
+ */
 @Composable
-private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onAtoll: (String) -> Unit) {
+private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onAtoll: (String) -> Unit, offline: OfflineChoice) {
   val colors = CurrentTheme.colors
   var open by remember { mutableStateOf(false) }
   val chosen = atolls.firstOrNull { it.id == atollId }
@@ -658,6 +685,45 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = if (chosen != null) colors.ink else colors.foam)
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+      if (chosen != null) {
+        val share = offline.saving[chosen.id]
+        val area = offline.saved[chosen.id]
+        DropdownMenuItem(
+          text = {
+            Column {
+              Text(
+                when {
+                  share != null -> "Saving for offline… ${(share * 100).toInt()}%"
+                  area != null -> "Update offline copy"
+                  else -> "Save ${chosen.name} for offline"
+                }
+              )
+              Text(
+                // While saving, the title already says how far it is.
+                if (share != null) "Goes on if you leave the map"
+                else offline.line(chosen.id) ?: "Forecasts, site pages and reef shapes, for use without signal",
+                style = MaterialTheme.typography.bodySmall,
+                color = colors.mist,
+              )
+            }
+          },
+          enabled = share == null,
+          onClick = {
+            open = false
+            offline.onSave(chosen.id)
+          },
+        )
+        if (area != null || share != null) {
+          DropdownMenuItem(
+            text = { Text("Remove offline copy") },
+            onClick = {
+              open = false
+              offline.onRemove(chosen.id)
+            },
+          )
+        }
+        HorizontalDivider()
+      }
       DropdownMenuItem(
         text = { Text("All atolls") },
         onClick = {
@@ -667,7 +733,7 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
       )
       for (atoll in atolls) {
         DropdownMenuItem(
-          text = { Text("${atoll.name} (${atoll.count})") },
+          text = { Text("${atoll.name} (${atoll.count})" + if (atoll.id in offline.saved) " · saved" else "") },
           onClick = {
             open = false
             onAtoll(atoll.id)
@@ -719,6 +785,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
           buildString {
             append(g.way)
             if (row.stale) append(" · old data")
+            if (row.fromSaved) append(" · saved")
           },
           style = MaterialTheme.typography.bodySmall,
           color = colors.foam.copy(alpha = 0.75f),
@@ -730,12 +797,33 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
   }
 }
 
+/** The saved atolls and what is being saved, with the menu's two actions. */
+private data class OfflineChoice(
+  val saved: Map<String, SavedArea>,
+  val saving: Map<String, Float>,
+  val errors: Map<String, String>,
+  val onSave: (String) -> Unit,
+  val onRemove: (String) -> Unit,
+) {
+  /** "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure; null when never saved. */
+  fun line(atollId: String): String? {
+    saving[atollId]?.let { return "Saving for offline… ${(it * 100).toInt()}%" }
+    errors[atollId]?.let { return it }
+    val area = saved[atollId] ?: return null
+    return buildString {
+      append("Saved for offline ${ageLabel(area.savedAt)} · ${OfflineArea.sizeLabel(area.bytes)}")
+      if (area.missedSites > 0) append(" · ${area.missedSites} of ${area.siteIds.size} forecasts missing")
+    }
+  }
+}
+
 /** Where a site page sent the diver back to: the site and its pin. */
 data class ShowOnMap(val siteId: String, val lat: Double, val lon: Double)
 
 /** What is wrong with the map's data, if anything: one value, so the chip over the map and the list header agree. */
 private enum class DataStatus(val words: String) {
   CouldNotLoad("Could not load"),
+  SavedForecast("Saved forecast"),
   NoCurrentHour("No current hour"),
   OfflineCopy("Offline copy"),
 }
@@ -743,6 +831,8 @@ private enum class DataStatus(val words: String) {
 private fun MapUiState.dataStatus(): DataStatus? =
   when {
     rows.isEmpty() && error != null -> DataStatus.CouldNotLoad
+    // Arrows from saved weeks only show with no current map: none at all, or one for an earlier hour.
+    savedRows > 0 -> DataStatus.SavedForecast
     outdatedWall != null -> DataStatus.NoCurrentHour
     fromCache && error != null -> DataStatus.OfflineCopy
     else -> null

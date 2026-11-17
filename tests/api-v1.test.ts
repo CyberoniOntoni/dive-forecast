@@ -60,10 +60,22 @@ describe("API v1 shapes", () => {
   });
 
   it("leaves hidden pins out of the list", () => {
-    const body = apiSites([userPin, { ...userPin, id: "spam", hidden: true }], [{ id: "north-male", name: "North Malé" } as never]);
+    const body = apiSites([userPin, { ...userPin, id: "spam", hidden: true }], [{ id: "north-male", name: "North Malé" } as never], () => null);
     expect(body.sites.map((site) => site.id)).toEqual(["my-reef-1a2b3c4d"]);
     expect(body.sites[0].atollName).toBe("North Malé");
     expect(body.apiVersion).toBe(API_VERSION);
+    expect(body.atolls).toEqual([{ id: "north-male", name: "North Malé", bounds: null }]);
+  });
+
+  it("gives each atoll the box round its outline, for saving it offline", () => {
+    const ring = [
+      [4.1, 73.3],
+      [4.712345, 73.3],
+      [4.712345, 73.712345],
+      [4.1, 73.3],
+    ] as const;
+    const body = apiSites([], [{ id: "north-male", name: "North Malé" } as never], () => ring);
+    expect(body.atolls[0].bounds).toEqual({ south: 4.1, west: 73.3, north: 4.7123, east: 73.7123 });
   });
 
   it("stamps forecasts and nowcasts with the model version", () => {

@@ -81,7 +81,15 @@ What it does:
   cuts them to its outline and islands once, where the web cuts on screen.
 - **Offline**: the last body of each read endpoint except boat routes and the sea state layer (about one position or
   view) is kept in Room as raw JSON and shown with its age when the server
-  cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy.
+  cannot be reached (API.md § Caching). A 404 is never hidden behind an old copy. Allen Coral Atlas tiles are kept the
+  same way once seen.
+- **Saved atolls** (`data/OfflineAreas.kt`, `domain/OfflineArea.kt`): with an atoll picked, its menu saves it for use
+  without signal: every site's page, week of forecast and recent reports, and the Atlas tiles over the atoll's outline
+  box (`bounds` in `GET /api/v1/sites`). The list of saved atolls is `offline-areas.json` in the app's files; a saved
+  atoll older than 6 h is saved again when the app has signal. With no current map from the server, the map takes
+  this hour for a saved atoll's sites from their saved week (marked "saved").
+- **Map tiles offline**: MapLibre keeps up to 512 MB of the tiles a diver has looked at. Areas of Esri imagery or
+  OpenStreetMap are never downloaded ahead of time: Esri's World Imagery terms and the OSM tile policy forbid it.
 
 - **Adding sites**: long-press the map on the site's spot (the list's + says so) and pick "Add a dive site here": the
   web form's name, kind of site, depths, how to dive it, the adder's rating and up to 6 photos, sent one by one after

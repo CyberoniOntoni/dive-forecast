@@ -35,7 +35,7 @@ import type { BoatTrip } from "./boat-route-data";
 import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
 import { REVIEW_MAX } from "./site-details";
 import { reviewDate, reviewSummaryLine } from "./review-words";
-import type { RimRing } from "./rim";
+import { ringBox, type RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
 import { SCALE_MAX_M, SCALE_STOPS, SCALE_TICKS, SHELTER_OPACITY, shelterReadout } from "./shelter-layer";
 import type { PlanLeg, PlanSummary, SavePlanResult } from "./plan-actions";
@@ -108,7 +108,14 @@ export type ApiSite = {
   photoUrls: string[];
 };
 
-export type ApiAtoll = { id: string; name: string };
+/** The box round an atoll's outline, degrees. */
+export type ApiBounds = { south: number; west: number; north: number; east: number };
+
+/**
+ * An atoll. `bounds` is the box round its outline (data/rims.json), for the app to save the atoll for offline use;
+ * null when no outline is stored.
+ */
+export type ApiAtoll = { id: string; name: string; bounds: ApiBounds | null };
 
 export type ApiSites = { apiVersion: number; atolls: ApiAtoll[]; sites: ApiSite[] };
 
@@ -233,10 +240,19 @@ export function atollNameOf(atolls: readonly Atoll[], atollId: string): string |
   return atolls.find((atoll) => atoll.id === atollId)?.name ?? null;
 }
 
-export function apiSites(sites: readonly Site[], atolls: readonly Atoll[]): ApiSites {
+/** Four decimals (about 11 m): a box to save, not a survey. */
+function boundsOf(ring: RimRing | null): ApiBounds | null {
+  if (!ring || ring.length === 0) return null;
+  const box = ringBox(ring);
+  const round = (value: number) => Math.round(value * 1e4) / 1e4;
+  return { south: round(box.south), west: round(box.west), north: round(box.north), east: round(box.east) };
+}
+
+/** `outline` finds an atoll's outline (the route passes rimForAtoll), so no caller can leave `bounds` out by mistake. */
+export function apiSites(sites: readonly Site[], atolls: readonly Atoll[], outline: (atoll: Atoll) => RimRing | null): ApiSites {
   return {
     apiVersion: API_VERSION,
-    atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name })),
+    atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),
     sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId))),
   };
 }
