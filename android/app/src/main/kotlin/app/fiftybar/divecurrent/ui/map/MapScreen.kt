@@ -132,6 +132,9 @@ fun MapScreen(
     remember(state.rows, query, atollId) {
       state.rows.filter { (atollId.isEmpty() || it.site.atollId == atollId) && SiteSearch.matches(it.site.name, it.site.atollName, query) }
     }
+  // The map keeps every atoll's pins when one is picked, as the web map does: the pick narrows the list and frames the
+  // atoll. A search still narrows the pins too, as it did before.
+  val pins = remember(state.rows, query) { state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) } }
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
     atollId = id
@@ -175,7 +178,7 @@ fun MapScreen(
   ) { padding ->
     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
       SiteMapView(
-        rows = shown,
+        rows = pins,
         layers = layers,
         colors = colors,
         onOpenSite = onOpenSite,

@@ -65,6 +65,9 @@ import org.maplibre.geojson.Point
 private const val LEGS = "legs"
 private const val STOPS = "stops"
 
+/** The imagery's credit, printed under the map (its (i) button is off). */
+const val PLAN_MAP_CREDIT = "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community"
+
 /**
  * One plan day on a small satellite map, as the web plan page's (components/PlanMap.tsx): the dives numbered in order,
  * coloured as their markers there (warned red, incoming teal, outgoing amber, else plain), and the boat route between
@@ -95,6 +98,8 @@ fun PlanDayMap(stops: List<ApiPlanStop>, legs: List<ApiPlanLeg>, colors: Current
       m.uiSettings.setAllGesturesEnabled(false)
       m.uiSettings.isCompassEnabled = false
       m.uiSettings.isLogoEnabled = false
+      // The frame turns touches down, so the (i) button could not be opened: the card prints the credit instead.
+      m.uiSettings.isAttributionEnabled = false
       map = m
     }
     onDispose {

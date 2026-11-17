@@ -219,6 +219,7 @@ private fun DayCard(
           colors,
           Modifier.fillMaxWidth().height(if (day.stops.size == 1) 176.dp else 256.dp).clip(RoundedCornerShape(16.dp)),
         )
+        Text(PLAN_MAP_CREDIT, style = MaterialTheme.typography.labelSmall, color = colors.foam.copy(alpha = 0.6f))
       }
       if (day.stops.isEmpty()) Text("No dives planned yet.", style = MaterialTheme.typography.bodyMedium)
       day.stops.forEachIndexed { at, stop ->
