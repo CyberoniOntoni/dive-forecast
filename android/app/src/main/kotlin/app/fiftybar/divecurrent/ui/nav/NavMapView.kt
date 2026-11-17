@@ -29,10 +29,10 @@ import org.maplibre.android.geometry.LatLngBounds
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
-import org.maplibre.android.style.expressions.Expression.get
-import org.maplibre.android.style.expressions.Expression.match
-import org.maplibre.android.style.expressions.Expression.stop
 import org.maplibre.android.style.expressions.Expression.color
+import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.switchCase
+import org.maplibre.android.style.expressions.Expression.toBool
 import org.maplibre.android.style.layers.CircleLayer
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
@@ -179,7 +179,8 @@ private fun addNavLayers(style: Style, colors: CurrentColors) {
     CircleLayer(GAPS, GAPS)
       .withProperties(
         circleRadius(5f),
-        circleColor(match(get("shallow"), color(colors.foam.toArgb()), stop(true, color(colors.outgoing.toArgb())))),
+        // switchCase, not match: MapLibre's match takes only number or string labels and rejects `true`.
+        circleColor(switchCase(toBool(get("shallow")), color(colors.outgoing.toArgb()), color(colors.foam.toArgb()))),
         circleStrokeColor(ink),
         circleStrokeWidth(1.5f),
       )

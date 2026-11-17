@@ -120,7 +120,9 @@ class ShelterViewModel(private val repository: DataRepository) : ViewModel() {
     load?.cancel()
     val box = view ?: return
     if (box.zoom < MIN_ZOOM) {
-      _state.update { it.copy(images = emptyList(), loading = false, note = "Zoom in on an atoll to see it.") }
+      // The tapped spot's readout goes with the shading it was read from.
+      read?.cancel()
+      _state.update { it.copy(images = emptyList(), loading = false, readout = null, note = "Zoom in on an atoll to see it.") }
       return
     }
     load =
