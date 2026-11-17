@@ -176,7 +176,7 @@ fun SiteMapView(
       m.uiSettings.isTiltGesturesEnabled = false
       m.addOnMapClickListener { point ->
         val screen = m.projection.toScreenLocation(point)
-        val hit = siteAt(m, screen)
+        val hit = siteAt(m, screen, context.resources.displayMetrics.density)
         if (hit != null) openSite(hit)
         hit != null || tapped(point.latitude, point.longitude)
       }
@@ -245,8 +245,11 @@ fun SiteMapView(
   // The badges breathe: each arrow nudges along its own heading, further the stronger the water runs (not at slack),
   // and a very strong site sends out a red ring. One clock for the whole map; the ring is a paint change, the nudge a
   // layout one, so the nudge only moves on every other frame.
-  LaunchedEffect(style, reducedMotion) {
+  // Nothing to move (every site slack, none very strong, or no pins yet): the clock stays off.
+  val moving = rows.any { it.glance?.strength?.let { s -> s != Strength.Slack } == true }
+  LaunchedEffect(style, reducedMotion, moving) {
     val s = style ?: return@LaunchedEffect
+    if (!moving) return@LaunchedEffect
     val arrows = s.getLayerAs<SymbolLayer>(ARROWS) ?: return@LaunchedEffect
     val pulse = s.getLayerAs<CircleLayer>(PULSE) ?: return@LaunchedEffect
     if (reducedMotion) {
@@ -383,10 +386,11 @@ private fun viewBox(map: MapLibreMap): MapViewBox {
   return MapViewBox(bounds.latitudeSouth, bounds.longitudeWest, bounds.latitudeNorth, bounds.longitudeEast, map.cameraPosition.zoom)
 }
 
-private fun siteAt(map: MapLibreMap, screen: PointF): String? {
-  val slop = 24f
+/** The site under a tap: on its badge or its arrow, within a finger's width (12 dp each way) of either. */
+private fun siteAt(map: MapLibreMap, screen: PointF, density: Float): String? {
+  val slop = 12f * density
   val box = RectF(screen.x - slop, screen.y - slop, screen.x + slop, screen.y + slop)
-  return map.queryRenderedFeatures(box, ARROWS).firstOrNull()?.getStringProperty("id")
+  return map.queryRenderedFeatures(box, ARROWS, BADGES).firstOrNull()?.getStringProperty("id")
 }
 
 private fun features(rows: List<SiteRow>): FeatureCollection =

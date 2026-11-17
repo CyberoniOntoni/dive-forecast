@@ -400,6 +400,14 @@ private fun NowList(
     state.error?.let {
       Text(it, color = colors.stop, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
     }
+    if (strength != null && rows.isEmpty() && total > 0) {
+      Text(
+        "No site runs ${strengthWord(strength)} now. Tap the count again to show them all.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.mist,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+      )
+    }
     LazyColumn(Modifier.fillMaxWidth()) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
