@@ -116,6 +116,37 @@ class OfflineAreasTest {
     assertTrue(offline.errors.value.getValue("north-male").startsWith("No signal"))
   }
 
+  /** Like MapLibre: the region is made even if the save is stopped while it is being made, then the download hangs. */
+  private class SlowImagery : OfflineImagery {
+    val saved = java.util.concurrent.ConcurrentHashMap<String, ApiBounds>()
+    val started = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    override suspend fun save(atollId: String, box: ApiBounds, progress: (Float) -> Unit): Long {
+      started.complete(Unit)
+      kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+        kotlinx.coroutines.delay(300)
+        saved[atollId] = box
+      }
+      kotlinx.coroutines.awaitCancellation()
+    }
+
+    override suspend fun remove(atollId: String) {
+      saved.remove(atollId)
+    }
+  }
+
+  @Test
+  fun `removing an atoll while its imagery is being made drops the region made`() = runBlocking {
+    val imagery = SlowImagery()
+    val offline = areas(imagery)
+    offline.save("north-male")
+    withTimeout(10_000) { imagery.started.await() }
+    offline.remove("north-male")
+    withTimeout(10_000) { offline.saving.first { "north-male" !in it } }
+    kotlinx.coroutines.delay(600)
+    assertTrue(imagery.saved.isEmpty())
+  }
+
   @Test
   fun `removing an atoll never saved still drops its imagery`() = runBlocking {
     val imagery = FakeImagery()

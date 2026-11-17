@@ -86,9 +86,11 @@ class OfflineAreas(
 
   /** Forgets the atoll and drops the copies no other saved atoll holds. Stops a save that is running for it. */
   fun remove(atollId: String) {
-    synchronized(jobs) { jobs.remove(atollId)?.cancel() }
+    val running = synchronized(jobs) { jobs.remove(atollId)?.also { it.cancel() } }
     scope.launch {
       read.await()
+      // Let a stopped save finish stopping first: MapLibre may still be creating its region, which would be left behind.
+      running?.join()
       // Imagery too when the atoll was never saved: a first save stopped part way leaves a region behind.
       try {
         imagery?.remove(atollId)

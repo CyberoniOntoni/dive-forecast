@@ -1,6 +1,8 @@
 package app.fiftybar.divecurrent.data
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import app.fiftybar.divecurrent.data.api.ApiBounds
 import java.io.IOException
 import kotlin.math.abs
@@ -114,9 +116,25 @@ class MapLibreOfflineImagery(
     suspendCancellableCoroutine { cont ->
       var failures = 0
       var lastDone = -1L
+      var checkedDone = -1L
+      val handler = Handler(Looper.getMainLooper())
+      lateinit var watchdog: Runnable
       fun stop() {
+        handler.removeCallbacks(watchdog)
         region.setObserver(null)
         region.setDownloadState(OfflineRegion.STATE_INACTIVE)
+      }
+      // A download can also stall with no error at all (a link that takes requests and never answers): no tile for
+      // [STALL_MS] stops it the same way.
+      watchdog = Runnable {
+        if (!cont.isActive) return@Runnable
+        if (lastDone == checkedDone) {
+          stop()
+          cont.resumeWithException(IOException("No signal: the satellite imagery stopped part way. Save again with signal."))
+        } else {
+          checkedDone = lastDone
+          handler.postDelayed(watchdog, STALL_MS)
+        }
       }
       region.setObserver(
         object : OfflineRegion.OfflineRegionObserver {
@@ -147,12 +165,15 @@ class MapLibreOfflineImagery(
           override fun mapboxTileCountLimitExceeded(limit: Long) = Unit
         }
       )
-      cont.invokeOnCancellation { stop() }
+      // Cancelled from any thread; MapLibre's region is the main thread's.
+      cont.invokeOnCancellation { handler.post { stop() } }
       region.setDownloadState(OfflineRegion.STATE_ACTIVE)
+      handler.postDelayed(watchdog, STALL_MS)
     }
 
   private companion object {
     const val GIVE_UP_AFTER = 5
+    const val STALL_MS = 60_000L
     /** Degrees: the server rounds outline boxes to 4 decimals, so a real change is far bigger. */
     const val BOX_EPS = 1e-6
   }
