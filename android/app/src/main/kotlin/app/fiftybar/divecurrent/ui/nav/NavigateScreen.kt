@@ -258,7 +258,8 @@ private fun Cockpit(readout: NavReadout, routeError: String?, reducedMotion: Boo
   val steer = readout.steerDeg?.let(BoatNav::formatBearing)
   Row(
     verticalAlignment = Alignment.CenterVertically,
-    modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = steer?.let { "Steer $it" } ?: "No steer yet" },
+    // One phrase for TalkBack ("Steer 247° WSW"), not that plus the eyebrow, the number and the word again.
+    modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = steer?.let { "Steer $it" } ?: "No steer yet" },
   ) {
     Column(Modifier.weight(1f)) {
       Text("STEER", style = Eyebrow, color = colors.incoming)
@@ -305,9 +306,9 @@ private fun Cockpit(readout: NavReadout, routeError: String?, reducedMotion: Boo
 
 /** Text whose characters each roll up into place when they change, as a mechanical counter; still with motion off. */
 @Composable
-private fun RollingText(text: String, style: TextStyle, color: Color, reducedMotion: Boolean) {
+private fun RollingText(text: String, style: TextStyle, color: Color, reducedMotion: Boolean, spoken: String = text) {
   // TalkBack reads the whole value once, not a character at a time.
-  Row(Modifier.clearAndSetSemantics { contentDescription = text }) {
+  Row(Modifier.clearAndSetSemantics { contentDescription = spoken }) {
     text.forEachIndexed { i, ch ->
       // Keyed by place from the right, so 99 -> 100 rolls the units, tens and hundreds rather than shifting them.
       key(text.length - i) {
@@ -331,10 +332,13 @@ private fun RollingText(text: String, style: TextStyle, color: Color, reducedMot
 private fun SteerDial(steer: Double?, reducedMotion: Boolean) {
   val colors = CurrentTheme.colors
   val angle = remember { Animatable((steer ?: 0.0).toFloat()) }
+  // The first steer after none (GPS just found the boat) appears in place rather than swinging round from north.
+  var shown by remember { mutableStateOf(steer != null) }
   LaunchedEffect(steer) {
     val to = steer?.toFloat() ?: return@LaunchedEffect
     val target = SiteOutlook.shortTurnTarget(angle.value, to)
-    if (reducedMotion) angle.snapTo(target) else angle.animateTo(target, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow))
+    if (reducedMotion || !shown) angle.snapTo(target) else angle.animateTo(target, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow))
+    shown = true
   }
   Box(
     Modifier.size(96.dp).clip(CircleShape).background(colors.reef).border(1.5.dp, colors.edge, CircleShape),
@@ -359,7 +363,13 @@ private fun RowScope.Cell(label: String, value: String?, reducedMotion: Boolean)
   ) {
     Text(label, style = Eyebrow, color = colors.dim, maxLines = 2)
     Spacer(Modifier.height(4.dp))
-    RollingText(value ?: "—", MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), if (value != null) colors.foam else colors.dim, reducedMotion)
+    RollingText(
+      value ?: "—",
+      MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
+      if (value != null) colors.foam else colors.dim,
+      reducedMotion,
+      spoken = value ?: "not known yet",
+    )
   }
 }
 
