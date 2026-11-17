@@ -89,8 +89,7 @@ class OfflineAreas(
     synchronized(jobs) { jobs.remove(atollId)?.cancel() }
     scope.launch {
       read.await()
-      val area = _areas.value[atollId] ?: return@launch
-      repository.deleteCopies(OfflineArea.keysToDrop(area, _areas.value.values))
+      // Imagery too when the atoll was never saved: a first save stopped part way leaves a region behind.
       try {
         imagery?.remove(atollId)
       } catch (e: CancellationException) {
@@ -98,6 +97,8 @@ class OfflineAreas(
       } catch (_: Exception) {
         // Left on the phone; no map draws it once the atoll is gone.
       }
+      val area = _areas.value[atollId] ?: return@launch
+      repository.deleteCopies(OfflineArea.keysToDrop(area, _areas.value.values))
       update { it - atollId }
       _errors.update { it - atollId }
     }
@@ -197,6 +198,10 @@ class OfflineAreas(
           null
         }
       }
+    // A refresh whose imagery failed leaves the region an earlier save completed (MapLibreOfflineImagery keeps it):
+    // the map goes on drawing it.
+    val before = _areas.value[atollId]?.takeIf { it.imagery && it.box == box }
+    val keptImagery = imageryBytes ?: before?.imageryBytes
     return SavedArea(
       atollId = atollId,
       name = atoll?.name ?: sites.firstOrNull()?.atollName ?: atollId,
@@ -204,9 +209,10 @@ class OfflineAreas(
       siteIds = sites.map { it.id },
       keys = keys,
       missedSites = missed.get(),
-      bytes = repository.copySize(keys) + (imageryBytes ?: 0L),
+      bytes = repository.copySize(keys) + (keptImagery ?: 0L),
       box = box,
-      imagery = imageryBytes != null,
+      imagery = keptImagery != null,
+      imageryBytes = keptImagery ?: 0L,
     )
   }
 

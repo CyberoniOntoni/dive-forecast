@@ -42,7 +42,9 @@ class DiveCurrentApp : Application() {
     val api = DiveCurrentApi(BuildConfig.API_BASE_URL)
     repository = DataRepository(api, CacheDatabase.create(this).bodies())
     account = AccountRepository(api, SessionStore(PrefsSessionStorage(this)))
-    val imagery = MapLibreOfflineImagery(this, SENTINEL2_STYLE, SENTINEL2_MIN_ZOOM.toDouble(), SENTINEL2_MAX_ZOOM.toDouble())
+    // A region's zooms are the map's: its 256 px tiles are a zoom deeper, so the region starts a zoom early to take in
+    // the server's coarsest tiles (zoom 8), drawn when the map is out at about 7 to see a whole atoll.
+    val imagery = MapLibreOfflineImagery(this, SENTINEL2_STYLE, SENTINEL2_MIN_ZOOM - 1.0, SENTINEL2_MAX_ZOOM.toDouble())
     offline = OfflineAreas(repository, File(filesDir, "offline-areas.json"), appScope, imagery)
     offline.refreshStale()
   }

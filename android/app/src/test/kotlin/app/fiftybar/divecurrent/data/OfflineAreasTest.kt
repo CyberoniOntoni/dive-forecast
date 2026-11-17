@@ -68,7 +68,7 @@ class OfflineAreasTest {
   private fun areas(imagery: OfflineImagery? = null) = OfflineAreas(repository, File(dir, "areas.json"), scope, imagery)
 
   /** Imagery saved in memory, or failing like a dropped signal. */
-  private class FakeImagery(val fail: Boolean = false) : OfflineImagery {
+  private class FakeImagery(@Volatile var fail: Boolean = false) : OfflineImagery {
     val saved = java.util.concurrent.ConcurrentHashMap<String, ApiBounds>()
 
     override suspend fun save(atollId: String, box: ApiBounds, progress: (Float) -> Unit): Long {
@@ -96,6 +96,33 @@ class OfflineAreasTest {
     offline.remove("north-male")
     withTimeout(10_000) { offline.areas.first { it.isEmpty() } }
     assertTrue(imagery.saved.isEmpty())
+  }
+
+  @Test
+  fun `a refresh whose imagery fails keeps drawing what an earlier save completed`() = runBlocking {
+    val imagery = FakeImagery()
+    val offline = areas(imagery)
+    offline.save("north-male")
+    withTimeout(10_000) { offline.areas.first { it.isNotEmpty() } }
+    imagery.fail = true
+    offline.save("north-male")
+    withTimeout(10_000) {
+      offline.errors.first { "north-male" in it }
+      offline.saving.first { "north-male" !in it }
+    }
+    val again = offline.areas.value.getValue("north-male")
+    assertTrue(again.imagery)
+    assertEquals(1_000_000L, again.imageryBytes)
+    assertTrue(offline.errors.value.getValue("north-male").startsWith("No signal"))
+  }
+
+  @Test
+  fun `removing an atoll never saved still drops its imagery`() = runBlocking {
+    val imagery = FakeImagery()
+    imagery.saved["north-male"] = ApiBounds(4.0, 73.0, 5.0, 74.0)
+    val offline = areas(imagery)
+    offline.remove("north-male")
+    withTimeout(10_000) { while (imagery.saved.isNotEmpty()) kotlinx.coroutines.delay(10) }
   }
 
   @Test

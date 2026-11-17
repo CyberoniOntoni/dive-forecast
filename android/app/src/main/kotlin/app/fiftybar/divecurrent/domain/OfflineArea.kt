@@ -27,6 +27,8 @@ data class SavedArea(
   val box: ApiBounds? = null,
   /** The satellite imagery over [box] is on the phone (our Sentinel-2 tiles, zoom 8 to 14). */
   val imagery: Boolean = false,
+  /** What the imagery takes, bytes: part of [bytes]. */
+  val imageryBytes: Long = 0,
 )
 
 /** What saving an atoll needs, worked out from what the server lists. */
