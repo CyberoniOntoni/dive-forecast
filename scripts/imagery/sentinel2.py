@@ -139,7 +139,7 @@ def tiles(work, out):
     for x, y in sorted(wanted):
         path = os.path.join(out, str(MAX_ZOOM), str(x), f"{y}.webp")
         if os.path.exists(path):
-            made[(x, y)] = Image.open(path).convert("RGB")
+            made[(x, y)] = Image.open(path).convert("RGBA")
             continue
         transform = transform_from_bounds(*tile_bounds_3857(MAX_ZOOM, x, y), TILE, TILE)
         pixels = np.zeros((3, TILE, TILE), np.uint8)
@@ -154,7 +154,9 @@ def tiles(work, out):
             pixels[:, empty] = part[:, empty]
         if (pixels.sum(0) > 0).mean() < 0.01:
             continue
-        image = Image.fromarray(np.moveaxis(pixels, 0, -1))
+        # Transparent where no scene reached: the map shows its own background there, not black squares.
+        alpha = np.where(pixels.sum(0) > 0, 255, 0).astype(np.uint8)
+        image = Image.fromarray(np.moveaxis(np.concatenate([pixels, alpha[None]]), 0, -1), "RGBA")
         os.makedirs(os.path.dirname(path), exist_ok=True)
         image.save(path, "WEBP", quality=WEBP_QUALITY)
         made[(x, y)] = image
@@ -166,7 +168,7 @@ def tiles(work, out):
             parents.setdefault((x // 2, y // 2), []).append(((x % 2, y % 2), image))
         made = {}
         for (px, py), children in parents.items():
-            canvas = Image.new("RGB", (TILE * 2, TILE * 2))
+            canvas = Image.new("RGBA", (TILE * 2, TILE * 2), (0, 0, 0, 0))
             for (dx, dy), image in children:
                 canvas.paste(image, (dx * TILE, dy * TILE))
             image = canvas.resize((TILE, TILE), Image.LANCZOS)
