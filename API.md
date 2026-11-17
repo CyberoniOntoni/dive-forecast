@@ -351,6 +351,11 @@ from `getBoatRoute` (`lib/boat-route.ts`, `lib/route-current-data.ts`). Satellit
 
 ## Map layers
 
+The app's map has every web map layer. The Allen Coral Atlas overlays (reef outline, reef zones, bottom types) read the
+same static tiles the web map does, `/overlays/<folder>/index.json` and its tiles (lib/atlas-overlays.ts), which are
+files on the server rather than API endpoints; the depth layers come straight from OpenSeaMap's and GEBCO's WMS, as on
+the web. Only the "Sheltered water" layer needs the endpoints below.
+
 ### `GET /api/v1/shelter?south=<deg>&west=<deg>&north=<deg>&east=<deg>[&time=YYYY-MM-DDTHH:00]`
 
 The "Sheltered water" layer for a map view: each atoll's lagoon and the sea a few km round it, shaded by the felt wave
@@ -535,5 +540,5 @@ badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxCh
 
 ## Next (not built yet)
 
-Nothing from the web is missing from the app now, apart from the map's reef-zone, bottom-type and depth layers and
-the coordinate grid. New web features come with their own section here.
+Still web-only: a dive plan day's map, and the atoll picker on the map's site list. New web features come with their
+own section here.
