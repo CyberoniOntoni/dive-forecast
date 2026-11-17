@@ -107,6 +107,7 @@ import app.fiftybar.divecurrent.domain.SiteSearch
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.appOffline
+import app.fiftybar.divecurrent.ui.savedImageryBoxes
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.domain.OfflineArea
 import app.fiftybar.divecurrent.domain.SavedArea
@@ -279,6 +280,7 @@ fun MapScreen(
         // Under the list the map is hidden: its arrows hold still rather than animate unseen.
         reducedMotion = reducedMotion || listShown || covered,
         highlight = peekSite?.siteId ?: highlight,
+        imagery = savedImageryBoxes(),
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
@@ -701,7 +703,7 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
               Text(
                 // While saving, the title already says how far it is.
                 if (share != null) "Goes on if you leave the map"
-                else offline.line(chosen.id) ?: "Forecasts, site pages and reef shapes, for use without signal",
+                else offline.line(chosen.id) ?: "Forecasts, site pages, reef shapes and satellite imagery, for use without signal",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.mist,
               )
@@ -805,14 +807,19 @@ private data class OfflineChoice(
   val onSave: (String) -> Unit,
   val onRemove: (String) -> Unit,
 ) {
-  /** "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure; null when never saved. */
+  /**
+   * "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure (after what is still saved);
+   * null when never saved or tried.
+   */
   fun line(atollId: String): String? {
     saving[atollId]?.let { return "Saving for offline… ${(it * 100).toInt()}%" }
-    errors[atollId]?.let { return it }
-    val area = saved[atollId] ?: return null
+    val area = saved[atollId] ?: return errors[atollId]
     return buildString {
       append("Saved for offline ${ageLabel(area.savedAt)} · ${OfflineArea.sizeLabel(area.bytes)}")
       if (area.missedSites > 0) append(" · ${area.missedSites} of ${area.siteIds.size} forecasts missing")
+      if (!area.imagery) append(" · no satellite imagery")
+      // A failed save keeps the last good one: say both.
+      errors[atollId]?.let { append(". $it") }
     }
   }
 }

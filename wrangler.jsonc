@@ -11,8 +11,8 @@
   },
   "r2_buckets": [
     {
-      // Divers' site photos (site-photos/...) and the old store.json, copied into D1 once and kept as a backup. The
-      // caches lived here before CACHE (lib/cloudflare.ts).
+      // Divers' site photos (site-photos/...), the Sentinel-2 imagery for saved atolls (imagery/..., lib/imagery.ts) and
+      // the old store.json, copied into D1 once and kept as a backup. The caches lived here before CACHE (lib/cloudflare.ts).
       "binding": "DATA",
       "bucket_name": "dive-current-data"
     },

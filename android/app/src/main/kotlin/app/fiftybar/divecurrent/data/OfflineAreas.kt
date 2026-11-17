@@ -38,13 +38,16 @@ import kotlinx.serialization.builtins.ListSerializer
  * endpoint (DataRepository), where the screens already look when a fetch fails. The map then draws the current hour's
  * arrows from the saved weeks (MapViewModel). The list of saved atolls is a small JSON file beside the copies.
  *
- * Map imagery is not saved here: Esri's and OpenStreetMap's terms do not allow downloading an area ahead of time. The
- * map keeps the tiles a diver has looked at (DiveCurrentApp sets MapLibre's cache size).
+ * Satellite imagery is saved as well, from our own Sentinel-2 tiles ([imagery]): Esri's and OpenStreetMap's terms do
+ * not allow downloading an area of theirs ahead of time. The map keeps the Esri tiles a diver has looked at
+ * (DiveCurrentApp sets MapLibre's cache size), and draws ours under them where an atoll is saved.
  */
 class OfflineAreas(
   private val repository: DataRepository,
   private val file: File,
   private val scope: CoroutineScope,
+  /** Where the atoll's satellite imagery is saved; none in tests. */
+  private val imagery: OfflineImagery? = null,
   private val now: () -> Long = System::currentTimeMillis,
 ) {
   private val _areas = MutableStateFlow<Map<String, SavedArea>>(emptyMap())
@@ -88,6 +91,13 @@ class OfflineAreas(
       read.await()
       val area = _areas.value[atollId] ?: return@launch
       repository.deleteCopies(OfflineArea.keysToDrop(area, _areas.value.values))
+      try {
+        imagery?.remove(atollId)
+      } catch (e: CancellationException) {
+        throw e
+      } catch (_: Exception) {
+        // Left on the phone; no map draws it once the atoll is gone.
+      }
       update { it - atollId }
       _errors.update { it - atollId }
     }
@@ -115,7 +125,7 @@ class OfflineAreas(
     _errors.update { it - atollId }
     _saving.update { it + (atollId to 0f) }
     try {
-      val area = fetch(atollId)
+      val area = fetch(atollId, quiet)
       update { it + (atollId to area) }
     } catch (e: CancellationException) {
       throw e
@@ -126,7 +136,7 @@ class OfflineAreas(
     }
   }
 
-  private suspend fun fetch(atollId: String): SavedArea {
+  private suspend fun fetch(atollId: String, quiet: Boolean): SavedArea {
     val list = tryOrNull { repository.sites() }
     if (list == null || list.fromCache) throw IOException(NO_SIGNAL)
     val atoll = list.value.atolls.firstOrNull { it.id == atollId }
@@ -141,7 +151,9 @@ class OfflineAreas(
     val total = sites.size + atlas.size
     val done = AtomicInteger(0)
     val missed = AtomicInteger(0)
-    fun tick() = _saving.update { it + (atollId to done.incrementAndGet().toFloat() / total) }
+    // With imagery to fetch after, the forecasts and reef shapes are the first part of the bar.
+    val dataShare = if (imagery != null) DATA_SHARE else 1f
+    fun tick() = _saving.update { it + (atollId to dataShare * done.incrementAndGet() / total) }
     val gate = Semaphore(PARALLEL)
     coroutineScope {
       val siteJobs =
@@ -173,6 +185,18 @@ class OfflineAreas(
       sites.flatMap { listOf(Keys.site(it.id), Keys.forecast(it.id), Keys.reports(it.id)) } +
         AtlasOverlay.entries.map { Keys.atlas(it.folder, "index.json") } +
         atlas.map { (folder, tile) -> Keys.atlas(folder, tile) }
+    val imageryBytes =
+      imagery?.let { store ->
+        try {
+          store.save(atollId, box) { share -> _saving.update { it + (atollId to dataShare + (1 - dataShare) * share) } }
+        } catch (e: CancellationException) {
+          throw e
+        } catch (e: Exception) {
+          // The forecasts are saved all the same; the line under the atoll says the imagery is not.
+          if (!quiet) _errors.update { it + (atollId to (e.message ?: "Could not save the satellite imagery.")) }
+          null
+        }
+      }
     return SavedArea(
       atollId = atollId,
       name = atoll?.name ?: sites.firstOrNull()?.atollName ?: atollId,
@@ -180,7 +204,9 @@ class OfflineAreas(
       siteIds = sites.map { it.id },
       keys = keys,
       missedSites = missed.get(),
-      bytes = repository.copySize(keys),
+      bytes = repository.copySize(keys) + (imageryBytes ?: 0L),
+      box = box,
+      imagery = imageryBytes != null,
     )
   }
 
@@ -223,6 +249,8 @@ class OfflineAreas(
 
   private companion object {
     const val PARALLEL = 4
+    /** The share of the progress bar for the forecasts and reef shapes; the imagery takes the rest. */
+    const val DATA_SHARE = 0.3f
     const val NO_SIGNAL = "No signal: save this atoll when you are online."
     val LIST = ListSerializer(SavedArea.serializer())
   }

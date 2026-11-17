@@ -7,7 +7,11 @@ import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.db.CacheDatabase
 import app.fiftybar.divecurrent.data.session.PrefsSessionStorage
 import app.fiftybar.divecurrent.data.session.SessionStore
+import app.fiftybar.divecurrent.data.MapLibreOfflineImagery
 import app.fiftybar.divecurrent.data.OfflineAreas
+import app.fiftybar.divecurrent.ui.map.SENTINEL2_MAX_ZOOM
+import app.fiftybar.divecurrent.ui.map.SENTINEL2_MIN_ZOOM
+import app.fiftybar.divecurrent.ui.map.SENTINEL2_STYLE
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -38,7 +42,8 @@ class DiveCurrentApp : Application() {
     val api = DiveCurrentApi(BuildConfig.API_BASE_URL)
     repository = DataRepository(api, CacheDatabase.create(this).bodies())
     account = AccountRepository(api, SessionStore(PrefsSessionStorage(this)))
-    offline = OfflineAreas(repository, File(filesDir, "offline-areas.json"), appScope)
+    val imagery = MapLibreOfflineImagery(this, SENTINEL2_STYLE, SENTINEL2_MIN_ZOOM.toDouble(), SENTINEL2_MAX_ZOOM.toDouble())
+    offline = OfflineAreas(repository, File(filesDir, "offline-areas.json"), appScope, imagery)
     offline.refreshStale()
   }
 

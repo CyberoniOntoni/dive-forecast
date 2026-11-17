@@ -1,0 +1,175 @@
+"""
+Satellite tiles the app may save for offline use, made from Copernicus Sentinel-2 (free for any use, with credit).
+
+The map's live satellite layer (Esri World Imagery) may not be downloaded ahead of time, so saved atolls draw these
+instead. Two steps, each safe to run again (finished parts are skipped):
+
+  composite   For each atoll outline in data/rims.json, the cloud-masked per-pixel median of the clearest L2A scenes
+              (true-colour "visual" band, cloud mask from the scene classification), one GeoTIFF per MGRS tile.
+              Reads the Sentinel-2 COGs on AWS (earth-search STAC). Takes about an hour for all atolls.
+  tiles       Web Mercator tiles, zoom 8-14 (z14 is about 9.5 m a pixel, the imagery's own 10 m), as WebP, under
+              <out>/{z}/{x}/{y}.webp. Only tiles over an atoll's box are made.
+
+  pip install rasterio pillow numpy
+  python3 scripts/imagery/sentinel2.py composite <work dir>
+  python3 scripts/imagery/sentinel2.py tiles <work dir> <out dir>
+  npm run imagery:upload -- <out dir>        # to R2 (scripts/imagery-upload.ts)
+
+Credit: "Contains modified Copernicus Sentinel data <years>".
+"""
+import glob, json, math, os, sys, urllib.request
+
+import numpy as np
+import rasterio
+from PIL import Image
+from rasterio.enums import Resampling
+from rasterio.transform import from_bounds as transform_from_bounds
+from rasterio.warp import reproject, transform_bounds
+from rasterio.windows import Window, from_bounds
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+STAC = "https://earth-search.aws.element84.com/v1/search"
+SCENES_PER_TILE = 8
+# Scene classification values left out of the median: no data, saturated, cloud shadow, cloud, cirrus.
+MASKED = [0, 1, 3, 8, 9, 10]
+PAD_DEG = 0.03
+MIN_ZOOM, MAX_ZOOM = 8, 14
+TILE = 256
+WEBP_QUALITY = 78
+
+
+def atoll_boxes():
+    rims = json.load(open(os.path.join(ROOT, "data", "rims.json")))["rims"]
+    for way, ring in sorted(rims.items()):
+        lats = [p[0] for p in ring]
+        lons = [p[1] for p in ring]
+        yield way, (min(lats) - PAD_DEG, min(lons) - PAD_DEG, max(lats) + PAD_DEG, max(lons) + PAD_DEG)
+
+
+def scenes(box):
+    south, west, north, east = box
+    body = {
+        "collections": ["sentinel-2-l2a"],
+        "bbox": [west, south, east, north],
+        "limit": 200,
+        "query": {"eo:cloud_cover": {"lt": 20}},
+        "datetime": "2023-01-01T00:00:00Z/2026-11-01T00:00:00Z",
+        "sortby": [{"field": "properties.eo:cloud_cover", "direction": "asc"}],
+    }
+    request = urllib.request.Request(STAC, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    by_tile = {}
+    for feature in json.load(urllib.request.urlopen(request))["features"]:
+        if feature["properties"].get("s2:nodata_pixel_percentage", 0) > 60:
+            continue
+        by_tile.setdefault(feature["properties"]["grid:code"], []).append(feature)
+    return {tile: features[:SCENES_PER_TILE] for tile, features in by_tile.items()}
+
+
+def composite(work):
+    os.makedirs(work, exist_ok=True)
+    years = set()
+    for way, box in atoll_boxes():
+        done = os.path.join(work, f"{way}.done")
+        if os.path.exists(done):
+            continue
+        south, west, north, east = box
+        for tile, features in sorted(scenes(box).items()):
+            stack, profile, shape = [], None, None
+            for feature in features:
+                with rasterio.open(feature["assets"]["visual"]["href"]) as src:
+                    bounds = transform_bounds("EPSG:4326", src.crs, west, south, east, north)
+                    win = from_bounds(*bounds, transform=src.transform).round_offsets().round_lengths()
+                    win = win.intersection(Window(0, 0, src.width, src.height))
+                    rgb = src.read(window=win).astype(np.float32)
+                    win_bounds = src.window_bounds(win)
+                    if profile is None:
+                        shape = (win.height, win.width)
+                        profile = src.profile.copy()
+                        profile.update(width=win.width, height=win.height, transform=src.window_transform(win), driver="GTiff",
+                                       compress="deflate", tiled=True, count=3, nodata=0)
+                with rasterio.open(feature["assets"]["scl"]["href"]) as scl_src:
+                    scl = scl_src.read(1, window=from_bounds(*win_bounds, transform=scl_src.transform), out_shape=shape,
+                                       resampling=Resampling.nearest, boundless=True, fill_value=0)
+                rgb = rgb[:, : shape[0], : shape[1]]
+                rgb[:, np.isin(scl, MASKED) | (rgb.sum(0) == 0)] = np.nan
+                stack.append(rgb)
+                years.add(feature["properties"]["datetime"][:4])
+            with np.errstate(all="ignore"):
+                median = np.nanmedian(np.stack(stack), axis=0)
+            out = np.nan_to_num(median, nan=0).clip(0, 255).astype(np.uint8)
+            with rasterio.open(os.path.join(work, f"{way}-{tile}.tif"), "w", **profile) as dst:
+                dst.write(out)
+            print(way, tile, len(stack), "scenes", flush=True)
+        open(done, "w").close()
+    print("years", sorted(years))
+
+
+def tile_bounds_3857(z, x, y):
+    size = 2 * math.pi * 6378137 / 2**z
+    west = -math.pi * 6378137 + x * size
+    north = math.pi * 6378137 - y * size
+    return west, north - size, west + size, north
+
+
+def tile_xy(lat, lon, z):
+    n = 2**z
+    x = int((lon + 180) / 360 * n)
+    y = int((1 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2 * n)
+    return x, y
+
+
+def tiles(work, out):
+    sources = [rasterio.open(path) for path in sorted(glob.glob(os.path.join(work, "*.tif")))]
+    boxes = [box for _, box in atoll_boxes()]
+    wanted = set()
+    for south, west, north, east in boxes:
+        x0, y0 = tile_xy(north, west, MAX_ZOOM)
+        x1, y1 = tile_xy(south, east, MAX_ZOOM)
+        wanted.update((x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1))
+    made = {}
+    for x, y in sorted(wanted):
+        path = os.path.join(out, str(MAX_ZOOM), str(x), f"{y}.webp")
+        if os.path.exists(path):
+            made[(x, y)] = Image.open(path).convert("RGB")
+            continue
+        transform = transform_from_bounds(*tile_bounds_3857(MAX_ZOOM, x, y), TILE, TILE)
+        pixels = np.zeros((3, TILE, TILE), np.uint8)
+        for src in sources:
+            part = np.zeros((3, TILE, TILE), np.uint8)
+            reproject(rasterio.band(src, [1, 2, 3]), part, src_transform=src.transform, src_crs=src.crs, dst_transform=transform,
+                      dst_crs="EPSG:3857", resampling=Resampling.bilinear, src_nodata=0, dst_nodata=0)
+            empty = pixels.sum(0) == 0
+            pixels[:, empty] = part[:, empty]
+        if (pixels.sum(0) > 0).mean() < 0.01:
+            continue
+        image = Image.fromarray(np.moveaxis(pixels, 0, -1))
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        image.save(path, "WEBP", quality=WEBP_QUALITY)
+        made[(x, y)] = image
+    print("z", MAX_ZOOM, len(made), flush=True)
+    # Each lower zoom from the four tiles under it.
+    for z in range(MAX_ZOOM - 1, MIN_ZOOM - 1, -1):
+        parents = {}
+        for (x, y), image in made.items():
+            parents.setdefault((x // 2, y // 2), []).append(((x % 2, y % 2), image))
+        made = {}
+        for (px, py), children in parents.items():
+            canvas = Image.new("RGB", (TILE * 2, TILE * 2))
+            for (dx, dy), image in children:
+                canvas.paste(image, (dx * TILE, dy * TILE))
+            image = canvas.resize((TILE, TILE), Image.LANCZOS)
+            path = os.path.join(out, str(z), str(px), f"{py}.webp")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            image.save(path, "WEBP", quality=WEBP_QUALITY)
+            made[(px, py)] = image
+        print("z", z, len(made), flush=True)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 3 and sys.argv[1] == "composite":
+        composite(sys.argv[2])
+    elif len(sys.argv) >= 4 and sys.argv[1] == "tiles":
+        tiles(sys.argv[2], sys.argv[3])
+    else:
+        print(__doc__)
+        sys.exit(1)

@@ -74,6 +74,14 @@ classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 
+### Imagery for saved atolls (outside `/api/v1`)
+
+`GET /map-styles/sentinel2.json` is a MapLibre style holding only our Sentinel-2 imagery, for an app's offline
+download of an atoll (a region definition needs a style URL). Its tiles are `GET /imagery/<version>/{z}/{x}/{y}.webp`,
+zoom 8 to 14, cached for good (a new build gets a new version); a tile over open ocean answers 204, an empty tile.
+The app's own map style must use the same tile URL so MapLibre finds the saved tiles. Credit: "Contains modified
+Copernicus Sentinel data".
+
 ### `GET /api/v1/sites/{id}`
 
 One site in the same shape as an entry of `sites` above. Returns 404 `not_found` for an unknown or hidden site.

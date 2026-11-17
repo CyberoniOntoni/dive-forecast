@@ -1,5 +1,7 @@
 package app.fiftybar.divecurrent.ui.nav
 
+import app.fiftybar.divecurrent.ui.savedImageryBoxes
+
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -188,6 +190,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
         baseMap = baseMap,
         colors = colors,
         modifier = Modifier.weight(1f).fillMaxWidth(),
+        imagery = savedImageryBoxes(),
       )
       Surface(
         color = colors.deep,
