@@ -249,10 +249,10 @@ fun SiteMapView(
   val moving = rows.any { it.glance?.strength?.let { s -> s != Strength.Slack } == true }
   LaunchedEffect(style, reducedMotion, moving) {
     val s = style ?: return@LaunchedEffect
-    if (!moving) return@LaunchedEffect
     val arrows = s.getLayerAs<SymbolLayer>(ARROWS) ?: return@LaunchedEffect
     val pulse = s.getLayerAs<CircleLayer>(PULSE) ?: return@LaunchedEffect
-    if (reducedMotion) {
+    // Held still (animations off, or nothing moving): arrows back on their pins, any ring steady.
+    if (reducedMotion || !moving) {
       arrows.setProperties(iconOffset(arrayOf(0f, 0f)))
       pulse.setProperties(circleRadius(badgeRadius(1.25f)), circleStrokeOpacity(0.6f))
       return@LaunchedEffect
