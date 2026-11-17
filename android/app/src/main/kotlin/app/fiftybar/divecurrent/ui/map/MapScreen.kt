@@ -260,15 +260,8 @@ fun MapScreen(
       listOpen = listOpen,
       onToggleList = { listOpen = !listOpen },
       loading = state.loading,
-      // Over the map nothing else says the data is old or missing, so a chip does, in the list's words.
-      status =
-        when {
-          state.loading -> null
-          state.rows.isEmpty() && state.error != null -> "Could not load"
-          state.outdatedWall != null -> "No current hour"
-          state.fromCache && state.error != null -> "Offline copy"
-          else -> null
-        },
+      // Over the map nothing else says the data is old or missing, so a chip does, with the list header's words.
+      status = state.dataStatus().takeIf { !state.loading }?.words,
       atolls = atolls,
       atollId = atollId,
       onAtoll = ::pickAtoll,
@@ -377,6 +370,7 @@ private fun NowList(
   modifier: Modifier = Modifier,
 ) {
   val colors = CurrentTheme.colors
+  val status = state.dataStatus()
   // imePadding lifts the list above the keyboard, so a short list of matches is not hidden behind it.
   Column(modifier.fillMaxWidth().imePadding()) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -384,19 +378,19 @@ private fun NowList(
         Text(
           text =
             when {
-              state.outdatedWall != null -> "No current hour offline"
+              status == DataStatus.NoCurrentHour -> DataStatus.NoCurrentHour.words
               state.maldivesWall != null -> "Now · ${MaldivesTime.label(state.maldivesWall)}"
               else -> "Now"
             },
           style = MaterialTheme.typography.titleLarge,
         )
-        val status =
+        val line =
           buildList {
             add(if (rows.size == total) "$total sites" else "${rows.size} of $total sites")
             state.savedAt?.let { add("updated ${ageLabel(it)}") }
-            if (state.fromCache && state.error != null) add("offline copy")
+            if (status == DataStatus.OfflineCopy) add(DataStatus.OfflineCopy.words.lowercase())
           }
-        Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.mist)
+        Text(line.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.mist)
       }
       IconButton(onClick = onAddSite, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Add, contentDescription = "Add a dive site")
@@ -676,6 +670,21 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     }
   }
 }
+
+/** What is wrong with the map's data, if anything: one value, so the chip over the map and the list header agree. */
+private enum class DataStatus(val words: String) {
+  CouldNotLoad("Could not load"),
+  NoCurrentHour("No current hour"),
+  OfflineCopy("Offline copy"),
+}
+
+private fun MapUiState.dataStatus(): DataStatus? =
+  when {
+    rows.isEmpty() && error != null -> DataStatus.CouldNotLoad
+    outdatedWall != null -> DataStatus.NoCurrentHour
+    fromCache && error != null -> DataStatus.OfflineCopy
+    else -> null
+  }
 
 /** Room the floating search pill and atoll chip take under the status bar. */
 private val TOP_BAR_ROOM = 128.dp
