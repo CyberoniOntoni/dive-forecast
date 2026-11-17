@@ -15,12 +15,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalDensity
 import app.fiftybar.divecurrent.ui.components.TabIcons
 import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
-import kotlinx.coroutines.launch
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -42,8 +40,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -64,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -108,18 +105,27 @@ fun SiteScreen(
   val viewModel: SiteViewModel = viewModel(key = "site/$siteId/${reportAt.orEmpty()}") { SiteViewModel(siteId, repository, account, reportAt) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val session by viewModel.session.collectAsStateWithLifecycle()
-  // Opened from a plan's "Report the current": show the form, once the forecast above it has laid out.
-  val reportFocus = remember { BringIntoViewRequester() }
+  // Opened from a plan's "Report the current": the sheet opens once, when the forecast has loaded under it.
+  var reportOpen by rememberSaveable { mutableStateOf(false) }
+  var reportAutoOpened by rememberSaveable { mutableStateOf(false) }
+  // Sent to sign in from the sheet: it opens again on coming back signed in, with the form as it was.
+  var reportAfterSignIn by rememberSaveable { mutableStateOf(false) }
+  val signedIn = session != null
+  LaunchedEffect(signedIn) {
+    if (signedIn && reportAfterSignIn) reportOpen = true
+    // Back signed in, or back without signing in: either way the request is spent, so signing in later from the You
+    // tab does not pop the sheet up out of nowhere.
+    reportAfterSignIn = false
+  }
   val forecastShown = state.forecast != null
   LaunchedEffect(reportAt, forecastShown) {
-    if (reportAt != null && forecastShown) {
-      delay(300)
-      reportFocus.bringIntoView()
+    if (reportAt != null && forecastShown && !reportAutoOpened) {
+      reportAutoOpened = true
+      reportOpen = true
     }
   }
   val colors = CurrentTheme.colors
   val context = LocalContext.current
-  val scope = rememberCoroutineScope()
   val reducedMotion = rememberReducedMotion()
   val scroll = rememberScrollState()
   val forecast = state.forecast
@@ -153,7 +159,7 @@ fun SiteScreen(
           horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
           Button(
-            onClick = { scope.launch { reportFocus.bringIntoView() } },
+            onClick = { reportOpen = true },
             shape = RoundedCornerShape(18.dp),
             colors = ButtonDefaults.buttonColors(containerColor = colors.incoming, contentColor = colors.ink),
             modifier = Modifier.weight(1f).height(56.dp),
@@ -175,6 +181,35 @@ fun SiteScreen(
       }
     },
   ) { padding ->
+    if (reportOpen && !state.notFound) {
+      val close = {
+        reportOpen = false
+        // A thanks already read leaves the form fresh for the next dive.
+        if (state.report.savedLine != null) viewModel.reportDone()
+      }
+      ReportSheet(
+        state = state,
+        nickname = session?.nickname,
+        actions =
+          ReportActions(
+            timeOf = viewModel::reportTime,
+            onQuick = viewModel::reportQuick,
+            onOther = viewModel::reportOther,
+            onDirection = viewModel::reportDirection,
+            onStrength = viewModel::reportStrength,
+            onSend = viewModel::sendReport,
+            onAsForecast = viewModel::sendAsForecast,
+            onDone = close,
+          ),
+        reducedMotion = reducedMotion,
+        onSignIn = {
+          reportOpen = false
+          reportAfterSignIn = true
+          onSignIn()
+        },
+        onDismiss = close,
+      )
+    }
     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
       Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
         // The streaks stop once the header has scrolled away, so the page does not draw every frame for nothing.
@@ -207,23 +242,7 @@ fun SiteScreen(
             }
           }
           if (forecast == null) StatusLine(state)
-          if (!state.notFound) {
-            Box(Modifier.bringIntoViewRequester(reportFocus)) {
-              ReportCard(
-                state = state,
-                nickname = session?.nickname,
-                timeOf = viewModel::reportTime,
-                onSignIn = onSignIn,
-                onQuick = viewModel::reportQuick,
-                onOther = viewModel::reportOther,
-                onDirection = viewModel::reportDirection,
-                onStrength = viewModel::reportStrength,
-                onSend = viewModel::sendReport,
-                onAsForecast = viewModel::sendAsForecast,
-              )
-            }
-            RecentReportsCard(state.reports, state.reportsSavedAt)
-          }
+          if (!state.notFound) RecentReportsCard(state.reports, state.reportsSavedAt)
           state.site?.let { s ->
             val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
             val photosState by photos.state.collectAsStateWithLifecycle()
