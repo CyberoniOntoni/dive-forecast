@@ -1,14 +1,17 @@
 package app.fiftybar.divecurrent
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -59,10 +62,12 @@ fun MainNavigation(startPlanId: String? = null) {
     // Each screen keeps its own insets; the outer scaffold only makes room for the bar.
     contentWindowInsets = WindowInsets(0),
     bottomBar = {
+      // The bar grows and shrinks rather than sliding, so the room it takes changes with it: a slide keeps its full
+      // height until the end and the screen under it would jump by that much when it finishes.
       AnimatedVisibility(
         visible = tab != null,
-        enter = slideInVertically { it },
-        exit = slideOutVertically { it },
+        enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
+        exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
       ) {
         TabBar(selected = tab ?: Tab.Now, onSelect = ::select)
       }

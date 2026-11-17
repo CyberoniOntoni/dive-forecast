@@ -133,7 +133,13 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountScreen(onBack: (() -> Unit)?, onSignedOut: () -> Unit, onPlans: () -> Unit, onScoreboard: () -> Unit, onMyPage: (String) -> Unit) {
+fun AccountScreen(
+  onBack: (() -> Unit)?,
+  onSignedOut: () -> Unit,
+  onPlans: () -> Unit,
+  onScoreboard: () -> Unit,
+  onMyPage: (String) -> Unit,
+) {
   val account = appAccount()
   val viewModel: AccountViewModel = viewModel { AccountViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
