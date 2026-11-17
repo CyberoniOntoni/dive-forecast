@@ -78,9 +78,10 @@ An atoll's `bounds` is the box round its outline, for saving the atoll for offli
 
 `GET /map-styles/sentinel2.json` is a MapLibre style holding only our Sentinel-2 imagery, for an app's offline
 download of an atoll (a region definition needs a style URL). Its tiles are `GET /imagery/<version>/{z}/{x}/{y}.webp`,
-zoom 8 to 14, cached for good (a new build gets a new version); a tile over open ocean answers 204, an empty tile.
-The app's own map style must use the same tile URL so MapLibre finds the saved tiles. Credit: "Contains modified
-Copernicus Sentinel data".
+zoom 8 to 14, cached for good (`public, max-age=31536000, immutable`; a new build gets a new version); a tile over
+open ocean answers 204, an empty tile, cached a day (`public, max-age=86400`, so a later upload is picked up). The
+app's own map style must use the same tile URL so MapLibre finds the saved tiles. Credit, as the map shows it
+(`IMAGERY_ATTRIBUTION` in `lib/imagery.ts`): "Contains modified Copernicus Sentinel data 2023–2026".
 
 ### `GET /api/v1/sites/{id}`
 

@@ -1,7 +1,7 @@
 /**
  * Uploads the Sentinel-2 imagery tiles (scripts/imagery/sentinel2.py tiles <out>) to the worker's R2 bucket under
  * imagery/<version>/, where /imagery/<version>/{z}/{x}/{y}.webp serves them (lib/imagery.ts). Needs wrangler signed in
- * to the account. Safe to run again: tiles already sent are listed in <dir>/.uploaded and skipped.
+ * to the account. Safe to run again: tiles already sent are listed in <dir>/.uploaded-<bucket> and skipped.
  *
  *   npm run imagery:upload -- <dir>              to dive-current-data (production)
  *   npm run imagery:upload -- <dir> --preview    to dive-current-data-preview (PR previews)

@@ -43,7 +43,7 @@ They are served from static tiles in `public/overlays/`, built from the Atlas re
 
 The Atlas maps only the shallow reef tops, so it does not decide a site's type (see `ADDING_SITES.md`). Whether Esri's terms allow this public map is still open (roadmap item 6).
 
-The app's saved-atoll satellite imagery is made from Copernicus Sentinel-2 data (2023–2026; `scripts/imagery/sentinel2.py`), free for any use with credit: "Contains modified Copernicus Sentinel data".
+The app's saved-atoll satellite imagery is made from Copernicus Sentinel-2 data (2023–2026; `scripts/imagery/sentinel2.py`), free for any use with credit, as the app's map shows it: "Contains modified Copernicus Sentinel data 2023–2026" (`IMAGERY_ATTRIBUTION` in `lib/imagery.ts`; a rebuild with other years changes it there, in `SENTINEL2_CREDIT` in the Android `SiteMapView.kt` and here).
 
 Channel depths in `data/sites.json` (`gridDepthMeanM`, `gridDepthMaxM`) are measured on the Maldives bathymetry grid by Shuaib Rasheed, Simon C. Warder, Yves Plancherel and Matthew D. Piggott: *An Improved Gridded Bathymetric Data Set and Tidal Model for the Maldives Archipelago*, Earth and Space Science 8 (2021), [doi:10.1029/2020EA001207](https://doi.org/10.1029/2020EA001207). The paper is CC BY-NC 4.0. The forecast uses the crossings marked `ok` to size channels that have no published section.
 

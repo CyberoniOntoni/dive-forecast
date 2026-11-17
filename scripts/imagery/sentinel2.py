@@ -15,7 +15,8 @@ instead. Two steps, each safe to run again (finished parts are skipped):
   python3 scripts/imagery/sentinel2.py tiles <work dir> <out dir>
   npm run imagery:upload -- <out dir>        # to R2 (scripts/imagery-upload.ts)
 
-Credit: "Contains modified Copernicus Sentinel data <years>".
+Credit: "Contains modified Copernicus Sentinel data <years>", the years the composite step prints (now 2023–2026,
+IMAGERY_ATTRIBUTION in lib/imagery.ts).
 """
 import glob, json, math, os, sys, urllib.request
 

@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.data
 import android.content.Context
 import app.fiftybar.divecurrent.data.api.ApiBounds
 import java.io.IOException
+import kotlin.math.abs
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +27,8 @@ interface OfflineImagery {
 /**
  * Our Sentinel-2 tiles (lib/imagery.ts) in a MapLibre offline region per atoll, read from [styleUrl]. A region is kept
  * once complete: the tiles never change under one imagery version, so a saved atoll's 6-hourly refresh costs nothing
- * here. A region from another version (its style URL differs) is dropped and the new one downloaded.
+ * here. A region from another version (its style URL differs) or over another box is dropped and the new one
+ * downloaded.
  */
 class MapLibreOfflineImagery(
   private val context: Context,
@@ -40,7 +42,8 @@ class MapLibreOfflineImagery(
   override suspend fun save(atollId: String, box: ApiBounds, progress: (Float) -> Unit): Long =
     withContext(Dispatchers.Main) {
       val mine = regions().filter { it.metadata.decodeToString() == atollId }
-      val (kept, stale) = mine.partition { (it.definition as? OfflineTilePyramidRegionDefinition)?.styleURL == styleUrl }
+      // Kept only for the same imagery and the same box: an atoll whose outline changed downloads its new box.
+      val (kept, stale) = mine.partition { region -> (region.definition as? OfflineTilePyramidRegionDefinition)?.let { it.styleURL == styleUrl && sameBox(it.bounds, box) } == true }
       stale.forEach { delete(it) }
       kept.drop(1).forEach { delete(it) }
       val region = kept.firstOrNull() ?: create(atollId, box)
@@ -49,6 +52,13 @@ class MapLibreOfflineImagery(
 
   override suspend fun remove(atollId: String) =
     withContext(Dispatchers.Main) { regions().filter { it.metadata.decodeToString() == atollId }.forEach { delete(it) } }
+
+  private fun sameBox(bounds: LatLngBounds?, box: ApiBounds): Boolean =
+    bounds != null &&
+      abs(bounds.latitudeNorth - box.north) < BOX_EPS &&
+      abs(bounds.latitudeSouth - box.south) < BOX_EPS &&
+      abs(bounds.longitudeEast - box.east) < BOX_EPS &&
+      abs(bounds.longitudeWest - box.west) < BOX_EPS
 
   private suspend fun regions(): List<OfflineRegion> =
     suspendCancellableCoroutine { cont ->
@@ -143,5 +153,7 @@ class MapLibreOfflineImagery(
 
   private companion object {
     const val GIVE_UP_AFTER = 5
+    /** Degrees: the server rounds outline boxes to 4 decimals, so a real change is far bigger. */
+    const val BOX_EPS = 1e-6
   }
 }
