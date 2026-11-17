@@ -1,13 +1,24 @@
 package app.fiftybar.divecurrent.ui.map
 
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import app.fiftybar.divecurrent.ui.components.Tab
+import app.fiftybar.divecurrent.ui.components.TabIcons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.selection.selectable
@@ -35,6 +46,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,7 +67,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -68,13 +79,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -100,7 +109,6 @@ import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,8 +137,11 @@ fun MapScreen(
   // The web list's atoll picker: "" for all atolls. Picking one also moves the map there.
   var atollId by rememberSaveable { mutableStateOf("") }
   var focus by remember { mutableStateOf<MapFocus?>(null) }
-  val scaffold = rememberBottomSheetScaffoldState()
-  val scope = rememberCoroutineScope()
+  // Map or list, one at a time, switched by the pill over the map: no sheet under the tab bar to compete with it.
+  var listOpen by rememberSaveable { mutableStateOf(false) }
+  BackHandler(enabled = listOpen) { listOpen = false }
+  // Kept out here: the list leaves composition while the map shows, and should come back where it was.
+  val listState = rememberLazyListState()
   val colors = CurrentTheme.colors
   // A point long-pressed on the map, waiting for "Navigate here" or "Add a dive site here".
   var pressed by remember { mutableStateOf<LatLon?>(null) }
@@ -141,7 +152,7 @@ fun MapScreen(
     onPauseOrDispose {}
   }
 
-  // A strength picked from the sheet's counts narrows the list and the pins to sites running that strength now.
+  // A strength picked from the counts narrows the list and the pins to sites running that strength now.
   var strength by rememberSaveable { mutableStateOf<Strength?>(null) }
   val reducedMotion = rememberReducedMotion()
   val inAtoll =
@@ -171,36 +182,11 @@ fun MapScreen(
         sites.maxOf { it.site.lat },
         sites.maxOf { it.site.lon },
       )
-    // The open list covers half the map: fold it down to show the atoll.
-    scope.launch { scaffold.bottomSheetState.partialExpand() }
   }
 
-  // The search pill and atoll chip float over the map and over the list; the list stops below them.
-  BoxWithConstraints(Modifier.fillMaxSize()) {
-  // The pill and chip sit under the status bar, so the list stops below both.
-  val sheetMax = maxHeight - TOP_BAR_ROOM - WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-  BottomSheetScaffold(
-    scaffoldState = scaffold,
-    sheetPeekHeight = 148.dp,
-    sheetContainerColor = colors.glass,
-    sheetContentColor = colors.foam,
-    sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-    sheetContent = {
-      NowList(
-        state = state,
-        rows = shown,
-        total = state.rows.size,
-        counts = counts,
-        strength = picked,
-        onStrength = { strength = if (strength == it) null else it },
-        onOpenSite = onOpenSite,
-        onRefresh = viewModel::refresh,
-        onAddSite = { addHint = true },
-        modifier = Modifier.heightIn(max = sheetMax),
-      )
-    },
-  ) { padding ->
-    Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
+  // The search pill, atoll chip and counts float over the map and over the list; the list starts below them.
+  Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
       SiteMapView(
         rows = pins,
         layers = layers,
@@ -218,11 +204,12 @@ fun MapScreen(
         onTap = shelter::tap,
         atlas = atlasState.shapes,
         focus = focus,
-        reducedMotion = reducedMotion,
+        // Under the list the map is hidden: its arrows hold still rather than animate unseen.
+        reducedMotion = reducedMotion || listOpen,
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
-        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = TOP_BAR_ROOM - 8.dp, end = 12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
+        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = TOP_BAR_ROOM - 8.dp, end = 12.dp, bottom = 12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
@@ -241,19 +228,50 @@ fun MapScreen(
         }
       }
     }
-  }
-  TopBar(
-    query = query,
-    onQuery = { query = it },
-    // The keyboard would cover a list left at its peek height: open it, so matches show above the keys.
-    onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
-    atolls = atolls,
-    atollId = atollId,
-    onAtoll = ::pickAtoll,
-    onLayers = { layersOpen = true },
-    layersMenu = { LayersMenu(expanded = layersOpen, layers = layers, onChoose = ::choose, onDismiss = { layersOpen = false }) },
-    modifier = Modifier.align(Alignment.TopCenter),
-  )
+    AnimatedVisibility(
+      visible = listOpen,
+      enter = if (reducedMotion) EnterTransition.None else fadeIn(tween(180)) + slideInVertically(tween(220)) { it / 12 },
+      exit = if (reducedMotion) ExitTransition.None else fadeOut(tween(150)) + slideOutVertically(tween(180)) { it / 12 },
+    ) {
+      NowList(
+        state = state,
+        rows = shown,
+        total = state.rows.size,
+        strength = picked,
+        onOpenSite = onOpenSite,
+        onRefresh = viewModel::refresh,
+        onAddSite = { addHint = true },
+        listState = listState,
+        modifier =
+          Modifier.fillMaxSize()
+            // The map is still under the list: touches on the list's empty parts must not pan it or long-press a
+            // point no one can see.
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+            .background(colors.ink)
+            .statusBarsPadding()
+            .padding(top = TOP_BAR_ROOM),
+      )
+    }
+    TopBar(
+      query = query,
+      onQuery = { query = it },
+      // Matches show in the list, above the keyboard.
+      onSearchFocus = { listOpen = true },
+      listOpen = listOpen,
+      onToggleList = { listOpen = !listOpen },
+      loading = state.loading,
+      // Over the map nothing else says the data is old or missing, so a chip does, with the list header's words.
+      status = state.dataStatus().takeIf { !state.loading }?.words,
+      atolls = atolls,
+      atollId = atollId,
+      onAtoll = ::pickAtoll,
+      counts = counts.takeIf { state.outdatedWall == null },
+      strength = picked,
+      onStrength = { strength = if (strength == it) null else it },
+      onLayers = { layersOpen = true },
+      layersMenu = { LayersMenu(expanded = layersOpen, layers = layers, onChoose = ::choose, onDismiss = { layersOpen = false }) },
+      modifier = Modifier.align(Alignment.TopCenter),
+    )
   }
   if (addHint) {
     AlertDialog(
@@ -264,7 +282,7 @@ fun MapScreen(
         TextButton(
           onClick = {
             addHint = false
-            scope.launch { scaffold.bottomSheetState.partialExpand() }
+            listOpen = false
           }
         ) {
           Text("OK")
@@ -344,50 +362,41 @@ private fun NowList(
   state: MapUiState,
   rows: List<SiteRow>,
   total: Int,
-  counts: NowCounts,
   strength: Strength?,
-  onStrength: (Strength) -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
   onAddSite: () -> Unit,
+  listState: LazyListState,
   modifier: Modifier = Modifier,
 ) {
   val colors = CurrentTheme.colors
-  // imePadding lifts the sheet's content above the keyboard, so a short list of matches is not hidden behind it.
+  val status = state.dataStatus()
+  // imePadding lifts the list above the keyboard, so a short list of matches is not hidden behind it.
   Column(modifier.fillMaxWidth().imePadding()) {
     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
       Column(Modifier.weight(1f)) {
         Text(
           text =
             when {
-              state.outdatedWall != null -> "No current hour offline"
+              status == DataStatus.NoCurrentHour -> DataStatus.NoCurrentHour.words
               state.maldivesWall != null -> "Now · ${MaldivesTime.label(state.maldivesWall)}"
               else -> "Now"
             },
           style = MaterialTheme.typography.titleLarge,
         )
-        val status =
+        val line =
           buildList {
             add(if (rows.size == total) "$total sites" else "${rows.size} of $total sites")
             state.savedAt?.let { add("updated ${ageLabel(it)}") }
-            if (state.fromCache && state.error != null) add("offline copy")
+            if (status == DataStatus.OfflineCopy) add(DataStatus.OfflineCopy.words.lowercase())
           }
-        Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.mist)
+        Text(line.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.mist)
       }
       IconButton(onClick = onAddSite, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Add, contentDescription = "Add a dive site")
       }
       IconButton(onClick = onRefresh, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Refresh, contentDescription = "Refresh the forecast")
-      }
-    }
-    // How many sites run each strength now; tap one to show only those, again to show all. None without a current hour.
-    if (state.outdatedWall == null) Row(
-      Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).selectableGroup(),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      for (s in NowCounts.ORDER) {
-        CountChip(s, counts.of(s), selected = strength == s) { onStrength(s) }
       }
     }
     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
@@ -410,7 +419,7 @@ private fun NowList(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
       )
     }
-    LazyColumn(Modifier.fillMaxWidth()) {
+    LazyColumn(Modifier.fillMaxWidth(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
         HorizontalDivider(color = colors.line, modifier = Modifier.padding(start = 68.dp))
@@ -452,11 +461,18 @@ private fun TopBar(
   query: String,
   onQuery: (String) -> Unit,
   onSearchFocus: () -> Unit,
+  listOpen: Boolean,
+  onToggleList: () -> Unit,
+  loading: Boolean,
+  status: String?,
   atolls: List<SiteSearch.AtollChoice>,
   atollId: String,
   onAtoll: (String) -> Unit,
   onLayers: () -> Unit,
   layersMenu: @Composable () -> Unit,
+  counts: NowCounts?,
+  strength: Strength?,
+  onStrength: (Strength) -> Unit,
   modifier: Modifier = Modifier,
 ) {
   val colors = CurrentTheme.colors
@@ -474,7 +490,8 @@ private fun TopBar(
       ) {
         Icon(Icons.Filled.Search, contentDescription = null, tint = colors.mist, modifier = Modifier.size(22.dp))
         Box(Modifier.weight(1f).padding(start = 10.dp), contentAlignment = Alignment.CenterStart) {
-          if (query.isEmpty()) Text("Find a site or atoll", style = MaterialTheme.typography.bodyLarge, color = colors.dim)
+          // Short, so it fits beside the List and layers buttons on a narrow phone; the field's label says the rest.
+          if (query.isEmpty()) Text("Search sites", style = MaterialTheme.typography.bodyLarge, color = colors.dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
           BasicTextField(
             value = query,
             onValueChange = onQuery,
@@ -488,6 +505,7 @@ private fun TopBar(
         }
         if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(44.dp)) { Icon(Icons.Filled.Clear, "Clear the search") }
       }
+      ViewToggle(listOpen, loading, onToggleList)
       Box {
         IconButton(
           onClick = onLayers,
@@ -498,7 +516,58 @@ private fun TopBar(
         layersMenu()
       }
     }
-    AtollChip(atolls, atollId, onAtoll)
+    // The atoll, then how many sites run each strength now: tap a count to show only those, again to show all.
+    // No counts without a current hour.
+    Row(
+      Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).selectableGroup(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      status?.let { StatusChip(it) }
+      AtollChip(atolls, atollId, onAtoll)
+      if (counts != null) for (s in NowCounts.ORDER) {
+        CountChip(s, counts.of(s), selected = strength == s) { onStrength(s) }
+      }
+    }
+  }
+}
+
+/**
+ * Map or list, beside the layers button and styled like it (dark glass), so it reads as part of the map's controls
+ * and stays clear of the tab bar. Shows what a tap switches to; a small spinner takes the icon's place while loading.
+ */
+@Composable
+private fun ViewToggle(listOpen: Boolean, loading: Boolean, onClick: () -> Unit) {
+  val colors = CurrentTheme.colors
+  Row(
+    Modifier.height(52.dp)
+      .clip(CircleShape)
+      .background(colors.glass)
+      .border(1.dp, colors.line, CircleShape)
+      .clickable(onClickLabel = if (listOpen) "Show the map" else "Show the list", onClick = onClick)
+      .padding(start = 14.dp, end = 16.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    if (loading) CircularProgressIndicator(color = colors.foam, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+    else Icon(if (listOpen) TabIcons.of(Tab.Now) else ListIcon, contentDescription = null, tint = colors.foam, modifier = Modifier.size(20.dp))
+    Text(if (listOpen) "Map" else "List", style = MaterialTheme.typography.labelLarge, color = colors.foam, maxLines = 1)
+  }
+}
+
+/** "Offline copy", "No current hour": the data's state, in amber, first in the chip row. */
+@Composable
+private fun StatusChip(text: String) {
+  val colors = CurrentTheme.colors
+  Box(
+    Modifier.heightIn(min = 40.dp)
+      .clip(CircleShape)
+      .background(colors.glass)
+      .border(1.dp, colors.outgoing, CircleShape)
+      .padding(horizontal = 14.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    Text(text, style = MaterialTheme.typography.labelLarge, color = colors.outgoing, maxLines = 1)
   }
 }
 
@@ -602,8 +671,37 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
   }
 }
 
+/** What is wrong with the map's data, if anything: one value, so the chip over the map and the list header agree. */
+private enum class DataStatus(val words: String) {
+  CouldNotLoad("Could not load"),
+  NoCurrentHour("No current hour"),
+  OfflineCopy("Offline copy"),
+}
+
+private fun MapUiState.dataStatus(): DataStatus? =
+  when {
+    rows.isEmpty() && error != null -> DataStatus.CouldNotLoad
+    outdatedWall != null -> DataStatus.NoCurrentHour
+    fromCache && error != null -> DataStatus.OfflineCopy
+    else -> null
+  }
+
 /** Room the floating search pill and atoll chip take under the status bar. */
 private val TOP_BAR_ROOM = 128.dp
+
+/** Three lines with a dot each: the list. */
+private val ListIcon: ImageVector by lazy {
+  ImageVector.Builder("list", 24.dp, 24.dp, 24f, 24f)
+    .path(stroke = SolidColor(androidx.compose.ui.graphics.Color.White), strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
+      for (y in listOf(6f, 12f, 18f)) {
+        moveTo(4f, y)
+        lineTo(4.01f, y)
+        moveTo(9f, y)
+        lineTo(20f, y)
+      }
+    }
+    .build()
+}
 
 /** Two stacked sheets: the layers button. */
 private val LayersIcon: ImageVector by lazy {

@@ -60,6 +60,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import app.fiftybar.divecurrent.ui.components.ClockDialog
 import app.fiftybar.divecurrent.data.api.GlanceTone
 import app.fiftybar.divecurrent.data.api.Strength
 import app.fiftybar.divecurrent.domain.MaldivesTime
@@ -243,7 +244,8 @@ private fun TimeChips(form: ReportFormState, actions: ReportActions) {
     )
   }
   pickedDate?.let { date ->
-    ReportClockDialog(
+    ClockDialog(
+      title = "Time in the water, Maldives time",
       initial = form.otherWall?.let(MaldivesTime::parse)?.toLocalTime() ?: LocalTime.of(9, 0),
       onPicked = { t ->
         pickedDate = null

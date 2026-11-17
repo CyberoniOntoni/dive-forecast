@@ -42,11 +42,9 @@ import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +61,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.fiftybar.divecurrent.ui.components.ClockDialog
 import app.fiftybar.divecurrent.data.api.ApiPickerSite
 import app.fiftybar.divecurrent.domain.DraftDay
 import app.fiftybar.divecurrent.domain.DraftStop
@@ -360,7 +359,8 @@ private fun StopEditor(
     )
   }
   if (pickTime) {
-    PlanTimeDialog(
+    ClockDialog(
+      title = "Time in the water, Maldives time",
       initial = runCatching { LocalTime.parse(stop.time) }.getOrElse { LocalTime.of(9, 0) },
       onPicked = { time ->
         pickTime = false
@@ -442,17 +442,4 @@ private fun PlanDateDialog(initial: LocalDate, years: IntRange, onPicked: (Local
   ) {
     DatePicker(state = picker, title = { Text("Day of the dives", Modifier.padding(start = 24.dp, top = 16.dp)) })
   }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PlanTimeDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit, onDismiss: () -> Unit) {
-  val picker = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text("Time in the water, Maldives time") },
-    text = { TimePicker(state = picker) },
-    confirmButton = { TextButton(onClick = { onPicked(LocalTime.of(picker.hour, picker.minute)) }) { Text("Done") } },
-    dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-  )
 }
