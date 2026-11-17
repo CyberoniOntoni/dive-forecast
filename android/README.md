@@ -13,11 +13,17 @@ What it does:
   Plans, Navigate and You (sign-in or the account). It shows only on those screens, each sitting right on the map, so
   Back from any of them goes to the map.
 
-- **Map**: every site with an arrow pointing the way the water runs at the current Maldives hour, coloured and faded like
-  the web pins (incoming teal, outgoing amber, along a reef foam, very strong the stop colour; low confidence fainter).
-  Satellite (Esri World Imagery) or OpenStreetMap base. Tap an arrow to open the site.
-- **Now list**: the bottom sheet lists the sites strongest first, as the web list does, with the web's search (every word starts a word of the site's or atoll's name; `domain/SiteSearch.kt`) and its atoll
-  picker, which also moves the map to that atoll.
+- **Map**: every site as a badge (a dark disc ringed in its colour, 26 dp inside an atoll, smaller over the chain)
+  with an arrow pointing the way the water runs at the current Maldives hour, coloured and faded like the web pins
+  (incoming teal, outgoing amber, along a reef foam, very strong the stop colour; low confidence fainter). Each arrow
+  nudges along its heading, further the stronger it runs (not at slack), and a very strong site sends out a red ring;
+  both hold still when the phone's animations are off. Satellite (Esri World Imagery) or OpenStreetMap base. Tap a
+  badge to open the site. A floating search pill (the web's search: every word starts a word of the site's or atoll's
+  name; `domain/SiteSearch.kt`) with the layers button, and the atoll chip under it (the web list's atoll picker, which
+  also moves the map to that atoll), sit over the map and the list.
+- **Now list**: the bottom sheet lists the sites strongest first, as the web list does, under counts of how many
+  run very strong, strong, mild and slack now (`domain/NowCounts.kt`); tap a count to show only those sites, on the
+  list and the map.
 - **Site page** (`ui/site/SiteHero.kt`, `SiteForecast.kt`, `domain/SiteOutlook.kt`), opened on the current Maldives
   hour: a satellite header round the pin (Esri World Imagery tiles at zoom 16) with faint streaks drifting the way the
   hour's water runs; the hour's strength in its colour, the arrow on a compass (it swings to a new heading), the way

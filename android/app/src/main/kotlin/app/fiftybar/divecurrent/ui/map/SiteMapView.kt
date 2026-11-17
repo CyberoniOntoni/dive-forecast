@@ -47,6 +47,21 @@ import org.maplibre.android.style.expressions.Expression.linear
 import org.maplibre.android.style.expressions.Expression.stop
 import org.maplibre.android.style.expressions.Expression.zoom
 import org.maplibre.android.style.layers.FillLayer
+import org.maplibre.android.style.expressions.Expression.match
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.PropertyFactory.circleColor
+import org.maplibre.android.style.layers.PropertyFactory.circleOpacity
+import org.maplibre.android.style.layers.PropertyFactory.circlePitchAlignment
+import org.maplibre.android.style.layers.PropertyFactory.circleRadius
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeColor
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeOpacity
+import org.maplibre.android.style.layers.PropertyFactory.circleStrokeWidth
+import org.maplibre.android.style.layers.PropertyFactory.iconOffset
+import app.fiftybar.divecurrent.data.api.Strength
+import app.fiftybar.divecurrent.ui.site.strengthLevel
+import androidx.compose.runtime.withFrameNanos
+import kotlin.math.PI
+import kotlin.math.cos
 import org.maplibre.android.style.layers.LineLayer
 import org.maplibre.android.style.layers.Property
 import org.maplibre.android.style.layers.PropertyFactory.fillColor
@@ -89,6 +104,8 @@ data class MapFocus(val count: Int, val south: Double, val west: Double, val nor
 
 private const val SOURCE = "sites"
 private const val ARROWS = "site-arrows"
+private const val BADGES = "site-badges"
+private const val PULSE = "site-pulse"
 private const val NAMES = "site-names"
 
 /**
@@ -125,6 +142,8 @@ fun SiteMapView(
   atlas: Map<AtlasOverlay, FeatureCollection> = emptyMap(),
   /** A box to frame, as when an atoll is picked; each new [MapFocus.count] moves the map once. */
   focus: MapFocus? = null,
+  /** The phone's animations are off: the arrows hold still and very strong sites keep a steady ring. */
+  reducedMotion: Boolean = false,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -221,6 +240,37 @@ fun SiteMapView(
   LaunchedEffect(style, rows) {
     val s = style ?: return@LaunchedEffect
     s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(features(rows))
+  }
+
+  // The badges breathe: each arrow nudges along its own heading, further the stronger the water runs (not at slack),
+  // and a very strong site sends out a red ring. One clock for the whole map; the ring is a paint change, the nudge a
+  // layout one, so the nudge only moves on every other frame.
+  LaunchedEffect(style, reducedMotion) {
+    val s = style ?: return@LaunchedEffect
+    val arrows = s.getLayerAs<SymbolLayer>(ARROWS) ?: return@LaunchedEffect
+    val pulse = s.getLayerAs<CircleLayer>(PULSE) ?: return@LaunchedEffect
+    if (reducedMotion) {
+      arrows.setProperties(iconOffset(arrayOf(0f, 0f)))
+      pulse.setProperties(circleRadius(badgeRadius(1.25f)), circleStrokeOpacity(0.6f))
+      return@LaunchedEffect
+    }
+    var frame = 0L
+    val start = withFrameNanos { it }
+    while (true) {
+      withFrameNanos { now ->
+        // A new style is on its way (base map switched): these layers are going, leave them be.
+        if (!s.isFullyLoaded) return@withFrameNanos
+        val t = (now - start) / 1e9f
+        val ring = (t % 1.8f) / 1.8f
+        pulse.setProperties(circleRadius(badgeRadius(1f + 0.9f * ring)), circleStrokeOpacity(0.7f * (1f - ring)))
+        if (frame++ % 2 == 0L) {
+          val nudge = 3.5f * (0.5f - 0.5f * cos(t * 2f * PI.toFloat() / 1.6f))
+          arrows.setProperties(
+            iconOffset(interpolate(linear(), get("speed"), stop(0, literal(arrayOf(0f, 0f))), stop(1, literal(arrayOf(0f, -nudge)))))
+          )
+        }
+      }
+    }
   }
 
   LaunchedEffect(style, shelterImages, shelterOpacity) {
@@ -349,6 +399,10 @@ private fun features(rows: List<SiteRow>): FeatureCollection =
         addStringProperty("icon", g?.tone?.let(::iconName) ?: ICON_NONE)
         addNumberProperty("bearing", g?.arrowBearing ?: 0.0)
         addNumberProperty("opacity", g?.opacity ?: 0.9f)
+        addStringProperty("tone", g?.tone?.name?.lowercase() ?: "none")
+        // How far the arrow nudges: the day chart's strength scale, none at slack.
+        addNumberProperty("speed", g?.strength?.takeIf { it != Strength.Slack }?.let(::strengthLevel) ?: 0f)
+        addBooleanProperty("pulse", g?.strength == Strength.TooStrong)
       }
     }
   )
@@ -385,12 +439,38 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
       .withFilter(eq(geometryType(), literal("Point")))
   )
   style.addSource(GeoJsonSource(SOURCE, FeatureCollection.fromFeatures(emptyList())))
+  // A very strong site's ring, under its badge; MapScreen's clock grows and fades it.
+  style.addLayer(
+    CircleLayer(PULSE, SOURCE)
+      .withProperties(
+        circleRadius(badgeRadius(1f)),
+        circleColor(Color.TRANSPARENT),
+        circleStrokeColor(colors.stop.toArgb()),
+        circleStrokeWidth(2f),
+        circleStrokeOpacity(0f),
+        circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
+      )
+      .withFilter(eq(get("pulse"), literal(true)))
+  )
+  // Each site a dark disc ringed in its colour, 26 dp inside one atoll, with the arrow on it.
+  val tones = GlanceTone.entries.map { stop(it.name.lowercase(), literal(colorHex(colors.tone(it).toArgb()))) }.toTypedArray()
+  style.addLayer(
+    CircleLayer(BADGES, SOURCE)
+      .withProperties(
+        circleRadius(badgeRadius(1f)),
+        circleColor(colors.ink.toArgb()),
+        circleOpacity(0.78f),
+        circleStrokeColor(toColor(match(get("tone"), literal(colorHex(colors.foam.toArgb())), *tones))),
+        circleStrokeWidth(interpolate(linear(), zoom(), stop(5, 1f), stop(11, 1.6f))),
+        circleStrokeOpacity(get("opacity")),
+      )
+  )
   style.addLayer(
     SymbolLayer(ARROWS, SOURCE)
       .withProperties(
         iconImage(get("icon")),
         // Small over the whole chain, where 300 pins share a phone screen; full size inside one atoll.
-        iconSize(interpolate(linear(), zoom(), stop(5, 0.4f), stop(8, 0.6f), stop(11, 0.85f), stop(13, 1f))),
+        iconSize(interpolate(linear(), zoom(), stop(5, 0.45f), stop(8, 0.65f), stop(11, 0.9f), stop(13, 1f))),
         iconRotate(get("bearing")),
         iconOpacity(get("opacity")),
         iconRotationAlignment(Property.ICON_ROTATION_ALIGNMENT_MAP),
@@ -415,9 +495,15 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
   )
 }
 
-/** An arrow pointing north (the layer rotates it), with a dark edge so it reads on imagery and on the street map. */
+/** A badge's radius in dp at each zoom, times [scale]: 13 dp (26 dp across) from zoom 13, smaller over the chain. */
+private fun badgeRadius(scale: Float) =
+  interpolate(linear(), zoom(), stop(5, 6f * scale), stop(8, 8.5f * scale), stop(11, 11.5f * scale), stop(13, 13f * scale))
+
+private fun colorHex(argb: Int) = String.format(Locale.ROOT, "#%06x", argb and 0xFFFFFF)
+
+/** An arrow pointing north (the layer rotates it) to sit on a badge, with a dark edge so it reads on any base. */
 private fun arrowBitmap(density: Float, fill: Int, edge: Int): Bitmap {
-  val size = (30 * density).toInt()
+  val size = (18 * density).toInt()
   val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
   val canvas = Canvas(bitmap)
   val s = size.toFloat()
@@ -438,7 +524,7 @@ private fun arrowBitmap(density: Float, fill: Int, edge: Int): Bitmap {
     Paint(Paint.ANTI_ALIAS_FLAG).apply {
       color = edge
       style = Paint.Style.STROKE
-      strokeWidth = 1.6f * density
+      strokeWidth = 1.2f * density
       strokeJoin = Paint.Join.ROUND
     },
   )

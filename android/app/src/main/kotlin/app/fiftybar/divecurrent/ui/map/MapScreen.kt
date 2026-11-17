@@ -1,6 +1,31 @@
 package app.fiftybar.divecurrent.ui.map
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.semantics.Role
+import app.fiftybar.divecurrent.data.api.Strength
+import app.fiftybar.divecurrent.domain.strengthWord
+import app.fiftybar.divecurrent.domain.NowCounts
+import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
+import app.fiftybar.divecurrent.ui.site.strengthLevel
+import app.fiftybar.divecurrent.ui.theme.SpaceGrotesk
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -27,8 +52,6 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -39,10 +62,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetScaffoldState
@@ -61,7 +81,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -119,13 +138,21 @@ fun MapScreen(
     onPauseOrDispose {}
   }
 
-  val shown =
+  // A strength picked from the sheet's counts narrows the list and the pins to sites running that strength now.
+  var strength by rememberSaveable { mutableStateOf<Strength?>(null) }
+  val reducedMotion = rememberReducedMotion()
+  val inAtoll =
     remember(state.rows, query, atollId) {
       state.rows.filter { (atollId.isEmpty() || it.site.atollId == atollId) && SiteSearch.matches(it.site.name, it.site.atollName, query) }
     }
+  val counts = remember(inAtoll) { NowCounts.of(inAtoll.map { it.glance }) }
+  val shown = remember(inAtoll, strength) { inAtoll.filter { NowCounts.matches(it.glance, strength) } }
   // The map keeps every atoll's pins when one is picked, as the web map does: the pick narrows the list and frames the
-  // atoll. A search still narrows the pins too, as it did before.
-  val pins = remember(state.rows, query) { state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) } }
+  // atoll. A search or a strength still narrows the pins too.
+  val pins =
+    remember(state.rows, query, strength) {
+      state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) && NowCounts.matches(it.glance, strength) }
+    }
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
     atollId = id
@@ -143,25 +170,27 @@ fun MapScreen(
     scope.launch { scaffold.bottomSheetState.partialExpand() }
   }
 
+  // The search pill and atoll chip float over the map and over the list; the list stops below them.
+  BoxWithConstraints(Modifier.fillMaxSize()) {
+  val sheetMax = maxHeight - TOP_BAR_ROOM
   BottomSheetScaffold(
     scaffoldState = scaffold,
-    sheetPeekHeight = 132.dp,
+    sheetPeekHeight = 148.dp,
     sheetContainerColor = colors.glass,
     sheetContentColor = colors.foam,
+    sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
     sheetContent = {
       NowList(
         state = state,
         rows = shown,
-        query = query,
-        onQuery = { query = it },
-        atolls = atolls,
-        atollId = atollId,
-        onAtoll = ::pickAtoll,
-        // The keyboard would cover a sheet left at its peek height, field and results with it.
-        onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
+        total = inAtoll.size,
+        counts = counts,
+        strength = strength,
+        onStrength = { strength = if (strength == it) null else it },
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
         onAddSite = { addHint = true },
+        modifier = Modifier.heightIn(max = sheetMax),
       )
     },
   ) { padding ->
@@ -183,22 +212,14 @@ fun MapScreen(
         onTap = shelter::tap,
         atlas = atlasState.shapes,
         focus = focus,
+        reducedMotion = reducedMotion,
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
-        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
+        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = TOP_BAR_ROOM - 8.dp, end = 12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
-        Box {
-          AssistChip(
-            onClick = { layersOpen = true },
-            label = { Text("Layers") },
-            colors = AssistChipDefaults.assistChipColors(containerColor = colors.glass, labelColor = colors.foam),
-            modifier = Modifier.heightIn(min = 44.dp).semantics { contentDescription = "Map layers" },
-          )
-          LayersMenu(expanded = layersOpen, layers = layers, onChoose = ::choose, onDismiss = { layersOpen = false })
-        }
         if (layers.shelter) {
           ShelterLegend(
             state = shelterState,
@@ -214,6 +235,19 @@ fun MapScreen(
         }
       }
     }
+  }
+  TopBar(
+    query = query,
+    onQuery = { query = it },
+    // The keyboard would cover a list left at its peek height: open it, so matches show above the keys.
+    onSearchFocus = { scope.launch { scaffold.bottomSheetState.expand() } },
+    atolls = atolls,
+    atollId = atollId,
+    onAtoll = ::pickAtoll,
+    onLayers = { layersOpen = true },
+    layersMenu = { LayersMenu(expanded = layersOpen, layers = layers, onChoose = ::choose, onDismiss = { layersOpen = false }) },
+    modifier = Modifier.align(Alignment.TopCenter),
+  )
   }
   if (addHint) {
     AlertDialog(
@@ -303,45 +337,51 @@ private fun LayersMenu(expanded: Boolean, layers: MapLayers, onChoose: (MapLayer
 private fun NowList(
   state: MapUiState,
   rows: List<SiteRow>,
-  query: String,
-  onQuery: (String) -> Unit,
-  atolls: List<SiteSearch.AtollChoice>,
-  atollId: String,
-  onAtoll: (String) -> Unit,
-  onSearchFocus: () -> Unit,
+  total: Int,
+  counts: NowCounts,
+  strength: Strength?,
+  onStrength: (Strength) -> Unit,
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
   onAddSite: () -> Unit,
+  modifier: Modifier = Modifier,
 ) {
   val colors = CurrentTheme.colors
-  val focus = LocalFocusManager.current
   // imePadding lifts the sheet's content above the keyboard, so a short list of matches is not hidden behind it.
-  Column(Modifier.fillMaxWidth().imePadding()) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+  Column(modifier.fillMaxWidth().imePadding()) {
+    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
       Column(Modifier.weight(1f)) {
         Text(
           text =
             when {
               state.outdatedWall != null -> "No current hour offline"
-              state.maldivesWall != null -> "Now · ${MaldivesTime.label(state.maldivesWall)} Maldives"
+              state.maldivesWall != null -> "Now · ${MaldivesTime.clock(state.maldivesWall)}"
               else -> "Now"
             },
-          style = MaterialTheme.typography.titleMedium,
-          fontWeight = FontWeight.SemiBold,
+          style = MaterialTheme.typography.titleLarge,
         )
         val status =
           buildList {
-            add(if (rows.size == state.rows.size) "${rows.size} sites" else "${rows.size} of ${state.rows.size} sites")
+            add(if (rows.size == total) "$total sites" else "${rows.size} of $total sites")
             state.savedAt?.let { add("updated ${ageLabel(it)}") }
             if (state.fromCache && state.error != null) add("offline copy")
           }
-        Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+        Text(status.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.mist)
       }
       IconButton(onClick = onAddSite, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Add, contentDescription = "Add a dive site")
       }
       IconButton(onClick = onRefresh, modifier = Modifier.size(48.dp)) {
         Icon(Icons.Filled.Refresh, contentDescription = "Refresh the forecast")
+      }
+    }
+    // How many sites run each strength now; tap one to show only those, again to show all.
+    Row(
+      Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp).selectableGroup(),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      for (s in NowCounts.ORDER) {
+        CountChip(s, counts.of(s), selected = strength == s) { onStrength(s) }
       }
     }
     if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 4.dp))
@@ -356,43 +396,124 @@ private fun NowList(
     state.error?.let {
       Text(it, color = colors.stop, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
     }
-    OutlinedTextField(
-      value = query,
-      onValueChange = onQuery,
-      singleLine = true,
-      placeholder = { Text("Find a site or atoll") },
-      trailingIcon = {
-        if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Clear, "Clear") }
-      },
-      keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-      keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
-      modifier =
-        Modifier.fillMaxWidth()
-          .padding(horizontal = 16.dp, vertical = 8.dp)
-          .onFocusChanged { if (it.isFocused) onSearchFocus() },
-    )
-    AtollPicker(atolls, atollId, onAtoll)
-    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 520.dp)) {
+    LazyColumn(Modifier.fillMaxWidth()) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
-        HorizontalDivider(color = colors.foam.copy(alpha = 0.08f))
+        HorizontalDivider(color = colors.line, modifier = Modifier.padding(start = 68.dp))
       }
     }
   }
 }
 
-/** The web list's atoll select: all atolls, or one with its site count. */
+/** "Very strong 12": a strength's word, its count now, and its colour as a dot (very strong in the stop colour). */
 @Composable
-private fun AtollPicker(atolls: List<SiteSearch.AtollChoice>, atollId: String, onAtoll: (String) -> Unit) {
+private fun CountChip(strength: Strength, count: Int, selected: Boolean, onClick: () -> Unit) {
+  val colors = CurrentTheme.colors
+  val tone = if (strength == Strength.TooStrong) colors.stop else colors.foam
+  Row(
+    Modifier.heightIn(min = 40.dp)
+      .clip(CircleShape)
+      .background(if (selected) tone.copy(alpha = 0.18f) else colors.reef)
+      .border(1.dp, if (selected) tone else colors.edge, CircleShape)
+      .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+      .padding(horizontal = 14.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(8.dp),
+  ) {
+    // The day chart's bar for this strength, so the four read as a scale here too.
+    Box(Modifier.size(width = 5.dp, height = 16.dp), contentAlignment = Alignment.BottomCenter) {
+      Box(Modifier.fillMaxWidth().fillMaxHeight(strengthLevel(strength)).clip(RoundedCornerShape(2.dp)).background(tone))
+    }
+    Text(strengthWord(strength).replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelLarge, color = if (selected) tone else colors.foam)
+    Text("$count", style = MaterialTheme.typography.titleSmall.copy(fontFamily = SpaceGrotesk), color = if (selected) tone else colors.mist)
+  }
+}
+
+/**
+ * The floating search pill with the layers button beside it, and the atoll chip under it: over the map and over the
+ * list alike, so the search is one tap away at any sheet height.
+ */
+@Composable
+private fun TopBar(
+  query: String,
+  onQuery: (String) -> Unit,
+  onSearchFocus: () -> Unit,
+  atolls: List<SiteSearch.AtollChoice>,
+  atollId: String,
+  onAtoll: (String) -> Unit,
+  onLayers: () -> Unit,
+  layersMenu: @Composable () -> Unit,
+  modifier: Modifier = Modifier,
+) {
+  val colors = CurrentTheme.colors
+  val focus = LocalFocusManager.current
+  Column(modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      Row(
+        Modifier.weight(1f)
+          .height(52.dp)
+          .clip(RoundedCornerShape(26.dp))
+          .background(colors.glass)
+          .border(1.dp, colors.line, RoundedCornerShape(26.dp))
+          .padding(start = 16.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Icon(Icons.Filled.Search, contentDescription = null, tint = colors.mist, modifier = Modifier.size(22.dp))
+        Box(Modifier.weight(1f).padding(start = 10.dp), contentAlignment = Alignment.CenterStart) {
+          if (query.isEmpty()) Text("Find a site or atoll", style = MaterialTheme.typography.bodyLarge, color = colors.dim)
+          BasicTextField(
+            value = query,
+            onValueChange = onQuery,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.foam),
+            cursorBrush = SolidColor(colors.incoming),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Find a site or atoll" }.onFocusChanged { if (it.isFocused) onSearchFocus() },
+          )
+        }
+        if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(44.dp)) { Icon(Icons.Filled.Clear, "Clear the search") }
+      }
+      Box {
+        IconButton(
+          onClick = onLayers,
+          modifier = Modifier.size(52.dp).clip(CircleShape).background(colors.glass).border(1.dp, colors.line, CircleShape),
+        ) {
+          Icon(LayersIcon, contentDescription = "Map layers", tint = colors.foam)
+        }
+        layersMenu()
+      }
+    }
+    AtollChip(atolls, atollId, onAtoll)
+  }
+}
+
+/** The web list's atoll select as a chip: all atolls, or one with its site count; picking one frames it. */
+@Composable
+private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onAtoll: (String) -> Unit) {
+  val colors = CurrentTheme.colors
   var open by remember { mutableStateOf(false) }
   val chosen = atolls.firstOrNull { it.id == atollId }
-  Box(Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
-    OutlinedButton(
-      onClick = { open = true },
-      modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = "Atoll: ${chosen?.name ?: "all atolls"}" },
+  Box {
+    Row(
+      Modifier.heightIn(min = 40.dp)
+        .clip(CircleShape)
+        .background(if (chosen != null) colors.foam else colors.glass)
+        .border(1.dp, if (chosen != null) colors.foam else colors.line, CircleShape)
+        .clickable { open = true }
+        .padding(start = 14.dp, end = 8.dp)
+        .semantics { contentDescription = "Atoll: ${chosen?.name ?: "all atolls"}" },
+      verticalAlignment = Alignment.CenterVertically,
     ) {
-      Text(chosen?.let { "${it.name} (${it.count})" } ?: "All atolls", modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-      Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
+      Text(
+        chosen?.let { "${it.name} · ${it.count}" } ?: "All atolls",
+        style = MaterialTheme.typography.labelLarge,
+        color = if (chosen != null) colors.ink else colors.foam,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.widthIn(max = 240.dp),
+      )
+      Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = if (chosen != null) colors.ink else colors.foam)
     }
     DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
       DropdownMenuItem(
@@ -430,9 +551,14 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
       .semantics(mergeDescendants = true) { contentDescription = spoken },
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-      if (g != null) CurrentArrow(bearing = g.arrowBearing, color = colors.tone(g.tone), alpha = g.opacity, size = 30.dp)
-      else Surface(Modifier.size(10.dp), shape = MaterialTheme.shapes.small, color = colors.foam.copy(alpha = 0.5f)) {}
+    // The map's badge: a dark disc ringed in the hour's colour with the arrow on it.
+    val ring = g?.let { colors.tone(it.tone).copy(alpha = it.opacity) } ?: colors.edge
+    Box(
+      Modifier.size(36.dp).clip(CircleShape).background(colors.ink).border(1.5.dp, ring, CircleShape),
+      contentAlignment = Alignment.Center,
+    ) {
+      if (g != null) CurrentArrow(bearing = g.arrowBearing, color = colors.tone(g.tone), alpha = g.opacity, size = 22.dp, edge = colors.ink)
+      else Box(Modifier.size(8.dp).clip(CircleShape).background(colors.foam.copy(alpha = 0.5f)))
     }
     Spacer(Modifier.width(12.dp))
     Column(Modifier.weight(1f)) {
@@ -446,7 +572,7 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     }
     Column(horizontalAlignment = Alignment.End) {
       if (g != null) {
-        Text(g.label, color = colors.tone(g.tone), fontWeight = FontWeight.SemiBold)
+        Text(g.label.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.titleSmall, color = colors.tone(g.tone))
         Text(
           buildString {
             append(g.way)
@@ -460,4 +586,23 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
       }
     }
   }
+}
+
+/** Room the floating search pill and atoll chip take under the status bar. */
+private val TOP_BAR_ROOM = 120.dp
+
+/** Two stacked sheets: the layers button. */
+private val LayersIcon: ImageVector by lazy {
+  ImageVector.Builder("layers", 24.dp, 24.dp, 24f, 24f)
+    .path(stroke = SolidColor(androidx.compose.ui.graphics.Color.White), strokeLineWidth = 1.8f, strokeLineJoin = StrokeJoin.Round, strokeLineCap = StrokeCap.Round) {
+      moveTo(12f, 4f)
+      lineTo(21f, 9f)
+      lineTo(12f, 14f)
+      lineTo(3f, 9f)
+      close()
+      moveTo(3f, 13.5f)
+      lineTo(12f, 18.5f)
+      lineTo(21f, 13.5f)
+    }
+    .build()
 }
