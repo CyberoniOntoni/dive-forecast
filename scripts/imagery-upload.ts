@@ -22,6 +22,8 @@ if (!dir || !fs.existsSync(dir)) {
 const local = process.argv.includes("--local");
 const bucket = process.argv.includes("--preview") ? "dive-current-data-preview" : "dive-current-data";
 const PARALLEL = 8;
+// Wrangler's own script run with this Node, not `npx`: on Windows npx is a .cmd file, which execFile cannot start.
+const WRANGLER = path.join("node_modules", "wrangler", "bin", "wrangler.js");
 
 function tiles(root: string): string[] {
   const out: string[] = [];
@@ -54,7 +56,7 @@ async function main() {
   async function worker() {
     for (let tile = todo.shift(); tile !== undefined; tile = todo.shift()) {
       const key = `${bucket}/imagery/${IMAGERY_VERSION}/${tile}`;
-      await run("npx", ["wrangler", "r2", "object", "put", key, "--file", path.join(dir, tile), "--content-type", "image/webp", "--remote"]);
+      await run(process.execPath, [WRANGLER, "r2", "object", "put", key, "--file", path.join(dir, tile), "--content-type", "image/webp", "--remote"]);
       fs.appendFileSync(doneFile, `${tile}\n`);
       sent += 1;
       if (sent % 100 === 0) console.log(`${sent} sent`);
