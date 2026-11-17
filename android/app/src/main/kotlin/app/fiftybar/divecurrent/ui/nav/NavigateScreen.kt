@@ -45,6 +45,10 @@ import androidx.compose.ui.text.TextStyle
 import app.fiftybar.divecurrent.domain.SiteOutlook
 import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
 import app.fiftybar.divecurrent.ui.theme.Eyebrow
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -172,7 +176,10 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
       )
     },
   ) { padding ->
-    Column(Modifier.fillMaxSize().padding(padding)) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+    // The panel never takes more than 60 % of the screen, so the map keeps room; past that it scrolls, End included.
+    val panelMax = maxHeight * 0.6f
+    Column(Modifier.fillMaxSize()) {
       NavMapView(
         target = target,
         boat = state.fixes.lastOrNull(),
@@ -189,7 +196,10 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
         border = BorderStroke(1.dp, colors.line),
         modifier = Modifier.fillMaxWidth(),
       ) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 0.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+          Modifier.heightIn(max = panelMax).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 18.dp).navigationBarsPadding(),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
           val gps = state.gps
           when {
             !granted ->
@@ -233,6 +243,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
           Spacer(Modifier.height(4.dp))
         }
       }
+    }
     }
   }
 }
@@ -295,7 +306,8 @@ private fun Cockpit(readout: NavReadout, routeError: String?, reducedMotion: Boo
 /** Text whose characters each roll up into place when they change, as a mechanical counter; still with motion off. */
 @Composable
 private fun RollingText(text: String, style: TextStyle, color: Color, reducedMotion: Boolean) {
-  Row {
+  // TalkBack reads the whole value once, not a character at a time.
+  Row(Modifier.clearAndSetSemantics { contentDescription = text }) {
     text.forEachIndexed { i, ch ->
       // Keyed by place from the right, so 99 -> 100 rolls the units, tens and hundreds rather than shifting them.
       key(text.length - i) {
@@ -347,7 +359,7 @@ private fun RowScope.Cell(label: String, value: String?, reducedMotion: Boolean)
   ) {
     Text(label, style = Eyebrow, color = colors.dim, maxLines = 2)
     Spacer(Modifier.height(4.dp))
-    RollingText(value ?: "—", MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp), if (value != null) colors.foam else colors.dim, reducedMotion)
+    RollingText(value ?: "—", MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp), if (value != null) colors.foam else colors.dim, reducedMotion)
   }
 }
 
