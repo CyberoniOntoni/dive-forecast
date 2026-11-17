@@ -64,3 +64,5 @@ next-env.d.ts
 
 # site photos added in the app (R2 on Cloudflare)
 /data/photos
+/data/imagery
+__pycache__/

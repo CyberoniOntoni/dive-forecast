@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.data
 
+import app.fiftybar.divecurrent.data.api.ApiBounds
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import java.io.File
 import java.nio.file.Files
@@ -64,7 +65,106 @@ class OfflineAreasTest {
     dir.deleteRecursively()
   }
 
-  private fun areas() = OfflineAreas(repository, File(dir, "areas.json"), scope)
+  private fun areas(imagery: OfflineImagery? = null) = OfflineAreas(repository, File(dir, "areas.json"), scope, imagery)
+
+  /** Imagery saved in memory, or failing like a dropped signal. */
+  private class FakeImagery(@Volatile var fail: Boolean = false) : OfflineImagery {
+    val saved = java.util.concurrent.ConcurrentHashMap<String, ApiBounds>()
+
+    override suspend fun save(atollId: String, box: ApiBounds, progress: (Float) -> Unit): Long {
+      progress(0.5f)
+      if (fail) throw java.io.IOException("No signal: the satellite imagery stopped part way.")
+      saved[atollId] = box
+      return 1_000_000
+    }
+
+    override suspend fun remove(atollId: String) {
+      saved.remove(atollId)
+    }
+  }
+
+  @Test
+  fun `saves the imagery over the outline's box with the forecasts, and removes it with them`() = runBlocking {
+    val imagery = FakeImagery()
+    val offline = areas(imagery)
+    offline.save("north-male")
+    val area = withTimeout(10_000) { offline.areas.first { it.isNotEmpty() } }.getValue("north-male")
+    assertTrue(area.imagery)
+    assertEquals(4.08, area.box!!.south, 1e-9)
+    assertEquals(area.box, imagery.saved["north-male"])
+    assertTrue(area.bytes > 1_000_000)
+    offline.remove("north-male")
+    withTimeout(10_000) { offline.areas.first { it.isEmpty() } }
+    assertTrue(imagery.saved.isEmpty())
+  }
+
+  @Test
+  fun `a refresh whose imagery fails keeps drawing what an earlier save completed`() = runBlocking {
+    val imagery = FakeImagery()
+    val offline = areas(imagery)
+    offline.save("north-male")
+    withTimeout(10_000) { offline.areas.first { it.isNotEmpty() } }
+    imagery.fail = true
+    offline.save("north-male")
+    withTimeout(10_000) {
+      offline.errors.first { "north-male" in it }
+      offline.saving.first { "north-male" !in it }
+    }
+    val again = offline.areas.value.getValue("north-male")
+    assertTrue(again.imagery)
+    assertEquals(1_000_000L, again.imageryBytes)
+    assertTrue(offline.errors.value.getValue("north-male").startsWith("No signal"))
+  }
+
+  /** Like MapLibre: the region is made even if the save is stopped while it is being made, then the download hangs. */
+  private class SlowImagery : OfflineImagery {
+    val saved = java.util.concurrent.ConcurrentHashMap<String, ApiBounds>()
+    val started = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    override suspend fun save(atollId: String, box: ApiBounds, progress: (Float) -> Unit): Long {
+      started.complete(Unit)
+      kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) {
+        kotlinx.coroutines.delay(300)
+        saved[atollId] = box
+      }
+      kotlinx.coroutines.awaitCancellation()
+    }
+
+    override suspend fun remove(atollId: String) {
+      saved.remove(atollId)
+    }
+  }
+
+  @Test
+  fun `removing an atoll while its imagery is being made drops the region made`() = runBlocking {
+    val imagery = SlowImagery()
+    val offline = areas(imagery)
+    offline.save("north-male")
+    withTimeout(10_000) { imagery.started.await() }
+    offline.remove("north-male")
+    withTimeout(10_000) { offline.saving.first { "north-male" !in it } }
+    kotlinx.coroutines.delay(600)
+    assertTrue(imagery.saved.isEmpty())
+  }
+
+  @Test
+  fun `removing an atoll never saved still drops its imagery`() = runBlocking {
+    val imagery = FakeImagery()
+    imagery.saved["north-male"] = ApiBounds(4.0, 73.0, 5.0, 74.0)
+    val offline = areas(imagery)
+    offline.remove("north-male")
+    withTimeout(10_000) { while (imagery.saved.isNotEmpty()) kotlinx.coroutines.delay(10) }
+  }
+
+  @Test
+  fun `keeps the forecasts when the imagery fails, and says why`() = runBlocking {
+    val offline = areas(FakeImagery(fail = true))
+    offline.save("north-male")
+    val area = withTimeout(10_000) { offline.areas.first { it.isNotEmpty() } }.getValue("north-male")
+    assertFalse(area.imagery)
+    assertNotNull(dao.rows["forecast/kuda-haa"])
+    assertTrue(offline.errors.value.getValue("north-male").startsWith("No signal"))
+  }
 
   @Test
   fun `saves an atoll's forecasts and the Atlas tiles over it, then removes them`() = runBlocking {

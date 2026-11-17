@@ -26,6 +26,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import java.util.Locale
 import app.fiftybar.divecurrent.BuildConfig
+import app.fiftybar.divecurrent.data.api.ApiBounds
 import app.fiftybar.divecurrent.data.api.GlanceTone
 import app.fiftybar.divecurrent.domain.AtlasOverlay
 import app.fiftybar.divecurrent.domain.CoordinateGrid
@@ -148,6 +149,8 @@ fun SiteMapView(
   reducedMotion: Boolean = false,
   /** A site to ring in foam, as when the site page sent the diver here to see where it is. */
   highlight: String? = null,
+  /** Saved atolls' boxes, where our imagery lies under the satellite base for use without signal. */
+  imagery: List<ApiBounds> = emptyList(),
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -208,11 +211,11 @@ fun SiteMapView(
 
   // Only the raster overlays are in the style itself; the rest are drawn on it, so switching them keeps the style.
   val rasters = layers.overlays.intersect(RASTER_ORDER.toSet())
-  LaunchedEffect(map, layers.shownBase, rasters, colors) {
+  LaunchedEffect(map, layers.shownBase, rasters, colors, imagery) {
     val m = map ?: return@LaunchedEffect
     style = null
     val background = String.format(Locale.ROOT, "#%06x", colors.ink.toArgb() and 0xFFFFFF)
-    m.setStyle(Style.Builder().fromJson(styleJson(layers.shownBase, rasters, background))) { loaded ->
+    m.setStyle(Style.Builder().fromJson(styleJson(layers.shownBase, rasters, background, imagery))) { loaded ->
       addSiteLayers(context, loaded, colors)
       shelterIds.clear()
       style = loaded
@@ -577,7 +580,31 @@ private const val GRID_LINES = "grid-lines"
 private const val GRID_LABELS = "grid-labels"
 
 /** One raster source and its layer in the style. */
-private data class Raster(val id: String, val tiles: String, val attribution: String, val maxZoom: Int, val opacity: Double = 1.0)
+private data class Raster(
+  val id: String,
+  val tiles: String,
+  val attribution: String,
+  val maxZoom: Int,
+  val opacity: Double = 1.0,
+  val minZoom: Int? = null,
+  val bounds: ApiBounds? = null,
+)
+
+/**
+ * The app server's Sentinel-2 tiles (lib/imagery.ts): the one satellite imagery a saved atoll may download. The version
+ * in the path is the server's IMAGERY_VERSION.
+ */
+internal const val SENTINEL2_VERSION = "s2-v1"
+internal val SENTINEL2_TILES = "${BuildConfig.API_BASE_URL}/imagery/$SENTINEL2_VERSION/{z}/{x}/{y}.webp"
+
+/**
+ * The style the offline download reads (it needs a style URL); its tile URL is [SENTINEL2_TILES]. The version is in the
+ * URL: MapLibreOfflineImagery keeps a saved region while the style URL is the same, so a new version downloads anew.
+ */
+internal val SENTINEL2_STYLE = "${BuildConfig.API_BASE_URL}/map-styles/sentinel2/$SENTINEL2_VERSION.json"
+internal const val SENTINEL2_MIN_ZOOM = 8
+internal const val SENTINEL2_MAX_ZOOM = 14
+private const val SENTINEL2_CREDIT = "Contains modified Copernicus Sentinel data 2023–2026"
 
 private const val OPENSEAMAP = "© <a href=\\\"https://www.openseamap.org/\\\">OpenSeaMap</a> contributors"
 private const val DEPTH_WMS = "https://depth.openseamap.org/geoserver/openseamap/wms"
@@ -593,7 +620,13 @@ private fun wms(base: String, layers: String, version: String): String =
  * the web map. Each source's attribution shows behind the map's (i) button. The Atlas overlays, the sheltered-water
  * shading and the grid are drawn on top by SiteMapView.
  */
-internal fun styleJson(baseMap: BaseMap, overlays: Set<MapOverlay> = emptySet(), background: String = "#07151d"): String {
+internal fun styleJson(
+  baseMap: BaseMap,
+  overlays: Set<MapOverlay> = emptySet(),
+  background: String = "#07151d",
+  /** Saved atolls' boxes: our Sentinel-2 imagery goes under the satellite base there, for when Esri's cannot load. */
+  imagery: List<ApiBounds> = emptyList(),
+): String {
   val base =
     when (baseMap) {
       BaseMap.Satellite ->
@@ -612,8 +645,17 @@ internal fun styleJson(baseMap: BaseMap, overlays: Set<MapOverlay> = emptySet(),
         )
       BaseMap.None -> null
     }
+  // One source per saved atoll, each held to its box, so the imagery is only asked for where the phone has it saved:
+  // online, Esri draws over it; offline, Esri's tiles fail and these show. Same URL as the saved download
+  // (lib/imagery.ts imageryStyle), so MapLibre finds the saved tiles.
+  val underlay =
+    if (baseMap != BaseMap.Satellite) emptyList()
+    else
+      imagery.mapIndexed { i, box ->
+        Raster("sentinel2-$i", SENTINEL2_TILES, SENTINEL2_CREDIT, SENTINEL2_MAX_ZOOM, minZoom = SENTINEL2_MIN_ZOOM, bounds = box)
+      }
   val rasters =
-    listOfNotNull(base) +
+    underlay + listOfNotNull(base) +
       RASTER_ORDER.filter { it in overlays }.map { overlay ->
         when (overlay) {
           MapOverlay.Seamarks -> Raster(SEAMARKS, "https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", OPENSEAMAP, 18)
@@ -634,7 +676,10 @@ internal fun styleJson(baseMap: BaseMap, overlays: Set<MapOverlay> = emptySet(),
       }
   val sources =
     rasters.joinToString(",\n") {
-      """"${it.id}": { "type": "raster", "tiles": ["${it.tiles}"], "tileSize": 256, "maxzoom": ${it.maxZoom}, "attribution": "${it.attribution}" }"""
+      val extra =
+        (it.minZoom?.let { z -> """, "minzoom": $z""" } ?: "") +
+          (it.bounds?.let { b -> """, "bounds": [${b.west}, ${b.south}, ${b.east}, ${b.north}]""" } ?: "")
+      """"${it.id}": { "type": "raster", "tiles": ["${it.tiles}"], "tileSize": 256, "maxzoom": ${it.maxZoom}$extra, "attribution": "${it.attribution}" }"""
     }
   val layers =
     listOf("""{ "id": "background", "type": "background", "paint": { "background-color": "$background" } }""") +

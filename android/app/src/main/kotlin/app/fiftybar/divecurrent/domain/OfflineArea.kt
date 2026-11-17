@@ -21,8 +21,14 @@ data class SavedArea(
   val keys: List<String>,
   /** Sites whose forecast could not be fetched on the last save: they keep an older copy, or none. */
   val missedSites: Int = 0,
-  /** About what it takes on the phone, bytes. */
+  /** About what it takes on the phone, bytes, imagery included. */
   val bytes: Long = 0,
+  /** The box saved: the atoll's outline, padded. */
+  val box: ApiBounds? = null,
+  /** The satellite imagery over [box] is on the phone (our Sentinel-2 tiles, zoom 8 to 14). */
+  val imagery: Boolean = false,
+  /** What the imagery takes, bytes: part of [bytes]. */
+  val imageryBytes: Long = 0,
 )
 
 /** What saving an atoll needs, worked out from what the server lists. */

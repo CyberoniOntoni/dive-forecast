@@ -18,6 +18,7 @@
     "benchmark": "tsx scripts/benchmark.ts",
     "verify": "tsx scripts/verify-reports.ts",
     "d1:export": "tsx scripts/d1-export.ts",
+    "imagery:upload": "tsx scripts/imagery-upload.ts",
     "bearings": "tsx scripts/bearings.ts",
     "sample-floors": "tsx scripts/sample-floors.ts",
     "channel-widths": "tsx scripts/channel-widths.ts",

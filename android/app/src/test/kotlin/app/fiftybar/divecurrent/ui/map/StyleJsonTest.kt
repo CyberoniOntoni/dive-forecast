@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.map
 
+import app.fiftybar.divecurrent.data.api.ApiBounds
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -37,5 +38,23 @@ class StyleJsonTest {
     assertTrue(tiles.contains("LAYERS=gebco2021:gebco_2021") && tiles.contains("BBOX={bbox-epsg-3857}"))
     assertTrue(shading["attribution"]!!.jsonPrimitive.content.contains("GEBCO"))
     assertEquals("0.8", style["layers"]!!.jsonArray[2].jsonObject["paint"]!!.jsonObject["raster-opacity"]!!.jsonPrimitive.content)
+  }
+
+  @Test
+  fun `saved atolls put our imagery under the satellite base, each held to its box`() {
+    val boxes = listOf(ApiBounds(4.1, 73.2, 4.7, 73.7), ApiBounds(3.4, 72.6, 4.3, 73.0))
+    val style = parse(styleJson(BaseMap.Satellite, imagery = boxes))
+    assertEquals(listOf("background", "sentinel2-0", "sentinel2-1", "base"), layerIds(style))
+    val source = style["sources"]!!.jsonObject["sentinel2-0"]!!.jsonObject
+    assertEquals(SENTINEL2_TILES, source["tiles"]!!.jsonArray[0].jsonPrimitive.content)
+    assertTrue(SENTINEL2_TILES.endsWith("/imagery/s2-v1/{z}/{x}/{y}.webp"))
+    // lib/imagery.ts serves the style of its IMAGERY_VERSION at this path.
+    assertTrue(SENTINEL2_STYLE.endsWith("/map-styles/sentinel2/s2-v1.json"))
+    assertEquals(listOf("73.2", "4.1", "73.7", "4.7"), source["bounds"]!!.jsonArray.map { it.jsonPrimitive.content })
+    assertEquals("8", source["minzoom"]!!.jsonPrimitive.content)
+    assertEquals("14", source["maxzoom"]!!.jsonPrimitive.content)
+    assertTrue(source["attribution"]!!.jsonPrimitive.content.contains("Copernicus"))
+    // Not under the street map or no base.
+    assertEquals(listOf("background", "base"), layerIds(parse(styleJson(BaseMap.Street, imagery = boxes))))
   }
 }

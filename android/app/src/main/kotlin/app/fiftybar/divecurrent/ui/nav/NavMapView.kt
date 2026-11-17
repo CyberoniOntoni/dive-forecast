@@ -1,5 +1,7 @@
 package app.fiftybar.divecurrent.ui.nav
 
+import app.fiftybar.divecurrent.data.api.ApiBounds
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -72,6 +74,8 @@ fun NavMapView(
   baseMap: BaseMap,
   colors: CurrentColors,
   modifier: Modifier = Modifier,
+  /** Saved atolls' boxes, where our imagery lies under the satellite base for use without signal. */
+  imagery: List<ApiBounds> = emptyList(),
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -106,10 +110,10 @@ fun NavMapView(
     }
   }
 
-  LaunchedEffect(map, baseMap, colors) {
+  LaunchedEffect(map, baseMap, colors, imagery) {
     val m = map ?: return@LaunchedEffect
     style = null
-    m.setStyle(Style.Builder().fromJson(styleJson(baseMap))) { loaded ->
+    m.setStyle(Style.Builder().fromJson(styleJson(baseMap, imagery = imagery))) { loaded ->
       addNavLayers(loaded, colors)
       style = loaded
     }

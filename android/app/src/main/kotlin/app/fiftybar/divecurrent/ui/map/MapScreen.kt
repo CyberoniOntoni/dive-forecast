@@ -80,6 +80,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,7 +90,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import android.net.ConnectivityManager
+import android.net.Network
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -107,6 +114,7 @@ import app.fiftybar.divecurrent.domain.SiteSearch
 import app.fiftybar.divecurrent.domain.ageLabel
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.ui.appOffline
+import app.fiftybar.divecurrent.ui.savedImageryBoxes
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.domain.OfflineArea
 import app.fiftybar.divecurrent.domain.SavedArea
@@ -156,7 +164,8 @@ fun MapScreen(
   var layersOpen by remember { mutableStateOf(false) }
   var query by rememberSaveable { mutableStateOf("") }
   // The web list's atoll picker: "" for all atolls. Picking one also moves the map there.
-  var atollId by rememberSaveable { mutableStateOf("") }
+  // Kept between launches too, so a saved atoll's menu is where the diver left it.
+  var atollId by rememberSaveable { mutableStateOf(MapAtollPrefs.read(context)) }
   var focus by remember { mutableStateOf<MapFocus?>(null) }
   // Map or list, one at a time, switched by the pill over the map: no sheet under the tab bar to compete with it.
   var listOpen by rememberSaveable { mutableStateOf(false) }
@@ -171,6 +180,16 @@ fun MapScreen(
   LifecycleResumeEffect(viewModel) {
     viewModel.refreshIfHourPassed()
     onPauseOrDispose {}
+  }
+  // Signal back after a failed load: fetch at once, so "Offline copy" does not stay up until the next refresh.
+  DisposableEffect(viewModel) {
+    val connectivity = context.getSystemService(ConnectivityManager::class.java)
+    val callback =
+      object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) = viewModel.onNetworkBack()
+      }
+    connectivity?.registerDefaultNetworkCallback(callback)
+    onDispose { connectivity?.unregisterNetworkCallback(callback) }
   }
 
   // A strength picked from the counts narrows the list and the pins to sites running that strength now.
@@ -243,6 +262,7 @@ fun MapScreen(
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
     atollId = id
+    MapAtollPrefs.write(context, id)
     val sites = state.rows.filter { it.site.atollId == id }
     if (id.isEmpty() || sites.isEmpty()) return
     focus =
@@ -253,6 +273,11 @@ fun MapScreen(
         sites.maxOf { it.site.lat },
         sites.maxOf { it.site.lon },
       )
+  }
+
+  // An atoll kept from an earlier launch that the server no longer lists would leave an empty list: back to all.
+  LaunchedEffect(atolls) {
+    if (atollId.isNotEmpty() && atolls.isNotEmpty() && atolls.none { it.id == atollId }) pickAtoll("")
   }
 
   // The search pill, atoll chip and counts float over the map and over the list; the list starts below them.
@@ -279,6 +304,7 @@ fun MapScreen(
         // Under the list the map is hidden: its arrows hold still rather than animate unseen.
         reducedMotion = reducedMotion || listShown || covered,
         highlight = peekSite?.siteId ?: highlight,
+        imagery = savedImageryBoxes(),
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
@@ -663,9 +689,14 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
   val colors = CurrentTheme.colors
   var open by remember { mutableStateOf(false) }
   val chosen = atolls.firstOrNull { it.id == atollId }
+  // Room under the chip, so the menu opens below it and scrolls rather than run up under the status bar.
+  val density = LocalDensity.current
+  val windowHeight = LocalWindowInfo.current.containerSize.height
+  var roomBelow by remember { mutableStateOf(320.dp) }
   Box {
     Row(
-      Modifier.heightIn(min = 40.dp)
+      Modifier.onGloballyPositioned { roomBelow = with(density) { (windowHeight - it.boundsInWindow().bottom).toDp() } }
+        .heightIn(min = 40.dp)
         .clip(CircleShape)
         .background(if (chosen != null) colors.foam else colors.glass)
         .border(1.dp, if (chosen != null) colors.foam else colors.line, CircleShape)
@@ -684,7 +715,8 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
       )
       Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = if (chosen != null) colors.ink else colors.foam)
     }
-    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+    // Less the navigation bar and a margin; never so short a few rows cannot show.
+    DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.heightIn(max = (roomBelow - 56.dp).coerceAtLeast(200.dp))) {
       if (chosen != null) {
         val share = offline.saving[chosen.id]
         val area = offline.saved[chosen.id]
@@ -701,7 +733,7 @@ private fun AtollChip(atolls: List<SiteSearch.AtollChoice>, atollId: String, onA
               Text(
                 // While saving, the title already says how far it is.
                 if (share != null) "Goes on if you leave the map"
-                else offline.line(chosen.id) ?: "Forecasts, site pages and reef shapes, for use without signal",
+                else offline.line(chosen.id) ?: "Forecasts, site pages, reef shapes and satellite imagery, for use without signal",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.mist,
               )
@@ -805,14 +837,19 @@ private data class OfflineChoice(
   val onSave: (String) -> Unit,
   val onRemove: (String) -> Unit,
 ) {
-  /** "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure; null when never saved. */
+  /**
+   * "Saved for offline 3 h ago · 4 MB", "Saving for offline… 40%", or the last failure (after what is still saved);
+   * null when never saved or tried.
+   */
   fun line(atollId: String): String? {
     saving[atollId]?.let { return "Saving for offline… ${(it * 100).toInt()}%" }
-    errors[atollId]?.let { return it }
-    val area = saved[atollId] ?: return null
+    val area = saved[atollId] ?: return errors[atollId]
     return buildString {
       append("Saved for offline ${ageLabel(area.savedAt)} · ${OfflineArea.sizeLabel(area.bytes)}")
       if (area.missedSites > 0) append(" · ${area.missedSites} of ${area.siteIds.size} forecasts missing")
+      if (!area.imagery) append(" · no satellite imagery")
+      // A failed save keeps the last good one: say both.
+      errors[atollId]?.let { append(". $it") }
     }
   }
 }
