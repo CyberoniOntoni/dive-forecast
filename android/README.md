@@ -19,11 +19,11 @@ What it does:
   nudges along its heading, further the stronger it runs (not at slack), and a very strong site sends out a red ring;
   both hold still when the phone's animations are off. Satellite (Esri World Imagery) or OpenStreetMap base. Tap a
   badge to open the site. A floating search pill (the web's search: every word starts a word of the site's or atoll's
-  name; `domain/SiteSearch.kt`) with the layers button, and the atoll chip under it (the web list's atoll picker, which
-  also moves the map to that atoll), sit over the map and the list.
-- **Now list**: the bottom sheet lists the sites strongest first, as the web list does, under counts of how many
-  run very strong, strong, mild and slack now (`domain/NowCounts.kt`); tap a count to show only those sites, on the
-  list and the map.
+  name; `domain/SiteSearch.kt`) with the layers button, and under it a row of chips: the atoll (the web list's atoll
+  picker, which also moves the map to that atoll), then how many sites run very strong, strong, mild and slack now
+  (`domain/NowCounts.kt`; tap a count to show only those sites, on the map and the list). They sit over the map and the list.
+- **Now list**: a light "List" pill floating over the map, apart from the tab bar, swaps the map for the list of sites
+  strongest first, as the web list does; its "Map" pill (or Back) swaps back. Searching opens the list.
 - **Site page** (`ui/site/SiteHero.kt`, `SiteForecast.kt`, `domain/SiteOutlook.kt`), opened on the current Maldives
   hour: a satellite header round the pin (Esri World Imagery tiles at zoom 16) with faint streaks drifting the way the
   hour's water runs; the hour's strength in its colour, the arrow on a compass (it swings to a new heading), the way
@@ -67,7 +67,7 @@ What it does:
   system photo picker (no storage permission) and are shrunk on the phone as the web's picker does them
   (`ui/site/PhotoShrink.kt`: turned upright, 1600 px, JPEG), then sent one by one.
 - **Map layers**: the layers button beside the search pill has the web map's menu: the base (satellite, street map or none) and every
-  overlay, kept between launches. Seamarks and the coordinate grid start on, as on the web, and depth shading or
+  overlay, kept between launches. The map starts on satellite with only the coordinate grid (the web also starts seamarks on; on a phone they crowd the badges), and depth shading or
   contours over satellite show the street map instead. The Allen Coral Atlas reef
   outline, reef zones and bottom types read the web map's static tiles under `/overlays/` (`domain/AtlasOverlay.kt`,
   `ui/map/AtlasViewModel.kt`: only tiles in view, from each overlay's zoom) with the web's colour key; depth shading

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,12 +12,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import app.fiftybar.divecurrent.ui.components.ClockDialog
 import app.fiftybar.divecurrent.data.api.ApiRecentReport
 import app.fiftybar.divecurrent.domain.ReportTime
 import app.fiftybar.divecurrent.domain.ageLabel
@@ -63,18 +61,9 @@ internal fun ReportDateDialog(initial: LocalDate, onPicked: (LocalDate) -> Unit,
   }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReportClockDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit, onDismiss: () -> Unit) {
-  val picker = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = { Text("Time in the water, Maldives time") },
-    text = { TimePicker(state = picker) },
-    confirmButton = { TextButton(onClick = { onPicked(LocalTime.of(picker.hour, picker.minute)) }) { Text("Done") } },
-    dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-  )
-}
+internal fun ReportClockDialog(initial: LocalTime, onPicked: (LocalTime) -> Unit, onDismiss: () -> Unit) =
+  ClockDialog("Time in the water, Maldives time", initial, onPicked, onDismiss)
 
 /** Divers' newest reports, as the site page lists them, with what the forecast said at that hour. */
 @Composable

@@ -11,11 +11,12 @@ enum class BaseMap(val label: String) {
 }
 
 /**
- * The web map's overlays (lib/map-layers.ts OVERLAYS), in its menu order, with the same defaults: seamarks and the
- * coordinate grid start on. [key] is the web's id and the saved preference's name.
+ * The web map's overlays (lib/map-layers.ts OVERLAYS), in its menu order. Only the coordinate grid starts on, over the
+ * satellite base (the web also starts seamarks on; on a phone they crowd the badges). [key] is the web's id and the
+ * saved preference's name.
  */
 enum class MapOverlay(val key: String, val label: String, val defaultOn: Boolean, val atlas: AtlasOverlay? = null) {
-  Seamarks("seamarks", "Seamarks", true),
+  Seamarks("seamarks", "Seamarks", false),
   ReefOutline("reefOutline", "Reef outline", false, AtlasOverlay.ReefOutline),
   ReefZones("reefZones", "Reef zones", false, AtlasOverlay.ReefZones),
   BottomTypes("bottomTypes", "Bottom types", false, AtlasOverlay.BottomTypes),
@@ -58,8 +59,15 @@ data class MapLayers(
 object MapLayersPrefs {
   private const val PREFS = "map-layers"
 
+  /**
+   * Bumped when the defaults change: a choice saved under older defaults is dropped once, so every diver starts from
+   * the new ones (2: seamarks start off).
+   */
+  private const val DEFAULTS_VERSION = 2
+
   fun read(context: Context): MapLayers {
     val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    if (prefs.getInt("defaults", 1) < DEFAULTS_VERSION) prefs.edit().clear().putInt("defaults", DEFAULTS_VERSION).apply()
     return MapLayers(
       base = BaseMap.entries.firstOrNull { it.name == prefs.getString("base", null) } ?: BaseMap.Satellite,
       overlays = MapOverlay.entries.filter { prefs.getBoolean(it.key, it.defaultOn) }.toSet(),
@@ -67,7 +75,8 @@ object MapLayersPrefs {
   }
 
   fun write(context: Context, layers: MapLayers) {
-    val editor = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("base", layers.base.name)
+    val editor =
+      context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt("defaults", DEFAULTS_VERSION).putString("base", layers.base.name)
     MapOverlay.entries.forEach { editor.putBoolean(it.key, it in layers.overlays) }
     editor.apply()
   }
