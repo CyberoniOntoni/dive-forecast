@@ -1,5 +1,9 @@
 package app.fiftybar.divecurrent.ui.map
 
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -137,6 +141,8 @@ fun MapScreen(
   // Map or list, one at a time, switched by the pill over the map: no sheet under the tab bar to compete with it.
   var listOpen by rememberSaveable { mutableStateOf(false) }
   BackHandler(enabled = listOpen) { listOpen = false }
+  // Kept out here: the list leaves composition while the map shows, and should come back where it was.
+  val listState = rememberLazyListState()
   val colors = CurrentTheme.colors
   // A point long-pressed on the map, waiting for "Navigate here" or "Add a dive site here".
   var pressed by remember { mutableStateOf<LatLon?>(null) }
@@ -236,17 +242,31 @@ fun MapScreen(
         onOpenSite = onOpenSite,
         onRefresh = viewModel::refresh,
         onAddSite = { addHint = true },
-        modifier = Modifier.fillMaxSize().background(colors.ink).statusBarsPadding().padding(top = TOP_BAR_ROOM),
+        listState = listState,
+        modifier =
+          Modifier.fillMaxSize()
+            // The map is still under the list: touches on the list's empty parts must not pan it or long-press a
+            // point no one can see.
+            .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }
+            .background(colors.ink)
+            .statusBarsPadding()
+            .padding(top = TOP_BAR_ROOM),
       )
     }
     ViewPill(
       listOpen = listOpen,
+      // Over the map the pill is the only status line, so it says what the list's header would: no current hour or
+      // an offline copy before the count.
       label =
         when {
           state.loading && state.rows.isEmpty() -> "List"
+          state.rows.isEmpty() && state.error != null -> "List · could not load"
+          state.outdatedWall != null -> "List · no current hour"
+          state.fromCache && state.error != null -> "List · offline copy"
           shown.size == state.rows.size -> "List · ${shown.size} sites"
           else -> "List · ${shown.size} of ${state.rows.size}"
         },
+      loading = state.loading,
       onClick = { listOpen = !listOpen },
       modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
     )
@@ -359,6 +379,7 @@ private fun NowList(
   onOpenSite: (String) -> Unit,
   onRefresh: () -> Unit,
   onAddSite: () -> Unit,
+  listState: LazyListState,
   modifier: Modifier = Modifier,
 ) {
   val colors = CurrentTheme.colors
@@ -411,7 +432,7 @@ private fun NowList(
       )
     }
     // Room at the end for the Map pill floating over the list.
-    LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(bottom = 88.dp)) {
+    LazyColumn(Modifier.fillMaxWidth(), state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
         HorizontalDivider(color = colors.line, modifier = Modifier.padding(start = 68.dp))
@@ -522,7 +543,7 @@ private fun TopBar(
  * tap switches to.
  */
 @Composable
-private fun ViewPill(listOpen: Boolean, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ViewPill(listOpen: Boolean, label: String, loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
   val colors = CurrentTheme.colors
   Row(
     modifier
@@ -535,7 +556,9 @@ private fun ViewPill(listOpen: Boolean, label: String, onClick: () -> Unit, modi
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    Icon(if (listOpen) TabIcons.of(Tab.Now) else ListIcon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(20.dp))
+    // Loading shows as a small spinner in the icon's place, over the map where the list's progress bar is hidden.
+    if (loading && !listOpen) CircularProgressIndicator(color = colors.ink, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+    else Icon(if (listOpen) TabIcons.of(Tab.Now) else ListIcon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(20.dp))
     Text(if (listOpen) "Map" else label, style = MaterialTheme.typography.labelLarge, color = colors.ink, maxLines = 1)
   }
 }
