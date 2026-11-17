@@ -32,6 +32,16 @@ object MaldivesTime {
   /** The current Maldives hour, "YYYY-MM-DDTHH:00". */
   fun nowHour(nowMs: Long = System.currentTimeMillis()): String = nowWall(nowMs).take(13) + ":00"
 
+  /**
+   * The Maldives hour nearest the clock, "YYYY-MM-DDTHH:00", as the server's nearestForecastHour picks the map's
+   * hour: 10:48 reads as 11:00. Exactly half past keeps the earlier hour, as the server does.
+   */
+  fun nearestHour(nowMs: Long = System.currentTimeMillis()): String =
+    nowHour(Math.floorDiv(nowMs + HALF_HOUR_MS - 1, HOUR_MS) * HOUR_MS)
+
+  private const val HOUR_MS = 3_600_000L
+  private const val HALF_HOUR_MS = HOUR_MS / 2
+
   /** "Sun 15 Nov, 09:00". */
   fun label(wall: String): String {
     val t = parse(wall) ?: return wall
@@ -42,10 +52,13 @@ object MaldivesTime {
 
   fun clock(wall: String): String = parse(wall)?.format(CLOCK) ?: wall.takeLast(5)
 
-  /** Index of the hour to open on: the current Maldives hour, else the first hour after it, else the last. */
+  /**
+   * Index of the hour to open on: the Maldives hour nearest the clock (the one the map shows), else the first hour
+   * after it, else the last.
+   */
   fun currentIndex(times: List<String>, nowMs: Long = System.currentTimeMillis()): Int {
     if (times.isEmpty()) return 0
-    val now = nowHour(nowMs)
+    val now = nearestHour(nowMs)
     val exact = times.indexOfFirst { it.take(16) == now }
     if (exact >= 0) return exact
     val after = times.indexOfFirst { it > now }
