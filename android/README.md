@@ -66,7 +66,7 @@ What it does:
   changeable or removable (`/api/v1/sites/{id}/reviews`, `/rating`, `/review`, `/review/photos`). Photos come from the
   system photo picker (no storage permission) and are shrunk on the phone as the web's picker does them
   (`ui/site/PhotoShrink.kt`: turned upright, 1600 px, JPEG), then sent one by one.
-- **Map layers**: the map's "Layers" chip has the web map's menu: the base (satellite, street map or none) and every
+- **Map layers**: the layers button beside the search pill has the web map's menu: the base (satellite, street map or none) and every
   overlay, kept between launches. Seamarks and the coordinate grid start on, as on the web, and depth shading or
   contours over satellite show the street map instead. The Allen Coral Atlas reef
   outline, reef zones and bottom types read the web map's static tiles under `/overlays/` (`domain/AtlasOverlay.kt`,

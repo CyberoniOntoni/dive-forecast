@@ -120,7 +120,7 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
         _state.update { it.copy(busy = false) }
       } catch (e: ApiException) {
         val refused = onRefused != null && e is ApiException.Server && e.status == 400
-        if (refused) onRefused?.invoke(e.message)
+        if (refused) onRefused(e.message)
         _state.update { it.copy(busy = false, error = if (refused) null else e.message) }
       }
     }
