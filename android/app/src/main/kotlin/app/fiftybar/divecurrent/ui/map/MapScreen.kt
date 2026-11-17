@@ -90,8 +90,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import android.net.ConnectivityManager
-import android.net.Network
+import app.fiftybar.divecurrent.ui.components.rememberOnline
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -181,16 +180,10 @@ fun MapScreen(
     viewModel.refreshIfHourPassed()
     onPauseOrDispose {}
   }
-  // Signal back after a failed load: fetch at once, so "Offline copy" does not stay up until the next refresh.
-  DisposableEffect(viewModel) {
-    val connectivity = context.getSystemService(ConnectivityManager::class.java)
-    val callback =
-      object : ConnectivityManager.NetworkCallback() {
-        override fun onAvailable(network: Network) = viewModel.onNetworkBack()
-      }
-    connectivity?.registerDefaultNetworkCallback(callback)
-    onDispose { connectivity?.unregisterNetworkCallback(callback) }
-  }
+  // Signal back after a failed load: fetch at once, so "Offline copy" does not stay up until the next refresh. Once
+  // Android has checked the network reaches the internet, not when it merely comes up.
+  val online = rememberOnline()
+  LaunchedEffect(online) { if (online) viewModel.onNetworkBack() }
 
   // A strength picked from the counts narrows the list and the pins to sites running that strength now.
   var strength by rememberSaveable { mutableStateOf<Strength?>(null) }
@@ -305,6 +298,7 @@ fun MapScreen(
         reducedMotion = reducedMotion || listShown || covered,
         highlight = peekSite?.siteId ?: highlight,
         imagery = savedImageryBoxes(),
+        online = online,
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.

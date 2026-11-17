@@ -38,6 +38,15 @@ class MaldivesTimeTest {
   }
 
   @Test
+  fun `a wall time's nearest hour, as the server labels the map fetched then`() {
+    assertEquals("2026-11-15T21:00", MaldivesTime.nearestHourOf("2026-11-15T20:59"))
+    assertEquals("2026-11-15T20:00", MaldivesTime.nearestHourOf("2026-11-15T20:30"))
+    assertEquals("2026-11-15T20:00", MaldivesTime.nearestHourOf("2026-11-15T20:12"))
+    assertEquals("2026-11-16T00:00", MaldivesTime.nearestHourOf("2026-11-15T23:45"))
+    assertEquals(null, MaldivesTime.nearestHourOf("not a time"))
+  }
+
+  @Test
   fun `labels an hour`() {
     assertEquals("Sun 15 Nov, 09:00", MaldivesTime.label("2026-11-15T09:00"))
   }

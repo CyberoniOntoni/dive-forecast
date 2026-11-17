@@ -7,6 +7,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -56,5 +57,18 @@ class StyleJsonTest {
     assertTrue(source["attribution"]!!.jsonPrimitive.content.contains("Copernicus"))
     // Not under the street map or no base.
     assertEquals(listOf("background", "base"), layerIds(parse(styleJson(BaseMap.Street, imagery = boxes))))
+  }
+
+  @Test
+  fun `a view is over a saved atoll when the boxes overlap at all`() {
+    val boxes = listOf(ApiBounds(-0.71, 73.07, -0.57, 73.24))
+    // Zoomed in on Gan, inside the box.
+    assertTrue(overlapsAny(-0.70, 73.15, -0.68, 73.17, boxes))
+    // Out at the whole Maldives, the box inside the view.
+    assertTrue(overlapsAny(-1.0, 72.0, 7.5, 74.0, boxes))
+    // Over North Male, nowhere near.
+    assertFalse(overlapsAny(4.1, 73.3, 4.6, 73.7, boxes))
+    assertFalse(overlapsAny(-0.70, 73.15, -0.68, 73.17, emptyList()))
+    assertEquals(BASE, "base")
   }
 }

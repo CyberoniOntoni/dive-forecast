@@ -45,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import app.fiftybar.divecurrent.domain.SiteOutlook
+import app.fiftybar.divecurrent.ui.components.rememberOnline
 import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
 import app.fiftybar.divecurrent.ui.theme.Eyebrow
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -191,6 +192,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
         colors = colors,
         modifier = Modifier.weight(1f).fillMaxWidth(),
         imagery = savedImageryBoxes(),
+        online = rememberOnline(),
       )
       Surface(
         color = colors.deep,

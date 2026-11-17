@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -22,6 +23,7 @@ import app.fiftybar.divecurrent.domain.Fix
 import app.fiftybar.divecurrent.domain.LatLon
 import app.fiftybar.divecurrent.domain.NavReadouts
 import app.fiftybar.divecurrent.ui.map.BaseMap
+import app.fiftybar.divecurrent.ui.map.holdBaseOverSavedImagery
 import app.fiftybar.divecurrent.ui.map.styleJson
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import org.maplibre.android.camera.CameraPosition
@@ -76,6 +78,8 @@ fun NavMapView(
   modifier: Modifier = Modifier,
   /** Saved atolls' boxes, where our imagery lies under the satellite base for use without signal. */
   imagery: List<ApiBounds> = emptyList(),
+  /** The phone reaches the internet (rememberOnline); without, a saved atoll's imagery shows through the base. */
+  online: Boolean = true,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -84,6 +88,8 @@ fun NavMapView(
   var style by remember { mutableStateOf<Style?>(null) }
   val currentBoat by rememberUpdatedState(boat)
   val currentRoute by rememberUpdatedState(route)
+  // Bumped each time the map settles, to check again whether a saved atoll is in view.
+  var settled by remember { mutableIntStateOf(0) }
 
   DisposableEffect(lifecycle, mapView) {
     val observer = LifecycleEventObserver { _, event ->
@@ -100,6 +106,7 @@ fun NavMapView(
       m.cameraPosition = CameraPosition.Builder().target(LatLng(target.lat, target.lon)).zoom(12.0).build()
       m.uiSettings.isRotateGesturesEnabled = false
       m.uiSettings.isTiltGesturesEnabled = false
+      m.addOnCameraIdleListener { settled++ }
       map = m
     }
     onDispose {
@@ -117,6 +124,12 @@ fun NavMapView(
       addNavLayers(loaded, colors)
       style = loaded
     }
+  }
+
+  LaunchedEffect(style, online, imagery, settled) {
+    val m = map ?: return@LaunchedEffect
+    val s = style ?: return@LaunchedEffect
+    holdBaseOverSavedImagery(m, s, online, imagery)
   }
 
   LaunchedEffect(style, target, boat, route) {
