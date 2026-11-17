@@ -28,7 +28,7 @@ class StyleJsonTest {
   }
 
   @Test
-  fun `no base leaves the background, and the rasters stack as the web tile pane: seamarks, depth shading, sonar, contours`() {
+  fun `no base leaves the background, and the rasters stack in the web tile pane order`() {
     val style = parse(styleJson(BaseMap.None, MapOverlay.entries.toSet(), background = "#07151d"))
     assertEquals(listOf("background", "seamarks", "depthShading", "sonarDepths", "depthContours"), layerIds(style))
     assertEquals("#07151d", style["layers"]!!.jsonArray[0].jsonObject["paint"]!!.jsonObject["background-color"]!!.jsonPrimitive.content)
