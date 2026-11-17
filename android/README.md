@@ -28,17 +28,19 @@ What it does:
   animations are off. Then the server's `notice` and `siteNote`; depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
   not `?at=`, which on the web only fills the report form's dive time).
 - **Sign-in and reports**: the web's email-code sign-in (a new diver picks a nickname) gives the app its own token
-  (`POST /api/v1/sign-in/token`), kept in shared prefs file `session`, out of backups. On a site page, "Report the
-  current" as on the web: this hour or up to 3 h ago in one tap or another day and time, then "As forecast" in one
-  tap or which way and how strong, in the site's own words (`reportWays`); what it earned comes back in words. Recent
-  reports are listed below it. The You tab opens sign-in or the account (points, sign out, sign out
+  (`POST /api/v1/sign-in/token`), kept in shared prefs file `session`, out of backups. On a site page, "Report current"
+  opens a sheet (`ui/site/ReportSheet.kt`) as on the web: this hour or up to 3 h ago in one tap or another day and
+  time, then "As forecast" in one tap, or which way (two halves with the site's arrow for each, in the site's own
+  words from `reportWays`) and how strong (four targets drawn as the day chart's bars). What it earned floats up as
+  "+N" over the thanks line. A plan's "Report the current" opens the sheet at the dive time. Recent reports are
+  listed on the page. The You tab opens sign-in or the account (points, sign out, sign out
   everywhere). A 401 from the server means the token stopped working, and the app forgets it.
 - **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
   (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; not verified, so Android asks which app to use), a pasted link on the Plans
   screen (the Plans tab, or "My dive plans" on the account), or the diver's own plans when signed
   in. Each day shows its dives on a small satellite map, numbered and coloured as on the web with the boat route between
   them (`ui/plan/PlanDayMap.kt`), then lists them with the forecast at the dive time, warnings and a better window, the
-  boat legs between them, and "Report the current" once a dive is over, which opens the site's report form at the dive time. The last copy
+  boat legs between them, and "Report the current" once a dive is over, which opens the site's report sheet at the dive time. The last copy
   of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
   open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
   note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
@@ -122,7 +124,7 @@ Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig
 | `domain/Glance.kt` | Reads the server's `glance` (arrow heading, "incoming" / "running NE along the reef", tone, rank) |
 | `domain/MaldivesTime.kt` | Maldives wall-clock strings (UTC+5), never the phone's zone |
 | `ui/map/`, `domain/AtlasOverlay.kt`, `domain/CoordinateGrid.kt`, `domain/ShelterField.kt` | MapLibre map, now list, layers (Atlas, depth, grid, sheltered water) |
-| `ui/site/`, `domain/NewSite.kt` | Site page, day chart, report form, recent reports, reviews, adding a site |
+| `ui/site/`, `domain/NewSite.kt` | Site page, day chart, report sheet, recent reports, reviews, adding a site |
 | `ui/account/` | Sign-in and account (About me, nickname, badges) |
 | `ui/scoreboard/` | Scoreboard and divers' public pages |
 | `ui/plan/`, `domain/PlanLink.kt` | Plan pages, my plans, reading a plan id from a link |

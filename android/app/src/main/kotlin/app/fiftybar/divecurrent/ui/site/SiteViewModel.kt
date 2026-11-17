@@ -52,6 +52,8 @@ data class ReportFormState(
   val strength: Strength? = null,
   val sending: Boolean = false,
   val savedLine: String? = null,
+  /** Points the saved report earned, for the sheet's "+N"; null or 0 shows none. */
+  val savedPoints: Int? = null,
   val error: String? = null,
 )
 
@@ -144,7 +146,7 @@ class SiteViewModel(
         val saved = account.fileReport(siteId, ReportRequest(time, direction, strength.wire))
         val line = saved.award?.line?.takeIf { it.isNotBlank() } ?: "Report saved."
         // A fresh form; the report joins the list below and the next hours take its pull.
-        _state.update { it.copy(report = ReportFormState(savedLine = "Thanks! $line")) }
+        _state.update { it.copy(report = ReportFormState(savedLine = "Thanks! $line", savedPoints = saved.award?.points)) }
         refresh()
       } catch (_: SignedOutException) {
         _state.update { it.copy(report = it.report.copy(sending = false, error = "Sign in again to report.")) }
@@ -154,8 +156,11 @@ class SiteViewModel(
     }
   }
 
+  /** The diver closed the thanks: the next report starts on a fresh form. */
+  fun reportDone() = _state.update { it.copy(report = it.report.copy(savedLine = null, savedPoints = null, error = null)) }
+
   private fun editReport(change: (ReportFormState) -> ReportFormState) =
-    _state.update { it.copy(report = change(it.report).copy(savedLine = null, error = null)) }
+    _state.update { it.copy(report = change(it.report).copy(savedLine = null, savedPoints = null, error = null)) }
 
   private fun show(current: SiteUiState, loaded: Loaded<ApiForecast>, keepSelection: Boolean): SiteUiState {
     val hours = loaded.value.hours
