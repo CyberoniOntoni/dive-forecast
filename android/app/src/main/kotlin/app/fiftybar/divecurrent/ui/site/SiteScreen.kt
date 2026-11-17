@@ -64,6 +64,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -122,7 +124,15 @@ fun SiteScreen(
   val scroll = rememberScrollState()
   val forecast = state.forecast
   val hours = forecast?.hours.orEmpty()
-  val week = remember(forecast) { forecast?.takeIf { it.hours.isNotEmpty() }?.let(::WeekView) }
+  // "Now" moves on while the page stays open (a boat day): the week is re-read when the Maldives hour changes.
+  var nowHour by remember { mutableStateOf(MaldivesTime.nowHour()) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(60_000)
+      nowHour = MaldivesTime.nowHour()
+    }
+  }
+  val week = remember(forecast, nowHour) { forecast?.takeIf { it.hours.isNotEmpty() }?.let { WeekView(it) } }
   val selected = state.selected.coerceIn(0, hours.lastIndex.coerceAtLeast(0))
   val selectedGlance = week?.glances?.getOrNull(selected)
   val site = state.site?.takeIf { !state.notFound }
@@ -167,7 +177,8 @@ fun SiteScreen(
   ) { padding ->
     Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
       Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
-        SiteHero(site = state.site, glance = selectedGlance, reducedMotion = reducedMotion)
+        // The streaks stop once the header has scrolled away, so the page does not draw every frame for nothing.
+        SiteHero(site = state.site, glance = selectedGlance, reducedMotion = reducedMotion || pastHero)
         Column(
           Modifier.fillMaxWidth().padding(horizontal = 16.dp),
           verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -176,7 +187,10 @@ fun SiteScreen(
           when {
             state.notFound -> Text("This site is not on the map any more.", color = colors.stop)
             forecast == null -> if (!state.loading) Text(state.error ?: "No forecast yet.", color = colors.stop)
-            forecast.unavailable || week == null -> UnavailableCard(forecast)
+            forecast.unavailable || week == null -> {
+              UnavailableCard(forecast)
+              StatusLine(state)
+            }
             else -> {
               HourCard(week, selected, reducedMotion)
               if (selectedGlance?.estimatedHeading == true) {
@@ -192,7 +206,7 @@ fun SiteScreen(
               NoticeCard(forecast)
             }
           }
-          if (forecast == null || week == null) StatusLine(state)
+          if (forecast == null) StatusLine(state)
           if (!state.notFound) {
             Box(Modifier.bringIntoViewRequester(reportFocus)) {
               ReportCard(

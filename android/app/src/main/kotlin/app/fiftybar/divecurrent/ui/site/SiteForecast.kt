@@ -15,7 +15,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
 import androidx.compose.ui.semantics.semantics
@@ -95,13 +96,15 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** The week read once per forecast: glances, tide turns, day starts and the hour that is now. */
-internal class WeekView(forecast: ApiForecast) {
+internal class WeekView(forecast: ApiForecast, nowMs: Long = System.currentTimeMillis()) {
   val hours = forecast.hours
+  /** Each hour's Maldives hour of day (0..23), parsed once; the chart reads it per bar on every frame. */
+  val hourOfDay: List<Int?> = hours.map { MaldivesTime.parse(it.time)?.hour }
   val glances: List<Glance?> = hours.map { app.fiftybar.divecurrent.domain.glance(it) }
   val levels: List<Double> = hours.map { it.levelM }
   val turns: List<TideTurn> = SiteOutlook.tideTurns(levels)
   val dayStarts: List<Int> = SiteOutlook.dayStarts(hours.map { it.time })
-  val nowIndex: Int = MaldivesTime.currentIndex(hours.map { it.time })
+  val nowIndex: Int = MaldivesTime.currentIndex(hours.map { it.time }, nowMs)
   val maxLevel: Double = (levels.maxOfOrNull { abs(it) } ?: 0.0).coerceAtLeast(0.05)
   val seaByTime: Map<String, ApiSeaStateHour> = forecast.seaState?.associateBy { it.time }.orEmpty()
 
@@ -318,11 +321,11 @@ internal fun DayChart(week: WeekView, selected: Int, onSelect: (Int) -> Unit, on
     DayChips(week, day) { d ->
       // Keep the hour of day when moving between days; today opens on now.
       val r = week.dayRange(d)
-      val hourOfDay = MaldivesTime.parse(week.hours[selected].time)?.hour ?: 0
+      val hourOfDay = week.hourOfDay[selected] ?: 0
       val target =
         when {
           week.nowIndex in r -> week.nowIndex
-          else -> r.firstOrNull { MaldivesTime.parse(week.hours[it].time)?.hour == hourOfDay } ?: r.first
+          else -> r.firstOrNull { week.hourOfDay[it] == hourOfDay } ?: r.first
         }
       select(target)
     }
@@ -336,7 +339,7 @@ internal fun DayChart(week: WeekView, selected: Int, onSelect: (Int) -> Unit, on
     }
     val text = rememberTextMeasurer()
     val labelStyle = TextStyle(fontFamily = Inter, fontWeight = FontWeight.Bold, fontSize = 10.5.sp, color = colors.tide)
-    fun slotOf(i: Int) = MaldivesTime.parse(week.hours[i].time)?.hour ?: (i - range.first)
+    fun slotOf(i: Int) = week.hourOfDay[i] ?: (i - range.first)
     fun indexAt(x: Float, width: Float): Int {
       val slot = ((x / width) * 24).toInt().coerceIn(0, 23)
       return range.minBy { abs(slotOf(it) - slot) }
@@ -345,8 +348,9 @@ internal fun DayChart(week: WeekView, selected: Int, onSelect: (Int) -> Unit, on
       Modifier.fillMaxWidth()
         .height(140.dp)
         .padding(horizontal = 16.dp)
-        .pointerInput(range) { detectTapGestures { select(indexAt(it.x, size.width.toFloat())) } }
-        .pointerInput(range) { detectHorizontalDragGestures { change, _ -> select(indexAt(change.position.x, size.width.toFloat())) } }
+        // Keyed on the week too: a refreshed forecast can keep the same index range for other hours.
+        .pointerInput(week, range) { detectTapGestures { select(indexAt(it.x, size.width.toFloat())) } }
+        .pointerInput(week, range) { detectHorizontalDragGestures { change, _ -> select(indexAt(change.position.x, size.width.toFloat())) } }
         .semantics {
           contentDescription = "Forecast hour"
           stateDescription = MaldivesTime.label(week.hours[selected].time)
@@ -457,7 +461,7 @@ private fun DayChips(week: WeekView, day: Int, onDay: (Int) -> Unit) {
         Modifier.width(52.dp)
           .clip(RoundedCornerShape(12.dp))
           .background(if (on) colors.foam else Color.Transparent)
-          .clickable { onDay(d) }
+          .selectable(selected = on, role = Role.Tab) { onDay(d) }
           .padding(vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
       ) {
