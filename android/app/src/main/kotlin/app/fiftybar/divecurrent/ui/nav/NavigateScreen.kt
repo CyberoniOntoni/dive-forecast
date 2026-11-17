@@ -16,6 +16,39 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.key
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import app.fiftybar.divecurrent.domain.SiteOutlook
+import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
+import app.fiftybar.divecurrent.ui.theme.Eyebrow
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -56,7 +89,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -123,6 +155,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
   if (granted) FollowGps(context, viewModel)
   KeepScreenOn()
 
+  val reducedMotion = rememberReducedMotion()
   val readout = remember(state, target) { NavReadouts.of(target, state.fixes, state.route, state.routeFailed, System.currentTimeMillis()) }
 
   Scaffold(
@@ -143,7 +176,10 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
       )
     },
   ) { padding ->
-    Column(Modifier.fillMaxSize().padding(padding)) {
+    BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+    // The panel never takes more than 60 % of the screen, so the map keeps room; past that it scrolls, End included.
+    val panelMax = maxHeight * 0.6f
+    Column(Modifier.fillMaxSize()) {
       NavMapView(
         target = target,
         boat = state.fixes.lastOrNull(),
@@ -153,8 +189,17 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
         colors = colors,
         modifier = Modifier.weight(1f).fillMaxWidth(),
       )
-      Surface(color = colors.glass, contentColor = colors.foam, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+      Surface(
+        color = colors.deep,
+        contentColor = colors.foam,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        border = BorderStroke(1.dp, colors.line),
+        modifier = Modifier.fillMaxWidth(),
+      ) {
+        Column(
+          Modifier.heightIn(max = panelMax).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 18.dp).navigationBarsPadding(),
+          verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
           val gps = state.gps
           when {
             !granted ->
@@ -176,8 +221,8 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
                 }
               }
             gps is GpsStatus.Error -> Text(gps.message, color = colors.stop)
-            readout == null -> Text("Waiting for GPS…", color = colors.foam.copy(alpha = 0.8f))
-            else -> Readouts(readout, state.routeError)
+            readout == null -> Text("Waiting for GPS…", style = MaterialTheme.typography.titleMedium, color = colors.mist)
+            else -> Cockpit(readout, state.routeError, reducedMotion)
           }
           if (granted && !hasPreciseLocation(context)) {
             Text(
@@ -186,75 +231,156 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
               color = colors.outgoing,
             )
           }
+          OutlinedButton(
+            onClick = onBack,
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, colors.stop.copy(alpha = 0.6f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.stop),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+          ) {
+            Text("End navigation", style = MaterialTheme.typography.titleMedium)
+          }
+          Spacer(Modifier.height(4.dp))
         }
       }
+    }
     }
   }
 }
 
+/**
+ * The cockpit: the steer as one huge bearing with its compass word and a dial, then distance to go, speed and arrival
+ * in three cells, then any warning as a banner. Readable at arm's length on a moving boat.
+ */
 @Composable
-private fun Readouts(readout: NavReadout, routeError: String?) {
+private fun Cockpit(readout: NavReadout, routeError: String?, reducedMotion: Boolean) {
   val colors = CurrentTheme.colors
-  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-    SteerDial(readout.steerDeg)
-    Stat(if (readout.byRoute) "To go, by route" else "To go", readout.remainingKm?.let(BoatNav::formatNm), big = true)
-    Stat("Speed", readout.motion?.let { "${"%.1f".format(Locale.ROOT, it.knots)} kn" })
-    Stat(
-      readout.etaMinutes?.let { "In ${BoatNav.formatDuration(it)}" } ?: "Arrive",
+  val steer = readout.steerDeg?.let(BoatNav::formatBearing)
+  Row(
+    verticalAlignment = Alignment.CenterVertically,
+    // One phrase for TalkBack ("Steer 247° WSW"), not that plus the eyebrow, the number and the word again.
+    modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = steer?.let { "Steer $it" } ?: "No steer yet" },
+  ) {
+    Column(Modifier.weight(1f)) {
+      Text("STEER", style = Eyebrow, color = colors.incoming)
+      Row(verticalAlignment = Alignment.Bottom) {
+        // "247° WSW" from the shared formatter: the number rolls, the word sits beside it.
+        RollingText(steer?.substringBefore(" ") ?: "—", MaterialTheme.typography.displayMedium, colors.foam, reducedMotion)
+        steer?.substringAfter(" ", "")?.takeIf { it.isNotEmpty() }?.let {
+          Text(it, style = MaterialTheme.typography.headlineMedium, color = colors.mist, modifier = Modifier.padding(start = 10.dp, bottom = 12.dp))
+        }
+      }
+    }
+    SteerDial(readout.steerDeg, reducedMotion)
+  }
+  Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Cell(if (readout.byRoute) "TO GO · ROUTE" else "TO GO", readout.remainingKm?.let(BoatNav::formatNm), reducedMotion)
+    Cell("SPEED", readout.motion?.let { "${"%.1f".format(Locale.ROOT, it.knots)} kn" }, reducedMotion)
+    Cell(
+      readout.etaMinutes?.let { "ARRIVE · ${BoatNav.formatDuration(it).uppercase()}" } ?: "ARRIVE",
       readout.arrival
         ?: when {
           readout.stopped -> "Stopped"
           readout.currentBeatsBoat -> "Current"
           else -> null
         },
+      reducedMotion,
     )
   }
-  readout.referenceLine?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.8f)) }
-  Text(readout.note, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.7f))
-  val warnings =
+  // Red only for very strong current ahead, the stop colour's one meaning; every other warning amber, as on the web.
+  val danger = listOfNotNull(readout.veryStrongLine)
+  val caution =
     listOfNotNull(
+      if (readout.currentBeatsBoat) "At this speed the current ahead is stronger than the boat makes through the water." else null,
       readout.trouble?.let { trouble ->
         // With no route at all, the server's reason (a start outside the Maldives) says what to do.
         routeError?.takeIf { trouble.startsWith("No route") && it.isNotBlank() }?.let { "$trouble ${it.trimEnd('.')}." } ?: trouble
       },
-      if (readout.currentBeatsBoat) "At this speed the current ahead is stronger than the boat makes through the water." else null,
-      readout.veryStrongLine,
       if (readout.shallow) "The route crosses a shallow reef-flat gap: check the depth before you go through." else null,
     )
-  warnings.forEach { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.outgoing) }
+  danger.forEach { Banner(it, colors.stop) }
+  caution.forEach { Banner(it, colors.outgoing) }
+  readout.referenceLine?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.mist) }
+  Text(readout.note, style = MaterialTheme.typography.bodySmall, color = colors.dim)
 }
 
-/** Which way to steer, as an arrow on a small compass rose (north up). */
+/** Text whose characters each roll up into place when they change, as a mechanical counter; still with motion off. */
 @Composable
-private fun SteerDial(steer: Double?) {
-  val colors = CurrentTheme.colors
-  Surface(
-    shape = CircleShape,
-    color = colors.foam.copy(alpha = 0.06f),
-    modifier =
-      Modifier.size(56.dp).semantics { contentDescription = steer?.let { "Steer ${BoatNav.formatBearing(it)}" } ?: "No steer yet" },
-  ) {
-    Box(contentAlignment = Alignment.Center) {
-      Text("N", fontSize = 9.sp, color = colors.foam.copy(alpha = 0.6f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 1.dp))
-      if (steer != null) CurrentArrow(bearing = steer, color = colors.incoming, size = 34.dp)
+private fun RollingText(text: String, style: TextStyle, color: Color, reducedMotion: Boolean, spoken: String = text) {
+  // TalkBack reads the whole value once, not a character at a time.
+  Row(Modifier.clearAndSetSemantics { contentDescription = spoken }) {
+    text.forEachIndexed { i, ch ->
+      // Keyed by place from the right, so 99 -> 100 rolls the units, tens and hundreds rather than shifting them.
+      key(text.length - i) {
+        AnimatedContent(
+          targetState = ch,
+          transitionSpec = {
+            if (reducedMotion) EnterTransition.None togetherWith ExitTransition.None
+            else (slideInVertically(tween(220)) { it / 2 } + fadeIn(tween(220))) togetherWith (slideOutVertically(tween(180)) { -it / 2 } + fadeOut(tween(140)))
+          },
+          label = "digit",
+        ) { c ->
+          Text(c.toString(), style = style, color = color, maxLines = 1)
+        }
+      }
     }
   }
 }
 
-/** One readout; a dash until it is known. The distance is the big one. */
+/** Which way to steer: an arrow on a compass rose (north up) that swings the short way to a new steer. */
 @Composable
-private fun RowScope.Stat(label: String, value: String?, big: Boolean = false) {
+private fun SteerDial(steer: Double?, reducedMotion: Boolean) {
   val colors = CurrentTheme.colors
-  Column(Modifier.weight(if (big) 1.4f else 1f)) {
-    Text(label, style = MaterialTheme.typography.labelSmall, color = colors.foam.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-    Text(
+  val angle = remember { Animatable((steer ?: 0.0).toFloat()) }
+  // The first steer after none (GPS just found the boat) appears in place rather than swinging round from north.
+  var shown by remember { mutableStateOf(steer != null) }
+  LaunchedEffect(steer) {
+    val to = steer?.toFloat() ?: return@LaunchedEffect
+    val target = SiteOutlook.shortTurnTarget(angle.value, to)
+    if (reducedMotion || !shown) angle.snapTo(target) else angle.animateTo(target, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow))
+    shown = true
+  }
+  Box(
+    Modifier.size(96.dp).clip(CircleShape).background(colors.reef).border(1.5.dp, colors.edge, CircleShape),
+    contentAlignment = Alignment.Center,
+  ) {
+    val mark = MaterialTheme.typography.labelSmall
+    Text("N", style = mark, color = colors.dim, modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp))
+    Text("E", style = mark, color = colors.dim, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 6.dp))
+    Text("S", style = mark, color = colors.dim, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+    Text("W", style = mark, color = colors.dim, modifier = Modifier.align(Alignment.CenterStart).padding(start = 6.dp))
+    if (steer != null) CurrentArrow(bearing = angle.value.toDouble(), color = colors.incoming, size = 56.dp, edge = colors.ink)
+  }
+}
+
+/** One readout cell: a small label over its value, a dash until it is known; numbers roll as they change. */
+@Composable
+private fun RowScope.Cell(label: String, value: String?, reducedMotion: Boolean) {
+  val colors = CurrentTheme.colors
+  Column(
+    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(16.dp)).background(colors.reef).padding(horizontal = 12.dp, vertical = 10.dp)
+      .semantics(mergeDescendants = true) {},
+  ) {
+    Text(label, style = Eyebrow, color = colors.dim, maxLines = 2)
+    Spacer(Modifier.height(4.dp))
+    RollingText(
       value ?: "—",
-      fontSize = if (big) 24.sp else 18.sp,
-      fontWeight = FontWeight.SemiBold,
-      color = if (value != null) colors.foam else colors.foam.copy(alpha = 0.4f),
-      maxLines = 1,
-      overflow = TextOverflow.Ellipsis,
+      MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
+      if (value != null) colors.foam else colors.dim,
+      reducedMotion,
+      spoken = value ?: "not known yet",
     )
+  }
+}
+
+/** A warning with a bar of its colour down the left: red for very strong current ahead, amber for the rest. */
+@Composable
+private fun Banner(text: String, tone: Color) {
+  Row(
+    Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(14.dp)).background(tone.copy(alpha = 0.12f)),
+  ) {
+    Box(Modifier.width(4.dp).fillMaxHeight().background(tone))
+    Text(text, style = MaterialTheme.typography.bodyMedium, color = CurrentTheme.colors.foam, modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp))
   }
 }
 
