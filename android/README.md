@@ -53,9 +53,10 @@ What it does:
 - **Boat navigation**: "Navigate here by boat" on a site page, the Navigate tab (sites nearest first, with a
   search), or a long press on the map for a point. The screen follows the phone's GPS while it is open (and keeps the
   screen on), asks the server for a route round the islands and reef (`GET /api/v1/boat-route`, the web's route and
-  its forecast current), and shows distance left, speed, the steer allowing for the current, the ETA with the current
-  each stretch has when the boat gets there, and the web panel's warnings (very strong current ahead, a shallow
-  reef-flat gap, a current the boat cannot beat). It asks again when the boat is 300 m off the route, at most every
+  its forecast current), and shows a cockpit: the steer allowing for the current as one big bearing with its compass word and
+  a dial, then distance left, speed and the ETA (with the current each stretch has when the boat gets there) in three
+  cells whose digits roll as they change, then the web panel's warnings as banners (red: very strong current ahead,
+  a current the boat cannot beat; amber: no route, a shallow reef-flat gap), and End navigation. It asks again when the boat is 300 m off the route, at most every
   20 seconds. The steer and ETA are worked out in the app (`domain/BoatNav.kt`, `domain/RouteCurrent.kt`,
   `domain/NavReadout.kt`), ported from `lib/boat-nav.ts` and `lib/route-current.ts` with their tests. Location comes
   from the platform `LocationManager` (no Play services), only while the screen is started. Satellite outlines, not a
