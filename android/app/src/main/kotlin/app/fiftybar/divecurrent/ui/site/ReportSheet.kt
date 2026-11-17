@@ -47,6 +47,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +71,7 @@ import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import app.fiftybar.divecurrent.ui.theme.Eyebrow
 import java.time.LocalDate
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 
 /** What the report sheet calls back to; all of it goes to [SiteViewModel]. */
@@ -101,6 +103,13 @@ internal fun ReportSheet(
 ) {
   val colors = CurrentTheme.colors
   val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+  val scope = rememberCoroutineScope()
+  // Done and sign-in slide the sheet down first, as a swipe or back does, then leave.
+  fun hideThen(then: () -> Unit) {
+    scope.launch { sheet.hide() }.invokeOnCompletion { then() }
+  }
+  val done = { hideThen(actions.onDone) }
+  val signIn = { hideThen(onSignIn) }
   ModalBottomSheet(
     onDismissRequest = onDismiss,
     sheetState = sheet,
@@ -121,7 +130,7 @@ internal fun ReportSheet(
           color = colors.mist,
         )
         state.report.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
-        BigButton("Sign in to report", colors.incoming, colors.ink, onClick = onSignIn)
+        BigButton("Sign in to report", colors.incoming, colors.ink, onClick = signIn)
         return@Column
       }
       val saved = state.report.savedLine
@@ -129,9 +138,9 @@ internal fun ReportSheet(
         targetState = saved != null,
         transitionSpec = { if (reducedMotion) fadeIn(tween(0)) togetherWith fadeOut(tween(0)) else fadeIn(tween(220)) togetherWith fadeOut(tween(120)) },
         label = "report",
-      ) { done ->
-        if (done) Saved(state.report, reducedMotion, actions.onDone)
-        else Form(state, nickname, actions, onSignIn)
+      ) { thanks ->
+        if (thanks) Saved(state.report, reducedMotion, onDone = done)
+        else Form(state, nickname, actions, signIn)
       }
     }
   }
@@ -312,7 +321,8 @@ private fun StrengthTarget(strength: Strength, selected: Boolean, modifier: Modi
       style = MaterialTheme.typography.labelMedium,
       color = if (selected) tone else colors.mist,
       textAlign = TextAlign.Center,
-      maxLines = 1,
+      // "Very strong" is about as wide as a quarter of a small phone: let it wrap rather than cut.
+      maxLines = 2,
     )
   }
 }

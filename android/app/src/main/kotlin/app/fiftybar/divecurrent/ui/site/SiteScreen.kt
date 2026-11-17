@@ -108,6 +108,15 @@ fun SiteScreen(
   // Opened from a plan's "Report the current": the sheet opens once, when the forecast has loaded under it.
   var reportOpen by rememberSaveable { mutableStateOf(false) }
   var reportAutoOpened by rememberSaveable { mutableStateOf(false) }
+  // Sent to sign in from the sheet: it opens again on coming back signed in, with the form as it was.
+  var reportAfterSignIn by rememberSaveable { mutableStateOf(false) }
+  val signedIn = session != null
+  LaunchedEffect(signedIn) {
+    if (signedIn && reportAfterSignIn) {
+      reportAfterSignIn = false
+      reportOpen = true
+    }
+  }
   val forecastShown = state.forecast != null
   LaunchedEffect(reportAt, forecastShown) {
     if (reportAt != null && forecastShown && !reportAutoOpened) {
@@ -195,6 +204,7 @@ fun SiteScreen(
         reducedMotion = reducedMotion,
         onSignIn = {
           reportOpen = false
+          reportAfterSignIn = true
           onSignIn()
         },
         onDismiss = close,
