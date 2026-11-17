@@ -275,13 +275,11 @@ private fun Cockpit(readout: NavReadout, routeError: String?, reducedMotion: Boo
       reducedMotion,
     )
   }
-  val danger =
-    listOfNotNull(
-      readout.veryStrongLine,
-      if (readout.currentBeatsBoat) "At this speed the current ahead is stronger than the boat makes through the water." else null,
-    )
+  // Red only for very strong current ahead, the stop colour's one meaning; every other warning amber, as on the web.
+  val danger = listOfNotNull(readout.veryStrongLine)
   val caution =
     listOfNotNull(
+      if (readout.currentBeatsBoat) "At this speed the current ahead is stronger than the boat makes through the water." else null,
       readout.trouble?.let { trouble ->
         // With no route at all, the server's reason (a start outside the Maldives) says what to do.
         routeError?.takeIf { trouble.startsWith("No route") && it.isNotBlank() }?.let { "$trouble ${it.trimEnd('.')}." } ?: trouble
@@ -353,7 +351,7 @@ private fun RowScope.Cell(label: String, value: String?, reducedMotion: Boolean)
   }
 }
 
-/** A warning with a bar of its colour down the left: red for the current, amber for the route. */
+/** A warning with a bar of its colour down the left: red for very strong current ahead, amber for the rest. */
 @Composable
 private fun Banner(text: String, tone: Color) {
   Row(
