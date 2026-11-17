@@ -2,7 +2,6 @@ package app.fiftybar.divecurrent.ui.map
 
 import app.fiftybar.divecurrent.data.api.ApiBounds
 import kotlinx.serialization.json.Json
-import app.fiftybar.divecurrent.data.api.ApiBounds
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
