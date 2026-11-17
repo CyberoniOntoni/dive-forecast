@@ -100,12 +100,13 @@ import org.maplibre.geojson.LineString
 import org.maplibre.geojson.Point
 
 /** A box for the map to frame; [count] makes picking the same atoll again move it again. */
-data class MapFocus(val count: Int, val south: Double, val west: Double, val north: Double, val east: Double)
+data class MapFocus(val count: Int, val south: Double, val west: Double, val north: Double, val east: Double, val zoom: Double = 12.0)
 
 private const val SOURCE = "sites"
 private const val ARROWS = "site-arrows"
 private const val BADGES = "site-badges"
 private const val PULSE = "site-pulse"
+private const val HIGHLIGHT = "site-highlight"
 private const val NAMES = "site-names"
 
 /**
@@ -144,6 +145,8 @@ fun SiteMapView(
   focus: MapFocus? = null,
   /** The phone's animations are off: the arrows hold still and very strong sites keep a steady ring. */
   reducedMotion: Boolean = false,
+  /** A site to ring in foam, as when the site page sent the diver here to see where it is. */
+  highlight: String? = null,
 ) {
   val context = LocalContext.current
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -219,7 +222,7 @@ fun SiteMapView(
     val m = map ?: return@LaunchedEffect
     val f = focus ?: return@LaunchedEffect
     if (f.north - f.south < 1e-3 && f.east - f.west < 1e-3) {
-      m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(f.south, f.west), 12.0))
+      m.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(f.south, f.west), f.zoom))
     } else {
       val pad = (48 * context.resources.displayMetrics.density).toInt()
       m.animateCamera(CameraUpdateFactory.newLatLngBounds(LatLngBounds.from(f.north, f.east, f.south, f.west), pad))
@@ -240,6 +243,11 @@ fun SiteMapView(
   LaunchedEffect(style, rows) {
     val s = style ?: return@LaunchedEffect
     s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(features(rows))
+  }
+
+  LaunchedEffect(style, highlight) {
+    val s = style ?: return@LaunchedEffect
+    s.getLayerAs<CircleLayer>(HIGHLIGHT)?.setFilter(eq(get("id"), literal(highlight ?: "")))
   }
 
   // The badges breathe: each arrow nudges along its own heading, further the stronger the water runs (not at slack),
@@ -456,6 +464,18 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
       )
       .withFilter(eq(get("pulse"), literal(true)))
+  )
+  // The site the page sent the diver to see: a foam ring round its badge. No site matches "" until one is set.
+  style.addLayer(
+    CircleLayer(HIGHLIGHT, SOURCE)
+      .withProperties(
+        circleRadius(badgeRadius(1.5f)),
+        circleColor(Color.TRANSPARENT),
+        circleStrokeColor(colors.foam.toArgb()),
+        circleStrokeWidth(3f),
+        circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
+      )
+      .withFilter(eq(get("id"), literal("")))
   )
   // Each site a dark disc ringed in its colour, 26 dp inside one atoll, with the arrow on it.
   val tones = GlanceTone.entries.map { stop(it.name.lowercase(), literal(colorHex(colors.tone(it).toArgb()))) }.toTypedArray()

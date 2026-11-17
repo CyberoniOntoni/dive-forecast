@@ -116,6 +116,9 @@ fun MapScreen(
   onOpenSite: (String) -> Unit,
   onNavigateTo: (id: String, name: String, lat: Double, lon: Double) -> Unit,
   onAddSite: (lat: Double, lon: Double) -> Unit,
+  // Sent from a site page to see where the site is: the map moves there and rings it, once.
+  showSite: ShowOnMap? = null,
+  onShown: () -> Unit = {},
 ) {
   val repository = appRepository()
   val viewModel: MapViewModel = viewModel { MapViewModel(repository) }
@@ -169,6 +172,19 @@ fun MapScreen(
     remember(state.rows, query, picked) {
       state.rows.filter { SiteSearch.matches(it.site.name, it.site.atollName, query) && NowCounts.matches(it.glance, picked) }
     }
+  var highlight by rememberSaveable { mutableStateOf<String?>(null) }
+  LaunchedEffect(showSite) {
+    val show = showSite ?: return@LaunchedEffect
+    listOpen = false
+    // A search or a strength that hides this site would leave the map with nothing to ring: show everything again.
+    if (state.rows.isNotEmpty() && pins.none { it.site.id == show.siteId }) {
+      query = ""
+      strength = null
+    }
+    highlight = show.siteId
+    focus = MapFocus((focus?.count ?: 0) + 1, show.lat, show.lon, show.lat, show.lon, zoom = 13.5)
+    onShown()
+  }
   val atolls = remember(state.rows) { SiteSearch.atollChoices(state.rows.map { it.site.atollId to it.site.atollName }) }
   fun pickAtoll(id: String) {
     atollId = id
@@ -206,6 +222,7 @@ fun MapScreen(
         focus = focus,
         // Under the list the map is hidden: its arrows hold still rather than animate unseen.
         reducedMotion = reducedMotion || listOpen,
+        highlight = highlight,
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
@@ -670,6 +687,9 @@ private fun NowRow(row: SiteRow, onClick: () -> Unit) {
     }
   }
 }
+
+/** Where a site page sent the diver back to: the site and its pin. */
+data class ShowOnMap(val siteId: String, val lat: Double, val lon: Double)
 
 /** What is wrong with the map's data, if anything: one value, so the chip over the map and the list header agree. */
 private enum class DataStatus(val words: String) {

@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent
 
+import app.fiftybar.divecurrent.ui.map.ShowOnMap
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -10,6 +11,10 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -42,6 +47,8 @@ fun MainNavigation(startPlanId: String? = null) {
   // A screen that leaves by itself (signed in, signed out) never pops the map: an empty back stack would crash.
   val leave: () -> Unit = { if (backStack.size > 1) backStack.removeLastOrNull() }
   val sessions = appAccount().sessions
+  // A site page's "see it on the map": the map takes it once it is on top again.
+  var showOnMap by remember { mutableStateOf<ShowOnMap?>(null) }
   // A tab's top screen sits right on the map (Back from it goes to the map); only there is the bar shown.
   val tab = tabOf(backStack)
   fun isTabRoot(key: NavKey) = backStack.size == 2 && backStack[1] == key
@@ -86,6 +93,8 @@ fun MainNavigation(startPlanId: String? = null) {
               onOpenSite = { id -> backStack.add(SiteKey(id)) },
               onNavigateTo = { id, name, lat, lon -> backStack.add(NavigateKey(id, name, lat, lon)) },
               onAddSite = { lat, lon -> backStack.add(AddSiteKey(lat, lon)) },
+              showSite = showOnMap,
+              onShown = { showOnMap = null },
             )
           }
           entry<AddSiteKey> { key ->
@@ -110,6 +119,11 @@ fun MainNavigation(startPlanId: String? = null) {
               onBack = leave,
               onSignIn = { backStack.add(SignInKey) },
               onNavigate = { site -> backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon)) },
+              // Wherever the page was opened from (map, list, plan, Navigate), the map is the stack's root.
+              onShowOnMap = { site ->
+                showOnMap = ShowOnMap(site.id, site.lat, site.lon)
+                while (backStack.size > 1) backStack.removeLastOrNull()
+              },
             )
           }
           entry<NavigatePickKey> { key ->

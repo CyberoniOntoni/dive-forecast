@@ -32,7 +32,7 @@ What it does:
   and a confidence meter; beside it the tide (rising or falling, next high or low, read from the hours' residual sea
   level) and when the flow next changes. Day chips over a 24-hour chart: bars for the flow and the residual tide as a
   line with its highs and lows, a sea-state band under them; tap or drag to pick an hour (TalkBack can step it). Sea,
-  swell and wind as tiles; "Report current" and "Go by boat" stay at the bottom. Motion stops when the phone's
+  swell and wind as tiles; "Report current" and "Go by boat" stay at the bottom. Pull the page down from its top (past a hint that turns to "Release for the map", with a haptic tick), or tap the map button beside Refresh, and the map opens centred on the site with a foam ring round its badge, whichever screen the page was opened from. Motion stops when the phone's
   animations are off. Then the server's `notice` and `siteNote`; depths, how to dive it, photos, the source; share the hour as text (site, Maldives time, way and strength) with the site's link (`https://50bar.app/sites/<id>`;
   not `?at=`, which on the web only fills the report form's dive time).
 - **Sign-in and reports**: the web's email-code sign-in (a new diver picks a nickname) gives the app its own token
