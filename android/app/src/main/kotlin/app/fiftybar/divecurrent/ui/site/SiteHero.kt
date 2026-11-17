@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.Strength
 import app.fiftybar.divecurrent.domain.Glance
+import app.fiftybar.divecurrent.domain.SiteOutlook
 import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import app.fiftybar.divecurrent.ui.theme.Eyebrow
@@ -142,9 +143,8 @@ private fun FlowStreaks(glance: Glance, reducedMotion: Boolean, modifier: Modifi
   // The heading eases round when the hour changes, so the streaks turn with the arrow instead of snapping.
   val heading = remember { Animatable(glance.arrowBearing.toFloat()) }
   LaunchedEffect(glance.arrowBearing) {
-    val target = glance.arrowBearing.toFloat()
-    val delta = ((target - heading.value) % 360 + 540) % 360 - 180
-    if (reducedMotion) heading.snapTo(heading.value + delta) else heading.animateTo(heading.value + delta)
+    val target = SiteOutlook.shortTurnTarget(heading.value, glance.arrowBearing.toFloat())
+    if (reducedMotion) heading.snapTo(target) else heading.animateTo(target)
   }
   val current by rememberUpdatedState(glance)
   var frame by remember { mutableLongStateOf(0L) }
@@ -193,11 +193,5 @@ private fun FlowStreaks(glance: Glance, reducedMotion: Boolean, modifier: Modifi
   }
 }
 
-/** Header widths per second: slack barely moves, very strong crosses in about three seconds. */
-private fun speedOf(strength: Strength): Float =
-  when (strength) {
-    Strength.Slack -> 0.03f
-    Strength.Mild -> 0.1f
-    Strength.Strong -> 0.2f
-    Strength.TooStrong -> 0.32f
-  }
+/** Header widths per second, from the same strength scale as the day chart's bars: very strong crosses in about 3 s. */
+private fun speedOf(strength: Strength): Float = 0.32f * strengthLevel(strength)

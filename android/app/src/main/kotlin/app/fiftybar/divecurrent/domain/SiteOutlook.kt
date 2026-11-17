@@ -47,17 +47,21 @@ object SiteOutlook {
   }
 
   /**
-   * The first hour after [index] whose flow reads differently: another strength word or another way (tone). Null when
-   * the week ends first, or when [index] has no reading.
+   * The first hour after [index] whose flow reads differently: another strength word, another tone, or another way
+   * (an along-reef "running NE" turning to "running SW" keeps its tone). An hour with no reading counts as a change,
+   * so the page can say the forecast stops there. Null when the week ends first, or when [index] has no reading.
    */
   fun nextFlowChange(glances: List<Glance?>, index: Int): Int? {
     val now = glances.getOrNull(index) ?: return null
     for (j in index + 1..glances.lastIndex) {
-      val g = glances[j] ?: return null
-      if (g.label != now.label || g.tone != now.tone) return j
+      val g = glances[j] ?: return j
+      if (g.label != now.label || g.tone != now.tone || g.way != now.way) return j
     }
     return null
   }
+
+  /** The heading to animate to from [from] so the turn takes the short way round (at most 180 degrees). */
+  fun shortTurnTarget(from: Float, to: Float): Float = from + (((to - from) % 360 + 540) % 360 - 180)
 
   /** The index each Maldives day starts at: the first hour, then every midnight. */
   fun dayStarts(times: List<String>): List<Int> =

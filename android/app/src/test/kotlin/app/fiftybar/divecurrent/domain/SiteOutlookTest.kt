@@ -37,8 +37,8 @@ class SiteOutlookTest {
     assertNull(SiteOutlook.trend(listOf(0.1), 0))
   }
 
-  private fun g(label: String, tone: GlanceTone) =
-    Glance(90.0, "outgoing", "outgoing", "outgoing, toward E", label, Strength.Mild, Confidence.Low, 1f, tone, 1, false)
+  private fun g(label: String, tone: GlanceTone, way: String = "outgoing") =
+    Glance(90.0, way, way, way, label, Strength.Mild, Confidence.Low, 1f, tone, 1, false)
 
   @Test
   fun `the flow changes on a new strength word or a new way`() {
@@ -52,8 +52,26 @@ class SiteOutlookTest {
     assertEquals(2, SiteOutlook.nextFlowChange(week, 0))
     assertEquals(3, SiteOutlook.nextFlowChange(week, 2))
     assertNull(SiteOutlook.nextFlowChange(week, 3))
-    // An hour without a reading stops the look-ahead rather than skipping over it.
-    assertNull(SiteOutlook.nextFlowChange(listOf(g("strong", GlanceTone.Outgoing), null, g("mild", GlanceTone.Outgoing)), 0))
+    // An hour without a reading is where the flow next changes, so the page can say the forecast stops there.
+    assertEquals(1, SiteOutlook.nextFlowChange(listOf(g("strong", GlanceTone.Outgoing), null, g("mild", GlanceTone.Outgoing)), 0))
+  }
+
+  @Test
+  fun `along a reef a new heading is a change even with the same word and tone`() {
+    val week =
+      listOf(
+        g("mild", GlanceTone.Along, "running NE"),
+        g("mild", GlanceTone.Along, "running NE"),
+        g("mild", GlanceTone.Along, "running SW"),
+      )
+    assertEquals(2, SiteOutlook.nextFlowChange(week, 0))
+  }
+
+  @Test
+  fun `turns take the short way round`() {
+    assertEquals(370f, SiteOutlook.shortTurnTarget(350f, 10f))
+    assertEquals(-10f, SiteOutlook.shortTurnTarget(10f, 350f))
+    assertEquals(90f, SiteOutlook.shortTurnTarget(0f, 90f))
   }
 
   @Test

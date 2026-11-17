@@ -85,6 +85,7 @@ import app.fiftybar.divecurrent.domain.compassWord
 import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.domain.heightLabel
 import app.fiftybar.divecurrent.domain.seaBandLabel
+import app.fiftybar.divecurrent.domain.windKnots
 import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.theme.CurrentColors
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -180,8 +181,7 @@ private fun Compass(g: Glance, reducedMotion: Boolean) {
   val tone = colors.tone(g.tone)
   val angle = remember { Animatable(g.arrowBearing.toFloat()) }
   LaunchedEffect(g.arrowBearing) {
-    val delta = ((g.arrowBearing.toFloat() - angle.value) % 360 + 540) % 360 - 180
-    val target = angle.value + delta
+    val target = SiteOutlook.shortTurnTarget(angle.value, g.arrowBearing.toFloat())
     if (reducedMotion) angle.snapTo(target)
     else angle.animateTo(target, spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessLow))
   }
@@ -251,7 +251,7 @@ private fun TideCell(week: WeekView, selected: Int, modifier: Modifier) {
       when (trend) {
         TideTrend.Rising -> "Rising ↗"
         TideTrend.Falling -> "Falling ↘"
-        null -> "Turning"
+        null -> "Steady"
       },
       style = MaterialTheme.typography.titleMedium,
       modifier = Modifier.padding(top = 4.dp),
@@ -273,11 +273,15 @@ private fun FlowNextCell(week: WeekView, selected: Int, modifier: Modifier) {
   val next = j?.let { week.glances[it] }
   Column(modifier.padding(start = 16.dp, end = 20.dp, top = 12.dp, bottom = 12.dp)) {
     Text("FLOW NEXT", style = Eyebrow, color = next?.let { colors.tone(it.tone) } ?: colors.dim)
-    if (j == null || next == null) {
+    if (j == null) {
       Text(if (now == null) "No reading" else "Holds", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
       Text("to the end of the forecast", style = MaterialTheme.typography.bodySmall, color = colors.mist, modifier = Modifier.padding(top = 2.dp))
+    } else if (next == null) {
+      Text("No reading", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 4.dp))
+      Text("from ${week.whenLabel(j, selected)}", style = MaterialTheme.typography.bodySmall, color = colors.mist, modifier = Modifier.padding(top = 2.dp))
     } else {
-      val turns = now != null && next.tone != now.tone
+      // Name the way when it changes: in or out at a channel, or the new heading along a reef.
+      val turns = now != null && next.way != now.way
       Text(
         next.label.replaceFirstChar { it.uppercase() } + if (turns) ", ${next.way}" else "",
         style = MaterialTheme.typography.titleMedium,
@@ -362,13 +366,7 @@ internal fun DayChart(week: WeekView, selected: Int, onSelect: (Int) -> Unit, on
       for (i in range) {
         val g = week.glances[i] ?: continue
         val x = slotOf(i) * slot
-        val frac =
-          when (g.strength) {
-            Strength.Slack -> 0.14f
-            Strength.Mild -> 0.42f
-            Strength.Strong -> 0.72f
-            Strength.TooStrong -> 1f
-          }
+        val frac = strengthLevel(g.strength)
         val delay = (slotOf(i) / 24f) * 0.35f
         val p = ((grow.value - delay) / 0.65f).coerceIn(0f, 1f)
         val h = barsH * frac * p
@@ -492,6 +490,10 @@ private fun seaColor(band: SeaBand?, colors: CurrentColors): Color =
 @Composable
 internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
   val colors = CurrentTheme.colors
+  // Said before anything else, so it shows even when there is no sea row for this hour, or none at all.
+  if (forecast.seaStale) {
+    Text("Sea state from old wave or wind data: the server could not refresh it.", style = MaterialTheme.typography.bodySmall, color = colors.mist)
+  }
   val sea = forecast.seaState ?: return
   val hour = week.hours.getOrNull(selected)?.let { week.seaByTime[it.time] }
   if (hour == null) {
@@ -519,7 +521,7 @@ internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
     )
     SeaTile(
       "WIND",
-      hour.wind?.let { "${(it.speedMs * 1.943844).roundToInt()} kn" } ?: "–",
+      hour.wind?.let { "${windKnots(it.speedMs)} kn" } ?: "–",
       hour.wind?.let { "from ${compassWord(it.fromDeg)}" } ?: "no data",
       modifier = Modifier.weight(1f),
     )
@@ -530,9 +532,6 @@ internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
       color = colors.stop,
       style = MaterialTheme.typography.bodyMedium,
     )
-  }
-  if (forecast.seaStale) {
-    Text("Sea state from old wave or wind data: the server could not refresh it.", style = MaterialTheme.typography.bodySmall, color = colors.mist)
   }
 }
 
@@ -547,3 +546,15 @@ private fun SeaTile(eyebrow: String, value: String, sub: String, modifier: Modif
     Text(sub, style = MaterialTheme.typography.bodySmall, color = colors.mist, modifier = Modifier.padding(top = 2.dp))
   }
 }
+
+/**
+ * How strong the flow reads, 0 to 1, for anything drawn to its size: bar heights here and the header streaks' pace.
+ * Slack keeps a sliver so its hour still shows.
+ */
+internal fun strengthLevel(strength: Strength): Float =
+  when (strength) {
+    Strength.Slack -> 0.14f
+    Strength.Mild -> 0.42f
+    Strength.Strong -> 0.72f
+    Strength.TooStrong -> 1f
+  }
