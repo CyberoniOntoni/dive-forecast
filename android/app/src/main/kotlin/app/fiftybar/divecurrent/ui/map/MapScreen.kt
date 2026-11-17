@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.ui.draw.shadow
 import app.fiftybar.divecurrent.ui.components.Tab
 import app.fiftybar.divecurrent.ui.components.TabIcons
 import androidx.compose.foundation.clickable
@@ -210,7 +209,7 @@ fun MapScreen(
       )
       Column(
         // Several legends can be on at once: they scroll rather than run off a small screen.
-        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = TOP_BAR_ROOM - 8.dp, end = 12.dp, bottom = 88.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
+        Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = TOP_BAR_ROOM - 8.dp, end = 12.dp, bottom = 12.dp).widthIn(max = 300.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(8.dp),
       ) {
@@ -253,28 +252,23 @@ fun MapScreen(
             .padding(top = TOP_BAR_ROOM),
       )
     }
-    ViewPill(
-      listOpen = listOpen,
-      // Over the map the pill is the only status line, so it says what the list's header would: no current hour or
-      // an offline copy before the count.
-      label =
-        when {
-          state.loading && state.rows.isEmpty() -> "List"
-          state.rows.isEmpty() && state.error != null -> "List · could not load"
-          state.outdatedWall != null -> "List · no current hour"
-          state.fromCache && state.error != null -> "List · offline copy"
-          shown.size == state.rows.size -> "List · ${shown.size} sites"
-          else -> "List · ${shown.size} of ${state.rows.size}"
-        },
-      loading = state.loading,
-      onClick = { listOpen = !listOpen },
-      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
-    )
     TopBar(
       query = query,
       onQuery = { query = it },
       // Matches show in the list, above the keyboard.
       onSearchFocus = { listOpen = true },
+      listOpen = listOpen,
+      onToggleList = { listOpen = !listOpen },
+      loading = state.loading,
+      // Over the map nothing else says the data is old or missing, so a chip does, in the list's words.
+      status =
+        when {
+          state.loading -> null
+          state.rows.isEmpty() && state.error != null -> "Could not load"
+          state.outdatedWall != null -> "No current hour"
+          state.fromCache && state.error != null -> "Offline copy"
+          else -> null
+        },
       atolls = atolls,
       atollId = atollId,
       onAtoll = ::pickAtoll,
@@ -431,8 +425,7 @@ private fun NowList(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
       )
     }
-    // Room at the end for the Map pill floating over the list.
-    LazyColumn(Modifier.fillMaxWidth(), state = listState, contentPadding = PaddingValues(bottom = 88.dp)) {
+    LazyColumn(Modifier.fillMaxWidth(), state = listState, contentPadding = PaddingValues(bottom = 16.dp)) {
       items(rows, key = { it.site.id }) { row ->
         NowRow(row, onClick = { onOpenSite(row.site.id) })
         HorizontalDivider(color = colors.line, modifier = Modifier.padding(start = 68.dp))
@@ -474,6 +467,10 @@ private fun TopBar(
   query: String,
   onQuery: (String) -> Unit,
   onSearchFocus: () -> Unit,
+  listOpen: Boolean,
+  onToggleList: () -> Unit,
+  loading: Boolean,
+  status: String?,
   atolls: List<SiteSearch.AtollChoice>,
   atollId: String,
   onAtoll: (String) -> Unit,
@@ -499,7 +496,8 @@ private fun TopBar(
       ) {
         Icon(Icons.Filled.Search, contentDescription = null, tint = colors.mist, modifier = Modifier.size(22.dp))
         Box(Modifier.weight(1f).padding(start = 10.dp), contentAlignment = Alignment.CenterStart) {
-          if (query.isEmpty()) Text("Find a site or atoll", style = MaterialTheme.typography.bodyLarge, color = colors.dim)
+          // Short, so it fits beside the List and layers buttons on a narrow phone; the field's label says the rest.
+          if (query.isEmpty()) Text("Search sites", style = MaterialTheme.typography.bodyLarge, color = colors.dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
           BasicTextField(
             value = query,
             onValueChange = onQuery,
@@ -513,6 +511,7 @@ private fun TopBar(
         }
         if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }, modifier = Modifier.size(44.dp)) { Icon(Icons.Filled.Clear, "Clear the search") }
       }
+      ViewToggle(listOpen, loading, onToggleList)
       Box {
         IconButton(
           onClick = onLayers,
@@ -530,6 +529,7 @@ private fun TopBar(
       horizontalArrangement = Arrangement.spacedBy(8.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
+      status?.let { StatusChip(it) }
       AtollChip(atolls, atollId, onAtoll)
       if (counts != null) for (s in NowCounts.ORDER) {
         CountChip(s, counts.of(s), selected = strength == s) { onStrength(s) }
@@ -539,27 +539,41 @@ private fun TopBar(
 }
 
 /**
- * Map or list: a light pill floating over the map (or the list), clearly apart from the tab bar under it. Shows what a
- * tap switches to.
+ * Map or list, beside the layers button and styled like it (dark glass), so it reads as part of the map's controls
+ * and stays clear of the tab bar. Shows what a tap switches to; a small spinner takes the icon's place while loading.
  */
 @Composable
-private fun ViewPill(listOpen: Boolean, label: String, loading: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun ViewToggle(listOpen: Boolean, loading: Boolean, onClick: () -> Unit) {
   val colors = CurrentTheme.colors
   Row(
-    modifier
-      .shadow(10.dp, CircleShape)
+    Modifier.height(52.dp)
       .clip(CircleShape)
-      .background(colors.foam)
+      .background(colors.glass)
+      .border(1.dp, colors.line, CircleShape)
       .clickable(onClickLabel = if (listOpen) "Show the map" else "Show the list", onClick = onClick)
-      .heightIn(min = 48.dp)
-      .padding(horizontal = 20.dp),
+      .padding(start = 14.dp, end = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(8.dp),
   ) {
-    // Loading shows as a small spinner in the icon's place, over the map where the list's progress bar is hidden.
-    if (loading && !listOpen) CircularProgressIndicator(color = colors.ink, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-    else Icon(if (listOpen) TabIcons.of(Tab.Now) else ListIcon, contentDescription = null, tint = colors.ink, modifier = Modifier.size(20.dp))
-    Text(if (listOpen) "Map" else label, style = MaterialTheme.typography.labelLarge, color = colors.ink, maxLines = 1)
+    if (loading) CircularProgressIndicator(color = colors.foam, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+    else Icon(if (listOpen) TabIcons.of(Tab.Now) else ListIcon, contentDescription = null, tint = colors.foam, modifier = Modifier.size(20.dp))
+    Text(if (listOpen) "Map" else "List", style = MaterialTheme.typography.labelLarge, color = colors.foam, maxLines = 1)
+  }
+}
+
+/** "Offline copy", "No current hour": the data's state, in amber, first in the chip row. */
+@Composable
+private fun StatusChip(text: String) {
+  val colors = CurrentTheme.colors
+  Box(
+    Modifier.heightIn(min = 40.dp)
+      .clip(CircleShape)
+      .background(colors.glass)
+      .border(1.dp, colors.outgoing, CircleShape)
+      .padding(horizontal = 14.dp),
+    contentAlignment = Alignment.Center,
+  ) {
+    Text(text, style = MaterialTheme.typography.labelLarge, color = colors.outgoing, maxLines = 1)
   }
 }
 

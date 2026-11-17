@@ -22,8 +22,10 @@ What it does:
   name; `domain/SiteSearch.kt`) with the layers button, and under it a row of chips: the atoll (the web list's atoll
   picker, which also moves the map to that atoll), then how many sites run very strong, strong, mild and slack now
   (`domain/NowCounts.kt`; tap a count to show only those sites, on the map and the list). They sit over the map and the list.
-- **Now list**: a light "List" pill floating over the map, apart from the tab bar, swaps the map for the list of sites
-  strongest first, as the web list does; its "Map" pill (or Back) swaps back. Searching opens the list.
+- **Now list**: the "List" button beside the layers button (dark glass like it, clear of the tab bar) swaps the map for
+  the list of sites strongest first, as the web list does; the same button, now "Map", or Back swaps back. Searching
+  opens the list. While loading the button shows a spinner, and an amber chip first in the chip row says when the data
+  is an offline copy, has no current hour, or could not load.
 - **Site page** (`ui/site/SiteHero.kt`, `SiteForecast.kt`, `domain/SiteOutlook.kt`), opened on the current Maldives
   hour: a satellite header round the pin (Esri World Imagery tiles at zoom 16) with faint streaks drifting the way the
   hour's water runs; the hour's strength in its colour, the arrow on a compass (it swings to a new heading), the way
