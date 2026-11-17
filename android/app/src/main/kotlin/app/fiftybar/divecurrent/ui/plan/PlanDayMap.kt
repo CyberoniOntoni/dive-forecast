@@ -1,5 +1,8 @@
 package app.fiftybar.divecurrent.ui.plan
 
+import android.content.Context
+import android.view.MotionEvent
+import android.widget.FrameLayout
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -128,7 +131,7 @@ fun PlanDayMap(stops: List<ApiPlanStop>, legs: List<ApiPlanLeg>, colors: Current
         stops.mapIndexed { at, stop ->
           Feature.fromGeometry(Point.fromLngLat(stop.lon, stop.lat)).apply {
             addStringProperty("number", "${at + 1}")
-            addStringProperty("color", String.format("#%06x", stopColor(stop, colors) and 0xFFFFFF))
+            addStringProperty("color", String.format("#%06x", toneColor(stop.tone, colors).toArgb() and 0xFFFFFF))
           }
         }
       )
@@ -149,17 +152,20 @@ fun PlanDayMap(stops: List<ApiPlanStop>, legs: List<ApiPlanLeg>, colors: Current
   }
 
   val spoken = stops.mapIndexed { at, stop -> "${at + 1}. ${stop.name}" }.joinToString(", ")
-  AndroidView(factory = { mapView }, modifier = modifier.semantics { contentDescription = "Map of the day's dives: $spoken" })
+  // Wrapped so it takes no touch at all: a drag that starts on the map scrolls the plan, as on any other card.
+  AndroidView(
+    factory = { StillFrame(it).apply { addView(mapView) } },
+    modifier = modifier.semantics { contentDescription = "Map of the day's dives: $spoken" },
+  )
 }
 
-/** The web plan page's marker colours (lib/plan-words.ts stopTone, sent as `tone`). */
-private fun stopColor(stop: ApiPlanStop, colors: CurrentColors): Int =
-  when (stop.tone) {
-    "stop" -> colors.stop
-    "incoming" -> colors.incoming
-    "outgoing" -> colors.outgoing
-    else -> colors.foam
-  }.toArgb()
+/**
+ * Holds the map and turns every touch down, so the map never claims a gesture (MapLibre's view takes one and asks the
+ * list not to intercept it, even with its own gestures off) and the scrolling list gets it instead.
+ */
+private class StillFrame(context: Context) : FrameLayout(context) {
+  override fun dispatchTouchEvent(event: MotionEvent?): Boolean = false
+}
 
 private fun addDayLayers(style: Style, colors: CurrentColors) {
   val empty = FeatureCollection.fromFeatures(emptyList())

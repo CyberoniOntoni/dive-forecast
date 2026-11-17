@@ -240,7 +240,8 @@ private fun Badge(text: String, color: Color) {
   )
 }
 
-private fun toneColor(tone: String, colors: CurrentColors): Color =
+/** A dive's marker colour from its outlook (`tone`), in the list and on the day map alike. */
+internal fun toneColor(tone: String, colors: CurrentColors): Color =
   when (tone) {
     "incoming" -> colors.incoming
     "outgoing" -> colors.outgoing
