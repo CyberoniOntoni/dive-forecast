@@ -61,3 +61,6 @@ val Typography =
     labelMedium = text(12.0, 16, FontWeight.SemiBold),
     labelSmall = text(11.0, 16, FontWeight.SemiBold, 0.1),
   )
+
+/** The small capitals over a card cell or readout ("TIDE", "FLOW NEXT"); pass them upper-cased. */
+val Eyebrow = text(11.5, 14, FontWeight.SemiBold, 0.12)

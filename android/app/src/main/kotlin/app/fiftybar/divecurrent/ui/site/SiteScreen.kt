@@ -1,6 +1,26 @@
 package app.fiftybar.divecurrent.ui.site
 
 import android.content.Intent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
+import app.fiftybar.divecurrent.ui.components.TabIcons
+import app.fiftybar.divecurrent.ui.components.rememberReducedMotion
+import kotlinx.coroutines.launch
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -17,7 +37,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -34,22 +53,19 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,7 +76,6 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,27 +83,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiForecast
 import app.fiftybar.divecurrent.data.api.ApiHour
-import app.fiftybar.divecurrent.data.api.ApiSeaStateHour
 import app.fiftybar.divecurrent.data.api.ApiSite
-import app.fiftybar.divecurrent.data.api.SeaBand
-import app.fiftybar.divecurrent.domain.Glance
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
-import app.fiftybar.divecurrent.domain.compassWord
-import app.fiftybar.divecurrent.domain.confidenceLabel
 import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.domain.glance
-import app.fiftybar.divecurrent.domain.heightLabel
-import app.fiftybar.divecurrent.domain.seaBandLabel
-import app.fiftybar.divecurrent.domain.windLabel
-import app.fiftybar.divecurrent.ui.components.CurrentArrow
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SiteScreen(
   siteId: String,
@@ -113,95 +119,176 @@ fun SiteScreen(
   }
   val colors = CurrentTheme.colors
   val context = LocalContext.current
-  val hours = state.forecast?.hours.orEmpty()
-  val selectedTime = hours.getOrNull(state.selected)?.time
+  val scope = rememberCoroutineScope()
+  val reducedMotion = rememberReducedMotion()
+  val scroll = rememberScrollState()
+  val forecast = state.forecast
+  val hours = forecast?.hours.orEmpty()
+  // "Now" moves on while the page stays open (a boat day): the week is re-read when the Maldives hour changes.
+  var nowHour by remember { mutableStateOf(MaldivesTime.nowHour()) }
+  LaunchedEffect(Unit) {
+    while (true) {
+      delay(60_000)
+      nowHour = MaldivesTime.nowHour()
+    }
+  }
+  val week = remember(forecast, nowHour) { forecast?.takeIf { it.hours.isNotEmpty() }?.let { WeekView(it) } }
+  val selected = state.selected.coerceIn(0, hours.lastIndex.coerceAtLeast(0))
+  val selectedGlance = week?.glances?.getOrNull(selected)
+  val site = state.site?.takeIf { !state.notFound }
+  // Past the header the page gets a solid strip with the site's name behind the floating buttons.
+  val heroPx = with(LocalDensity.current) { HERO_HEIGHT.toPx() }
+  val pastHero by remember { derivedStateOf { scroll.value > heroPx * 0.7f } }
 
   Scaffold(
     containerColor = colors.ink,
-    topBar = {
-      TopAppBar(
-        title = { Text(state.site?.name ?: "Site", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } },
-        actions = {
-          IconButton(onClick = viewModel::refresh) { Icon(Icons.Filled.Refresh, "Refresh the forecast") }
-          IconButton(
-            onClick = {
-              val url = shareText(siteId, state.site?.name, hours.getOrNull(state.selected))
-              val send =
-                Intent(Intent.ACTION_SEND).apply {
-                  type = "text/plain"
-                  putExtra(Intent.EXTRA_TEXT, url)
-                }
-              context.startActivity(Intent.createChooser(send, "Share this hour"))
-            }
+    contentWindowInsets = WindowInsets(0),
+    bottomBar = {
+      if (site != null) {
+        Row(
+          Modifier.fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(colors.ink.copy(alpha = 0f), colors.ink, colors.ink)))
+            .navigationBarsPadding()
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
+          horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+          Button(
+            onClick = { scope.launch { reportFocus.bringIntoView() } },
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.incoming, contentColor = colors.ink),
+            modifier = Modifier.weight(1f).height(56.dp),
           ) {
-            Icon(Icons.Filled.Share, "Share this hour")
+            Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text("  Report current", style = MaterialTheme.typography.titleMedium)
           }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
-      )
+          Button(
+            onClick = { onNavigate(site) },
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.reef, contentColor = colors.foam),
+            border = BorderStroke(1.dp, colors.edge),
+            modifier = Modifier.weight(1f).height(56.dp),
+          ) {
+            Icon(TabIcons.heading, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text("  Go by boat", style = MaterialTheme.typography.titleMedium)
+          }
+        }
+      }
     },
   ) { padding ->
-    Column(
-      Modifier.fillMaxSize()
-        .padding(padding)
-        .verticalScroll(rememberScrollState())
-        .padding(horizontal = 16.dp)
-        .navigationBarsPadding(),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-      if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-      StatusLine(state)
-      val forecast = state.forecast
-      when {
-        state.notFound -> Text("This site is not on the map any more.", color = colors.stop)
-        forecast == null -> if (!state.loading) Text(state.error ?: "No forecast yet.", color = colors.stop)
-        forecast.unavailable || hours.isEmpty() -> UnavailableCard(forecast)
-        else -> {
-          HourCard(forecast, state.selected)
-          HourPicker(forecast, state.selected, onSelect = viewModel::select, onNow = viewModel::selectNow)
-          SeaStateCard(forecast, selectedTime)
-          NoticeCard(forecast)
-        }
-      }
-      state.site?.takeIf { !state.notFound }?.let { site ->
-        OutlinedButton(onClick = { onNavigate(site) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-          Text("Navigate here by boat")
-        }
-      }
-      if (!state.notFound) {
-        Box(Modifier.bringIntoViewRequester(reportFocus)) {
-        ReportCard(
-          state = state,
-          nickname = session?.nickname,
-          timeOf = viewModel::reportTime,
-          onSignIn = onSignIn,
-          onQuick = viewModel::reportQuick,
-          onOther = viewModel::reportOther,
-          onDirection = viewModel::reportDirection,
-          onStrength = viewModel::reportStrength,
-          onSend = viewModel::sendReport,
-          onAsForecast = viewModel::sendAsForecast,
-        )
-        }
-        RecentReportsCard(state.reports, state.reportsSavedAt)
-      }
-      state.site?.let { site ->
-        val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
-        val photosState by photos.state.collectAsStateWithLifecycle()
-        AboutCard(site, photoUrl = viewModel::photoUrl) {
-          if (site.userAdded && photosState.isAdder && session != null) {
-            AdderPhotos(site, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
+    Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())) {
+      Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
+        // The streaks stop once the header has scrolled away, so the page does not draw every frame for nothing.
+        SiteHero(site = state.site, glance = selectedGlance, reducedMotion = reducedMotion || pastHero)
+        Column(
+          Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+          if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
+          when {
+            state.notFound -> Text("This site is not on the map any more.", color = colors.stop)
+            forecast == null -> if (!state.loading) Text(state.error ?: "No forecast yet.", color = colors.stop)
+            forecast.unavailable || week == null -> {
+              UnavailableCard(forecast)
+              StatusLine(state)
+            }
+            else -> {
+              HourCard(week, selected, reducedMotion)
+              if (selectedGlance?.estimatedHeading == true) {
+                Text(
+                  "The arrow's heading is an estimate: this site's bearing is not measured or taken from the atoll rim.",
+                  style = MaterialTheme.typography.bodySmall,
+                  color = colors.mist,
+                )
+              }
+              StatusLine(state)
+              DayChart(week, selected, onSelect = viewModel::select, onNow = viewModel::selectNow, reducedMotion = reducedMotion)
+              SeaTiles(week, forecast, selected)
+              NoticeCard(forecast)
+            }
           }
+          if (forecast == null) StatusLine(state)
+          if (!state.notFound) {
+            Box(Modifier.bringIntoViewRequester(reportFocus)) {
+              ReportCard(
+                state = state,
+                nickname = session?.nickname,
+                timeOf = viewModel::reportTime,
+                onSignIn = onSignIn,
+                onQuick = viewModel::reportQuick,
+                onOther = viewModel::reportOther,
+                onDirection = viewModel::reportDirection,
+                onStrength = viewModel::reportStrength,
+                onSend = viewModel::sendReport,
+                onAsForecast = viewModel::sendAsForecast,
+              )
+            }
+            RecentReportsCard(state.reports, state.reportsSavedAt)
+          }
+          state.site?.let { s ->
+            val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
+            val photosState by photos.state.collectAsStateWithLifecycle()
+            AboutCard(s, photoUrl = viewModel::photoUrl) {
+              if (s.userAdded && photosState.isAdder && session != null) {
+                AdderPhotos(s, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
+              }
+            }
+          }
+          if (!state.notFound) {
+            val reviews: ReviewsViewModel = viewModel(key = "reviews/$siteId") { ReviewsViewModel(siteId, repository, account) }
+            val reviewsState by reviews.state.collectAsStateWithLifecycle()
+            ReviewsCard(reviewsState, signedIn = session != null, viewModel = reviews, onSignIn = onSignIn)
+          }
+          Spacer(Modifier.height(24.dp))
         }
       }
-      if (!state.notFound) {
-        val reviews: ReviewsViewModel = viewModel(key = "reviews/$siteId") { ReviewsViewModel(siteId, repository, account) }
-        val reviewsState by reviews.state.collectAsStateWithLifecycle()
-        ReviewsCard(reviewsState, signedIn = session != null, viewModel = reviews, onSignIn = onSignIn)
+      // The buttons float over the header and stay put; once it has scrolled away a strip with the name backs them.
+      AnimatedVisibility(visible = pastHero, enter = fadeIn(), exit = fadeOut()) {
+        Box(Modifier.fillMaxWidth().background(colors.ink).statusBarsPadding().height(60.dp)) {
+          Text(
+            state.site?.name ?: "",
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.CenterStart).padding(start = 72.dp, end = 120.dp),
+          )
+        }
       }
-      Spacer(Modifier.height(24.dp))
+      Row(
+        Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        RoundButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+        Spacer(Modifier.weight(1f))
+        RoundButton(onClick = viewModel::refresh) { Icon(Icons.Filled.Refresh, "Refresh the forecast") }
+        Spacer(Modifier.width(8.dp))
+        RoundButton(
+          onClick = {
+            val text = shareText(siteId, state.site?.name, hours.getOrNull(selected))
+            val send =
+              Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+              }
+            context.startActivity(Intent.createChooser(send, "Share this hour"))
+          }
+        ) {
+          Icon(Icons.Filled.Share, "Share this hour")
+        }
+      }
     }
+  }
+}
+
+/** A 44 dp glass circle that reads over the satellite header and over the page alike. */
+@Composable
+private fun RoundButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+  val colors = CurrentTheme.colors
+  IconButton(
+    onClick = onClick,
+    modifier = Modifier.size(44.dp).clip(CircleShape).background(colors.ink.copy(alpha = 0.6f)).border(1.dp, colors.line, CircleShape),
+    colors = IconButtonDefaults.iconButtonColors(contentColor = colors.foam),
+  ) {
+    content()
   }
 }
 
@@ -244,124 +331,6 @@ internal fun SurfaceCard(content: @Composable () -> Unit) {
     modifier = Modifier.fillMaxWidth(),
   ) {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
-  }
-}
-
-@Composable
-private fun HourCard(forecast: ApiForecast, selected: Int) {
-  val colors = CurrentTheme.colors
-  val hour = forecast.hours.getOrNull(selected) ?: return
-  val g: Glance? = glance(hour)
-  SurfaceCard {
-    Text(MaldivesTime.label(hour.time) + " Maldives", style = MaterialTheme.typography.labelLarge)
-    if (g == null) {
-      Text("No reading for this hour.")
-      return@SurfaceCard
-    }
-    val way = g.wayToward
-    Row(
-      verticalAlignment = Alignment.CenterVertically,
-      modifier =
-        Modifier.semantics(mergeDescendants = true) {
-          contentDescription = "$way, ${g.label}, ${confidenceLabel(g.confidence)} confidence"
-        },
-    ) {
-      CurrentArrow(bearing = g.arrowBearing, color = colors.tone(g.tone), alpha = g.opacity, size = 72.dp)
-      Spacer(Modifier.width(16.dp))
-      Column {
-        Text(
-          g.label.replaceFirstChar { it.uppercase() },
-          style = MaterialTheme.typography.headlineMedium,
-          fontWeight = FontWeight.Bold,
-          color = colors.tone(g.tone),
-        )
-        Text(way, style = MaterialTheme.typography.titleMedium)
-        Text("${confidenceLabel(g.confidence).replaceFirstChar { it.uppercase() }} confidence", style = MaterialTheme.typography.bodyMedium)
-      }
-    }
-    if (g.estimatedHeading) {
-      Text(
-        "The arrow's heading is an estimate: this site's bearing is not measured or taken from the atoll rim.",
-        style = MaterialTheme.typography.bodySmall,
-        color = colors.foam.copy(alpha = 0.75f),
-      )
-    }
-  }
-}
-
-@Composable
-private fun HourPicker(forecast: ApiForecast, selected: Int, onSelect: (Int) -> Unit, onNow: () -> Unit) {
-  val colors = CurrentTheme.colors
-  val hours = forecast.hours
-  SurfaceCard {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-      Text(MaldivesTime.dayLabel(hours[selected].time), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-      TextButton(onClick = onNow, modifier = Modifier.heightIn(min = 44.dp)) { Text("Now") }
-    }
-    ForecastStrip(
-      hours = hours,
-      glances = hours.map { glance(it) },
-      seaState = forecast.seaState,
-      selected = selected,
-      onSelect = onSelect,
-      colors = colors,
-    )
-    Slider(
-      value = selected.toFloat(),
-      onValueChange = { onSelect(Math.round(it)) },
-      valueRange = 0f..(hours.lastIndex.coerceAtLeast(1)).toFloat(),
-      steps = (hours.size - 2).coerceAtLeast(0),
-      modifier = Modifier.semantics { contentDescription = "Forecast hour, ${MaldivesTime.label(hours[selected].time)}" },
-    )
-    Row {
-      Text(MaldivesTime.label(hours.first().time), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-      Text(MaldivesTime.label(hours.last().time), style = MaterialTheme.typography.bodySmall)
-    }
-    Text(
-      "Bars: current strength each hour. Line: the residual tide. Under them, the sea state.",
-      style = MaterialTheme.typography.bodySmall,
-      color = colors.foam.copy(alpha = 0.7f),
-    )
-  }
-}
-
-@Composable
-private fun SeaStateCard(forecast: ApiForecast, time: String?) {
-  val colors = CurrentTheme.colors
-  val sea = forecast.seaState ?: return
-  SurfaceCard {
-    Text("Sea state", style = MaterialTheme.typography.titleSmall)
-    if (forecast.seaStale) {
-      Text(
-        "From old wave or wind data: the server could not refresh it.",
-        style = MaterialTheme.typography.bodySmall,
-        color = colors.foam.copy(alpha = 0.8f),
-      )
-    }
-    val hour: ApiSeaStateHour? = sea.firstOrNull { it.time == time }
-    if (hour == null) {
-      Text(if (sea.isEmpty()) "The wave forecast did not load." else "No sea state for this hour.", style = MaterialTheme.typography.bodyMedium)
-      return@SurfaceCard
-    }
-    val band = SeaBand.of(hour.band)
-    Text(
-      "${band?.let(::seaBandLabel)?.replaceFirstChar { it.uppercase() } ?: hour.band}, about ${heightLabel(hour.feltM)} felt",
-      style = MaterialTheme.typography.titleMedium,
-      color = if (band == SeaBand.Rough) colors.stop else colors.foam,
-    )
-    hour.swell?.let { s ->
-      val period = s.periodS?.let { " at ${Math.round(it)} s" } ?: ""
-      Text("Swell ${heightLabel(s.heightM)} from ${compassWord(s.fromDeg)}$period", style = MaterialTheme.typography.bodyMedium)
-    }
-    Text("Wind chop ${heightLabel(hour.windWaveM)}", style = MaterialTheme.typography.bodyMedium)
-    hour.wind?.let { Text("Wind ${windLabel(it.speedMs, it.fromDeg)}", style = MaterialTheme.typography.bodyMedium) }
-    if (hour.againstCurrent) {
-      Text(
-        "Swell runs into a strong outgoing current here: expect steep, breaking water at the channel mouth.",
-        color = colors.stop,
-        style = MaterialTheme.typography.bodyMedium,
-      )
-    }
   }
 }
 

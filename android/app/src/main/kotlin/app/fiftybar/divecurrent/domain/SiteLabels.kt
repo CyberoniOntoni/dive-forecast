@@ -24,5 +24,7 @@ fun seaBandLabel(band: SeaBand): String = band.name.lowercase()
 fun heightLabel(metres: Double): String = "%.1f m".format(metres)
 
 /** Wind in knots: what boats talk in. */
-fun windLabel(speedMs: Double, fromDeg: Double): String =
-  "${(speedMs * 1.943844).roundToInt()} kn from ${compassWord(fromDeg)}"
+fun windLabel(speedMs: Double, fromDeg: Double): String = "${windKnots(speedMs)} kn from ${compassWord(fromDeg)}"
+
+/** Metres per second to whole knots. */
+fun windKnots(speedMs: Double): Int = (speedMs * 1.943844).roundToInt()
