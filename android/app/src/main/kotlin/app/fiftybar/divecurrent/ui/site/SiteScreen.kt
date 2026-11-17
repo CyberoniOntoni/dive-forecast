@@ -112,10 +112,10 @@ fun SiteScreen(
   var reportAfterSignIn by rememberSaveable { mutableStateOf(false) }
   val signedIn = session != null
   LaunchedEffect(signedIn) {
-    if (signedIn && reportAfterSignIn) {
-      reportAfterSignIn = false
-      reportOpen = true
-    }
+    if (signedIn && reportAfterSignIn) reportOpen = true
+    // Back signed in, or back without signing in: either way the request is spent, so signing in later from the You
+    // tab does not pop the sheet up out of nowhere.
+    reportAfterSignIn = false
   }
   val forecastShown = state.forecast != null
   LaunchedEffect(reportAt, forecastShown) {
