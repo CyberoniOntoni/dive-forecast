@@ -166,6 +166,12 @@ and add four repository secrets (Settings → Secrets and variables → Actions)
 Locally the same environment variables (`ANDROID_KEYSTORE_PATH` pointing at the `.jks`, plus the three others) sign
 `./gradlew bundleRelease`; without them a release build is unsigned.
 
+The release build is shrunk by R8 (`isMinifyEnabled`, `isShrinkResources`; the app's own keep rules are in
+`app/proguard-rules.pro`). The bundle carries R8's mapping file and MapLibre's native symbol tables, so Play Console
+decodes crash traces itself and asks for no extra uploads. CI builds `bundleRelease` on every push, so a shrinking
+problem shows there; one that only shows at run time (a class R8 removed that is reached by reflection) needs a run of
+the release build on a phone before uploading.
+
 ## Layout
 
 | Path | What |
