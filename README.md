@@ -1,6 +1,6 @@
-# dive-current
+# 50Bar (dive-current)
 
-Maldives dive-site current forecast for guides and liveaboard crews. Open a site, move the time slider (about a week ahead), and read which way the current runs, how strong it is (slack, mild, strong, very strong), and how much to trust the call before the site goes on the board.
+Maldives dive-site current forecast for guides and liveaboard crews, live at [50bar.app](https://50bar.app) and on Google Play as **50Bar: Maldives Dive Currents** (Android). The brand is spelled 50Bar; the domain stays lowercase. The repository and npm package keep the older name `dive-current`. Open a site, move the time slider (about a week ahead), and read which way the current runs, how strong it is (slack, mild, strong, very strong), and how much to trust the call before the site goes on the board.
 
 The forecast uses Open-Meteo sea level and ocean current, sampled about 3 km seaward of each pin and round each atoll's outline. What it shows depends on where the site is:
 
@@ -23,6 +23,33 @@ Open [http://localhost:3000](http://localhost:3000). Widen the window past about
 npm test
 npm run build
 ```
+
+## Accounts and community
+
+Reading forecasts needs no account. Filing dive reports, rating and reviewing sites, adding sites and saving dive plans need a diver signed in with an emailed six-digit code (sent through Cloudflare Email Sending, Mailgun as fallback). Only nicknames are ever shown. Reports earn points and badges on the public [scoreboard](https://50bar.app/scoreboard), and each diver has a public page with an optional "About me".
+
+Because divers post reviews, photos, sites and profiles, the app follows Google Play's user-generated content rules:
+
+- **[/terms](https://50bar.app/terms)**: the content rules. A diver agrees to them at sign-in before posting anything others see.
+- **Report and Block**, on the web and in the app: Report sends a review, site or diver to the moderators (by email, and on `/moderation`); Block hides a diver's reviews and site notes from the one who blocked them.
+- **`/moderation`**, for the addresses in the `MODERATOR_EMAILS` secret: remove content, ban a diver, or dismiss a report.
+- **Delete account**, on `/account` or the app's You tab (`DELETE /api/v1/me`): the account, codes, plans, ratings, reviews and photos go at once; dive reports stay without a name so they keep teaching the forecast.
+
+**[/privacy](https://50bar.app/privacy)** (`app/privacy/page.tsx`) is the policy Google Play links to. It describes what the code collects and keeps, so change it with any change to that. Privacy questions go to privacy@50bar.app (Cloudflare Email Routing).
+
+A store-review account (`lib/review-account.ts`) lets Google's reviewers sign in with a fixed code and no email. Its address and code are worker secrets (`REVIEW_EMAIL`, `REVIEW_CODE`; `CLOUDFLARE.md` § Sign-in) and are never written in the repository. What it posts is shown only to itself, never teaches the forecast and earns no points.
+
+User data lives in Cloudflare D1 and photos in R2; see [CLOUDFLARE.md](CLOUDFLARE.md) for the Workers deployment.
+
+## Android app
+
+The Kotlin/Compose app is in [`android/`](android/README.md), built over the same JSON API (`app/api/v1/*`, [API.md](API.md)), so the forecast model lives only on the server. Package `app.fiftybar` (permanent once published).
+
+- **Saved atolls**: save an atoll for use without signal: every site's page, week of forecast and recent reports, the Allen Coral Atlas tiles, and our own Sentinel-2 imagery (Esri and OpenStreetMap tiles are never downloaded ahead, as their terms forbid it).
+- **Release**: `.github/workflows/android-release.yml` builds a signed `.aab` with the upload key from four repository secrets (run it from the Actions tab or push a tag `android-v1.0.1`); the `versionCode` is the run number. The release build is shrunk by R8, and its mapping file ships in the bundle.
+- **Edge to edge** comes from the theme XML, not `enableEdgeToEdge()`, so Play does not flag deprecated window APIs; `android/scripts/check-window-apis.sh` fails CI if any shipped code uses them again.
+
+Details, secrets and the release steps: [android/README.md](android/README.md) § Releasing to Google Play.
 
 ## Map
 
