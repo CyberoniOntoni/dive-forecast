@@ -113,16 +113,16 @@ export type LoginResult =
 /** A sign-in by a diver who has not agreed to the content rules, without the box ticked. */
 export const TERMS_NEEDED = "Agree to the content rules and privacy policy to sign in.";
 
-/**
- * Checks a code against the address's live one. A right code ends it and signs in; a new address also needs a
- * nickname, and becomes a user. A wrong code counts against the code's tries, so the result is returned, not thrown,
- * for the count to be saved.
- */
 /** Ids of store-review accounts (`User.storeReview`): their reports are app reviewers trying the form, not dives. */
 export function storeReviewIds(users: readonly Pick<User, "id" | "storeReview">[]): Set<string> {
   return new Set(users.filter((user) => user.storeReview).map((user) => user.id));
 }
 
+/**
+ * Checks a code against the address's live one. A right code ends it and signs in; a new address also needs a
+ * nickname, and becomes a user. A wrong code counts against the code's tries, so the result is returned, not thrown,
+ * for the count to be saved.
+ */
 export function finishLogin(
   store: StoreData,
   email: string,

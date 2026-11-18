@@ -23,7 +23,7 @@ import { localPath } from "./sign-in";
 import { appSetting } from "./cloudflare";
 import { hasAcceptedTerms, isModeratorEmail, requireTermsAccepted } from "./moderation";
 import { deletePhotoBytes } from "./site-photos";
-import { listMergedSites, mutateStore, readStore } from "./store";
+import { countedReports, listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean; needsTerms?: boolean };
@@ -190,7 +190,7 @@ export type BadgeView = { id: BadgeId; label: string; detail: string; earned: bo
 export type DiverNumbers = Omit<DiverStats, "userId" | "nickname" | "badges">;
 
 function allDiverStats(store: StoreData): DiverStats[] {
-  return diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
+  return diverStats(countedReports(store), store.users, listMergedSites(), Date.now(), store.ratings);
 }
 
 /** One diver's numbers, every badge (earned or not) and their ranks, worked out from the whole store. */
@@ -298,7 +298,7 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
   const store = readStore();
   const nickname = new Map(store.users.map((user) => [user.id, user.nickname]));
   const reviewers = storeReviewIds(store.users);
-  const scouts = siteScouts(store.sites, store.users.filter((user) => !reviewers.has(user.id)), store.reports)
+  const scouts = siteScouts(store.sites, store.users.filter((user) => !reviewers.has(user.id)), countedReports(store))
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,

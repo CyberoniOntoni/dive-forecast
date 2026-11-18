@@ -43,8 +43,9 @@ import {
   readStore,
   removeRating,
   removeReviewPhotoRecord,
+  countedReports,
+  visibleReportsForSite,
   forecastReportsForSite,
-  reportsForSite,
   saveRating,
   saveReviewText,
 } from "./store";
@@ -195,14 +196,14 @@ export async function rateSite(siteId: string, score: number): Promise<RatingSum
   if (!findSite(siteId)) throw new Error("Unknown site");
   requireRatingScore(score);
   await saveRating({ siteId, score, updatedAt: new Date().toISOString(), userId: session.userId });
-  return ratingSummary(ratingsForSite(siteId), session.userId);
+  return ratingSummary(ratingsForSite(siteId, session.userId), session.userId);
 }
 
 /** The site's ratings, and the signed-in diver's own (never another diver's: the id comes from the session). */
 export async function getRating(siteId: string): Promise<RatingSummary> {
   await ready();
   const session = await currentSession();
-  return ratingSummary(ratingsForSite(siteId), session?.userId ?? null);
+  return ratingSummary(ratingsForSite(siteId, session?.userId ?? null), session?.userId ?? null);
 }
 
 /** One diver's review of a site: their score, what they wrote and their photos. */
@@ -238,7 +239,7 @@ export async function getSiteReviews(siteId: string, options?: { signedOut?: boo
 }
 
 function siteReviews(siteId: string, userId: string | null): SiteReviews {
-  const ratings = ratingsForSite(siteId);
+  const ratings = ratingsForSite(siteId, userId);
   const store = readStore();
   const nicknames = new Map(store.users.map((user) => [user.id, user.nickname]));
   // Divers this one blocked: their reviews and photos are not shown to them.
@@ -423,7 +424,7 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
       direction: direction as Direction,
       strength: strength as Strength,
     });
-    return { success: true, error: null, award: reportAwards(readStore().reports).get(report.id) ?? null };
+    return { success: true, error: null, award: reportAwards(countedReports(readStore())).get(report.id) ?? null };
   } catch (caught) {
     const error = caught instanceof Error ? caught.message : "Could not add that report.";
     return { success: false, error };
@@ -505,12 +506,14 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
 
 /**
  * The site's newest reports, as the site page lists them. On any route but "channel" the site's forecast reads as a
- * compass direction, so older in/out reports there are marked.
+ * compass direction, so older in/out reports there are marked. The store-review account's show only to itself; with
+ * `signedOut` (the API's shared, cached answer) to nobody.
  */
-export async function getRecentReports(siteId: string, route: ForecastRoute): Promise<RecentReportRow[]> {
+export async function getRecentReports(siteId: string, route: ForecastRoute, options?: { signedOut?: boolean }): Promise<RecentReportRow[]> {
   await ready();
   requireSiteId(siteId);
-  return recentReportRows(reportsForSite(siteId), {
+  const session = options?.signedOut ? null : await currentSession();
+  return recentReportRows(visibleReportsForSite(siteId, session?.userId ?? null), {
     nowWall: toMaldivesWall(new Date().toISOString()),
     route,
     nicknames: new Map(readStore().users.map((user) => [user.id, user.nickname])),
@@ -643,7 +646,8 @@ function requireNotAhead(time: string, zone: SiteTimeZone, nowMs: number): void 
 }
 
 function requireNotDuplicate(siteId: string, time: string, direction: Direction, strength: Strength, nowMs: number): void {
-  const repeat = reportsForSite(siteId).some((report) => {
+  // The store-review account's reports never block a real one (lib/review-account.ts).
+  const repeat = forecastReportsForSite(siteId).some((report) => {
     if (report.time !== time || report.direction !== direction || report.strength !== strength) return false;
     const filed = report.filedAt ? Date.parse(report.filedAt) : Number.NaN;
     return Number.isFinite(filed) && nowMs - filed < DUPLICATE_WINDOW_MS;

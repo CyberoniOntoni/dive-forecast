@@ -171,17 +171,45 @@ export function reportsForSite(siteId: string): Report[] {
 
 /**
  * The site's reports that teach the forecast: all of them but the store-review account's (lib/review-account.ts),
- * whose reports are app reviewers trying the form, not dives. They still show on the site page like any report.
+ * whose reports are app reviewers trying the form, not dives. Listed only to the reviewer (visibleReportsForSite).
  */
 export function forecastReportsForSite(siteId: string): Report[] {
-  const store = readStore();
-  const reviewers = storeReviewIds(store.users);
-  return store.reports.filter((report) => report.siteId === siteId && !(report.userId && reviewers.has(report.userId)));
+  return countedReports(readStore()).filter((report) => report.siteId === siteId);
 }
 
-/** The site's ratings that count: a rating its diver removed is left out. */
-export function ratingsForSite(siteId: string): Rating[] {
-  return readStore().ratings.filter((rating) => rating.siteId === siteId && !rating.removedAt);
+/**
+ * Reports that count: for the forecast, points, awards and the scoreboard. All but the store-review account's
+ * (`User.storeReview`), which are app reviewers trying the form, not dives.
+ */
+export function countedReports(store: Pick<StoreData, "reports" | "users">): Report[] {
+  const reviewers = storeReviewIds(store.users);
+  return reviewers.size ? store.reports.filter((report) => !(report.userId && reviewers.has(report.userId))) : store.reports;
+}
+
+/**
+ * The site's reports as `viewerId` sees them listed: the store-review account's only to itself, so a reviewer's
+ * made-up current never shows to divers checking the site.
+ */
+export function visibleReportsForSite(siteId: string, viewerId: string | null): Report[] {
+  const store = readStore();
+  const reviewers = storeReviewIds(store.users);
+  return store.reports.filter((report) => report.siteId === siteId && !hiddenReviewerContent(report.userId, reviewers, viewerId));
+}
+
+/**
+ * The site's ratings that count: a rating its diver removed is left out, and the store-review account's is seen only
+ * by itself (it moves no average anyone else sees).
+ */
+export function ratingsForSite(siteId: string, viewerId: string | null = null): Rating[] {
+  const store = readStore();
+  const reviewers = storeReviewIds(store.users);
+  return store.ratings.filter(
+    (rating) => rating.siteId === siteId && !rating.removedAt && !hiddenReviewerContent(rating.userId, reviewers, viewerId),
+  );
+}
+
+function hiddenReviewerContent(authorId: string | undefined, reviewers: Set<string>, viewerId: string | null): boolean {
+  return authorId != null && reviewers.has(authorId) && authorId !== viewerId;
 }
 
 /** Adds an app-added pin. With `perDay`, throws when its adder already added that many in the last 24 hours. */
