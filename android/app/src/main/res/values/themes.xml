@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Edge to edge from the theme, not from code: androidx.activity's enableEdgeToEdge() sets the bar colours and
-         the cutout mode with Window.setStatusBarColor, setNavigationBarColor and LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES,
-         which Android 15 deprecates and Play Console flags. MainActivity only lets the content draw behind the bars;
-         Compose pads each screen by the insets. The app is dark day and night, so the bar icons are always light. -->
-    <style name="Theme.DiveCurrent" parent="android:Theme.Material.NoActionBar">
+    <!-- Edge to edge from the theme rather than enableEdgeToEdge(): android/README.md § Releasing to Google Play.
+         Each item is set once: the values-v27/v29/v30 files only add their own items on top of the previous level. -->
+    <style name="Base.Theme.DiveCurrent" parent="android:Theme.Material.NoActionBar">
         <!-- Dark navy window before Compose draws, so launch does not flash white. -->
         <item name="android:windowBackground">@color/ink</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <!-- Below Android 10 there is no contrast scrim, so the bar keeps the dark scrim enableEdgeToEdge() used. -->
+        <!-- Below Android 10 there is no contrast scrim, so the navigation bar keeps a dark one. -->
         <item name="android:navigationBarColor">@color/nav_scrim</item>
+        <!-- The app is dark day and night, so the bar icons are always light. -->
         <item name="android:windowLightStatusBar">false</item>
     </style>
+
+    <style name="Theme.DiveCurrent" parent="Base.Theme.DiveCurrent" />
 </resources>

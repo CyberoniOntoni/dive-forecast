@@ -24,10 +24,8 @@ class MainActivity : ComponentActivity() {
     // back stack, so only a fresh start reads the link.
     val startPlanId = if (savedInstanceState == null) PlanLink.idOf(intent?.data?.path) else null
 
-    // Edge to edge on every Android version, as Android 15 enforces it. Not androidx.activity's enableEdgeToEdge():
-    // it calls Window.setStatusBarColor/setNavigationBarColor and sets LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES, all
-    // deprecated in Android 15 and flagged by Play Console. The bar colours, icon tone and cutout mode are in the theme
-    // (res/values*/themes.xml); this only lets the content draw behind the bars.
+    // Edge to edge without enableEdgeToEdge(): bars and cutout mode are in the theme (android/README.md § Releasing
+    // to Google Play).
     WindowCompat.setDecorFitsSystemWindows(window, false)
     setContent {
       DiveCurrentTheme {

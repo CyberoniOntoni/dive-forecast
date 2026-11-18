@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Fails if the release bundle's code calls a Window API that Android 15 deprecates for edge to edge. Play Console
-# flags these on every upload ("Your app uses deprecated APIs or parameters for edge-to-edge"); they came from
-# androidx.activity's enableEdgeToEdge() before MainActivity moved the bar setup to the theme. Run after bundleRelease.
-# LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES is an int constant, so it cannot be told apart in the dex: keep it out of
-# code by hand (the theme sets the cutout mode).
+# Fails if the release bundle's code uses what Play Console flags as deprecated for edge to edge (Android 15):
+# Window.setStatusBarColor, Window.setNavigationBarColor, and LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES. Why the app
+# avoids them: android/README.md § Releasing to Google Play. Run from android/ after bundleRelease.
+#
+# SHORT_EDGES is the int 1, so it shows in the dex only as a write of 1 to WindowManager.LayoutParams
+# .layoutInDisplayCutoutMode: the check follows each such write back to the register's last constant in the method.
 set -euo pipefail
 
 bundle="${1:-app/build/outputs/bundle/release/app-release.aab}"
@@ -19,11 +20,20 @@ found=0
 for dex in "$work"/base/dex/*.dex; do
   # Disassemble to a file first, so a dexdump failure stops the script rather than reading as "no calls".
   "$dexdump" -d "$dex" >"$work/dump.txt"
-  if grep -E 'Landroid/view/Window;\.(setStatusBarColor|setNavigationBarColor|setNavigationBarDividerColor):' "$work/dump.txt" >"$work/hits.txt"; then
-    echo "::error::$(basename "$dex") calls deprecated Window bar-colour APIs:"
-    sort -u "$work/hits.txt" | sed 's/^.*invoke/  invoke/'
+  if "$(dirname "$0")/find-window-apis.awk" "$work/dump.txt" >"$work/hits.txt"; then :; else
+    echo "::error::$(basename "$dex") uses Window APIs deprecated for edge to edge:"
+    sort -u "$work/hits.txt"
     found=1
   fi
 done
-[ "$found" -eq 0 ] && echo "No deprecated Window bar-colour calls in the release bundle."
+
+# The theme sets the cutout mode; shortEdges there is the same deprecated mode.
+if grep -rnE 'shortEdges|SHORT_EDGES' app/src/main --include='*.xml' --include='*.kt' --include='*.java' \
+  | grep -vE '^\S+:[0-9]+:\s*(//|\*|<!--)|Never shortEdges' >"$work/src.txt"; then
+  echo "::error::The source sets the deprecated short-edges cutout mode:"
+  cat "$work/src.txt"
+  found=1
+fi
+
+[ "$found" -eq 0 ] && echo "No deprecated edge-to-edge Window APIs in the release bundle."
 exit "$found"

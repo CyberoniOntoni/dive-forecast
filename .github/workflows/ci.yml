@@ -49,8 +49,7 @@ jobs:
           cache-provider: basic
       # bundleRelease runs R8 (unsigned here), so a shrinking problem fails CI rather than a Play upload.
       - run: ./gradlew --console=plain testDebugUnitTest assembleDebug bundleRelease
-      # Play Console flags Window.setStatusBarColor/setNavigationBarColor (deprecated in Android 15) wherever they are in
-      # the shipped code, libraries included.
+      # No Window API Play flags as deprecated for edge to edge, in any shipped code (android/README.md).
       - run: scripts/check-window-apis.sh
       # The debug APK, to install and try a branch on a phone (Actions run page, Artifacts).
       - uses: actions/upload-artifact@v7

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ink">#FF04121A</color>
-    <!-- Behind the navigation bar below Android 10: the platform's dark scrim (enableEdgeToEdge()'s DefaultDarkScrim). -->
+    <!-- Behind the navigation bar below Android 10: the platform's dark scrim. -->
     <color name="nav_scrim">#801B1B1B</color>
 </resources>
