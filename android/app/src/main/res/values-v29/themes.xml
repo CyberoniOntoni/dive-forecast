@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 10+: transparent navigation bar. Gesture navigation draws nothing; 3-button navigation gets the platform's
+         own contrast scrim. No scrim under the status bar: each screen colours its own top. -->
+    <style name="V29.Theme.DiveCurrent" parent="V27.Theme.DiveCurrent">
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">true</item>
+    </style>
+
+    <style name="Theme.DiveCurrent" parent="V29.Theme.DiveCurrent" />
+</resources>

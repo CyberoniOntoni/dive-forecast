@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 11+: draw into a display cutout on every edge ("always"), as Android 15 enforces anyway. Android 9 and 10
+         keep the default mode, which already reaches under a cutout in the status bar. Never shortEdges (deprecated). -->
+    <style name="Theme.DiveCurrent" parent="V29.Theme.DiveCurrent">
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+    </style>
+</resources>

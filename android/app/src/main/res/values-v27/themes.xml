@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 8.1+: light navigation bar icons too. -->
+    <style name="V27.Theme.DiveCurrent" parent="Base.Theme.DiveCurrent">
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="Theme.DiveCurrent" parent="V27.Theme.DiveCurrent" />
+</resources>
