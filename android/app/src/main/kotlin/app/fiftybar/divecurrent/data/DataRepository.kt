@@ -62,8 +62,8 @@ class DataRepository(
   suspend fun forecast(siteId: String): Loaded<ApiForecast> =
     load(Keys.forecast(siteId), ApiForecast.serializer()) { api.forecast(siteId).second }
 
-  suspend fun reports(siteId: String): Loaded<ApiRecentReports> =
-    load(Keys.reports(siteId), ApiRecentReports.serializer()) { api.reports(siteId).second }
+  suspend fun reports(siteId: String, token: String? = null): Loaded<ApiRecentReports> =
+    load(Keys.reports(siteId), ApiRecentReports.serializer()) { api.reports(siteId, token).second }
 
   suspend fun cachedReports(siteId: String): Loaded<ApiRecentReports>? =
     cached(Keys.reports(siteId), ApiRecentReports.serializer(), null)

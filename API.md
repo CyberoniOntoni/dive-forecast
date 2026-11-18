@@ -171,7 +171,9 @@ warm-up has fetched it.
 ### `GET /api/v1/sites/{id}/reports`
 
 Divers' newest reports at the site (at most 10), as the site page lists them. The words are made on the server
-(`recentReportRows` in `lib/recent-reports.ts`); `ago` is from the time of the response. Kept for 60 s.
+(`recentReportRows` in `lib/recent-reports.ts`); `ago` is from the time of the response. Kept for 60 s. With the
+diver's token it also lists what only they may see (the store-review account's own reports) and is never kept; a token
+the server turns down is read as none. The store-review account's reports are never in the shared answer.
 
 ```json
 {

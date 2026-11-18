@@ -227,7 +227,11 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
       if (kept.length) site.photos = kept;
       else delete site.photos;
     }
-    if (site.addedBy === userId) delete site.addedBy;
+    if (site.addedBy === userId) {
+      // The store-review account's sites are reviewers trying the form: hidden with it, not left on the map.
+      if (user.storeReview) site.hidden = true;
+      delete site.addedBy;
+    }
   }
   return photos;
 }

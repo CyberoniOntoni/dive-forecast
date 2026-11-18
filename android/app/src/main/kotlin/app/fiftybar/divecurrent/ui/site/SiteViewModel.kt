@@ -96,7 +96,7 @@ class SiteViewModel(
       // The site and its forecast load side by side; a failed site load keeps whatever copy is showing.
       val siteJob = async { runCatching { repository.site(siteId) } }
       val forecastJob = async { runCatching { repository.forecast(siteId) } }
-      val reportsJob = async { runCatching { repository.reports(siteId) } }
+      val reportsJob = async { runCatching { repository.reports(siteId, account.sessions.current()?.token) } }
       siteJob.await().getOrNull()?.let { loaded -> _state.update { it.copy(site = loaded.value) } }
       reportsJob.await().getOrNull()?.let { loaded ->
         _state.update { it.copy(reports = loaded.value.reports, reportsSavedAt = loaded.savedAt.takeIf { loaded.fromCache }) }

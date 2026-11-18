@@ -340,6 +340,8 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
   const user = store.users.find((item) => item.id === userId);
   if (!user) return null;
   const session = await currentSession();
+  // The store-review account has no public page: only it sees its own.
+  if (user.storeReview && session?.userId !== user.id) return null;
   const { stats, badges, allRank } = diverSummary(store, user.id);
   return {
     nickname: user.nickname,

@@ -142,13 +142,17 @@ describe("sign in by email code", () => {
     // Divers never see the reviewer's made-up report or rating; the reviewer sees its own.
     expect((await getRecentReports("banana-reef", "channel")).map((row) => row.by)).toEqual(["Bob"]);
     expect(await getRating("banana-reef")).toMatchObject({ count: 0 });
+    expect(await getDiverProfile(reviewer)).toBeNull();
 
     // A reviewer trying "Delete account" takes its test reports with it, rather than leaving them anonymised.
     jar.clear();
     await requestSignIn("review@50bar.app");
     await completeSignIn({ email: "review@50bar.app", code: "246810" });
     expect((await getAccount())!.userId).toBe(reviewer);
+    expect(await getDiverProfile(reviewer)).toMatchObject({ nickname: "Play Review" });
+    const testSite = await addSite({ name: "Review Thila", lat: 4.3, lon: 73.5 });
     expect(await deleteAccount()).toEqual({ ok: true, error: null });
+    expect(readStore().sites.find((site) => site.id === testSite.id)).toMatchObject({ hidden: true });
     expect(readStore().reports.filter((item) => item.siteId === "banana-reef").map((item) => item.userId)).not.toContain(reviewer);
     expect(readStore().reports.filter((item) => item.siteId === "banana-reef")).toHaveLength(1);
 

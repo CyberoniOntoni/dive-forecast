@@ -147,7 +147,7 @@ the hourly limits, the content rules box). The account is an ordinary diver and 
 is in `MODERATOR_EMAILS`. Its first sign-in marks the user as the review account for good (`User.storeReview`), so its
 dive reports never teach the forecast, earn points or count in `npm run verify`, its reports and ratings (with review
 text and photos) show only to itself, and it is left off the scoreboard, even after you change `REVIEW_EMAIL`; deleting
-the account deletes its reports. Sites it adds are public like anyone's: after a review, hide test sites,
+the account deletes its reports and hides its sites. Sites it adds are public until then: after a review, hide test sites,
 and never ban the account, or the next review cannot sign in. Use an address nobody would guess: anyone who knows it can
 use up its five codes an hour, or keep guessing the fixed code. To turn it off, `npx wrangler secret delete
 REVIEW_CODE`; to change the code, put a new one and update Play Console.
