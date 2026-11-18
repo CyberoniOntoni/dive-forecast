@@ -17,7 +17,9 @@ unzip -q -o "$bundle" 'base/dex/*.dex' -d "$work"
 
 found=0
 for dex in "$work"/base/dex/*.dex; do
-  if "$dexdump" -d "$dex" | grep -E 'Landroid/view/Window;\.(setStatusBarColor|setNavigationBarColor|setNavigationBarDividerColor):' >"$work/hits.txt"; then
+  # Disassemble to a file first, so a dexdump failure stops the script rather than reading as "no calls".
+  "$dexdump" -d "$dex" >"$work/dump.txt"
+  if grep -E 'Landroid/view/Window;\.(setStatusBarColor|setNavigationBarColor|setNavigationBarDividerColor):' "$work/dump.txt" >"$work/hits.txt"; then
     echo "::error::$(basename "$dex") calls deprecated Window bar-colour APIs:"
     sort -u "$work/hits.txt" | sed 's/^.*invoke/  invoke/'
     found=1
