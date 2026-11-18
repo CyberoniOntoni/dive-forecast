@@ -6,7 +6,9 @@ import { rimForAtoll, rimWayId } from "./rim";
 import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
-import { storeReviewIds } from "./accounts";
+import { countedReports, storeReviewIds } from "./accounts";
+
+export { countedReports };
 import {
   emptyStore,
   GUARD_FAILED,
@@ -177,14 +179,6 @@ export function forecastReportsForSite(siteId: string): Report[] {
   return countedReports(readStore()).filter((report) => report.siteId === siteId);
 }
 
-/**
- * Reports that count: for the forecast, points, awards and the scoreboard. All but the store-review account's
- * (`User.storeReview`), which are app reviewers trying the form, not dives.
- */
-export function countedReports(store: Pick<StoreData, "reports" | "users">): Report[] {
-  const reviewers = storeReviewIds(store.users);
-  return reviewers.size ? store.reports.filter((report) => !(report.userId && reviewers.has(report.userId))) : store.reports;
-}
 
 /**
  * The site's reports as `viewerId` sees them listed: the store-review account's only to itself, so a reviewer's

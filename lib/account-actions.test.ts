@@ -122,6 +122,7 @@ describe("sign in by email code", () => {
     expect((await getAccount())?.stats.points).toBe(0);
     await rateSite("banana-reef", 1);
     expect(await getRating("banana-reef")).toMatchObject({ count: 1, mine: 1 });
+    expect((await getAccount())?.stats.points).toBe(0);
     expect((await getRecentReports("banana-reef", "channel")).map((row) => row.by)).toEqual(["Play Review"]);
     expect(await getLeaderboard("all")).toEqual([]);
 

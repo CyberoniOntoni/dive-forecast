@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { storeReviewIds } from "../lib/accounts";
+import { countedReports } from "../lib/accounts";
 import { summarizeReports, type Score } from "../lib/verify";
 import type { Report, User } from "../lib/types";
 
@@ -15,8 +15,7 @@ function main(): void {
   const file = path.resolve(process.argv[2] ?? path.join("data", "store.json"));
   const store = JSON.parse(fs.readFileSync(file, "utf8")) as { reports?: Report[]; users?: User[] };
   // The store-review account's reports are app reviewers trying the form, not dives (lib/review-account.ts).
-  const reviewers = storeReviewIds(Array.isArray(store.users) ? store.users : []);
-  const reports = (Array.isArray(store.reports) ? store.reports : []).filter((report) => !(report.userId && reviewers.has(report.userId)));
+  const reports = countedReports({ reports: Array.isArray(store.reports) ? store.reports : [], users: Array.isArray(store.users) ? store.users : [] });
   const withPrediction = reports.filter((report) => report.predicted).length;
   console.log(`${file}\n${reports.length} reports, ${withPrediction} with a saved prediction.`);
   if (withPrediction === 0) {

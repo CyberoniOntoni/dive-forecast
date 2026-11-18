@@ -119,6 +119,15 @@ export function storeReviewIds(users: readonly Pick<User, "id" | "storeReview">[
 }
 
 /**
+ * Reports that count: for the forecast, points, awards and the scoreboard. All but the store-review account's
+ * (`User.storeReview`), which are app reviewers trying the form, not dives.
+ */
+export function countedReports(store: Pick<StoreData, "reports" | "users">): StoreData["reports"] {
+  const reviewers = storeReviewIds(store.users);
+  return reviewers.size ? store.reports.filter((report) => !(report.userId && reviewers.has(report.userId))) : store.reports;
+}
+
+/**
  * Checks a code against the address's live one. A right code ends it and signs in; a new address also needs a
  * nickname, and becomes a user. A wrong code counts against the code's tries, so the result is returned, not thrown,
  * for the count to be saved.
