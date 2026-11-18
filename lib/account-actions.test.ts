@@ -16,7 +16,7 @@ import {
 } from "./account-actions";
 import { addReport, addSite, rateSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
-import { mutateStore, readStore, setStorePath } from "./store";
+import { forecastReportsForSite, mutateStore, readStore, setStorePath } from "./store";
 import { TERMS_FIRST } from "./moderation";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -111,6 +111,16 @@ describe("sign in by email code", () => {
       error: null,
     });
     expect(await getAccount()).toMatchObject({ nickname: "Play Review", moderator: false });
+
+    // A reviewer trying the report form earns points on their own page, but the report does not teach the forecast
+    // and the account stays off the public scoreboard.
+    const reviewer = (await getAccount())!.userId;
+    expect(await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" })).toMatchObject({
+      userId: reviewer,
+    });
+    expect(forecastReportsForSite("banana-reef").some((item) => item.userId === reviewer)).toBe(false);
+    expect((await getAccount())?.stats.points).toBeGreaterThan(0);
+    expect(await getLeaderboard("all")).toEqual([]);
 
     // Any other address still gets a fresh emailed code, never the review one.
     await requestSignIn("other@example.com");

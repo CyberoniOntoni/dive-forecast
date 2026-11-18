@@ -43,6 +43,7 @@ import {
   readStore,
   removeRating,
   removeReviewPhotoRecord,
+  forecastReportsForSite,
   reportsForSite,
   saveRating,
   saveReviewText,
@@ -481,7 +482,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
   const atoll = catalog.atolls.find((item) => item.id === site.atollId);
   // The offshore waves do not depend on the current, so they load alongside it rather than after it.
   const [loaded, offshore] = await Promise.all([
-    loadSite(site, catalog.sites, atoll, reportsForSite(site.id)),
+    loadSite(site, catalog.sites, atoll, forecastReportsForSite(site.id)),
     loadOffshore(atoll).catch(() => undefined),
   ]);
   const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);

@@ -16,7 +16,7 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { siteScouts } from "./site-scouts";
-import { reviewCodeFor, reviewEmail } from "./review-account";
+import { reviewCodeFor, reviewEmail, reviewUserId } from "./review-account";
 import { hashLoginCode, newLoginCode } from "./session-token";
 import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
@@ -269,7 +269,9 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
   const period: LeaderboardPeriod = periodInput === "all" ? "all" : "month";
   const session = await currentSession();
   const store = readStore();
-  return leaderboard(allDiverStats(store), period)
+  // The store-review account (lib/review-account.ts) tries the forms; it is not a diver to celebrate.
+  const reviewer = reviewUserId(store);
+  return leaderboard(allDiverStats(store).filter((row) => row.userId !== reviewer), period)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,
@@ -295,7 +297,8 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
   const session = await currentSession();
   const store = readStore();
   const nickname = new Map(store.users.map((user) => [user.id, user.nickname]));
-  const scouts = siteScouts(store.sites, store.users, store.reports)
+  const reviewer = reviewUserId(store);
+  const scouts = siteScouts(store.sites, store.users.filter((user) => user.id !== reviewer), store.reports)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,
@@ -307,7 +310,7 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
     }));
   // Store order is the order sites were added.
   const newest = store.sites
-    .filter((site) => site.addedBy && !site.hidden && nickname.has(site.addedBy))
+    .filter((site) => site.addedBy && site.addedBy !== reviewer && !site.hidden && nickname.has(site.addedBy))
     .slice(-NEW_SITES)
     .reverse()
     .map((site) => ({ id: site.id, name: site.name, userId: site.addedBy!, nickname: nickname.get(site.addedBy!)! }));

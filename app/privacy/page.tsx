@@ -190,7 +190,8 @@ export default function PrivacyPage() {
           </li>
           <li>
             <strong className="text-foam">A dive plan</strong>: open the plan and tap{" "}
-            <strong className="text-foam">Delete plan</strong>.
+            <strong className="text-foam">Delete plan</strong> (<strong className="text-foam">Delete this plan</strong> in
+            the app).
           </li>
           <li>
             <strong className="text-foam">About me</strong>: clear it on <Link href="/account">your account page</Link>{" "}

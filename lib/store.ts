@@ -6,6 +6,7 @@ import { rimForAtoll, rimWayId } from "./rim";
 import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
+import { reviewUserId } from "./review-account";
 import {
   emptyStore,
   GUARD_FAILED,
@@ -166,6 +167,16 @@ export function findSite(id: string): Site | null {
 
 export function reportsForSite(siteId: string): Report[] {
   return readStore().reports.filter((report) => report.siteId === siteId);
+}
+
+/**
+ * The site's reports that teach the forecast: all of them but the store-review account's (lib/review-account.ts),
+ * whose reports are app reviewers trying the form, not dives. They still show on the site page like any report.
+ */
+export function forecastReportsForSite(siteId: string): Report[] {
+  const store = readStore();
+  const reviewer = reviewUserId(store);
+  return store.reports.filter((report) => report.siteId === siteId && (!reviewer || report.userId !== reviewer));
 }
 
 /** The site's ratings that count: a rating its diver removed is left out. */
