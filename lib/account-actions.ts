@@ -1,6 +1,6 @@
 "use server";
 
-import { ACCOUNT_GONE, deleteAccountRecords, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
+import { ACCOUNT_GONE, deleteAccountRecords, normalizeEmail, requireAbout, requireNickname, startLogin, storeReviewIds } from "./accounts";
 import {
   appUrl,
   authSecret,
@@ -16,13 +16,14 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { siteScouts } from "./site-scouts";
+import { reviewCodeFor, reviewEmail } from "./review-account";
 import { hashLoginCode, newLoginCode } from "./session-token";
 import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
 import { appSetting } from "./cloudflare";
 import { hasAcceptedTerms, isModeratorEmail, requireTermsAccepted } from "./moderation";
 import { deletePhotoBytes } from "./site-photos";
-import { listMergedSites, mutateStore, readStore } from "./store";
+import { countedReports, listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
 export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean; needsTerms?: boolean };
@@ -41,13 +42,17 @@ export async function requestSignIn(emailInput: unknown, next?: unknown, codeOnl
     if (!secret) return { ok: false, error: NOT_SET_UP };
     if (routes.length === 0 && process.env.NODE_ENV === "production") return { ok: false, error: NOT_SET_UP };
 
-    const code = newLoginCode();
+    // The store-review address gets its fixed code and no email (lib/review-account.ts); everyone else a fresh one.
+    const reviewCode = reviewCodeFor(email);
+    const code = reviewCode ?? newLoginCode();
     const codeHash = await hashLoginCode(email, code, secret);
     const ipKey = await requestIpKey(secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now(), ipKey));
     const base = await appUrl();
     const link = base && codeOnly !== true ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
-    if (routes.length > 0) {
+    if (reviewCode != null) {
+      // Nothing to send: the reviewer was given the code in the store listing's sign-in details.
+    } else if (routes.length > 0) {
       await sendLoginEmail(routes, { to: email, code, link }).catch(() => {
         throw new Error("Could not send the email. Try again in a minute.");
       });
@@ -185,7 +190,10 @@ export type BadgeView = { id: BadgeId; label: string; detail: string; earned: bo
 export type DiverNumbers = Omit<DiverStats, "userId" | "nickname" | "badges">;
 
 function allDiverStats(store: StoreData): DiverStats[] {
-  return diverStats(store.reports, store.users, listMergedSites(), Date.now(), store.ratings);
+  // The store-review account's reports and ratings earn nothing (lib/review-account.ts).
+  const reviewers = storeReviewIds(store.users);
+  const ratings = store.ratings.filter((rating) => !(rating.userId && reviewers.has(rating.userId)));
+  return diverStats(countedReports(store), store.users, listMergedSites(), Date.now(), ratings);
 }
 
 /** One diver's numbers, every badge (earned or not) and their ranks, worked out from the whole store. */
@@ -239,7 +247,7 @@ export async function getAccount(): Promise<AccountView | null> {
     email: user.email,
     about: user.about ?? "",
     acceptedTerms: hasAcceptedTerms(user),
-    moderator: !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS")),
+    moderator: !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS"), reviewEmail()),
     ...diverSummary(store, user.id),
   };
 }
@@ -264,7 +272,9 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
   const period: LeaderboardPeriod = periodInput === "all" ? "all" : "month";
   const session = await currentSession();
   const store = readStore();
-  return leaderboard(allDiverStats(store), period)
+  // The store-review account (lib/review-account.ts) tries the forms; it is not a diver to celebrate.
+  const reviewers = storeReviewIds(store.users);
+  return leaderboard(allDiverStats(store).filter((row) => !reviewers.has(row.userId)), period)
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,
@@ -290,7 +300,8 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
   const session = await currentSession();
   const store = readStore();
   const nickname = new Map(store.users.map((user) => [user.id, user.nickname]));
-  const scouts = siteScouts(store.sites, store.users, store.reports)
+  const reviewers = storeReviewIds(store.users);
+  const scouts = siteScouts(store.sites, store.users.filter((user) => !reviewers.has(user.id)), countedReports(store))
     .slice(0, LEADERBOARD_SIZE)
     .map((row) => ({
       userId: row.userId,
@@ -302,7 +313,7 @@ export async function getSiteScouts(): Promise<{ scouts: SiteScoutRow[]; newest:
     }));
   // Store order is the order sites were added.
   const newest = store.sites
-    .filter((site) => site.addedBy && !site.hidden && nickname.has(site.addedBy))
+    .filter((site) => site.addedBy && !reviewers.has(site.addedBy) && !site.hidden && nickname.has(site.addedBy))
     .slice(-NEW_SITES)
     .reverse()
     .map((site) => ({ id: site.id, name: site.name, userId: site.addedBy!, nickname: nickname.get(site.addedBy!)! }));
@@ -332,6 +343,8 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
   const user = store.users.find((item) => item.id === userId);
   if (!user) return null;
   const session = await currentSession();
+  // The store-review account has no public page: only it sees its own.
+  if (user.storeReview && session?.userId !== user.id) return null;
   const { stats, badges, allRank } = diverSummary(store, user.id);
   return {
     nickname: user.nickname,

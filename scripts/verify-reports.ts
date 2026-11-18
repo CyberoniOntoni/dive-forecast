@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
+import { countedReports } from "../lib/accounts";
 import { summarizeReports, type Score } from "../lib/verify";
-import type { Report } from "../lib/types";
+import type { Report, User } from "../lib/types";
 
 /**
  * Scores the predictions saved with each diver report against what the diver saw.
@@ -12,8 +13,9 @@ const MIN_RELIABLE = 30;
 
 function main(): void {
   const file = path.resolve(process.argv[2] ?? path.join("data", "store.json"));
-  const store = JSON.parse(fs.readFileSync(file, "utf8")) as { reports?: Report[] };
-  const reports = Array.isArray(store.reports) ? store.reports : [];
+  const store = JSON.parse(fs.readFileSync(file, "utf8")) as { reports?: Report[]; users?: User[] };
+  // The store-review account's reports are app reviewers trying the form, not dives (lib/review-account.ts).
+  const reports = countedReports({ reports: Array.isArray(store.reports) ? store.reports : [], users: Array.isArray(store.users) ? store.users : [] });
   const withPrediction = reports.filter((report) => report.predicted).length;
   console.log(`${file}\n${reports.length} reports, ${withPrediction} with a saved prediction.`);
   if (withPrediction === 0) {

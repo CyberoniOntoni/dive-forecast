@@ -271,6 +271,11 @@ export type User = {
   blocked?: string[];
   /** Banned by a moderator, ISO UTC: cannot sign in, and what they posted is removed (lib/moderation.ts). */
   bannedAt?: string;
+  /**
+   * The store-review account (lib/review-account.ts): set when it signs in with the review code, and kept, so its
+   * reports stay out of the forecast, verify and the scoreboard even after REVIEW_EMAIL changes or is turned off.
+   */
+  storeReview?: true;
 };
 
 export const FLAG_REASONS = ["sexual", "violence", "hate", "spam", "privacy", "illegal", "other"] as const;

@@ -1,4 +1,5 @@
 import { finishLogin, normalizeEmail } from "./accounts";
+import { reviewEmail } from "./review-account";
 import { authSecret } from "./auth";
 import { hashLoginCode, sameText } from "./session-token";
 import { mutateStore } from "./store";
@@ -26,7 +27,13 @@ export async function checkSignInCode(input: {
   const secret = authSecret();
   if (!secret) return { ok: false, error: NOT_SET_UP };
   const codeHash = await hashLoginCode(email, code, secret);
-  const result = await mutateStore((store) => finishLogin(store, email, codeHash, Date.now(), input?.nickname, sameText, input?.acceptTerms === true));
+  // The store-review address only ever has the review code (lib/review-account.ts): mark that user for good.
+  const review = email === reviewEmail();
+  const result = await mutateStore((store) => {
+    const login = finishLogin(store, email, codeHash, Date.now(), input?.nickname, sameText, input?.acceptTerms === true);
+    if (login.ok && review) login.user.storeReview = true;
+    return login;
+  });
   if (!result.ok) {
     return { ok: false, error: result.error ?? "Could not sign in.", needsNickname: result.needsNickname, needsTerms: result.needsTerms };
   }

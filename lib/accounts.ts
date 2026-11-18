@@ -113,6 +113,20 @@ export type LoginResult =
 /** A sign-in by a diver who has not agreed to the content rules, without the box ticked. */
 export const TERMS_NEEDED = "Agree to the content rules and privacy policy to sign in.";
 
+/** Ids of store-review accounts (`User.storeReview`): their reports are app reviewers trying the form, not dives. */
+export function storeReviewIds(users: readonly Pick<User, "id" | "storeReview">[]): Set<string> {
+  return new Set(users.filter((user) => user.storeReview).map((user) => user.id));
+}
+
+/**
+ * Reports that count: for the forecast, points, awards and the scoreboard. All but the store-review account's
+ * (`User.storeReview`), which are app reviewers trying the form, not dives.
+ */
+export function countedReports(store: Pick<StoreData, "reports" | "users">): StoreData["reports"] {
+  const reviewers = storeReviewIds(store.users);
+  return reviewers.size ? store.reports.filter((report) => !(report.userId && reviewers.has(report.userId))) : store.reports;
+}
+
 /**
  * Checks a code against the address's live one. A right code ends it and signs in; a new address also needs a
  * nickname, and becomes a user. A wrong code counts against the code's tries, so the result is returned, not thrown,
@@ -204,9 +218,15 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
     return false;
   });
 
-  const anonymous = `deleted-${crypto.randomUUID()}`;
-  for (const report of store.reports) {
-    if (report.userId === userId) report.userId = anonymous;
+  // Dive reports stay, anonymised, to keep teaching the forecast. The store-review account's are reviewers trying the
+  // form, and with the user gone nothing would mark them any more (storeReviewIds), so they go with it.
+  if (user.storeReview) {
+    store.reports = store.reports.filter((report) => report.userId !== userId);
+  } else {
+    const anonymous = `deleted-${crypto.randomUUID()}`;
+    for (const report of store.reports) {
+      if (report.userId === userId) report.userId = anonymous;
+    }
   }
   for (const site of store.sites) {
     const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);
@@ -216,7 +236,11 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
       if (kept.length) site.photos = kept;
       else delete site.photos;
     }
-    if (site.addedBy === userId) delete site.addedBy;
+    if (site.addedBy === userId) {
+      // The store-review account's sites are reviewers trying the form: hidden with it, not left on the map.
+      if (user.storeReview) site.hidden = true;
+      delete site.addedBy;
+    }
   }
   return photos;
 }

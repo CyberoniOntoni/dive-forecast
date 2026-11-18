@@ -14,9 +14,9 @@ import {
   signOutEverywhere,
   whoAmI,
 } from "./account-actions";
-import { addReport, addSite, rateSite } from "./actions";
+import { addReport, addSite, getRating, getRecentReports, rateSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
-import { mutateStore, readStore, setStorePath } from "./store";
+import { forecastReportsForSite, mutateStore, readStore, setStorePath } from "./store";
 import { TERMS_FIRST } from "./moderation";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -94,6 +94,73 @@ describe("sign in by email code", () => {
     await rateSite("banana-reef", 5);
     expect((await getLeaderboard("all"))[0]).toMatchObject({ points: 23, ratings: 1 });
     expect(await getAccount()).toMatchObject({ nickname: "Manta", email: "diver@example.com", allRank: 1 });
+  });
+
+  it("signs the store-review address in with its fixed code, sends no email, and never makes it a moderator", async () => {
+    vi.stubEnv("REVIEW_EMAIL", "Review@50bar.app");
+    vi.stubEnv("REVIEW_CODE", "246810");
+    vi.stubEnv("MODERATOR_EMAILS", "review@50bar.app");
+    expect(await requestSignIn("review@50bar.app")).toMatchObject({ ok: true, newUser: true });
+    expect(sent).toHaveLength(0);
+    expect(await completeSignIn({ email: "review@50bar.app", code: "135791", nickname: "Play Review", acceptTerms: true })).toMatchObject({
+      ok: false,
+      error: "That code is not right.",
+    });
+    expect(await completeSignIn({ email: "review@50bar.app", code: "246810", nickname: "Play Review", acceptTerms: true })).toEqual({
+      ok: true,
+      error: null,
+    });
+    expect(await getAccount()).toMatchObject({ nickname: "Play Review", moderator: false });
+
+    // A reviewer trying the report form: the report is saved, but it does not teach the forecast, earn points or
+    // put the account on the public scoreboard.
+    const reviewer = (await getAccount())!.userId;
+    expect(await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" })).toMatchObject({
+      userId: reviewer,
+    });
+    expect(forecastReportsForSite("banana-reef").some((item) => item.userId === reviewer)).toBe(false);
+    expect((await getAccount())?.stats.points).toBe(0);
+    await rateSite("banana-reef", 1);
+    expect(await getRating("banana-reef")).toMatchObject({ count: 1, mine: 1 });
+    expect((await getAccount())?.stats.points).toBe(0);
+    expect((await getRecentReports("banana-reef", "channel")).map((row) => row.by)).toEqual(["Play Review"]);
+    expect(await getLeaderboard("all")).toEqual([]);
+
+    // Moving the review account to another address, or turning it off, never lets its old reports back in.
+    vi.stubEnv("REVIEW_EMAIL", "review-other@50bar.app");
+    expect(forecastReportsForSite("banana-reef").some((item) => item.userId === reviewer)).toBe(false);
+    vi.stubEnv("REVIEW_EMAIL", "Review@50bar.app");
+
+    // Any other address still gets a fresh emailed code, never the review one; and a real diver reporting after the
+    // reviewer at the same site still earns the full points (the reviewer's report took no bonus from them).
+    jar.clear();
+    await requestSignIn("other@example.com");
+    expect(sent).toHaveLength(1);
+    expect(codeFromEmail()).not.toBe("246810");
+    await completeSignIn({ email: "other@example.com", code: codeFromEmail(), nickname: "Bob", acceptTerms: true });
+    await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    expect(await getLeaderboard("all")).toMatchObject([{ nickname: "Bob", points: 20, reports: 1 }]);
+    // Divers never see the reviewer's made-up report or rating; the reviewer sees its own.
+    expect((await getRecentReports("banana-reef", "channel")).map((row) => row.by)).toEqual(["Bob"]);
+    expect(await getRating("banana-reef")).toMatchObject({ count: 0 });
+    expect(await getDiverProfile(reviewer)).toBeNull();
+
+    // A reviewer trying "Delete account" takes its test reports with it, rather than leaving them anonymised.
+    jar.clear();
+    await requestSignIn("review@50bar.app");
+    await completeSignIn({ email: "review@50bar.app", code: "246810" });
+    expect((await getAccount())!.userId).toBe(reviewer);
+    expect(await getDiverProfile(reviewer)).toMatchObject({ nickname: "Play Review" });
+    const testSite = await addSite({ name: "Review Thila", lat: 4.3, lon: 73.5 });
+    expect(await deleteAccount()).toEqual({ ok: true, error: null });
+    expect(readStore().sites.find((site) => site.id === testSite.id)).toMatchObject({ hidden: true });
+    expect(readStore().reports.filter((item) => item.siteId === "banana-reef").map((item) => item.userId)).not.toContain(reviewer);
+    expect(readStore().reports.filter((item) => item.siteId === "banana-reef")).toHaveLength(1);
+
+    // Turned off by removing the code: the review address is then an ordinary address.
+    vi.stubEnv("REVIEW_CODE", "");
+    await requestSignIn("review@50bar.app");
+    expect(sent).toHaveLength(2);
   });
 
   it("signs a known diver straight in, and lets them rename", async () => {

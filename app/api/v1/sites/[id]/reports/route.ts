@@ -9,14 +9,19 @@ import {
   apiRecentReports,
   apiReportSaved,
 } from "@/lib/api-v1";
+import { bearerToken, currentSession } from "@/lib/auth";
 import { routeFor } from "@/lib/load-site";
 import { reportAwards } from "@/lib/points";
 import { ready } from "@/lib/ready";
 import { SIGN_IN_FIRST } from "@/lib/sign-in";
-import { readCatalog, readStore } from "@/lib/store";
+import { countedReports, readCatalog, readStore } from "@/lib/store";
 
-/** Divers' newest reports at the site, as the site page lists them. API.md § GET /api/v1/sites/{id}/reports. */
-export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
+/**
+ * Divers' newest reports at the site, as the site page lists them. Without a token the answer is the same for everyone
+ * and kept a minute; with one it also holds what only that diver may see (the store-review account's own reports), and
+ * is never kept. A token the server turns down is read as none. API.md § GET /api/v1/sites/{id}/reports.
+ */
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   return apiHandler(async () => {
     const { id } = await context.params;
     const site = await getSite(id);
@@ -24,7 +29,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const route = routeFor(site, catalog.sites, atoll)?.route ?? "channel";
-    return apiJson(apiRecentReports(site.id, await getRecentReports(site.id, route)), {
+    if (bearerToken(request.headers.get("authorization")) !== undefined && (await currentSession())) {
+      return apiJson(apiRecentReports(site.id, await getRecentReports(site.id, route)), { cacheControl: API_NO_STORE });
+    }
+    return apiJson(apiRecentReports(site.id, await getRecentReports(site.id, route, { signedOut: true })), {
       cacheControl: "public, max-age=60",
     });
   });
@@ -53,7 +61,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       // The checks in addReport throw words meant for the diver, as the web form shows them.
       return apiError(400, "bad_request", message);
     }
-    const award = reportAwards(readStore().reports).get(report.id) ?? null;
+    const award = reportAwards(countedReports(readStore())).get(report.id) ?? null;
     return apiJson(apiReportSaved(report, award), { status: 201, cacheControl: API_NO_STORE });
   });
 }

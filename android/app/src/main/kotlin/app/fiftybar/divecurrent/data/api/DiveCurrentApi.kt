@@ -65,8 +65,9 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
 
   suspend fun nowcast(): Pair<ApiNowcast, String> = get(listOf("api", "v1", "nowcast"))
 
-  suspend fun reports(siteId: String): Pair<ApiRecentReports, String> =
-    get(listOf("api", "v1", "sites", siteId, "reports"))
+  /** With the diver's token the list also holds what only they may see (the store-review account's own reports). */
+  suspend fun reports(siteId: String, token: String? = null): Pair<ApiRecentReports, String> =
+    get(listOf("api", "v1", "sites", siteId, "reports"), token)
 
   /** A plan by its share id; with the diver's token the answer says whether they made it. */
   suspend fun plan(id: String, token: String?): Pair<ApiPlan, String> = get(listOf("api", "v1", "plans", id), token)
