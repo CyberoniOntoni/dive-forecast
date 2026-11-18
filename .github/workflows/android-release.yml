@@ -54,7 +54,10 @@ jobs:
           VERSION_NAME="${VERSION_NAME#android-v}"
           # Play needs every upload's versionCode higher than the last: this workflow's run number always grows.
           ./gradlew --console=plain bundleRelease -PversionCode=${{ github.run_number }} -PversionName="$VERSION_NAME"
-          jarsigner -verify app/build/outputs/bundle/release/app-release.aab > /dev/null
+          # jarsigner exits 0 on an unsigned bundle ("jar is unsigned."), so require "jar verified.". Not -strict: the
+          # upload key is self-signed, and -strict turns that warning into a failure.
+          jarsigner -verify app/build/outputs/bundle/release/app-release.aab | tee "$RUNNER_TEMP/verify.txt"
+          grep -q "^jar verified" "$RUNNER_TEMP/verify.txt" || { echo "::error::The bundle is not signed"; exit 1; }
           echo "Built $VERSION_NAME (versionCode ${{ github.run_number }})" >> "$GITHUB_STEP_SUMMARY"
       - name: Remove the keystore
         if: always()

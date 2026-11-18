@@ -55,12 +55,12 @@ export default function PrivacyPage() {
         <ul>
           <li>
             Your <strong className="text-foam">email address</strong>, to send you a six-digit sign-in code. Only you see
-            it, on your account page. We keep a hash of each code, never the code itself; it works for 15 minutes and is cleared out with later sign-ins.
+            it, on your account page. We keep a hash of each code, never the code itself. A code works for 15 minutes; its hash stays at least an hour, to count codes against the sending limits, and is removed the next time anyone asks for a code after that.
           </li>
           <li>
             A keyed hash of your connection&rsquo;s <strong className="text-foam">IP address</strong> with each code, to
-            limit how many codes one connection can ask for. We never keep the address itself, and the hash goes with the
-            code.
+            limit how many codes one connection can ask for. We never keep the address itself, and this hash is kept and
+            removed with the code&rsquo;s.
           </li>
           <li>
             The <strong className="text-foam">nickname</strong> you pick, shown with your reports, reviews and on the
@@ -160,8 +160,8 @@ export default function PrivacyPage() {
         <p>
           <strong className="text-foam">Kept without your name:</strong> your dive reports, which keep teaching the
           forecast, and dive sites you added, so other divers&rsquo; reports and reviews there keep their place. Nothing
-          left on them leads back to you, and they no longer count on the scoreboard. Our backup
-          copies of the database are overwritten within 30 days.
+          left on them leads back to you, and they no longer count on the scoreboard. Cloudflare keeps a
+          30-day restore history of the database, so deleted data can stay in that history until it is 30 days old.
         </p>
       </Section>
 
