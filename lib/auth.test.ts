@@ -1,4 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import fs from "fs";
+import path from "path";
+import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 // What the mocked cookies() and headers() do on the next call.
 let cookiesBehaviour: () => unknown = () => ({ get: () => undefined });
@@ -11,6 +13,7 @@ vi.mock("next/headers", () => ({
 
 const { appUrl, bearerToken, currentSession, ipGroup, SESSION_COOKIE } = await import("./auth");
 const { sealSession, signSession } = await import("./session-token");
+const { setStorePath } = await import("./store");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
@@ -94,6 +97,15 @@ describe("the app's bearer token", () => {
   });
 
   it("signs in by the token, and a bad token is not rescued by a cookie", async () => {
+    // Both divers exist: a session whose diver is gone (a deleted account) no longer counts.
+    const file = `.store-test-${crypto.randomUUID()}.json`;
+    const users = ["u1", "u2"].map((id) => ({ id, email: `${id}@example.com`, nickname: id, createdAt: "2026-11-01T00:00:00Z" }));
+    fs.writeFileSync(path.join(process.cwd(), "data", file), JSON.stringify({ reports: [], ratings: [], sites: [], users, logins: [], plans: [], flags: [] }));
+    setStorePath(file);
+    onTestFinished(() => {
+      setStorePath("store.json");
+      fs.rmSync(path.join(process.cwd(), "data", file), { force: true });
+    });
     const token = await sealSession({ userId: "u1", nickname: "Ann", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
     const cookie = await signSession({ userId: "u2", nickname: "Bob", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
     cookiesBehaviour = () => ({ get: (name: string) => (name === SESSION_COOKIE ? { name, value: cookie } : undefined) });

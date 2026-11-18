@@ -2,6 +2,8 @@ package app.fiftybar.divecurrent.ui.account
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -14,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,12 +31,16 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 
@@ -45,6 +52,7 @@ fun SignInScreen(onDone: () -> Unit, onBack: (() -> Unit)?, onScoreboard: (() ->
   val viewModel: SignInViewModel = viewModel { SignInViewModel(account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
+  val uri = LocalUriHandler.current
 
   LaunchedEffect(state.step) { if (state.step == SignInStep.Done) onDone() }
 
@@ -120,9 +128,22 @@ fun SignInScreen(onDone: () -> Unit, onBack: (() -> Unit)?, onScoreboard: (() ->
               modifier = Modifier.fillMaxWidth(),
             )
           }
+          Row(verticalAlignment = Alignment.Top, modifier = Modifier.fillMaxWidth().toggleable(value = state.agreed, role = Role.Checkbox, onValueChange = viewModel::agree)) {
+            Checkbox(checked = state.agreed, onCheckedChange = null, modifier = Modifier.padding(top = 2.dp, end = 8.dp))
+            Text(
+              "I agree to the content rules and the privacy policy. No nudity, hate, harassment or spam: posts that break the " +
+                "rules are removed and their divers banned.",
+              style = MaterialTheme.typography.bodyMedium,
+              color = colors.foam,
+            )
+          }
+          Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/terms") }) { Text("Content rules") }
+            TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/privacy") }) { Text("Privacy policy") }
+          }
           Button(
             onClick = viewModel::signIn,
-            enabled = !state.busy && state.code.length == 6 && (!state.newUser || state.nickname.isNotBlank()),
+            enabled = !state.busy && state.agreed && state.code.length == 6 && (!state.newUser || state.nickname.isNotBlank()),
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
           ) {
             Text("Sign in")

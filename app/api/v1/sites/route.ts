@@ -1,14 +1,14 @@
 import { getSite, listSites, submitSite } from "@/lib/actions";
-import { apiError, apiHandler, apiJson, apiJsonBody, apiNeedsToken, apiSiteSaved, apiSites, atollNameOf } from "@/lib/api-v1";
+import { adderNicknames, apiError, apiHandler, apiJson, apiJsonBody, apiNeedsToken, apiSiteSaved, apiSites, atollNameOf } from "@/lib/api-v1";
 import { SIGN_IN_FIRST } from "@/lib/sign-in";
 import { rimForAtoll } from "@/lib/rim";
-import { readCatalog } from "@/lib/store";
+import { readCatalog, readStore } from "@/lib/store";
 
 /** Every site on the map (catalog and pins added in the app) and the atolls' names. API.md § GET /api/v1/sites. */
 export async function GET() {
   return apiHandler(async () => {
     const sites = await listSites();
-    return apiJson(apiSites(sites, readCatalog().atolls, rimForAtoll));
+    return apiJson(apiSites(sites, readCatalog().atolls, rimForAtoll, adderNicknames(readStore())));
   });
 }
 
@@ -39,6 +39,6 @@ export async function POST(request: Request) {
     }
     // As GET /api/v1/sites/{id} reads it: with the forecast's site type, which the pin's place sets.
     const site = (await getSite(result.site.id)) ?? result.site;
-    return apiSiteSaved(site, atollNameOf(readCatalog().atolls, site.atollId), 201);
+    return apiSiteSaved(site, atollNameOf(readCatalog().atolls, site.atollId), 201, adderNicknames(readStore())(site));
   });
 }

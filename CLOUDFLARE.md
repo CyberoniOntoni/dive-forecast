@@ -8,7 +8,7 @@ The app also runs on Cloudflare Workers through [OpenNext](https://opennext.js.o
 | Data | Docker / `next dev` | Worker |
 | --- | --- | --- |
 | Read-only data (`sites.json`, `rims.json`, `openings.json`, `islands.json`, `shoals.json`, `shelter-grid.json`, `seaward-floor.json`, `replay.json`) | `data/` | Static assets under `/_data/`, copied by `scripts/cf-assets.ts`, fetched once per isolate (`lib/data-files.ts`); `shelter-grid.json` (8.5 MB) only by the sheltered-water actions, the rest by every action |
-| Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list. A request reads the `store_version` row in `meta` and reuses its isolate's copy of the store while the version is the same (at most 10 minutes), else reads every table. A change writes only the rows it touched, in one transaction, guarded: it goes ahead only if those rows (and, for the sign-in codes and added pins, the list's membership) are as it read them, else nothing is written and it runs again on a fresh read; each write sets a new `store_version` (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object is left as a backup |
+| Reports, ratings, added pins, accounts, sign-in codes | `data/store.json` | D1 database `dive-forecast` (binding `DB`): one table per list. A request reads the `store_version` row in `meta` and reuses its isolate's copy of the store while the version is the same (at most 10 minutes), else reads every table. A change writes only the rows it touched, in one transaction, guarded: it goes ahead only if those rows (and, for the sign-in codes and added pins, the list's membership) are as it read them, else nothing is written and it runs again on a fresh read; each write sets a new `store_version` (`lib/store.ts`, `lib/store-d1.ts`). The app creates the tables itself. On its first request it copied the old `store.json` from the R2 bucket into D1 (all or nothing, once); that R2 object was left as a backup. It still holds accounts as of 31 Oct, so delete it (owner step, § Moderation) for account deletion to reach every copy; D1's own 30-day restore history is the backup now |
 | Open-Meteo cache | `data/marine-cache/` | `marine-cache/…` in the R2 bucket `dive-current-cache` (binding `CACHE`, created with the Asia-Pacific location hint; `lib/cache-bucket.ts`), plus a copy in the serving data centre's Cache API kept 24 hours (`lib/edge-cache.ts`): a copy past the 6-hour TTL is checked against R2 before it is used (only Open-Meteo is left behind the response), so a map list or page is never made from a copy past the TTL while R2 holds a newer one; a copy still inside the TTL is used without reading R2, and a failed R2 read keeps the copy it had. Plus an in-memory copy per isolate (`lib/marine.ts`). Writes go to `CACHE` only; until 12 Nov 2026 a key it lacks is also looked up in `DATA` (eastern North America, where the caches lived before the move; the warm-up rewrites every series within hours). Previews have no `CACHE` binding and keep everything in their `DATA` bucket |
 | Site photos added by divers | `data/photos/` | `site-photos/<site>/<photo>.jpg` in the `DATA` bucket `dive-current-data` (previews use the preview bucket), JPEG only, at most 1.5 MB each after the browser shrinks them (`lib/site-photos.ts`) |
 | Satellite imagery for saved atolls (Sentinel-2) | `data/imagery/<version>/` | `imagery/<version>/<z>/<x>/<y>.webp` in the `DATA` bucket, served at `/imagery/<version>/…` and cached for good (`lib/imagery.ts`). Made by `scripts/imagery/sentinel2.py` and sent with `npm run imagery:upload -- <dir>` (add `--preview` for the preview bucket, `--local` for a Node host) |
@@ -119,6 +119,28 @@ npx wrangler d1 execute dive-forecast --remote --command "UPDATE sites SET data 
 ```
 
 Any hand edit in D1 should bump `store_version` the same way; otherwise isolates see it within 10 minutes.
+
+**Moderation** (Google Play's user-generated content rules, `lib/moderation.ts`): divers agree to `/terms` at sign-in,
+can Report reviews, added sites and diver pages and Block divers, on the web and in the app. Set the secret
+`MODERATOR_EMAILS` (comma-separated sign-in emails; a secret, so it survives deploys and stays out of the repo):
+
+```bash
+npx wrangler secret put MODERATOR_EMAILS
+```
+
+Each new report emails them (same routes as sign-in codes), and signed in with one of those emails, the account page
+links `/moderation`: open reports with Remove content, Ban diver (signs them out, refuses their sign-in, removes all they
+posted except dive reports) and Dismiss. Photos are cached an hour (`app/site-photos`), so a removed one stops showing
+within the hour.
+
+Two more owner steps for Google Play:
+
+- **`privacy@50bar.app`** is the contact on `/privacy` and `/terms`. Make it deliver: Cloudflare dashboard → the
+  `50bar.app` zone → Email → Email Routing → add a custom address `privacy` forwarding to your inbox (verify the
+  destination). Or change `PRIVACY_EMAIL` in `app/privacy/page.tsx` and the address in `app/terms/page.tsx`.
+- **Delete the old R2 `store.json`** (copied into D1 on 31 Oct, still holding accounts from then), so a deleted account
+  leaves no copy behind: `npx wrangler r2 object delete dive-current-data/store.json --remote` (the `DATA`
+  bucket). Run `npm run d1:export` first if you want a local copy.
 
 ## Cost
 

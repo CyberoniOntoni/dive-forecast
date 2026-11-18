@@ -63,7 +63,8 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "approximatePin": false,
       "pinNote": null,
       "howToDive": null,
-      "photoUrls": ["/site-photos/<site>/<photo>.jpg"]
+      "photoUrls": ["/site-photos/<site>/<photo>.jpg"],
+      "adderNickname": null
     }
   ]
 }
@@ -71,6 +72,9 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
 classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `photoUrls` are paths on this server.
+`adderNickname` is who added a pin in the app (null on a catalog site, or once they deleted their account); a client
+hides that site's `howToDive` and `photoUrls` from a diver whose `blocked` list (`GET /api/v1/me`) holds it, as the web
+does.
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 
@@ -221,6 +225,35 @@ out.
 ### `POST /api/v1/sign-out-everywhere`
 
 Signed in, body `{}`. Ends every session of the diver: this token, other phones and the web's cookies.
+
+### Content rules, reports and blocking
+
+Google Play's user-generated content policy, as on the web (`lib/moderation.ts`, rules at `/terms`):
+
+- **Sign-in** (`POST /api/v1/sign-in/token`) takes `"acceptTerms": true`, the "I agree to the content rules and privacy
+  policy" box. A first sign-in, or a diver who signed up before the rules, without it answers 400 `needs_terms`. A
+  banned diver's sign-in answers 400 with the reason.
+- `GET /api/v1/me` adds `acceptedTerms` (boolean) and `blocked` (nicknames). A diver with `acceptedTerms: false` who
+  posts a review, photo, site or About me gets 400 "Agree to the content rules first…": the app asks, then calls
+  **`POST /api/v1/me/terms`** (no body) → `{"apiVersion": 1, "acceptedTerms": true}`.
+- **`POST /api/v1/flags`**, signed in: `{"kind": "review" | "site" | "diver", "siteId"?, "nickname"?, "reason",
+  "note"?}`. A review is `siteId` + its author's `nickname`, a site added in the app is `siteId`, a diver is
+  `nickname`. `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
+  500 characters. 201 `{"apiVersion": 1, "sent": true}`; 400 for one's own content, at 20 a day, or gone content.
+  Moderators get an email and act at `/moderation` on the web.
+- **`POST /api/v1/divers/{nickname}/block`** and **`DELETE`** the same, signed in → `{"apiVersion": 1, "blocked":
+  true | false}`. A blocked diver's reviews and photos drop out of `GET /api/v1/sites/{id}/reviews` for the blocker,
+  and `GET /api/v1/divers/{nickname}` answers `blockedByMe: true` with an empty `about`. Notes and photos on a site
+  they added are hidden by the app from the site's `adderNickname` (site bodies are cached for everyone). A diver
+  can block up to 500 others, so the list stays one small row.
+
+### `DELETE /api/v1/me`
+
+Signed in, no body. Deletes the diver's account and data, as the web's account page does (`deleteAccountRecords` in
+`lib/accounts.ts`; what goes and what stays is on `/privacy`): the account, its pending codes, plans, ratings with
+reviews and photos, and photos on sites it added. Dive reports stay with no name on them. Answers
+`{"apiVersion": 1, "deleted": true}`; every token and cookie of the diver stops working. 401 when signed out or
+already deleted. The app asks the diver to confirm first.
 
 ### `POST /api/v1/sites/{id}/reports`
 

@@ -1,4 +1,5 @@
-import type { StoreData, User } from "./types";
+import { BANNED } from "./moderation";
+import type { SitePhoto, StoreData, User } from "./types";
 
 /**
  * Sign-in by emailed code, on the store's data: no passwords. A code is good for LOGIN_CODE_TTL_MS and
@@ -64,6 +65,12 @@ export function requireNickname(input: unknown, users: readonly User[], selfId?:
   return nickname;
 }
 
+/** A diver by nickname, ignoring case and spaces at the ends (nicknames are unique that way). */
+export function userByNickname(store: StoreData, nickname: string): User | null {
+  const key = nickname.trim().toLowerCase();
+  return store.users.find((user) => user.nickname.toLowerCase() === key) ?? null;
+}
+
 export function userByEmail(store: StoreData, email: string): User | null {
   return store.users.find((user) => user.email === email) ?? null;
 }
@@ -101,7 +108,10 @@ export function startLogin(
 
 export type LoginResult =
   | { ok: true; user: User }
-  | { ok: false; error: string; needsNickname?: boolean };
+  | { ok: false; error: string; needsNickname?: boolean; needsTerms?: boolean };
+
+/** A sign-in by a diver who has not agreed to the content rules, without the box ticked. */
+export const TERMS_NEEDED = "Agree to the content rules and privacy policy to sign in.";
 
 /**
  * Checks a code against the address's live one. A right code ends it and signs in; a new address also needs a
@@ -115,6 +125,7 @@ export function finishLogin(
   nowMs: number,
   nickname: unknown,
   matches: (stored: string, given: string) => boolean,
+  acceptTerms = false,
 ): LoginResult {
   const live = store.logins.find((login) => login.email === email && Date.parse(login.expiresAt) > nowMs);
   if (!live || live.attempts >= LOGIN_MAX_ATTEMPTS) {
@@ -128,6 +139,10 @@ export function finishLogin(
     };
   }
   let user = userByEmail(store, email);
+  if (user?.bannedAt) {
+    live.expiresAt = new Date(nowMs).toISOString();
+    return { ok: false, error: BANNED };
+  }
   if (!user) {
     let name: string;
     try {
@@ -135,10 +150,73 @@ export function finishLogin(
     } catch (caught) {
       return { ok: false, error: (caught as Error).message, needsNickname: true };
     }
+    if (!acceptTerms) return { ok: false, error: TERMS_NEEDED, needsTerms: true };
     user = { id: crypto.randomUUID(), email, nickname: name, createdAt: new Date(nowMs).toISOString() };
     store.users.push(user);
+  }
+  // Content rules agreed to at the first sign-in, or at the next one for divers from before they existed.
+  if (!user.acceptedTermsAt) {
+    if (!acceptTerms) return { ok: false, error: TERMS_NEEDED, needsTerms: true };
+    user.acceptedTermsAt = new Date(nowMs).toISOString();
   }
   // Kept, expired, so it still counts toward the hour's sends.
   live.expiresAt = new Date(nowMs).toISOString();
   return { ok: true, user };
+}
+
+/** deleteAccount's answer when the signed-in diver's account is gone already. */
+export const ACCOUNT_GONE = "This account no longer exists.";
+
+/** A photo to delete from storage once the account's rows are gone. */
+export type AccountPhoto = { siteId: string; photo: SitePhoto };
+
+/**
+ * Deletes a diver's account from the store (PRIVACY: app/privacy/page.tsx § Deleting your account): the user row, its
+ * pending sign-in codes, its dive plans, its ratings with their reviews and photos, and the photos it added to sites it
+ * added. Two things stay, with nothing that leads back to the diver:
+ *
+ * - Dive reports, which train the forecast: their userId becomes one new random id that no account has, so the
+ *   reports drop off the scoreboard but still count as one diver where the forecast asks how many divers agree.
+ * - Sites the diver added, so other divers' reports and reviews there keep their place: `addedBy` goes.
+ *
+ * Returns the photos whose JPEGs the caller deletes, or null when there is no such user. Safe to run again on a fresh
+ * store (mutateStore may retry it).
+ */
+export function deleteAccountRecords(store: StoreData, userId: string): AccountPhoto[] | null {
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) return null;
+  const photos: AccountPhoto[] = [];
+
+  store.users = store.users.filter((item) => item.id !== userId);
+  store.logins = store.logins.filter((login) => login.email !== user.email);
+  store.plans = store.plans.filter((plan) => plan.ownerId !== userId);
+  // Reports they filed, and reports on their content (which goes too).
+  store.flags = store.flags.filter((flag) => flag.reporterId !== userId && flag.userId !== userId);
+  for (const other of store.users) {
+    if (!other.blocked?.includes(userId)) continue;
+    const kept = other.blocked.filter((id) => id !== userId);
+    if (kept.length) other.blocked = kept;
+    else delete other.blocked;
+  }
+  store.ratings = store.ratings.filter((rating) => {
+    if (rating.userId !== userId) return true;
+    for (const photo of rating.photos ?? []) photos.push({ siteId: rating.siteId, photo });
+    return false;
+  });
+
+  const anonymous = `deleted-${crypto.randomUUID()}`;
+  for (const report of store.reports) {
+    if (report.userId === userId) report.userId = anonymous;
+  }
+  for (const site of store.sites) {
+    const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);
+    for (const photo of own) photos.push({ siteId: site.id, photo });
+    if (own.length) {
+      const kept = (site.photos ?? []).filter((photo) => photo.addedBy !== userId);
+      if (kept.length) site.photos = kept;
+      else delete site.photos;
+    }
+    if (site.addedBy === userId) delete site.addedBy;
+  }
+  return photos;
 }

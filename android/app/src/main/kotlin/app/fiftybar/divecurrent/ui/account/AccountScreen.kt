@@ -37,11 +37,15 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.AccountRepository
 import app.fiftybar.divecurrent.data.SignedOutException
 import app.fiftybar.divecurrent.data.api.ApiException
@@ -110,6 +114,21 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
 
   fun signOutEverywhere() = act { account.signOutEverywhere() }
 
+  fun deleteAccount() = act { account.deleteAccount() }
+
+  /** Agrees to the content rules, for divers from before them. */
+  fun acceptTerms() =
+    act {
+      account.acceptTerms()
+      _state.update { it.copy(me = it.me?.copy(acceptedTerms = true), note = "Thanks. You can post reviews and photos.") }
+    }
+
+  fun unblock(nickname: String) =
+    act {
+      account.block(nickname, false)
+      _state.update { it.copy(me = it.me?.let { me -> me.copy(blocked = me.blocked - nickname) }, note = "$nickname is unblocked.") }
+    }
+
   private fun act(onRefused: ((String?) -> Unit)? = null, block: suspend () -> Unit) {
     _state.update { it.copy(busy = true, error = null, note = null) }
     viewModelScope.launch {
@@ -146,6 +165,8 @@ fun AccountScreen(
   val session by viewModel.session.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
   var confirmEverywhere by remember { mutableStateOf(false) }
+  var confirmDelete by remember { mutableStateOf(false) }
+  val uri = LocalUriHandler.current
 
   // Signed out here, everywhere, or by the server: nothing left to show.
   LaunchedEffect(session) { if (session == null) onSignedOut() }
@@ -168,6 +189,20 @@ fun AccountScreen(
       state.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
       state.note?.let {
         Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.incoming, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+      }
+      state.me?.takeIf { !it.acceptedTerms }?.let {
+        ProfileCard {
+          Text("Agree to the content rules", style = MaterialTheme.typography.titleSmall)
+          Text(
+            "Before you post reviews, photos, sites or an About me: no nudity, hate, harassment or spam. Posts that break the rules " +
+              "are removed and their divers banned.",
+            style = MaterialTheme.typography.bodyMedium,
+          )
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = viewModel::acceptTerms, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("I agree") }
+            TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/terms") }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Read the rules") }
+          }
+        }
       }
       state.me?.let { me ->
         StatGrid(
@@ -231,11 +266,49 @@ fun AccountScreen(
           Button(onClick = viewModel::saveNickname, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("Save nickname") }
         }
       }
+      state.me?.blocked?.takeIf { it.isNotEmpty() }?.let { blocked ->
+        Text("Divers you blocked", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        blocked.forEach { nickname ->
+          Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(nickname, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { viewModel.unblock(nickname) }, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("Unblock") }
+          }
+        }
+      }
       OutlinedButton(onClick = viewModel::signOut, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
         Text("Sign out on this phone")
       }
       TextButton(onClick = { confirmEverywhere = true }, enabled = !state.busy) { Text("Sign out everywhere") }
+      TextButton(onClick = { confirmDelete = true }, enabled = !state.busy) { Text("Delete account", color = colors.stop) }
+      Row {
+        TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/privacy") }) { Text("Privacy policy") }
+        TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/terms") }) { Text("Content rules") }
+      }
     }
+  }
+
+  if (confirmDelete) {
+    AlertDialog(
+      onDismissRequest = { confirmDelete = false },
+      title = { Text("Delete your account?") },
+      text = {
+        Text(
+          "This deletes your email, nickname, About me, dive plans, ratings, reviews and photos, and signs you out everywhere. " +
+            "Your dive reports stay, with no name on them, because they teach the forecast. It cannot be undone."
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmDelete = false
+            viewModel.deleteAccount()
+          }
+        ) {
+          Text("Delete account", color = colors.stop)
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+    )
   }
 
   if (confirmEverywhere) {

@@ -1,7 +1,7 @@
 import { mailgunConfig } from "./auth";
 import { appSetting, workerEnv, type SendEmail } from "./cloudflare";
 import { loginEmailMessage, SENDER_NAME, type LoginEmail } from "./login-email";
-import { sendMailgunEmail } from "./mailgun";
+import { sendMailgunEmail, sendMailgunMessage } from "./mailgun";
 
 /**
  * Where the sign-in email goes out, in order: Cloudflare Email Sending (the worker's EMAIL binding, from EMAIL_FROM,
@@ -40,4 +40,28 @@ export async function sendLoginEmail(routes: MailRoute[], email: LoginEmail): Pr
 async function sendCloudflareEmail(binding: SendEmail, from: string, email: LoginEmail): Promise<void> {
   const { subject, text, html } = loginEmailMessage(email);
   await binding.send({ from: { email: from, name: SENDER_NAME }, to: email.to, subject, text, html });
+}
+
+/**
+ * A plain-text notice to our own people (a moderator, on a new content report), by the same routes as sign-in emails:
+ * Cloudflare first, then Mailgun. Throws when none sent it.
+ */
+export async function sendNotice(to: string, subject: string, text: string): Promise<void> {
+  const binding = workerEnv()?.EMAIL;
+  const from = appSetting("EMAIL_FROM");
+  const mailgun = mailgunConfig();
+  let failure: unknown = new Error("No email route is set up");
+  if (binding && from) {
+    try {
+      await binding.send({ from: { email: from, name: SENDER_NAME }, to, subject, text });
+      return;
+    } catch (error) {
+      failure = error;
+    }
+  }
+  if (mailgun) {
+    await sendMailgunMessage(mailgun, { to, subject, text });
+    return;
+  }
+  throw failure;
 }

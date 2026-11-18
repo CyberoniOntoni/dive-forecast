@@ -9,6 +9,7 @@ import { SiteReviews } from "@/components/SiteReviews";
 import { ReportForm } from "@/components/ReportForm";
 import { NavigateIcon } from "@/components/site-ui";
 import { forecastSite, getRecentReports, getSite, getSiteReviews, siteAdderNickname } from "@/lib/actions";
+import { getBlockedDivers } from "@/lib/moderation-actions";
 import { currentSession } from "@/lib/auth";
 import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
@@ -29,7 +30,7 @@ export async function generateMetadata({
   const { id } = await params;
   const site = await getSite(id);
   return {
-    title: site ? `${site.name} · 50bar` : "Site not found · 50bar",
+    title: site ? `${site.name} · 50Bar` : "Site not found · 50Bar",
   };
 }
 
@@ -50,10 +51,11 @@ export default async function SitePage({
   if (!site) notFound();
 
   const session = await currentSession();
-  const [forecast, reviews, adderNickname] = await Promise.all([
+  const [forecast, reviews, adderNickname, blocked] = await Promise.all([
     forecastSite(site.id),
     getSiteReviews(site.id),
     siteAdderNickname(site.id),
+    getBlockedDivers(),
   ]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
   const recent = await getRecentReports(site.id, forecast.forecastRoute);
@@ -110,6 +112,8 @@ export default async function SitePage({
         site={site}
         adderNickname={adderNickname}
         isAdder={session != null && site.sourceUrl === "user" && site.addedBy === session.userId}
+        signedIn={session != null}
+        blockedAdder={site.addedBy != null && blocked.some((diver) => diver.userId === site.addedBy)}
       />
       <RecentReports rows={recent} />
       <div className="flex min-w-0 flex-col gap-4">

@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -44,6 +45,11 @@ import app.fiftybar.divecurrent.data.api.ApiBadge
 import app.fiftybar.divecurrent.data.api.ApiDiver
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.ui.appAccount
+import app.fiftybar.divecurrent.data.SignedOutException
+import app.fiftybar.divecurrent.data.api.FlagBody
+import app.fiftybar.divecurrent.ui.components.BlockDialog
+import app.fiftybar.divecurrent.ui.components.ContentActions
+import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +57,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class DiverUiState(val diver: ApiDiver? = null, val loading: Boolean = true, val error: String? = null)
+data class DiverUiState(
+  val diver: ApiDiver? = null,
+  val loading: Boolean = true,
+  val error: String? = null,
+  /** "Thanks. A moderator will look at it." */
+  val note: String? = null,
+)
 
 class DiverViewModel(private val nickname: String, private val account: AccountRepository) : ViewModel() {
   private val _state = MutableStateFlow(DiverUiState())
@@ -77,16 +89,48 @@ class DiverViewModel(private val nickname: String, private val account: AccountR
       }
     }
   }
+
+  val signedIn: Boolean
+    get() = account.sessions.current() != null
+
+  /** Reports this diver's nickname or About me to the moderators. */
+  fun report(reason: String, note: String) =
+    act("Thanks. A moderator will look at it.") {
+      account.report(FlagBody("diver", nickname = _state.value.diver?.nickname ?: nickname, reason = reason, note = note.ifBlank { null }))
+    }
+
+  /** Blocks or unblocks this diver, then reads the page again. */
+  fun block(blocked: Boolean) =
+    act(if (blocked) "Blocked." else "Unblocked.") {
+      account.block(_state.value.diver?.nickname ?: nickname, blocked)
+      load()
+    }
+
+  private fun act(done: String, call: suspend () -> Unit) {
+    viewModelScope.launch {
+      _state.update { it.copy(error = null, note = null) }
+      try {
+        call()
+        _state.update { it.copy(note = done) }
+      } catch (_: SignedOutException) {
+        _state.update { it.copy(error = "Sign in again first.") }
+      } catch (e: ApiException) {
+        _state.update { it.copy(error = e.message) }
+      }
+    }
+  }
 }
 
 /** A diver's public page, as the web's (app/divers): nickname, About me, numbers and earned badges. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DiverScreen(nickname: String, onBack: () -> Unit, onAccount: () -> Unit) {
+fun DiverScreen(nickname: String, onBack: () -> Unit, onAccount: () -> Unit, onSignIn: () -> Unit = onAccount) {
   val account = appAccount()
   val viewModel: DiverViewModel = viewModel(key = "diver/$nickname") { DiverViewModel(nickname, account) }
   val state by viewModel.state.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
+  var reporting by remember { mutableStateOf(false) }
+  var blocking by remember { mutableStateOf(false) }
   // Back from the account screen: show the About me or nickname just saved.
   var shownOnce by remember { mutableStateOf(false) }
   LifecycleResumeEffect(viewModel) {
@@ -112,7 +156,13 @@ fun DiverScreen(nickname: String, onBack: () -> Unit, onAccount: () -> Unit) {
       state.error?.let { Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium) }
       val diver = state.diver ?: return@Column
       Text(diver.sinceLine, style = MaterialTheme.typography.bodyMedium, color = colors.foam.copy(alpha = 0.8f))
-      if (diver.about.isNotBlank()) {
+      state.note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.incoming) }
+      if (diver.blockedByMe) {
+        ProfileCard {
+          Text("You blocked this diver. Their reviews and photos are hidden from you.", style = MaterialTheme.typography.bodyMedium)
+          TextButton(onClick = { viewModel.block(false) }, modifier = Modifier.heightIn(min = 48.dp)) { Text("Unblock") }
+        }
+      } else if (diver.about.isNotBlank()) {
         ProfileCard { Text(diver.about, style = MaterialTheme.typography.bodyMedium) }
       } else if (diver.isMe) {
         Text("Nothing about you yet.", style = MaterialTheme.typography.bodyMedium, color = colors.foam.copy(alpha = 0.8f))
@@ -134,7 +184,34 @@ fun DiverScreen(nickname: String, onBack: () -> Unit, onAccount: () -> Unit) {
         Text("Badges", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
         BadgeList(diver.badges)
       }
+      if (!diver.isMe && !diver.blockedByMe) {
+        ContentActions(
+          onReport = { if (viewModel.signedIn) reporting = true else onSignIn() },
+          onBlock = if (viewModel.signedIn) ({ blocking = true }) else null,
+        )
+      }
     }
+  }
+
+  if (reporting) {
+    ReportDialog(
+      what = "diver",
+      onDismiss = { reporting = false },
+      onSend = { reason, note ->
+        reporting = false
+        viewModel.report(reason, note)
+      },
+    )
+  }
+  if (blocking) {
+    BlockDialog(
+      nickname = state.diver?.nickname ?: nickname,
+      onDismiss = { blocking = false },
+      onBlock = {
+        blocking = false
+        viewModel.block(true)
+      },
+    )
   }
 }
 

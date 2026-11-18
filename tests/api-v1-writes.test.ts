@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET as getMe } from "@/app/api/v1/me/route";
+import { DELETE as deleteMe, GET as getMe } from "@/app/api/v1/me/route";
 import { POST as requestCode } from "@/app/api/v1/sign-in/code/route";
 import { POST as getToken } from "@/app/api/v1/sign-in/token/route";
 import { POST as signOutEverywhere } from "@/app/api/v1/sign-out-everywhere/route";
@@ -77,7 +77,7 @@ function codeFromEmail(): string {
 async function signInApp(email: string, nickname: string): Promise<string> {
   const asked = await requestCode(call("/api/v1/sign-in/code", { body: { email } }));
   expect(asked.status).toBe(200);
-  const response = await getToken(call("/api/v1/sign-in/token", { body: { email, code: codeFromEmail(), nickname } }));
+  const response = await getToken(call("/api/v1/sign-in/token", { body: { email, code: codeFromEmail(), nickname, acceptTerms: true } }));
   expect(response.status).toBe(200);
   const body = await response.json();
   expect(body).toMatchObject({ apiVersion: 1, nickname, token: expect.any(String), expiresAt: expect.any(Number) });
@@ -95,10 +95,10 @@ describe("API v1 sign-in", () => {
 
     const wrong = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code: "000000" } }));
     expect(wrong.status).toBe(400);
-    const noName = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code } }));
+    const noName = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code, acceptTerms: true } }));
     expect(noName.status).toBe(400);
     expect((await noName.json()).error.code).toBe("needs_nickname");
-    const ok = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code, nickname: "Manta" } }));
+    const ok = await getToken(call("/api/v1/sign-in/token", { body: { email: "diver@example.com", code, nickname: "Manta", acceptTerms: true } }));
     const { token } = await ok.json();
     expect(jar.has(SESSION_COOKIE)).toBe(false);
     // The diver's id is not readable from the token, encoded or not.
@@ -134,6 +134,17 @@ describe("API v1 sign-in", () => {
     expect((await signOutEverywhere(call("/api/v1/sign-out-everywhere", { body: {}, token }))).status).toBe(200);
     expect((await getMe(call("/api/v1/me", { token }))).status).toBe(401);
   });
+
+  it("deletes the account with the app's token, and the token stops working", async () => {
+    const token = await signInApp("a@example.com", "Ann");
+    const deleted = await deleteMe(call("/api/v1/me", { method: "DELETE", token }));
+    expect(deleted.status).toBe(200);
+    expect(await deleted.json()).toEqual({ apiVersion: 1, deleted: true });
+    expect(readStore().users).toEqual([]);
+    expect((await getMe(call("/api/v1/me", { token }))).status).toBe(401);
+    expect((await deleteMe(call("/api/v1/me", { method: "DELETE", token }))).status).toBe(401);
+    expect((await deleteMe(call("/api/v1/me", { method: "DELETE" }))).status).toBe(401);
+  });
 });
 
 describe("API v1 reports", () => {
@@ -163,7 +174,7 @@ describe("API v1 reports", () => {
 
   it("refuses a report without a token, even from a signed-in browser", async () => {
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
     expect(jar.has(SESSION_COOKIE)).toBe(true);
     const response = await postReport(
       call("/api/v1/sites/banana-reef/reports", { body: { time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" } }),

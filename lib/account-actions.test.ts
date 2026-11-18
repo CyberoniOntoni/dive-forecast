@@ -5,6 +5,7 @@ import {
   changeAbout,
   changeNickname,
   completeSignIn,
+  deleteAccount,
   getAccount,
   getDiverProfile,
   getLeaderboard,
@@ -15,7 +16,8 @@ import {
 } from "./account-actions";
 import { addReport, addSite, rateSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
-import { readStore, setStorePath } from "./store";
+import { mutateStore, readStore, setStorePath } from "./store";
+import { TERMS_FIRST } from "./moderation";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -80,8 +82,8 @@ describe("sign in by email code", () => {
     expect(JSON.stringify(readStore().logins)).not.toContain(code);
 
     expect(await completeSignIn({ email: "diver@example.com", code: "000000" })).toMatchObject({ ok: false });
-    expect(await completeSignIn({ email: "diver@example.com", code })).toMatchObject({ ok: false, needsNickname: true });
-    expect(await completeSignIn({ email: "diver@example.com", code, nickname: "Manta" })).toEqual({ ok: true, error: null });
+    expect(await completeSignIn({ email: "diver@example.com", code, acceptTerms: true })).toMatchObject({ ok: false, needsNickname: true });
+    expect(await completeSignIn({ email: "diver@example.com", code, nickname: "Manta", acceptTerms: true })).toEqual({ ok: true, error: null });
     expect(jar.has(SESSION_COOKIE)).toBe(true);
     expect(await whoAmI()).toEqual({ nickname: "Manta" });
 
@@ -96,26 +98,34 @@ describe("sign in by email code", () => {
 
   it("signs a known diver straight in, and lets them rename", async () => {
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
     await requestSignIn("b@example.com");
-    await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob" });
+    await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob", acceptTerms: true });
     expect(await changeNickname("ann")).toMatchObject({ ok: false, error: "That nickname is taken." });
+    // A diver from before the content rules agrees to them before renaming.
+    await mutateStore((store) => {
+      delete store.users.find((user) => user.nickname === "Bob")!.acceptedTermsAt;
+    });
+    expect(await changeNickname("Bobby")).toMatchObject({ ok: false, error: TERMS_FIRST });
+    await mutateStore((store) => {
+      store.users.find((user) => user.nickname === "Bob")!.acceptedTermsAt = "2026-11-18T00:00:00Z";
+    });
     expect(await changeNickname("Bobby")).toMatchObject({ ok: true, nickname: "Bobby" });
     expect(await whoAmI()).toEqual({ nickname: "Bobby" });
 
     jar.clear();
     expect(await requestSignIn("a@example.com")).toMatchObject({ ok: true, newUser: false });
-    expect(await completeSignIn({ email: "a@example.com", code: codeFromEmail() })).toEqual({ ok: true, error: null });
+    expect(await completeSignIn({ email: "a@example.com", code: codeFromEmail(), acceptTerms: true })).toEqual({ ok: true, error: null });
     expect(await whoAmI()).toEqual({ nickname: "Ann" });
   });
 
   it("puts divers who add sites on the public site board, newest site first", async () => {
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
     const first = await addSite({ name: "Ann Thila", lat: 4.3, lon: 73.5 });
     const second = await addSite({ name: "Ann Corner", lat: 4.31, lon: 73.51 });
     await requestSignIn("b@example.com");
-    await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob" });
+    await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob", acceptTerms: true });
     await addReport({ siteId: first.id, time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
 
     jar.clear();
@@ -131,7 +141,7 @@ describe("sign in by email code", () => {
   it("shows a diver's About me and numbers on their public page, never the email", async () => {
     expect(await changeAbout("Hi")).toMatchObject({ ok: false });
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
     expect(await changeAbout("  Guide in Maafushi, mantas please.  ")).toEqual({
       ok: true,
       error: null,
@@ -161,6 +171,38 @@ describe("sign in by email code", () => {
   });
 });
 
+describe("deleting an account", () => {
+  it("removes the diver, keeps their reports without a name, and ends every session", async () => {
+    await requestSignIn("a@example.com");
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
+    const otherDevice = jar.get(SESSION_COOKIE)!;
+    const userId = (await getAccount())!.userId;
+    await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    await rateSite("banana-reef", 5);
+
+    expect(await deleteAccount()).toEqual({ ok: true, error: null });
+    expect(jar.has(SESSION_COOKIE)).toBe(false);
+    const store = readStore();
+    expect(JSON.stringify(store)).not.toContain("a@example.com");
+    expect(JSON.stringify(store)).not.toContain(userId);
+    expect(store.users).toEqual([]);
+    expect(store.ratings).toEqual([]);
+    expect(store.reports).toHaveLength(1);
+    expect(store.reports[0].userId).toMatch(/^deleted-/);
+    expect(await getLeaderboard("all")).toEqual([]);
+
+    // A copy of the cookie from before no longer signs anyone in.
+    jar.set(SESSION_COOKIE, otherDevice);
+    expect(await getAccount()).toBeNull();
+    expect(await deleteAccount()).toMatchObject({ ok: false });
+    await expect(rateSite("banana-reef", 4)).rejects.toThrow("Sign in first.");
+
+    // The address can sign up again, as a new diver.
+    jar.clear();
+    expect(await requestSignIn("a@example.com")).toMatchObject({ ok: true, newUser: true });
+  });
+});
+
 describe("sign-in limits and sessions", () => {
   it("caps the codes one connection can ask for in an hour, whatever the address", async () => {
     client.ip = "203.0.113.5";
@@ -176,7 +218,7 @@ describe("sign-in limits and sessions", () => {
 
   it("signs a diver out on every device, and a new sign-in works again", async () => {
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });
     const otherDevice = jar.get(SESSION_COOKIE)!;
     vi.setSystemTime(new Date("2026-09-28T00:00:01Z"));
     expect(await signOutEverywhere()).toEqual({ ok: true, error: null });
@@ -189,7 +231,7 @@ describe("sign-in limits and sessions", () => {
     vi.setSystemTime(new Date("2026-09-28T00:00:02Z"));
     jar.clear();
     await requestSignIn("a@example.com");
-    await completeSignIn({ email: "a@example.com", code: codeFromEmail() });
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), acceptTerms: true });
     expect(await getAccount()).toMatchObject({ nickname: "Ann" });
   });
 });

@@ -42,7 +42,13 @@ vi.mock("next/headers", () => ({
   headers: async () => new Headers(),
 }));
 
+/** Signs a diver in, adding them to the store first: a session whose diver is not there no longer counts. */
 async function signInAs(userId: string, nickname = userId) {
+  await mutateStore((store) => {
+    if (!store.users.some((user) => user.id === userId)) {
+      store.users.push({ id: userId, email: `${userId}@example.com`, nickname, createdAt: "2026-09-01T00:00:00Z", acceptedTermsAt: "2026-09-01T00:00:00Z" });
+    }
+  });
   jar.set(SESSION_COOKIE, await signSession({ userId, nickname, issuedAt: Date.now() }, authSecret()!));
 }
 
@@ -345,7 +351,8 @@ describe("reviews on any site", () => {
   async function withDivers() {
     await mutateStore((store) => {
       for (const id of ["diver-1", "diver-2"]) {
-        store.users.push({ id, email: `${id}@example.com`, nickname: id.replace("diver-", "Diver "), createdAt: "2026-09-01T00:00:00Z" });
+        store.users = store.users.filter((user) => user.id !== id);
+        store.users.push({ id, email: `${id}@example.com`, nickname: id.replace("diver-", "Diver "), createdAt: "2026-09-01T00:00:00Z", acceptedTermsAt: "2026-09-01T00:00:00Z" });
       }
     });
   }

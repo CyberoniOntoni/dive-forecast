@@ -49,6 +49,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.fiftybar.divecurrent.data.api.ApiReview
 import app.fiftybar.divecurrent.data.api.ApiReviewPhoto
+import app.fiftybar.divecurrent.ui.components.BlockDialog
+import app.fiftybar.divecurrent.ui.components.ContentActions
+import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 
@@ -64,6 +67,9 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
   val card = state.card
   val mine = card?.mine
   var confirmRemove by remember { mutableStateOf(false) }
+  // The nickname whose review is being reported or blocked.
+  var reportOf by remember { mutableStateOf<String?>(null) }
+  var blockOf by remember { mutableStateOf<String?>(null) }
   val room = (card?.maxPhotos ?: 6) - (mine?.photos?.size ?: 0)
   val pick =
     rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(6)) { uris ->
@@ -143,8 +149,41 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
     }
     card?.reviews?.takeIf { it.isNotEmpty() }?.let { reviews ->
       HorizontalDivider(color = colors.foam.copy(alpha = 0.1f))
-      reviews.forEach { OtherReview(it, viewModel::photoUrl) }
+      reviews.forEach { review ->
+        OtherReview(
+          review,
+          viewModel::photoUrl,
+          actions = {
+            ContentActions(
+              onReport = { if (signedIn) reportOf = review.nickname else onSignIn() },
+              onBlock = if (signedIn) ({ blockOf = review.nickname }) else null,
+              enabled = !state.busy,
+            )
+          },
+        )
+      }
     }
+  }
+
+  reportOf?.let { nickname ->
+    ReportDialog(
+      what = "review",
+      onDismiss = { reportOf = null },
+      onSend = { reason, note ->
+        reportOf = null
+        viewModel.report(nickname, reason, note)
+      },
+    )
+  }
+  blockOf?.let { nickname ->
+    BlockDialog(
+      nickname = nickname,
+      onDismiss = { blockOf = null },
+      onBlock = {
+        blockOf = null
+        viewModel.block(nickname)
+      },
+    )
   }
 
   if (confirmRemove && mine != null) {
@@ -177,7 +216,7 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
 }
 
 @Composable
-private fun OtherReview(review: ApiReview, photoUrl: (String) -> String) {
+private fun OtherReview(review: ApiReview, photoUrl: (String) -> String, actions: @Composable () -> Unit) {
   val colors = CurrentTheme.colors
   Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -186,6 +225,7 @@ private fun OtherReview(review: ApiReview, photoUrl: (String) -> String) {
     }
     review.review?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     if (review.photos.isNotEmpty()) PhotoRow(review.photos, photoUrl, label = { "Photo ${it + 1} by ${review.nickname}" }, onRemove = null)
+    actions()
   }
 }
 

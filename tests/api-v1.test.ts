@@ -37,7 +37,7 @@ function params(id: string) {
 
 describe("API v1 shapes", () => {
   it("gives a site its display fields only, with no diver id", () => {
-    const site = apiSite(userPin);
+    const site = apiSite(userPin, null, "Reefer");
     expect(site).toEqual({
       id: "my-reef-1a2b3c4d",
       name: "My Reef",
@@ -55,6 +55,7 @@ describe("API v1 shapes", () => {
       pinNote: null,
       howToDive: "Drop on the east side.",
       photoUrls: ["/site-photos/my-reef-1a2b3c4d/p1.jpg"],
+      adderNickname: "Reefer",
     });
     expect(JSON.stringify(site)).not.toContain("user-123");
   });

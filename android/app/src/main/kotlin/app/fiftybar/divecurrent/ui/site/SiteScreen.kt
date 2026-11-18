@@ -106,6 +106,9 @@ import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
+import app.fiftybar.divecurrent.ui.components.ContentActions
+import app.fiftybar.divecurrent.ui.components.BlockDialog
+import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -282,9 +285,39 @@ fun SiteScreen(
           state.site?.let { s ->
             val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
             val photosState by photos.state.collectAsStateWithLifecycle()
-            AboutCard(s, photoUrl = viewModel::photoUrl) {
+            AboutCard(s, photoUrl = viewModel::photoUrl, adderBlocked = photosState.adderBlocked(s)) {
               if (s.userAdded && photosState.isAdder && session != null) {
                 AdderPhotos(s, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
+              }
+              if (s.userAdded && !photosState.isAdder) {
+                var reporting by remember { mutableStateOf(false) }
+                var blocking by remember { mutableStateOf(false) }
+                val adderName = s.adderNickname
+                ContentActions(
+                  onReport = { if (session != null) reporting = true else onSignIn() },
+                  onBlock = if (session != null && adderName != null && !photosState.adderBlocked(s)) ({ blocking = true }) else null,
+                )
+                photosState.reportNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.85f)) }
+                if (reporting) {
+                  ReportDialog(
+                    what = "site",
+                    onDismiss = { reporting = false },
+                    onSend = { reason, note ->
+                      reporting = false
+                      photos.report(reason, note)
+                    },
+                  )
+                }
+                if (blocking && adderName != null) {
+                  BlockDialog(
+                    nickname = adderName,
+                    onDismiss = { blocking = false },
+                    onBlock = {
+                      blocking = false
+                      photos.blockAdder(adderName)
+                    },
+                  )
+                }
               }
             }
           }
@@ -421,7 +454,12 @@ private fun UnavailableCard(forecast: ApiForecast) {
 }
 
 @Composable
-private fun AboutCard(site: ApiSite, photoUrl: (String) -> String, adder: @Composable () -> Unit = {}) {
+private fun AboutCard(
+  site: ApiSite,
+  photoUrl: (String) -> String,
+  adderBlocked: Boolean = false,
+  adder: @Composable () -> Unit = {},
+) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
   SurfaceCard {
@@ -437,11 +475,18 @@ private fun AboutCard(site: ApiSite, photoUrl: (String) -> String, adder: @Compo
     } else {
       site.pinNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
-    site.howToDive?.let {
+    if (adderBlocked) {
+      Text(
+        "You blocked the diver who added this site, so their notes and photos are hidden. Unblock them on your account screen.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.8f),
+      )
+    }
+    site.howToDive?.takeUnless { adderBlocked }?.let {
       Text("How to dive it", style = MaterialTheme.typography.labelLarge)
       Text(it, style = MaterialTheme.typography.bodyMedium)
     }
-    if (site.photoUrls.isNotEmpty()) {
+    if (site.photoUrls.isNotEmpty() && !adderBlocked) {
       LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
         items(site.photoUrls) { path ->
           AsyncImage(

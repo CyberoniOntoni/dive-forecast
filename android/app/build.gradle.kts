@@ -13,18 +13,40 @@ plugins {
 val releaseApiBaseUrl = "https://50bar.app"
 val devApiBaseUrl = (findProperty("devApiBaseUrl") as String?) ?: "http://10.0.2.2:3000"
 
+/**
+ * Release signing with the Play upload key, from the environment (the `android-release` workflow writes the keystore
+ * from GitHub secrets; see android/README.md § Releasing to Google Play). Without ANDROID_KEYSTORE_PATH a release
+ * build is unsigned, as before. Play re-signs the app with its own app-signing key.
+ */
+val uploadKeystore = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }?.let { file(it) }
+
+/** Play needs every upload's versionCode higher than the last; the release workflow passes its run number. */
+val appVersionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+val appVersionName = (findProperty("versionName") as String?) ?: "1.0"
+
 android {
   namespace = "app.fiftybar.divecurrent"
   compileSdk = 37
   defaultConfig {
-    applicationId = "app.fiftybar.divecurrent"
+    applicationId = "app.fiftybar"
     minSdk = 26
     targetSdk = 37
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = appVersionCode
+    versionName = appVersionName
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     // Share links and "Open on the web" always go to the public site, whatever server the build reads.
     buildConfigField("String", "WEB_URL", "\"$releaseApiBaseUrl\"")
+  }
+
+  signingConfigs {
+    if (uploadKeystore != null) {
+      create("upload") {
+        storeFile = uploadKeystore
+        storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+        keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+        keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+      }
+    }
   }
 
   buildTypes {
@@ -33,6 +55,7 @@ android {
     }
     release {
       buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
+      if (uploadKeystore != null) signingConfig = signingConfigs.getByName("upload")
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
     }

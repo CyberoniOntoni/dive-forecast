@@ -44,7 +44,7 @@ class AccountRepositoryTest {
     assertEquals("""{"email":"diver@example.com"}""", sent.body.readUtf8())
 
     account.signIn("diver@example.com", "12 34 56", "Manta")
-    assertEquals("""{"email":"diver@example.com","code":"123456","nickname":"Manta"}""", server.takeRequest().body.readUtf8())
+    assertEquals("""{"email":"diver@example.com","code":"123456","nickname":"Manta","acceptTerms":true}""", server.takeRequest().body.readUtf8())
     assertEquals(Session("t.sig", "Manta", 9000), storage.saved)
     assertEquals("Manta", account.sessions.session.value?.nickname)
   }
@@ -171,6 +171,64 @@ class AccountRepositoryTest {
     account.signOutEverywhere()
     assertEquals("/api/v1/sign-out-everywhere", server.takeRequest().path)
     assertNull(account.sessions.session.value)
+  }
+
+  @Test
+  fun `deletes the account with the token, then forgets it`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(200, """{"apiVersion":1,"deleted":true}"""))
+    account.deleteAccount()
+    val sent = server.takeRequest()
+    assertEquals("DELETE", sent.method)
+    assertEquals("/api/v1/me", sent.path)
+    assertEquals("Bearer t.sig", sent.getHeader("Authorization"))
+    assertNull(account.sessions.session.value)
+  }
+
+  @Test
+  fun `keeps the token when deleting fails for another reason`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(500, """{"apiVersion":1,"error":{"code":"server_error","message":"Try again."}}"""))
+    try {
+      account.deleteAccount()
+      fail("expected the server's error")
+    } catch (_: ApiException.Server) {}
+    assertEquals("t.sig", account.sessions.session.value?.token)
+  }
+
+  @Test
+  fun `reports content and blocks a diver with the token`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(201, """{"apiVersion":1,"sent":true}"""))
+    account.report(app.fiftybar.divecurrent.data.api.FlagBody("review", siteId = "s1", nickname = "Rude", reason = "hate"))
+    val flag = server.takeRequest()
+    assertEquals("/api/v1/flags", flag.path)
+    assertEquals("""{"kind":"review","siteId":"s1","nickname":"Rude","reason":"hate"}""", flag.body.readUtf8())
+
+    server.enqueue(reply(200, """{"apiVersion":1,"blocked":true}"""))
+    account.block("Rude", true)
+    val block = server.takeRequest()
+    assertEquals("POST", block.method)
+    assertEquals("/api/v1/divers/Rude/block", block.path)
+
+    server.enqueue(reply(200, """{"apiVersion":1,"blocked":false}"""))
+    account.block("Rude", false)
+    assertEquals("DELETE", server.takeRequest().method)
+
+    server.enqueue(reply(200, """{"apiVersion":1,"acceptedTerms":true}"""))
+    account.acceptTerms()
+    assertEquals("/api/v1/me/terms", server.takeRequest().path)
+  }
+
+  @Test
+  fun `reads whose site it is and whom the diver blocked, for the site page`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(
+      reply(200, """{"apiVersion":1,"nickname":"Manta","points":0,"monthPoints":0,"reports":0,"addedSiteIds":["pin"],"blocked":["Rude"]}""")
+    )
+    assertEquals(true to setOf("rude"), account.siteViewer("pin"))
+    account.signOut()
+    assertEquals(false to emptySet<String>(), account.siteViewer("pin"))
   }
 
   private class MemoryStorage : SessionStorage {
