@@ -24,9 +24,13 @@ data class SitePhotosUiState(
   val progress: String? = null,
   val error: String? = null,
   val note: String? = null,
-  /** After reporting the site: "Thanks. A moderator will look at it.", or why it failed. */
+  /** After reporting the site or blocking its adder: what happened, or why it failed. */
   val reportNote: String? = null,
-)
+  /** Nicknames (lower case) the signed-in diver blocked: a blocked adder's notes and photos are hidden, as on the web. */
+  val blocked: Set<String> = emptySet(),
+) {
+  fun adderBlocked(site: ApiSite): Boolean = site.adderNickname?.lowercase()?.let { it in blocked } == true
+}
 
 /** "Add photos" on a site the signed-in diver added in the app, as the web's site page (components/SiteAbout.tsx). */
 class SitePhotosViewModel(private val siteId: String, private val account: AccountRepository) : ViewModel() {
@@ -37,8 +41,8 @@ class SitePhotosViewModel(private val siteId: String, private val account: Accou
     // Whose site it is can change with who is signed in.
     viewModelScope.launch {
       account.sessions.session.map { it?.token }.distinctUntilChanged().collect { token ->
-        val adder = token != null && account.addedSite(siteId)
-        _state.update { it.copy(isAdder = adder) }
+        val (adder, blocked) = if (token != null) account.siteViewer(siteId) else false to emptySet()
+        _state.update { it.copy(isAdder = adder, blocked = blocked) }
       }
     }
   }
@@ -84,6 +88,22 @@ class SitePhotosViewModel(private val siteId: String, private val account: Accou
           e.message ?: "Could not send the report."
         }
       _state.update { it.copy(reportNote = line) }
+    }
+  }
+
+  /** Blocks the diver who added this site: their notes and photos are hidden from now on. */
+  fun blockAdder(nickname: String) {
+    viewModelScope.launch {
+      try {
+        account.block(nickname, true)
+        _state.update {
+          it.copy(blocked = it.blocked + nickname.lowercase(), reportNote = "$nickname is blocked. Unblock them on your account screen.")
+        }
+      } catch (_: SignedOutException) {
+        _state.update { it.copy(reportNote = "Sign in again first.") }
+      } catch (e: ApiException) {
+        _state.update { it.copy(reportNote = e.message ?: "Could not block them.") }
+      }
     }
   }
 }

@@ -118,7 +118,7 @@ describe("API v1 adding sites", () => {
     expect(added.status).toBe(201);
     expect(added.headers.get("cache-control")).toBe("private, no-store");
     const { site: saved } = await added.json();
-    expect(saved).toMatchObject({ name: "Test Thila", userAdded: true, diveTopM: 8, diveMaxM: 25, howToDive: "Drop on the east side.", photoUrls: [] });
+    expect(saved).toMatchObject({ name: "Test Thila", userAdded: true, diveTopM: 8, diveMaxM: 25, howToDive: "Drop on the east side.", photoUrls: [], adderNickname: "Ann" });
     expect(JSON.stringify(saved)).not.toMatch(/addedBy|example\.com/);
     // On the map and with its rating.
     const read = await getSite(call(`/api/v1/sites/${saved.id}`), site(saved.id));

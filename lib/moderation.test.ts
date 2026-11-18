@@ -84,6 +84,14 @@ describe("moderation", () => {
     expect(data.users[1].nickname).toMatch(/^Diver /);
   });
 
+  it("removes a site whose adder has since deleted their account", () => {
+    const data = store();
+    delete data.sites[0].addedBy;
+    expect(removeFlagged(data, { kind: "site", siteId: "pin" }, new Date(NOW).toISOString())).toEqual([{ siteId: "pin", photo: photo("p1", "bad") }]);
+    expect(data.sites[0]).toMatchObject({ hidden: true });
+    expect(data.sites[0].howToDive).toBeUndefined();
+  });
+
   it("bans a diver: signed out, posts removed, reports on them closed, and their sign-in refused", () => {
     const data = store();
     addFlag(data, "ann", { kind: "diver", userId: "bad", reason: "hate" }, NOW);

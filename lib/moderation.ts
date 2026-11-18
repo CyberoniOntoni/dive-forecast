@@ -138,7 +138,7 @@ function removeReview(store: StoreData, siteId: string, userId: string, nowIso: 
 
 /** Hides a site added in the app and drops its photos and notes. */
 function removeSite(store: StoreData, siteId: string): StoredPhoto[] {
-  const site = store.sites.find((item) => item.id === siteId && item.addedBy !== undefined);
+  const site = store.sites.find((item) => item.id === siteId && item.sourceUrl === "user");
   if (!site) return [];
   const photos = (site.photos ?? []).map((photo) => ({ siteId, photo }));
   site.hidden = true;

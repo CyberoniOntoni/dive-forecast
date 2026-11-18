@@ -63,7 +63,8 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "approximatePin": false,
       "pinNote": null,
       "howToDive": null,
-      "photoUrls": ["/site-photos/<site>/<photo>.jpg"]
+      "photoUrls": ["/site-photos/<site>/<photo>.jpg"],
+      "adderNickname": null
     }
   ]
 }
@@ -71,6 +72,9 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
 classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `photoUrls` are paths on this server.
+`adderNickname` is who added a pin in the app (null on a catalog site, or once they deleted their account); a client
+hides that site's `howToDive` and `photoUrls` from a diver whose `blocked` list (`GET /api/v1/me`) holds it, as the web
+does.
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 
@@ -239,7 +243,9 @@ Google Play's user-generated content policy, as on the web (`lib/moderation.ts`,
   Moderators get an email and act at `/moderation` on the web.
 - **`POST /api/v1/divers/{nickname}/block`** and **`DELETE`** the same, signed in → `{"apiVersion": 1, "blocked":
   true | false}`. A blocked diver's reviews and photos drop out of `GET /api/v1/sites/{id}/reviews` for the blocker,
-  and `GET /api/v1/divers/{nickname}` answers `blockedByMe: true` with an empty `about`.
+  and `GET /api/v1/divers/{nickname}` answers `blockedByMe: true` with an empty `about`. Notes and photos on a site
+  they added are hidden by the app from the site's `adderNickname` (site bodies are cached for everyone). A diver
+  can block up to 500 others, so the list stays one small row.
 
 ### `DELETE /api/v1/me`
 

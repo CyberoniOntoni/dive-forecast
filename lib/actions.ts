@@ -163,7 +163,12 @@ export async function addSitePhoto(siteId: string, formData: FormData): Promise<
     } finally {
       if (!saved) await deletePhotoBytes(siteId, photo.id);
     }
-    if (!saved) return { ok: false, error: `A site can have at most ${MAX_PHOTOS_PER_SITE} photos.` };
+    if (!saved) {
+      // Refused either because the site filled up meanwhile or because it is no longer this diver's (account deleted).
+      const now = readStore().sites.find((item) => item.id === siteId && !item.hidden);
+      if (now?.addedBy !== session.userId) return { ok: false, error: "Only the diver who added this site can add photos." };
+      return { ok: false, error: `A site can have at most ${MAX_PHOTOS_PER_SITE} photos.` };
+    }
     return { ok: true, photo, url: photoUrl(siteId, photo.id) };
   } catch (error) {
     rethrowIfNextError(error);

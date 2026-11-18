@@ -220,6 +220,17 @@ class AccountRepositoryTest {
     assertEquals("/api/v1/me/terms", server.takeRequest().path)
   }
 
+  @Test
+  fun `reads whose site it is and whom the diver blocked, for the site page`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(
+      reply(200, """{"apiVersion":1,"nickname":"Manta","points":0,"monthPoints":0,"reports":0,"addedSiteIds":["pin"],"blocked":["Rude"]}""")
+    )
+    assertEquals(true to setOf("rude"), account.siteViewer("pin"))
+    account.signOut()
+    assertEquals(false to emptySet<String>(), account.siteViewer("pin"))
+  }
+
   private class MemoryStorage : SessionStorage {
     var saved: Session? = null
 

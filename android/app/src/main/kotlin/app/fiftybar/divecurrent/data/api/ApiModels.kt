@@ -46,6 +46,8 @@ data class ApiSite(
   val howToDive: String? = null,
   /** Paths on the server, oldest first. */
   val photoUrls: List<String> = emptyList(),
+  /** Who added the pin (null on a catalog site): their notes and photos are hidden from a diver who blocked them. */
+  val adderNickname: String? = null,
 )
 
 /** A site-hour of the forecast. Times are Maldives wall clock, "YYYY-MM-DDTHH:MM". */

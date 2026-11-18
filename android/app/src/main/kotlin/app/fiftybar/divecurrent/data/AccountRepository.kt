@@ -124,13 +124,19 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun addSitePhoto(siteId: String, jpeg: ByteArray): ApiSite = signedIn { api.addSitePhoto(it, siteId, jpeg) }.site
 
   /** Whether the signed-in diver added this site, so they may add its photos. False signed out or offline. */
-  suspend fun addedSite(siteId: String): Boolean =
+  suspend fun addedSite(siteId: String): Boolean = siteViewer(siteId).first
+
+  /**
+   * For a site page: whether the signed-in diver added the site, and the nicknames (lower case) of divers they blocked,
+   * whose notes and photos are hidden. False and empty signed out or offline.
+   */
+  suspend fun siteViewer(siteId: String): Pair<Boolean, Set<String>> =
     try {
-      me()?.addedSiteIds?.contains(siteId) == true
+      me()?.let { me -> (me.addedSiteIds.contains(siteId)) to me.blocked.map { it.lowercase() }.toSet() } ?: (false to emptySet())
     } catch (_: ApiException) {
-      false
+      false to emptySet()
     } catch (_: SignedOutException) {
-      false
+      false to emptySet()
     }
 
   private suspend fun <T> signedIn(call: suspend (token: String) -> T): T {

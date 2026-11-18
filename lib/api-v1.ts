@@ -72,6 +72,7 @@ import type {
   Site,
   SiteForecast,
   SiteType,
+  StoreData,
   Strength,
 } from "./types";
 
@@ -106,6 +107,11 @@ export type ApiSite = {
   howToDive: string | null;
   /** Paths on this server, oldest first. */
   photoUrls: string[];
+  /**
+   * The nickname of the diver who added the pin; null on a catalog site or once they deleted their account. A client
+   * hides `howToDive` and `photoUrls` from a diver who blocked them, as the web does.
+   */
+  adderNickname: string | null;
 };
 
 /** The box round an atoll's outline, degrees. */
@@ -215,7 +221,7 @@ export type ApiErrorCode =
   | "needs_nickname"
   | "needs_terms";
 
-export function apiSite(site: Site, atollName?: string | null): ApiSite {
+export function apiSite(site: Site, atollName?: string | null, adderNickname?: string | null): ApiSite {
   const userAdded = site.sourceUrl === "user";
   return {
     id: site.id,
@@ -234,7 +240,14 @@ export function apiSite(site: Site, atollName?: string | null): ApiSite {
     pinNote: site.pinNote ?? null,
     howToDive: site.howToDive ?? null,
     photoUrls: (site.photos ?? []).map((photo) => photoUrl(site.id, photo.id)),
+    adderNickname: userAdded ? (adderNickname ?? null) : null,
   };
+}
+
+/** The nickname of whoever added each app-added pin, by user id. */
+export function adderNicknames(store: Pick<StoreData, "users">): (site: Site) => string | null {
+  const byId = new Map(store.users.map((user) => [user.id, user.nickname]));
+  return (site) => (site.addedBy ? (byId.get(site.addedBy) ?? null) : null);
 }
 
 export function atollNameOf(atolls: readonly Atoll[], atollId: string): string | null {
@@ -250,11 +263,16 @@ function boundsOf(ring: RimRing | null): ApiBounds | null {
 }
 
 /** `outline` finds an atoll's outline (the route passes rimForAtoll), so no caller can leave `bounds` out by mistake. */
-export function apiSites(sites: readonly Site[], atolls: readonly Atoll[], outline: (atoll: Atoll) => RimRing | null): ApiSites {
+export function apiSites(
+  sites: readonly Site[],
+  atolls: readonly Atoll[],
+  outline: (atoll: Atoll) => RimRing | null,
+  adder: (site: Site) => string | null = () => null,
+): ApiSites {
   return {
     apiVersion: API_VERSION,
     atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),
-    sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId))),
+    sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId), adder(site))),
   };
 }
 
@@ -1033,8 +1051,8 @@ export function apiReviewResult(siteId: string, result: ReviewActionResult | Pho
 /** POST /api/v1/sites and its photos: the site as GET /api/v1/sites/{id} gives it. */
 export type ApiSiteSaved = { apiVersion: number; site: ApiSite };
 
-export function apiSiteSaved(site: Site, atollName: string | null, status: number): Response {
-  return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
+export function apiSiteSaved(site: Site, atollName: string | null, status: number, adderNickname: string | null = null): Response {
+  return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName, adderNickname) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
 }
 
 /** One row of a scoreboard: the nickname (which opens their page), the words under it and the number at the end. */
