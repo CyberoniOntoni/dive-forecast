@@ -62,6 +62,6 @@ Web version: https://50bar.app
 | --- | --- | --- |
 | App icon | `icon-512.png` (same file as `brand/50bar-play-icon-512.png`) | 512 × 512, 24 KB |
 | Feature graphic | `feature-graphic-1024x500.png` | 1024 × 500 |
-| Phone screenshots, in this order | `screenshots/01-map.png` … `06-boat-navigation.png` | 1440 × 2560 (9:16) each |
+| Phone screenshots, in this order (8, Play's maximum) | `screenshots/01-map.png` … `08-boat-navigation.png` | 1440 × 2560 (9:16) each |
 
-Screenshots were taken on the test phone (app 1.0, signed out, so no account details appear) on 18 Nov 2026 and framed on a 9:16 canvas with a one-line caption, because the phone's own 1080 × 2340 screen is taller than Play's 2:1 limit. The status bar is cropped off. The boat navigation shot uses the phone's mock location off Hulhulé.
+Screenshots were taken on the test phone on 18 Nov 2026 (release build from main, version code 3) and framed on a 9:16 canvas with a one-line caption, because the phone's own 1080 × 2340 screen is taller than Play's 2:1 limit. The status bar is cropped off. The dive plan and report shots are signed in as the reviewer account, which shows only its nickname "Reviewer", never its email; the report was not sent. The sample plan "North Ari week" is saved on the reviewer account (delete it there if it should not stay). The boat navigation shot uses the phone's mock location in North Ari Atoll, heading to Maaya Thila.
