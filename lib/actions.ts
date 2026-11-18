@@ -439,7 +439,7 @@ async function predictionAtReport(site: Site, time: string): Promise<ForecastAtR
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
-    const earlier = reportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
+    const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
     const shown = await loadSite(site, catalog.sites, atoll, earlier);
     const modelOnly = await loadSite(site, catalog.sites, atoll, []);
     return forecastAtReport(shown, modelOnly, time);
