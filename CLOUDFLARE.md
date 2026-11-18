@@ -138,7 +138,7 @@ an inbox, so one address signs in with a fixed code and no email is sent for it.
 digits; pick a random one):
 
 ```bash
-npx wrangler secret put REVIEW_EMAIL   # an address nobody would guess, e.g. review-k7q2m9@50bar.app
+npx wrangler secret put REVIEW_EMAIL   # an address nobody would guess, e.g. review-<random letters>@50bar.app
 npx wrangler secret put REVIEW_CODE    # e.g. 6 random digits
 ```
 
