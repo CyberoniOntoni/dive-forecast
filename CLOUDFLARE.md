@@ -144,7 +144,9 @@ npx wrangler secret put REVIEW_CODE    # e.g. 6 random digits
 
 The reviewer taps "Email me a code", then types that code; everything else is the normal sign-in (15 minutes, 5 tries,
 the hourly limits, the content rules box). The account is an ordinary diver and never a moderator, even if its address
-is in `MODERATOR_EMAILS`. Its dive reports never teach the forecast and it is left off the scoreboard, but what it
+is in `MODERATOR_EMAILS`. Its first sign-in marks the user as the review account for good (`User.storeReview`), so its
+dive reports never teach the forecast or count in `npm run verify` and it is left off the scoreboard, even after you
+change `REVIEW_EMAIL`; deleting the account deletes its reports. What it
 posts (reviews, photos, sites) is public like anyone's: after a review, remove it in `/moderation` or hide test sites,
 and never ban the account, or the next review cannot sign in. Use an address nobody would guess: anyone who knows it can
 use up its five codes an hour, or keep guessing the fixed code. To turn it off, `npx wrangler secret delete

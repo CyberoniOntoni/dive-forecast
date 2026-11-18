@@ -118,6 +118,11 @@ export const TERMS_NEEDED = "Agree to the content rules and privacy policy to si
  * nickname, and becomes a user. A wrong code counts against the code's tries, so the result is returned, not thrown,
  * for the count to be saved.
  */
+/** Ids of store-review accounts (`User.storeReview`): their reports are app reviewers trying the form, not dives. */
+export function storeReviewIds(users: readonly Pick<User, "id" | "storeReview">[]): Set<string> {
+  return new Set(users.filter((user) => user.storeReview).map((user) => user.id));
+}
+
 export function finishLogin(
   store: StoreData,
   email: string,
@@ -204,9 +209,15 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
     return false;
   });
 
-  const anonymous = `deleted-${crypto.randomUUID()}`;
-  for (const report of store.reports) {
-    if (report.userId === userId) report.userId = anonymous;
+  // Dive reports stay, anonymised, to keep teaching the forecast. The store-review account's are reviewers trying the
+  // form, and with the user gone nothing would mark them any more (storeReviewIds), so they go with it.
+  if (user.storeReview) {
+    store.reports = store.reports.filter((report) => report.userId !== userId);
+  } else {
+    const anonymous = `deleted-${crypto.randomUUID()}`;
+    for (const report of store.reports) {
+      if (report.userId === userId) report.userId = anonymous;
+    }
   }
   for (const site of store.sites) {
     const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);

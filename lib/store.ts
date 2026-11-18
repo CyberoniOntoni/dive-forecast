@@ -6,7 +6,7 @@ import { rimForAtoll, rimWayId } from "./rim";
 import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
-import { reviewUserId } from "./review-account";
+import { storeReviewIds } from "./accounts";
 import {
   emptyStore,
   GUARD_FAILED,
@@ -175,8 +175,8 @@ export function reportsForSite(siteId: string): Report[] {
  */
 export function forecastReportsForSite(siteId: string): Report[] {
   const store = readStore();
-  const reviewer = reviewUserId(store);
-  return store.reports.filter((report) => report.siteId === siteId && (!reviewer || report.userId !== reviewer));
+  const reviewers = storeReviewIds(store.users);
+  return store.reports.filter((report) => report.siteId === siteId && !(report.userId && reviewers.has(report.userId)));
 }
 
 /** The site's ratings that count: a rating its diver removed is left out. */

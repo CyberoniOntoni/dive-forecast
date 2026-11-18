@@ -122,6 +122,16 @@ describe("sign in by email code", () => {
     expect((await getAccount())?.stats.points).toBeGreaterThan(0);
     expect(await getLeaderboard("all")).toEqual([]);
 
+    // Moving the review account to another address, or turning it off, never lets its old reports back in.
+    vi.stubEnv("REVIEW_EMAIL", "review-other@50bar.app");
+    expect(forecastReportsForSite("banana-reef").some((item) => item.userId === reviewer)).toBe(false);
+    expect(await getLeaderboard("all")).toEqual([]);
+    vi.stubEnv("REVIEW_EMAIL", "Review@50bar.app");
+
+    // A reviewer trying "Delete account" takes its test reports with it, rather than leaving them anonymised.
+    expect(await deleteAccount()).toEqual({ ok: true, error: null });
+    expect(readStore().reports.filter((item) => item.siteId === "banana-reef")).toEqual([]);
+
     // Any other address still gets a fresh emailed code, never the review one.
     await requestSignIn("other@example.com");
     expect(sent).toHaveLength(1);
