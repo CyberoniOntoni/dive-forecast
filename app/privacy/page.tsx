@@ -181,9 +181,32 @@ export default function PrivacyPage() {
 
       <Section id="rights" title="Your choices and rights">
         <p>
-          You can see and change your nickname and About me on your account page, remove any rating, review or photo
-          you added, and delete your plans or your whole account. To ask for a copy of your data, or with any other
-          privacy question, email <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>.
+          You can delete some of your data and keep your account, on the website or in the app, once signed in:
+        </p>
+        <ul>
+          <li>
+            <strong className="text-foam">A rating or review, with its photos</strong>: open the site and tap{" "}
+            <strong className="text-foam">Remove my rating</strong>. It is deleted at once.
+          </li>
+          <li>
+            <strong className="text-foam">A dive plan</strong>: open the plan and tap{" "}
+            <strong className="text-foam">Delete plan</strong>.
+          </li>
+          <li>
+            <strong className="text-foam">About me</strong>: clear it on <Link href="/account">your account page</Link>{" "}
+            (in the app, the You tab).
+          </li>
+          <li>
+            <strong className="text-foam">Dive reports, photos on a site you added, or anything else</strong>: email{" "}
+            <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a> from the address you signed up with and we will delete
+            it within 30 days.
+          </li>
+        </ul>
+        <p>
+          Cloudflare keeps a 30-day restore history of the database, so deleted data can stay in that history until it
+          is 30 days old. To ask for a copy of your data, or with any other privacy question, email{" "}
+          <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>. To delete everything, see{" "}
+          <a href="#delete">Deleting your account</a>.
         </p>
         <p>
           50Bar is for divers and is not meant for children under 13. If we learn a child under 13 has an account, we
