@@ -61,8 +61,8 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // MapLibre's native libraries: their symbol tables go into the bundle for Play's native crash reports.
-      ndk { debugSymbolLevel = "SYMBOL_TABLE" }
+      // No ndk { debugSymbolLevel }: the only native code is MapLibre's prebuilt, already-stripped .so files, so AGP
+      // has no symbols to pack (MapLibre publishes them as a separate debug-symbols archive on its GitHub releases).
     }
   }
   compileOptions {

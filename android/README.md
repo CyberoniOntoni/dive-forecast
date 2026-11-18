@@ -167,9 +167,11 @@ Locally the same environment variables (`ANDROID_KEYSTORE_PATH` pointing at the 
 `./gradlew bundleRelease`; without them a release build is unsigned.
 
 The release build is shrunk by R8 (`isMinifyEnabled`, `isShrinkResources`; the app's own keep rules are in
-`app/proguard-rules.pro`). The bundle carries R8's mapping file and MapLibre's native symbol tables, so Play Console
-decodes crash traces itself and asks for no extra uploads. CI builds `bundleRelease` on every push, so a shrinking
-problem shows there; one that only shows at run time (a class R8 removed that is reached by reflection) needs a run of
+`app/proguard-rules.pro`). The bundle carries R8's mapping file, so Play Console decodes Kotlin crash traces itself.
+Play still warns that the native code has no debug symbols: the only native code is MapLibre's prebuilt `.so` files,
+which ship stripped, so there are none to pack (MapLibre's GitHub releases have a `debug-symbols` archive that can be
+uploaded by hand in Play Console under the version's App bundle explorer if a map-engine crash ever needs reading).
+CI builds `bundleRelease` on pull requests and on pushes to `main`, so a shrinking problem shows there; one that only shows at run time (a class R8 removed that is reached by reflection) needs a run of
 the release build on a phone before uploading.
 
 ## Layout
