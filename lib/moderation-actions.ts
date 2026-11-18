@@ -190,7 +190,8 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
 export async function moderateFlag(flagId: unknown, action: unknown): Promise<ModerationResult> {
   await ready();
   try {
-    if (!(await moderatorId())) return { ok: false, error: "Only moderators can do that." };
+    const moderator = await moderatorId();
+    if (!moderator) return { ok: false, error: "Only moderators can do that." };
     if (action !== "remove" && action !== "ban" && action !== "dismiss") return { ok: false, error: "Unknown action." };
     const photos = await mutateStore((store): StoredPhoto[] | null => {
       const flag = store.flags.find((item) => item.id === flagId);
@@ -203,6 +204,7 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
       }
       if (action === "ban") {
         if (!flag.userId) throw new Error("This report names no diver to ban.");
+        if (flag.userId === moderator) throw new Error("You cannot ban yourself.");
         const removed = banDiver(store, flag.userId, nowMs) ?? [];
         resolveFlags(store, flag, "banned", nowIso);
         return removed;

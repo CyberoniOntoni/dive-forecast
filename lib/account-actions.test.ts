@@ -16,7 +16,8 @@ import {
 } from "./account-actions";
 import { addReport, addSite, rateSite } from "./actions";
 import { SESSION_COOKIE } from "./auth";
-import { readStore, setStorePath } from "./store";
+import { mutateStore, readStore, setStorePath } from "./store";
+import { TERMS_FIRST } from "./moderation";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -101,6 +102,14 @@ describe("sign in by email code", () => {
     await requestSignIn("b@example.com");
     await completeSignIn({ email: "b@example.com", code: codeFromEmail(), nickname: "Bob", acceptTerms: true });
     expect(await changeNickname("ann")).toMatchObject({ ok: false, error: "That nickname is taken." });
+    // A diver from before the content rules agrees to them before renaming.
+    await mutateStore((store) => {
+      delete store.users.find((user) => user.nickname === "Bob")!.acceptedTermsAt;
+    });
+    expect(await changeNickname("Bobby")).toMatchObject({ ok: false, error: TERMS_FIRST });
+    await mutateStore((store) => {
+      store.users.find((user) => user.nickname === "Bob")!.acceptedTermsAt = "2026-11-18T00:00:00Z";
+    });
     expect(await changeNickname("Bobby")).toMatchObject({ ok: true, nickname: "Bobby" });
     expect(await whoAmI()).toEqual({ nickname: "Bobby" });
 

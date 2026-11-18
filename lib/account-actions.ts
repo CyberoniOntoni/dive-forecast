@@ -148,6 +148,8 @@ export async function changeNickname(input: unknown, options?: { cookie?: boolea
     const nickname = await mutateStore((store) => {
       const user = store.users.find((item) => item.id === session.userId);
       if (!user) throw new Error("This account no longer exists.");
+      // A nickname is shown to everyone, so it falls under the content rules like About me.
+      requireTermsAccepted(store, user.id);
       user.nickname = requireNickname(input, store.users, user.id);
       return user.nickname;
     });
