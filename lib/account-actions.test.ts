@@ -96,6 +96,33 @@ describe("sign in by email code", () => {
     expect(await getAccount()).toMatchObject({ nickname: "Manta", email: "diver@example.com", allRank: 1 });
   });
 
+  it("signs the store-review address in with its fixed code, sends no email, and never makes it a moderator", async () => {
+    vi.stubEnv("REVIEW_EMAIL", "Review@50bar.app");
+    vi.stubEnv("REVIEW_CODE", "246810");
+    vi.stubEnv("MODERATOR_EMAILS", "review@50bar.app");
+    expect(await requestSignIn("review@50bar.app")).toMatchObject({ ok: true, newUser: true });
+    expect(sent).toHaveLength(0);
+    expect(await completeSignIn({ email: "review@50bar.app", code: "135791", nickname: "Play Review", acceptTerms: true })).toMatchObject({
+      ok: false,
+      error: "That code is not right.",
+    });
+    expect(await completeSignIn({ email: "review@50bar.app", code: "246810", nickname: "Play Review", acceptTerms: true })).toEqual({
+      ok: true,
+      error: null,
+    });
+    expect(await getAccount()).toMatchObject({ nickname: "Play Review", moderator: false });
+
+    // Any other address still gets a fresh emailed code, never the review one.
+    await requestSignIn("other@example.com");
+    expect(sent).toHaveLength(1);
+    expect(codeFromEmail()).not.toBe("246810");
+
+    // Turned off by removing the code: the review address is then an ordinary address.
+    vi.stubEnv("REVIEW_CODE", "");
+    await requestSignIn("review@50bar.app");
+    expect(sent).toHaveLength(2);
+  });
+
   it("signs a known diver straight in, and lets them rename", async () => {
     await requestSignIn("a@example.com");
     await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann", acceptTerms: true });

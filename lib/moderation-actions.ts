@@ -15,6 +15,7 @@ import {
   type StoredPhoto,
 } from "./moderation";
 import { ready } from "./ready";
+import { reviewEmail } from "./review-account";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
 import { findSite, mutateStore, readStore } from "./store";
 import type { ContentFlag, FlagKind, FlagReason } from "./types";
@@ -117,7 +118,7 @@ async function moderatorId(): Promise<string | null> {
   const session = await requireSession().catch(() => null);
   if (!session) return null;
   const user = readStore().users.find((item) => item.id === session.userId);
-  return user && !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS")) ? user.id : null;
+  return user && !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS"), reviewEmail()) ? user.id : null;
 }
 
 export async function isModerator(): Promise<boolean> {

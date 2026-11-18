@@ -16,6 +16,7 @@ import { diverStats, leaderboard, type DiverStats, type LeaderboardPeriod } from
 import { BADGES, type BadgeId } from "./points-rules";
 import { ready } from "./ready";
 import { siteScouts } from "./site-scouts";
+import { reviewCodeFor, reviewEmail } from "./review-account";
 import { hashLoginCode, newLoginCode } from "./session-token";
 import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
@@ -41,13 +42,17 @@ export async function requestSignIn(emailInput: unknown, next?: unknown, codeOnl
     if (!secret) return { ok: false, error: NOT_SET_UP };
     if (routes.length === 0 && process.env.NODE_ENV === "production") return { ok: false, error: NOT_SET_UP };
 
-    const code = newLoginCode();
+    // The store-review address gets its fixed code and no email (lib/review-account.ts); everyone else a fresh one.
+    const reviewCode = reviewCodeFor(email);
+    const code = reviewCode ?? newLoginCode();
     const codeHash = await hashLoginCode(email, code, secret);
     const ipKey = await requestIpKey(secret);
     const { newUser } = await mutateStore((store) => startLogin(store, email, codeHash, Date.now(), ipKey));
     const base = await appUrl();
     const link = base && codeOnly !== true ? `${base}/login?${new URLSearchParams({ email, code, next: localPath(next) })}` : null;
-    if (routes.length > 0) {
+    if (reviewCode != null) {
+      // Nothing to send: the reviewer was given the code in the store listing's sign-in details.
+    } else if (routes.length > 0) {
       await sendLoginEmail(routes, { to: email, code, link }).catch(() => {
         throw new Error("Could not send the email. Try again in a minute.");
       });
@@ -239,7 +244,7 @@ export async function getAccount(): Promise<AccountView | null> {
     email: user.email,
     about: user.about ?? "",
     acceptedTerms: hasAcceptedTerms(user),
-    moderator: !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS")),
+    moderator: !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS"), reviewEmail()),
     ...diverSummary(store, user.id),
   };
 }

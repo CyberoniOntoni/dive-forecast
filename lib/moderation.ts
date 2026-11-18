@@ -200,9 +200,13 @@ export function resolveFlags(store: StoreData, flag: Pick<ContentFlag, "kind" | 
   }
 }
 
-/** Moderators: the signed-in divers whose email is in MODERATOR_EMAILS (comma-separated). */
-export function isModeratorEmail(email: string, setting: string | null): boolean {
+/**
+ * Moderators: the signed-in divers whose email is in MODERATOR_EMAILS (comma-separated). Never the store-review
+ * account (`reviewEmail`, lib/review-account.ts), whose code is written down in Play Console.
+ */
+export function isModeratorEmail(email: string, setting: string | null, reviewEmail: string | null = null): boolean {
   if (!setting) return false;
+  if (reviewEmail && email.toLowerCase() === reviewEmail) return false;
   return setting
     .split(",")
     .map((item) => item.trim().toLowerCase())

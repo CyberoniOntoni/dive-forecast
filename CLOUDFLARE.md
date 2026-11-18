@@ -133,6 +133,20 @@ links `/moderation`: open reports with Remove content, Ban diver (signs them out
 posted except dive reports) and Dismiss. Photos are cached an hour (`app/site-photos`), so a removed one stops showing
 within the hour.
 
+**Store-review account** (Play Console → App content → Sign in details; `lib/review-account.ts`): reviewers cannot read
+an inbox, so one address signs in with a fixed code and no email is sent for it. Set both secrets (the code is six
+digits; pick a random one):
+
+```bash
+npx wrangler secret put REVIEW_EMAIL   # e.g. review@50bar.app
+npx wrangler secret put REVIEW_CODE    # e.g. 6 random digits
+```
+
+The reviewer taps "Email me a code", then types that code; everything else is the normal sign-in (15 minutes, 5 tries,
+the hourly limits, the content rules box). The account is an ordinary diver and never a moderator, even if its address
+is in `MODERATOR_EMAILS`. To turn it off, `npx wrangler secret delete REVIEW_CODE`; to change the code, put a new one
+and update Play Console.
+
 Two more owner steps for Google Play:
 
 - **`privacy@50bar.app`** is the contact on `/privacy` and `/terms`. Make it deliver: Cloudflare dashboard → the
