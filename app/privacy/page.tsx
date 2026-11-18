@@ -55,12 +55,12 @@ export default function PrivacyPage() {
         <ul>
           <li>
             Your <strong className="text-foam">email address</strong>, to send you a six-digit sign-in code. Only you see
-            it, on your account page. We keep a hash of each code, never the code itself, and remove it within an hour.
+            it, on your account page. We keep a hash of each code, never the code itself; it works for 15 minutes and is cleared out with later sign-ins.
           </li>
           <li>
             A keyed hash of your connection&rsquo;s <strong className="text-foam">IP address</strong> with each code, to
             limit how many codes one connection can ask for. We never keep the address itself, and the hash goes with the
-            code within an hour.
+            code.
           </li>
           <li>
             The <strong className="text-foam">nickname</strong> you pick, shown with your reports, reviews and on the
