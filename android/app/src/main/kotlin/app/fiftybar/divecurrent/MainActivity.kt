@@ -3,11 +3,17 @@ package app.fiftybar.divecurrent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
+import androidx.core.view.WindowCompat
 import app.fiftybar.divecurrent.domain.PlanLink
 import app.fiftybar.divecurrent.ui.theme.DiveCurrentTheme
 
@@ -18,11 +24,21 @@ class MainActivity : ComponentActivity() {
     // back stack, so only a fresh start reads the link.
     val startPlanId = if (savedInstanceState == null) PlanLink.idOf(intent?.data?.path) else null
 
-    enableEdgeToEdge()
+    // Edge to edge on every Android version, as Android 15 enforces it. Not androidx.activity's enableEdgeToEdge():
+    // it calls Window.setStatusBarColor/setNavigationBarColor and sets LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES, all
+    // deprecated in Android 15 and flagged by Play Console. The bar colours, icon tone and cutout mode are in the theme
+    // (res/values*/themes.xml); this only lets the content draw behind the bars.
+    WindowCompat.setDecorFitsSystemWindows(window, false)
     setContent {
       DiveCurrentTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          MainNavigation(startPlanId = startPlanId)
+          // A camera cutout on the side (landscape) is kept clear for every screen; the screens pad the status and
+          // navigation bars themselves. In portrait the cutout sits in the status bar and this pads nothing.
+          Box(
+            Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+          ) {
+            MainNavigation(startPlanId = startPlanId)
+          }
         }
       }
     }

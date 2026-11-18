@@ -174,6 +174,14 @@ uploaded by hand in Play Console under the version's App bundle explorer if a ma
 CI builds `bundleRelease` on pull requests and on pushes to `main`, so a shrinking problem shows there; one that only shows at run time (a class R8 removed that is reached by reflection) needs a run of
 the release build on a phone before uploading.
 
+Edge to edge (enforced from Android 15) is set up without `enableEdgeToEdge()`: androidx.activity's helper calls
+`Window.setStatusBarColor`, `setNavigationBarColor` and `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`, deprecated in
+Android 15, and Play Console flags each upload that ships them. The bars, their icon tone and the cutout mode are in
+`res/values*/themes.xml`; `MainActivity` only calls `WindowCompat.setDecorFitsSystemWindows(window, false)` and keeps
+a side cutout (landscape) clear. Each screen pads its own status and navigation bar insets. CI and the release workflow
+run `scripts/check-window-apis.sh` on the release bundle, which fails if any shipped code (a library too) calls those
+Window methods again.
+
 ## Layout
 
 | Path | What |

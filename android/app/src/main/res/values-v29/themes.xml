@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 10+: both bars transparent. Gesture navigation draws nothing; 3-button navigation gets the platform's own
+         contrast scrim (enforceNavigationBarContrast stays on), as with enableEdgeToEdge(). No scrim under the status bar:
+         each screen colours its own top. -->
+    <style name="Theme.DiveCurrent" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/ink</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">true</item>
+    </style>
+</resources>

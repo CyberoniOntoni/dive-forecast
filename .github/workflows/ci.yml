@@ -12,13 +12,15 @@ concurrency:
 permissions:
   contents: read
 
+# Pinned rather than ubuntu-latest, which moves to Ubuntu 26 from 19 Oct 2026: move both workflows on purpose.
+
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -30,22 +32,28 @@ jobs:
 
   # The Android app (android/, its own Gradle build). Unit tests, a debug APK and an unsigned release bundle (R8); no device.
   android:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
         working-directory: android
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
-      - uses: gradle/actions/setup-gradle@v4
+      # basic: the open-source cache on actions/cache, not v6's default proprietary "enhanced" provider.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
       # bundleRelease runs R8 (unsigned here), so a shrinking problem fails CI rather than a Play upload.
       - run: ./gradlew --console=plain testDebugUnitTest assembleDebug bundleRelease
+      # Play Console flags Window.setStatusBarColor/setNavigationBarColor (deprecated in Android 15) wherever they are in
+      # the shipped code, libraries included.
+      - run: scripts/check-window-apis.sh
       # The debug APK, to install and try a branch on a phone (Actions run page, Artifacts).
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dive-current-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
