@@ -12,7 +12,7 @@ export const metadata: Metadata = {
  * user-generated content policy asks for. Reporting, blocking and moderation are in lib/moderation.ts.
  */
 const UPDATED = "18 November 2026";
-const CONTACT = "privacy@50bar.app";
+const CONTACT = "support@50bar.app";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (

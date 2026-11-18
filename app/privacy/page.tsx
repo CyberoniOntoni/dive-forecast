@@ -15,6 +15,8 @@ export const metadata: Metadata = {
 const UPDATED = "18 November 2026";
 /** Where privacy questions and deletion requests go. */
 const PRIVACY_EMAIL = "privacy@50bar.app";
+/** Help with the website or the app. */
+const SUPPORT_EMAIL = "support@50bar.app";
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
@@ -66,6 +68,10 @@ export default function PrivacyPage() {
             The <strong className="text-foam">nickname</strong> you pick, shown with your reports, reviews and on the
             scoreboard, and an optional <strong className="text-foam">About me</strong> shown on your public diver page.
           </li>
+          <li>
+            When you agreed to our <Link href="/terms">content rules</Link>, and when you added review photos in the last
+            day, for the daily photo limit.
+          </li>
         </ul>
         <p>
           <strong className="text-foam">What you choose to add:</strong>
@@ -104,8 +110,8 @@ export default function PrivacyPage() {
           everything else works without it.
         </p>
         <p>
-          <strong className="text-foam">On your device:</strong> the website keeps your sign-in in a cookie and your map
-          settings and recent searches in your browser&rsquo;s storage. The app keeps your sign-in token (never backed up
+          <strong className="text-foam">On your device:</strong> the website keeps your sign-in in a cookie, your map
+          layers in your browser&rsquo;s storage, and the map view and list filter for the open tab only. The app keeps your sign-in token (never backed up
           or moved to another phone), a copy of forecasts and maps for offline use, and your settings. These stay on
           your device.
         </p>
@@ -125,7 +131,8 @@ export default function PrivacyPage() {
             <strong className="text-foam">Cloudflare</strong> runs the website and the app&rsquo;s server. Your account,
             reports, ratings, reviews, sites and plans are kept in Cloudflare D1, and photos in Cloudflare R2 storage.
             Cloudflare also sends the sign-in emails, and like any web host it handles your IP address to answer
-            requests.
+            requests. Our server&rsquo;s request and error logs, which can include your IP address, are kept by
+            Cloudflare for up to 7 days.
           </li>
           <li>
             <strong className="text-foam">Mailgun</strong> sends a sign-in email only if Cloudflare cannot. It then
@@ -146,7 +153,8 @@ export default function PrivacyPage() {
         <p>
           Reviews, photos, sites and profiles must follow our <Link href="/terms">content rules</Link>. Moderators read reported
           content and may remove it. If a diver is banned for breaking the rules, we keep their account&rsquo;s email and the
-          reports about them, so they cannot sign up again; everything else they posted, except dive reports, is removed.
+          reports about them, so they cannot sign up again. Their reviews, photos, sites and About me are removed and their
+          nickname is replaced; their dive reports stay, and so do their dive plans until the account is deleted.
         </p>
       </Section>
 
@@ -168,12 +176,12 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong className="text-foam">Deleted:</strong> your email, nickname and About me, your pending sign-in
-          codes, your dive plans, your ratings and reviews, every photo you uploaded, the reports you filed and the divers you
-          blocked.
+          codes, your dive plans, your ratings and reviews, every photo you uploaded, the reports you filed and those about
+          your content, and the divers you blocked.
         </p>
         <p>
           <strong className="text-foam">Kept without your name:</strong> your dive reports, which keep teaching the
-          forecast, and dive sites you added, so other divers&rsquo; reports and reviews there keep their place. Nothing
+          forecast, and dive sites you added with their notes, so other divers&rsquo; reports and reviews there keep their place. Nothing
           left on them leads back to you, and they no longer count on the scoreboard. Cloudflare keeps a
           30-day restore history of the database, so deleted data can stay in that history until it is 30 days old.
         </p>
@@ -186,7 +194,9 @@ export default function PrivacyPage() {
         <ul>
           <li>
             <strong className="text-foam">A rating or review, with its photos</strong>: open the site and tap{" "}
-            <strong className="text-foam">Remove my rating</strong>. It is deleted at once.
+            <strong className="text-foam">Remove my rating</strong>. The review and photos are deleted at once and the
+            score leaves the site&rsquo;s average. We keep a private note that you rated the site and when, so rating it
+            again earns no new points; it goes when you delete your account.
           </li>
           <li>
             <strong className="text-foam">A dive plan</strong>: open the plan and tap{" "}
@@ -212,6 +222,9 @@ export default function PrivacyPage() {
         <p>
           50Bar is for divers and is not meant for children under 13. If we learn a child under 13 has an account, we
           delete it.
+        </p>
+        <p>
+          For help with the website or the app, email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
         </p>
         <p>If we change this policy we update it on this page and change the date above.</p>
       </Section>
