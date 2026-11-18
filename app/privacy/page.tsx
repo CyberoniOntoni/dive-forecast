@@ -161,7 +161,7 @@ export default function PrivacyPage() {
       <Section id="delete" title="Deleting your account">
         <p>
           Sign in and open{" "}
-          <Link href="/account#delete">your account page</Link>, or in the Android app open Account and tap{" "}
+          <Link href="/account#delete">your account page</Link>, or in the Android app open the You tab and tap{" "}
           <strong className="text-foam">Delete account</strong>. It happens at once and signs you out everywhere. If you
           cannot sign in, email <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a> from the address you signed up
           with and we will delete it within 30 days.
