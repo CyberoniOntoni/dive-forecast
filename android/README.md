@@ -180,7 +180,8 @@ Android 15, and Play Console flags each upload that ships them. The bars, their 
 `res/values*/themes.xml`; `MainActivity` only calls `WindowCompat.setDecorFitsSystemWindows(window, false)` and keeps
 a side cutout (landscape) clear. Each screen pads its own status and navigation bar insets. CI and the release workflow
 run `scripts/check-window-apis.sh` on the release bundle, which fails if any shipped code (a library too) uses any of
-the three again, or if the source sets the short-edges cutout mode.
+the three again, or if a theme sets the short-edges cutout mode. It first runs on a small fixture
+(`scripts/window-apis-fixture/`) that must be caught, so the check cannot pass by reading nothing.
 
 ## Layout
 
