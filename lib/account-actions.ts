@@ -1,6 +1,6 @@
 "use server";
 
-import { normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
+import { ACCOUNT_GONE, deleteAccountRecords, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import {
   appUrl,
   authSecret,
@@ -19,6 +19,7 @@ import { siteScouts } from "./site-scouts";
 import { hashLoginCode, newLoginCode } from "./session-token";
 import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
+import { deletePhotoBytes } from "./site-photos";
 import { listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
@@ -107,6 +108,26 @@ export async function signOutEverywhere(): Promise<{ ok: boolean; error: string 
     return { ok: true, error: null };
   } catch (caught) {
     return { ok: false, error: caught instanceof Error ? caught.message : "Could not sign out everywhere." };
+  }
+}
+
+/**
+ * Deletes the signed-in diver's account and data (deleteAccountRecords), then the photo files, and signs this device
+ * out. Every other session ends with it: a session whose user is gone no longer counts (lib/auth.ts). The web asks
+ * for the nickname typed back; the app's API passes `cookie: false` and confirms on the phone.
+ */
+export async function deleteAccount(options?: { cookie?: boolean }): Promise<{ ok: boolean; error: string | null }> {
+  await ready();
+  try {
+    const session = await requireSession();
+    const photos = await mutateStore((store) => deleteAccountRecords(store, session.userId));
+    if (!photos) throw new Error(ACCOUNT_GONE);
+    // The rows are gone already; a file that fails to delete is unreachable (no row names it), so it does not stop this.
+    await Promise.all(photos.map(({ siteId, photo }) => deletePhotoBytes(siteId, photo.id).catch(() => undefined)));
+    if (options?.cookie !== false) await clearSessionCookie();
+    return { ok: true, error: null };
+  } catch (caught) {
+    return { ok: false, error: caught instanceof Error ? caught.message : "Could not delete the account." };
   }
 }
 

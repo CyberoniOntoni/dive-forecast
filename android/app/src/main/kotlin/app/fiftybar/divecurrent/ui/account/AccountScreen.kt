@@ -37,11 +37,13 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.AccountRepository
 import app.fiftybar.divecurrent.data.SignedOutException
 import app.fiftybar.divecurrent.data.api.ApiException
@@ -110,6 +112,8 @@ class AccountViewModel(private val account: AccountRepository) : ViewModel() {
 
   fun signOutEverywhere() = act { account.signOutEverywhere() }
 
+  fun deleteAccount() = act { account.deleteAccount() }
+
   private fun act(onRefused: ((String?) -> Unit)? = null, block: suspend () -> Unit) {
     _state.update { it.copy(busy = true, error = null, note = null) }
     viewModelScope.launch {
@@ -146,6 +150,8 @@ fun AccountScreen(
   val session by viewModel.session.collectAsStateWithLifecycle()
   val colors = CurrentTheme.colors
   var confirmEverywhere by remember { mutableStateOf(false) }
+  var confirmDelete by remember { mutableStateOf(false) }
+  val uri = LocalUriHandler.current
 
   // Signed out here, everywhere, or by the server: nothing left to show.
   LaunchedEffect(session) { if (session == null) onSignedOut() }
@@ -235,7 +241,33 @@ fun AccountScreen(
         Text("Sign out on this phone")
       }
       TextButton(onClick = { confirmEverywhere = true }, enabled = !state.busy) { Text("Sign out everywhere") }
+      TextButton(onClick = { confirmDelete = true }, enabled = !state.busy) { Text("Delete account", color = colors.stop) }
+      TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/privacy") }) { Text("Privacy policy") }
     }
+  }
+
+  if (confirmDelete) {
+    AlertDialog(
+      onDismissRequest = { confirmDelete = false },
+      title = { Text("Delete your account?") },
+      text = {
+        Text(
+          "This deletes your email, nickname, About me, dive plans, ratings, reviews and photos, and signs you out everywhere. " +
+            "Your dive reports stay, with no name on them, because they teach the forecast. It cannot be undone."
+        )
+      },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmDelete = false
+            viewModel.deleteAccount()
+          }
+        ) {
+          Text("Delete account", color = colors.stop)
+        }
+      },
+      dismissButton = { TextButton(onClick = { confirmDelete = false }) { Text("Cancel") } },
+    )
   }
 
   if (confirmEverywhere) {

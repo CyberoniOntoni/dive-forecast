@@ -47,9 +47,9 @@ describe("sign-in email routes", () => {
     expect(await sendLoginEmail(mailRoutes(), email)).toBe("cloudflare");
     expect(viaMailgun).toHaveLength(0);
     expect(viaCloudflare[0]).toMatchObject({
-      from: { email: "login@50bar.app", name: "50bar" },
+      from: { email: "login@50bar.app", name: "50Bar" },
       to: "diver@example.com",
-      subject: "123456 is your 50bar sign-in code",
+      subject: "123456 is your 50Bar sign-in code",
     });
     expect(viaCloudflare[0].text).toContain(email.link);
   });

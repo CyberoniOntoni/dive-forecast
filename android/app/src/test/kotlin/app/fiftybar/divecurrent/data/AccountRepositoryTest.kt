@@ -173,6 +173,29 @@ class AccountRepositoryTest {
     assertNull(account.sessions.session.value)
   }
 
+  @Test
+  fun `deletes the account with the token, then forgets it`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(200, """{"apiVersion":1,"deleted":true}"""))
+    account.deleteAccount()
+    val sent = server.takeRequest()
+    assertEquals("DELETE", sent.method)
+    assertEquals("/api/v1/me", sent.path)
+    assertEquals("Bearer t.sig", sent.getHeader("Authorization"))
+    assertNull(account.sessions.session.value)
+  }
+
+  @Test
+  fun `keeps the token when deleting fails for another reason`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(500, """{"apiVersion":1,"error":{"code":"server_error","message":"Try again."}}"""))
+    try {
+      account.deleteAccount()
+      fail("expected the server's error")
+    } catch (_: ApiException.Server) {}
+    assertEquals("t.sig", account.sessions.session.value?.token)
+  }
+
   private class MemoryStorage : SessionStorage {
     var saved: Session? = null
 

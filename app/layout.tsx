@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "50bar · Maldives dive currents",
+  title: "50Bar · Maldives dive currents",
   description: "Maldives dive-site current forecast: which way and how strong, hour by hour for a week, from the tide, the monsoon current and divers' reports.",
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             <BrandMark />
             {/* Below 420 px the three tabs and the account button need the room: the mark alone stands for the name. */}
             <span className="min-w-0 max-[419px]:sr-only">
-              <span className="chart-name block">50bar</span>
+              <span className="chart-name block">50Bar</span>
               {/* On a phone the map and the forecast need the height more than the tagline. */}
               <span className="chart-line hidden sm:block">Maldives dive sites, incoming or outgoing right now.</span>
             </span>

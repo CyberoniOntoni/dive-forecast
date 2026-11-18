@@ -1,5 +1,6 @@
-import { getAccount } from "@/lib/account-actions";
-import { ABOUT_MAX } from "@/lib/accounts";
+import { deleteAccount, getAccount } from "@/lib/account-actions";
+import { SIGN_IN_FIRST } from "@/lib/sign-in";
+import { ABOUT_MAX, ACCOUNT_GONE } from "@/lib/accounts";
 import { pointsRuleLines } from "@/lib/profile-words";
 import { readStore } from "@/lib/store";
 import { API_NO_STORE, API_VERSION, apiError, apiHandler, apiJson, apiNeedsToken } from "@/lib/api-v1";
@@ -38,5 +39,23 @@ export async function GET(request: Request) {
       },
       { cacheControl: API_NO_STORE },
     );
+  });
+}
+
+/**
+ * Deletes the signed-in diver's account and data (lib/accounts.ts deleteAccountRecords). The app confirms first.
+ * Every token and cookie of the diver stops working. API.md § DELETE /api/v1/me.
+ */
+export async function DELETE(request: Request) {
+  return apiHandler(async () => {
+    const denied = apiNeedsToken(request);
+    if (denied) return denied;
+    const result = await deleteAccount({ cookie: false });
+    if (!result.ok) {
+      // Signed out, or the account was deleted already: the app forgets the token. Anything else is worth a retry.
+      const signedOut = result.error === SIGN_IN_FIRST || result.error === ACCOUNT_GONE;
+      return signedOut ? apiError(401, "unauthorized", result.error!) : apiError(500, "server_error", result.error ?? "Could not delete the account.");
+    }
+    return apiJson({ apiVersion: API_VERSION, deleted: true }, { cacheControl: API_NO_STORE });
   });
 }

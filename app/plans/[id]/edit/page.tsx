@@ -11,7 +11,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Edit dive plan · 50bar", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Edit dive plan · 50Bar", robots: { index: false, follow: false } };
 
 export default async function EditPlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

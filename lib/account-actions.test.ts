@@ -5,6 +5,7 @@ import {
   changeAbout,
   changeNickname,
   completeSignIn,
+  deleteAccount,
   getAccount,
   getDiverProfile,
   getLeaderboard,
@@ -158,6 +159,38 @@ describe("sign in by email code", () => {
     globalThis.fetch = (async () => new Response("no", { status: 401 })) as unknown as typeof fetch;
     const result = await requestSignIn("a@example.com");
     expect(result).toMatchObject({ ok: false, error: "Could not send the email. Try again in a minute." });
+  });
+});
+
+describe("deleting an account", () => {
+  it("removes the diver, keeps their reports without a name, and ends every session", async () => {
+    await requestSignIn("a@example.com");
+    await completeSignIn({ email: "a@example.com", code: codeFromEmail(), nickname: "Ann" });
+    const otherDevice = jar.get(SESSION_COOKIE)!;
+    const userId = (await getAccount())!.userId;
+    await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+    await rateSite("banana-reef", 5);
+
+    expect(await deleteAccount()).toEqual({ ok: true, error: null });
+    expect(jar.has(SESSION_COOKIE)).toBe(false);
+    const store = readStore();
+    expect(JSON.stringify(store)).not.toContain("a@example.com");
+    expect(JSON.stringify(store)).not.toContain(userId);
+    expect(store.users).toEqual([]);
+    expect(store.ratings).toEqual([]);
+    expect(store.reports).toHaveLength(1);
+    expect(store.reports[0].userId).toMatch(/^deleted-/);
+    expect(await getLeaderboard("all")).toEqual([]);
+
+    // A copy of the cookie from before no longer signs anyone in.
+    jar.set(SESSION_COOKIE, otherDevice);
+    expect(await getAccount()).toBeNull();
+    expect(await deleteAccount()).toMatchObject({ ok: false });
+    await expect(rateSite("banana-reef", 4)).rejects.toThrow("Sign in first.");
+
+    // The address can sign up again, as a new diver.
+    jar.clear();
+    expect(await requestSignIn("a@example.com")).toMatchObject({ ok: true, newUser: true });
   });
 });
 

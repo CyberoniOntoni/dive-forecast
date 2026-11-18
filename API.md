@@ -222,6 +222,14 @@ out.
 
 Signed in, body `{}`. Ends every session of the diver: this token, other phones and the web's cookies.
 
+### `DELETE /api/v1/me`
+
+Signed in, no body. Deletes the diver's account and data, as the web's account page does (`deleteAccountRecords` in
+`lib/accounts.ts`; what goes and what stays is on `/privacy`): the account, its pending codes, plans, ratings with
+reviews and photos, and photos on sites it added. Dive reports stay with no name on them. Answers
+`{"apiVersion": 1, "deleted": true}`; every token and cookie of the diver stops working. 401 when signed out or
+already deleted. The app asks the diver to confirm first.
+
 ### `POST /api/v1/sites/{id}/reports`
 
 Signed in. `{"time": "2026-11-15T08:00", "direction": "incoming" | "outgoing", "strength": "slack" | "mild" |

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const diver = await getDiverProfile(id);
-  return { title: diver ? `${diver.nickname} · 50bar` : "Diver · 50bar" };
+  return { title: diver ? `${diver.nickname} · 50Bar` : "Diver · 50Bar" };
 }
 
 /** A diver's public page, opened from their nickname on the scoreboard. Nickname, About me, numbers, badges. */

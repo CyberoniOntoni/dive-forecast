@@ -151,6 +151,17 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
     sessions.set(null)
   }
 
+  /** Deletes the account and its data on the server, then forgets the token here. Already gone reads as done. */
+  suspend fun deleteAccount() {
+    val session = sessions.current() ?: return
+    try {
+      api.deleteAccount(session.token)
+    } catch (e: ApiException.Server) {
+      if (!e.signedOut) throw e
+    }
+    sessions.set(null)
+  }
+
   private suspend fun <T> authed(call: suspend () -> T): T =
     try {
       call()

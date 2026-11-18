@@ -116,6 +116,11 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
   suspend fun saveNickname(token: String, nickname: String): ApiNicknameSaved =
     send("PUT", listOf("api", "v1", "me", "nickname"), ApiJson.encodeToString(NicknameBody(nickname)), token)
 
+  /** Deletes the diver's account and data (API.md § DELETE /api/v1/me); every token of the diver stops working. */
+  suspend fun deleteAccount(token: String) {
+    send<ApiOk>("DELETE", listOf("api", "v1", "me"), null, token)
+  }
+
   suspend fun signOutEverywhere(token: String) {
     post<ApiOk>(listOf("api", "v1", "sign-out-everywhere"), "{}", token)
   }

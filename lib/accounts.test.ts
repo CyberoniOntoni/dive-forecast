@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ABOUT_MAX, LOGIN_CODE_TTL_MS, LOGIN_MAX_ATTEMPTS, LOGIN_SENDS_PER_EMAIL, finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
+import { ABOUT_MAX, deleteAccountRecords, LOGIN_CODE_TTL_MS, LOGIN_MAX_ATTEMPTS, LOGIN_SENDS_PER_EMAIL, finishLogin, normalizeEmail, requireAbout, requireNickname, startLogin } from "./accounts";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-10-30T10:00:00Z");
@@ -81,5 +81,50 @@ describe("requireAbout", () => {
     expect(requireAbout(undefined)).toBe("");
     expect(() => requireAbout("x".repeat(ABOUT_MAX + 1))).toThrow(/characters/);
     expect(() => requireAbout(42)).toThrow();
+  });
+});
+
+describe("deleteAccountRecords", () => {
+  it("drops the diver's rows and photos, and keeps their reports and sites without their id", () => {
+    const store = emptyStore();
+    const photo = (id: string, addedBy: string) => ({ id, addedBy, addedAt: "2026-11-01T00:00:00Z" });
+    store.users = [
+      { id: "u1", email: "a@b.co", nickname: "Ann", createdAt: "" },
+      { id: "u2", email: "c@d.co", nickname: "Bob", createdAt: "" },
+    ];
+    store.logins = [{ email: "a@b.co", codeHash: "h", sentAt: "", expiresAt: "", attempts: 0 }];
+    store.plans = [
+      { id: "p1", ownerId: "u1", title: "Mine", boatSpeedKn: 10, days: [], createdAt: "", updatedAt: "" },
+      { id: "p2", ownerId: "u2", title: "Bob's", boatSpeedKn: 10, days: [], createdAt: "", updatedAt: "" },
+    ];
+    store.ratings = [
+      { siteId: "s1", score: 5, updatedAt: "", userId: "u1", review: "Great", photos: [photo("r1", "u1")] },
+      { siteId: "s1", score: 3, updatedAt: "", userId: "u2" },
+    ];
+    store.reports = [
+      { id: "a", siteId: "s1", time: "2026-11-01T08:00", direction: "incoming", strength: "mild", userId: "u1" },
+      { id: "b", siteId: "s1", time: "2026-11-01T09:00", direction: "incoming", strength: "mild", userId: "u1" },
+      { id: "c", siteId: "s1", time: "2026-11-01T09:00", direction: "incoming", strength: "mild", userId: "u2" },
+    ];
+    store.sites = [
+      { id: "s1", name: "Pin", atollId: "x", lat: 4, lon: 73, sourceUrl: "user", addedBy: "u1", photos: [photo("p1", "u1")] },
+    ];
+
+    const photos = deleteAccountRecords(store, "u1");
+    expect(photos?.map((item) => `${item.siteId}/${item.photo.id}`).sort()).toEqual(["s1/p1", "s1/r1"]);
+    expect(store.users.map((user) => user.id)).toEqual(["u2"]);
+    expect(store.logins).toEqual([]);
+    expect(store.plans.map((plan) => plan.id)).toEqual(["p2"]);
+    expect(store.ratings).toEqual([{ siteId: "s1", score: 3, updatedAt: "", userId: "u2" }]);
+    expect(store.sites[0].addedBy).toBeUndefined();
+    expect(store.sites[0].photos).toBeUndefined();
+    // Still one diver to the forecast, and no longer the deleted one.
+    const [a, b, c] = store.reports.map((report) => report.userId);
+    expect(a).toMatch(/^deleted-/);
+    expect(b).toBe(a);
+    expect(c).toBe("u2");
+    expect(JSON.stringify(store)).not.toContain("u1");
+
+    expect(deleteAccountRecords(store, "u1")).toBeNull();
   });
 });

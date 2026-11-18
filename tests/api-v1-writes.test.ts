@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET as getMe } from "@/app/api/v1/me/route";
+import { DELETE as deleteMe, GET as getMe } from "@/app/api/v1/me/route";
 import { POST as requestCode } from "@/app/api/v1/sign-in/code/route";
 import { POST as getToken } from "@/app/api/v1/sign-in/token/route";
 import { POST as signOutEverywhere } from "@/app/api/v1/sign-out-everywhere/route";
@@ -133,6 +133,17 @@ describe("API v1 sign-in", () => {
     vi.setSystemTime(new Date("2026-09-28T00:00:05Z"));
     expect((await signOutEverywhere(call("/api/v1/sign-out-everywhere", { body: {}, token }))).status).toBe(200);
     expect((await getMe(call("/api/v1/me", { token }))).status).toBe(401);
+  });
+
+  it("deletes the account with the app's token, and the token stops working", async () => {
+    const token = await signInApp("a@example.com", "Ann");
+    const deleted = await deleteMe(call("/api/v1/me", { method: "DELETE", token }));
+    expect(deleted.status).toBe(200);
+    expect(await deleted.json()).toEqual({ apiVersion: 1, deleted: true });
+    expect(readStore().users).toEqual([]);
+    expect((await getMe(call("/api/v1/me", { token }))).status).toBe(401);
+    expect((await deleteMe(call("/api/v1/me", { method: "DELETE", token }))).status).toBe(401);
+    expect((await deleteMe(call("/api/v1/me", { method: "DELETE" }))).status).toBe(401);
   });
 });
 

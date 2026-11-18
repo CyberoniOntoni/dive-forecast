@@ -1,4 +1,4 @@
-import type { StoreData, User } from "./types";
+import type { SitePhoto, StoreData, User } from "./types";
 
 /**
  * Sign-in by emailed code, on the store's data: no passwords. A code is good for LOGIN_CODE_TTL_MS and
@@ -141,4 +141,53 @@ export function finishLogin(
   // Kept, expired, so it still counts toward the hour's sends.
   live.expiresAt = new Date(nowMs).toISOString();
   return { ok: true, user };
+}
+
+/** deleteAccount's answer when the signed-in diver's account is gone already. */
+export const ACCOUNT_GONE = "This account no longer exists.";
+
+/** A photo to delete from storage once the account's rows are gone. */
+export type AccountPhoto = { siteId: string; photo: SitePhoto };
+
+/**
+ * Deletes a diver's account from the store (PRIVACY: app/privacy/page.tsx § Deleting your account): the user row, its
+ * pending sign-in codes, its dive plans, its ratings with their reviews and photos, and the photos it added to sites it
+ * added. Two things stay, with nothing that leads back to the diver:
+ *
+ * - Dive reports, which train the forecast: their userId becomes one new random id that no account has, so the
+ *   reports drop off the scoreboard but still count as one diver where the forecast asks how many divers agree.
+ * - Sites the diver added, so other divers' reports and reviews there keep their place: `addedBy` goes.
+ *
+ * Returns the photos whose JPEGs the caller deletes, or null when there is no such user. Safe to run again on a fresh
+ * store (mutateStore may retry it).
+ */
+export function deleteAccountRecords(store: StoreData, userId: string): AccountPhoto[] | null {
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) return null;
+  const photos: AccountPhoto[] = [];
+
+  store.users = store.users.filter((item) => item.id !== userId);
+  store.logins = store.logins.filter((login) => login.email !== user.email);
+  store.plans = store.plans.filter((plan) => plan.ownerId !== userId);
+  store.ratings = store.ratings.filter((rating) => {
+    if (rating.userId !== userId) return true;
+    for (const photo of rating.photos ?? []) photos.push({ siteId: rating.siteId, photo });
+    return false;
+  });
+
+  const anonymous = `deleted-${crypto.randomUUID()}`;
+  for (const report of store.reports) {
+    if (report.userId === userId) report.userId = anonymous;
+  }
+  for (const site of store.sites) {
+    const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);
+    for (const photo of own) photos.push({ siteId: site.id, photo });
+    if (own.length) {
+      const kept = (site.photos ?? []).filter((photo) => photo.addedBy !== userId);
+      if (kept.length) site.photos = kept;
+      else delete site.photos;
+    }
+    if (site.addedBy === userId) delete site.addedBy;
+  }
+  return photos;
 }

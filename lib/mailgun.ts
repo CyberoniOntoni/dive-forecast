@@ -3,7 +3,7 @@ import { loginEmailMessage, type LoginEmail } from "./login-email";
 /**
  * Sends the sign-in email through Mailgun's HTTP API (fetch, so it runs on Node and on a worker). On the worker it is
  * the fallback when Cloudflare's own sending refuses (lib/email.ts). Settings: MAILGUN_API_KEY, MAILGUN_DOMAIN (the
- * sending domain, such as mailgun.50bar.app), MAILGUN_FROM (optional, defaults to "50bar
+ * sending domain, such as mailgun.50bar.app), MAILGUN_FROM (optional, defaults to "50Bar
  * <login@MAILGUN_DOMAIN>") and MAILGUN_REGION ("eu" for an EU account; US otherwise).
  */
 

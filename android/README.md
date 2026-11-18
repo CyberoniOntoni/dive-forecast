@@ -1,4 +1,4 @@
-# 50bar for Android
+# 50Bar for Android
 
 The dive-current forecast as a phone app. It reads the web app's JSON API (`/api/v1`, contract in `../API.md`),
 so it shows exactly what the site shows and never runs the model itself.
@@ -133,6 +133,38 @@ HTTP is allowed only in debug builds and only to `10.0.2.2`, `localhost` and `12
 (`app/src/debug/res/xml/network_security_config.xml`).
 
 Share links and "Open on the web" always go to `https://50bar.app` (`BuildConfig.WEB_URL`).
+
+## Releasing to Google Play
+
+The Play listing is "50Bar: Maldives Dive Currents", package **`app.fiftybar`** (`applicationId` in
+`app/build.gradle.kts`; it can never change once published. The Kotlin `namespace` stays `app.fiftybar.divecurrent`:
+it only names the code's packages and `R`/`BuildConfig`, and users never see it). The privacy policy is
+`https://50bar.app/privacy` (`app/privacy/page.tsx`), and divers delete their account on the Account screen
+(`DELETE /api/v1/me`) or on the web's account page.
+
+`.github/workflows/android-release.yml` builds a signed `.aab`: run it from the Actions tab (Run workflow, give the
+version name) or push a tag `android-v1.0.1`. Download the bundle from the run's Artifacts and upload it in Play
+Console. The `versionCode` is the workflow's run number, so each upload is higher than the last.
+
+It signs with the **upload key** (Play App Signing holds the real app-signing key). Make one once, keep the file and
+passwords safe outside the repo:
+
+```bash
+keytool -genkeypair -v -keystore upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 upload.jks   # macOS: base64 -i upload.jks
+```
+
+and add four repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `ANDROID_UPLOAD_KEYSTORE_BASE64` | the `base64` output |
+| `ANDROID_KEYSTORE_PASSWORD` | the keystore password |
+| `ANDROID_KEY_ALIAS` | `upload` (the `-alias`) |
+| `ANDROID_KEY_PASSWORD` | the key password (the same as the keystore's unless you set another) |
+
+Locally the same environment variables (`ANDROID_KEYSTORE_PATH` pointing at the `.jks`, plus the three others) sign
+`./gradlew bundleRelease`; without them a release build is unsigned.
 
 ## Layout
 

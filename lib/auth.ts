@@ -111,12 +111,16 @@ export function bearerToken(authorization: string | null): string | null | undef
 }
 
 /**
- * Whether the diver chose "Sign out everywhere" after this cookie was issued. Read from the store when this request
- * has loaded it (every server action has, by ready()); a page that has not is checked again by the action it calls.
+ * Whether the diver chose "Sign out everywhere" after this cookie was issued, or deleted the account. Read from the
+ * store when this request has loaded it (every server action has, by ready()); a page that has not is checked again
+ * by the action it calls.
  */
 function signedOutSince(session: Session): boolean {
-  const user = peekStore()?.users.find((item) => item.id === session.userId);
-  return user?.sessionsValidFrom != null && session.issuedAt < user.sessionsValidFrom;
+  const store = peekStore();
+  if (!store) return false;
+  const user = store.users.find((item) => item.id === session.userId);
+  if (!user) return true;
+  return user.sessionsValidFrom != null && session.issuedAt < user.sessionsValidFrom;
 }
 
 export async function requireSession(): Promise<Session> {

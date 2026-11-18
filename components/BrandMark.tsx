@@ -1,5 +1,5 @@
 /**
- * The 50bar mark ("Waterline"): "50" cut by the sea surface, the digits below it pushed sideways by the current.
+ * The 50Bar mark ("Waterline"): "50" cut by the sea surface, the digits below it pushed sideways by the current.
  * Generated from brand/50bar-icon.svg (same paths as app/icon.svg and the Android launcher background and foreground; see brand/README.md).
  */
 export function BrandMark() {

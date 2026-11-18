@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AboutForm } from "@/components/AboutForm";
 import { AccountControls } from "@/components/AccountControls";
+import { DeleteAccount } from "@/components/DeleteAccount";
 import { BadgeGrid, Stat } from "@/components/ProfileParts";
 import { getAccount } from "@/lib/account-actions";
 import { pointsRuleLines } from "@/lib/profile-words";
@@ -10,7 +11,7 @@ import { signInHref } from "@/lib/sign-in";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Your account · 50bar" };
+export const metadata: Metadata = { title: "Your account · 50Bar" };
 
 export default async function AccountPage() {
   const account = await getAccount();
@@ -65,6 +66,12 @@ export default async function AccountPage() {
 
       <AboutForm about={account.about} userId={account.userId} />
       <AccountControls nickname={account.nickname} />
+      <DeleteAccount nickname={account.nickname} />
+      <p className="text-sm text-foam/75">
+        <Link href="/privacy" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
+          Privacy policy
+        </Link>
+      </p>
     </main>
   );
 }
