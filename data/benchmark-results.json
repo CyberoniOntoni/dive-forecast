@@ -4,27 +4,27 @@
   "strengthMismatches": 17,
   "metrics": {
     "totalReports": 30,
-    "directionalAccuracyPct": 86.67,
-    "slackTimingDeviationMins": 135,
+    "directionalAccuracyPct": 80,
+    "slackTimingDeviationMins": 120,
     "slackReports": 4,
     "falseHighConfidenceRatePct": 0,
     "confidenceBreakdown": {
       "high": {
-        "count": 0,
-        "accuracyPct": 0
+        "count": 2,
+        "accuracyPct": 100
       },
       "medium": {
-        "count": 15,
-        "accuracyPct": 80
+        "count": 14,
+        "accuracyPct": 71.43
       },
       "low": {
-        "count": 15,
-        "accuracyPct": 93.33
+        "count": 14,
+        "accuracyPct": 85.71
       }
     }
   },
   "datasetName": "data/benchmark-reports.json",
-  "evaluatedAt": "2026-11-18T03:09:21.554Z",
+  "evaluatedAt": "2026-11-02T06:57:06.540Z",
   "siteResults": [
     {
       "siteId": "rasdhoo-madivaru",
@@ -49,7 +49,7 @@
       "slackReports": 1,
       "slackDeviationSumMins": 210,
       "failures": 0,
-      "strengthMismatches": 6,
+      "strengthMismatches": 7,
       "directionalMatches": 6,
       "directionalAccuracyPct": 66.67,
       "slackTimingDeviationMins": 210,
@@ -62,12 +62,12 @@
       "atollName": "South Male Atoll",
       "evaluatedReports": 10,
       "slackReports": 1,
-      "slackDeviationSumMins": 150,
+      "slackDeviationSumMins": 90,
       "failures": 0,
       "strengthMismatches": 5,
-      "directionalMatches": 9,
-      "directionalAccuracyPct": 90,
-      "slackTimingDeviationMins": 150,
+      "directionalMatches": 8,
+      "directionalAccuracyPct": 80,
+      "slackTimingDeviationMins": 90,
       "falseHighConfidenceRatePct": 0,
       "ok": true
     },
@@ -79,9 +79,9 @@
       "slackReports": 2,
       "slackDeviationSumMins": 180,
       "failures": 0,
-      "strengthMismatches": 5,
-      "directionalMatches": 9,
-      "directionalAccuracyPct": 100,
+      "strengthMismatches": 4,
+      "directionalMatches": 8,
+      "directionalAccuracyPct": 88.89,
       "slackTimingDeviationMins": 90,
       "falseHighConfidenceRatePct": 0,
       "ok": true
