@@ -106,6 +106,8 @@ import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
+import app.fiftybar.divecurrent.ui.components.ContentActions
+import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
@@ -285,6 +287,21 @@ fun SiteScreen(
             AboutCard(s, photoUrl = viewModel::photoUrl) {
               if (s.userAdded && photosState.isAdder && session != null) {
                 AdderPhotos(s, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
+              }
+              if (s.userAdded && !photosState.isAdder) {
+                var reporting by remember { mutableStateOf(false) }
+                ContentActions(onReport = { if (session != null) reporting = true else onSignIn() }, onBlock = null)
+                photosState.reportNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.85f)) }
+                if (reporting) {
+                  ReportDialog(
+                    what = "site",
+                    onDismiss = { reporting = false },
+                    onSend = { reason, note ->
+                      reporting = false
+                      photos.report(reason, note)
+                    },
+                  )
+                }
               }
             }
           }

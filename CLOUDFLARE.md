@@ -120,6 +120,19 @@ npx wrangler d1 execute dive-forecast --remote --command "UPDATE sites SET data 
 
 Any hand edit in D1 should bump `store_version` the same way; otherwise isolates see it within 10 minutes.
 
+**Moderation** (Google Play's user-generated content rules, `lib/moderation.ts`): divers agree to `/terms` at sign-in,
+can Report reviews, added sites and diver pages and Block divers, on the web and in the app. Set the secret
+`MODERATOR_EMAILS` (comma-separated sign-in emails; a secret, so it survives deploys and stays out of the repo):
+
+```bash
+npx wrangler secret put MODERATOR_EMAILS
+```
+
+Each new report emails them (same routes as sign-in codes), and signed in with one of those emails, the account page
+links `/moderation`: open reports with Remove content, Ban diver (signs them out, refuses their sign-in, removes all they
+posted except dive reports) and Dismiss. Photos are cached an hour (`app/site-photos`), so a removed one stops showing
+within the hour.
+
 ## Cost
 
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over

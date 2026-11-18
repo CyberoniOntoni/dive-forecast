@@ -265,6 +265,40 @@ export type User = {
    * from the photos, so deleting a photo or a rating does not give the upload back.
    */
   reviewPhotoUploads?: string[];
+  /** When the diver agreed to the content rules (/terms), ISO UTC. Needed before they post anything others see. */
+  acceptedTermsAt?: string;
+  /** Divers this one blocked (User.id): their reviews, photos and pages are hidden from this diver. */
+  blocked?: string[];
+  /** Banned by a moderator, ISO UTC: cannot sign in, and what they posted is removed (lib/moderation.ts). */
+  bannedAt?: string;
+};
+
+export const FLAG_REASONS = ["sexual", "violence", "hate", "spam", "privacy", "illegal", "other"] as const;
+export type FlagReason = (typeof FLAG_REASONS)[number];
+export const FLAG_KINDS = ["review", "site", "diver"] as const;
+export type FlagKind = (typeof FLAG_KINDS)[number];
+
+/**
+ * A diver's report of something objectionable (Google Play's user-generated content rules): a review with its
+ * photos, a site added in the app with its notes and photos, or a diver's nickname and About me. Moderators act on it
+ * at /moderation.
+ */
+export type ContentFlag = {
+  id: string;
+  /** Who reported it (User.id). */
+  reporterId: string;
+  kind: FlagKind;
+  /** The review's or the site's site. */
+  siteId?: string;
+  /** Whose content it is (User.id): the review's author, the site's adder, the diver. */
+  userId?: string;
+  reason: FlagReason;
+  /** The reporter's words, plain text. */
+  note?: string;
+  createdAt: string;
+  /** When a moderator closed it, ISO UTC, and what they did. */
+  resolvedAt?: string;
+  resolution?: "removed" | "banned" | "dismissed";
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */
@@ -432,4 +466,5 @@ export type StoreData = {
   users: User[];
   logins: PendingLogin[];
   plans: DivePlan[];
+  flags: ContentFlag[];
 };

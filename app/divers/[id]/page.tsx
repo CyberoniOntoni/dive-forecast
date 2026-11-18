@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ContentActions } from "@/components/ContentActions";
 import { BadgeGrid, Stat } from "@/components/ProfileParts";
+import { UnblockButton } from "@/components/UnblockButton";
+import { currentSession } from "@/lib/auth";
 import { getDiverProfile } from "@/lib/account-actions";
 import { sinceLine } from "@/lib/profile-words";
 
@@ -18,6 +21,7 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const diver = await getDiverProfile(id);
   if (!diver) notFound();
+  const signedIn = (await currentSession()) != null;
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
@@ -31,7 +35,12 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
         </p>
       </header>
 
-      {diver.about ? (
+      {diver.blockedByMe ? (
+        <section className="flex min-w-0 flex-wrap items-center justify-between gap-3 surface p-4 sm:p-5" aria-label="Blocked">
+          <p className="text-sm text-foam/80">You blocked this diver. Their reviews and photos are hidden from you.</p>
+          <UnblockButton userId={id} nickname={diver.nickname} />
+        </section>
+      ) : diver.about ? (
         <section className="surface p-4 sm:p-5" aria-label="About me">
           <p className="whitespace-pre-line break-words text-sm leading-6 text-foam">{diver.about}</p>
         </section>
@@ -55,6 +64,10 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
         <Stat label="Ratings" value={diver.stats.ratings} />
         <Stat label="Sites added" value={diver.sitesAdded} />
       </section>
+
+      {!diver.isMe && !diver.blockedByMe ? (
+        <ContentActions kind="diver" userId={id} nickname={diver.nickname} signedIn={signedIn} returnTo={`/divers/${id}`} />
+      ) : null}
 
       {diver.badges.length ? (
         <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="badges-heading">

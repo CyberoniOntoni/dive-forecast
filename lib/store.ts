@@ -197,6 +197,8 @@ export async function addSitePhotoRecord(siteId: string, photo: SitePhoto, max: 
   return mutateStore((store) => {
     const site = store.sites.find((item) => item.id === siteId);
     if (!site) return false;
+    // Checked again here: the adder may have deleted their account since the action read the store.
+    if (site.addedBy !== photo.addedBy) return false;
     const photos = site.photos ?? [];
     if (photos.length >= max) return false;
     site.photos = [...photos, photo];

@@ -82,7 +82,7 @@ function codeFromEmail(): string {
 async function signInApp(email: string, nickname: string): Promise<string> {
   const asked = await requestCode(call("/api/v1/sign-in/code", { body: { email } }));
   expect(asked.status).toBe(200);
-  const response = await getToken(call("/api/v1/sign-in/token", { body: { email, code: codeFromEmail(), nickname } }));
+  const response = await getToken(call("/api/v1/sign-in/token", { body: { email, code: codeFromEmail(), nickname, acceptTerms: true } }));
   expect(response.status).toBe(200);
   const body = await response.json();
   expect(body).toMatchObject({ apiVersion: 1, nickname, token: expect.any(String), expiresAt: expect.any(Number) });

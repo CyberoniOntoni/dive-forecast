@@ -31,6 +31,7 @@ export function SignInForm({
   const [code, setCode] = useState(initialCode);
   const [nickname, setNickname] = useState("");
   const [askNickname, setAskNickname] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -55,7 +56,7 @@ export function SignInForm({
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const result = await completeSignIn({ email, code, nickname: askNickname ? nickname : undefined });
+      const result = await completeSignIn({ email, code, nickname: askNickname ? nickname : undefined, acceptTerms: agreed });
       if (result.ok) {
         router.replace(next);
         router.refresh();
@@ -139,12 +140,33 @@ export function SignInForm({
               </span>
             </label>
           ) : null}
+          <label className="flex min-w-0 items-start gap-2 text-sm leading-6 text-foam/85" htmlFor="sign-in-terms">
+            <input
+              id="sign-in-terms"
+              type="checkbox"
+              required
+              checked={agreed}
+              onChange={(event) => setAgreed(event.target.checked)}
+              className="mt-1 size-5 shrink-0 accent-incoming"
+            />
+            <span>
+              I agree to the{" "}
+              <Link href="/terms" target="_blank" className="underline decoration-incoming underline-offset-4">
+                content rules
+              </Link>{" "}
+              and the{" "}
+              <Link href="/privacy" target="_blank" className="underline decoration-incoming underline-offset-4">
+                privacy policy
+              </Link>
+              . No nudity, hate, harassment or spam: posts that break the rules are removed and their divers banned.
+            </span>
+          </label>
           {error ? (
             <p role="alert" className="text-sm text-outgoing">
               {error}
             </p>
           ) : null}
-          <button type="submit" disabled={pending} className={PRIMARY}>
+          <button type="submit" disabled={pending || !agreed} className={PRIMARY}>
             {pending ? "Signing in…" : "Sign in"}
           </button>
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">

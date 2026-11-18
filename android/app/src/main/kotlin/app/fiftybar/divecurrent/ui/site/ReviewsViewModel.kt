@@ -9,6 +9,7 @@ import app.fiftybar.divecurrent.data.DataRepository
 import app.fiftybar.divecurrent.data.SignedOutException
 import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiReviews
+import app.fiftybar.divecurrent.data.api.FlagBody
 import app.fiftybar.divecurrent.data.session.Session
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -132,6 +133,32 @@ class ReviewsViewModel(
                 )
                 .joinToString(" "),
         )
+      }
+    }
+  }
+
+  /** Reports another diver's review (and its photos) to the moderators. */
+  fun report(nickname: String, reason: String, note: String) =
+    act("Thanks. A moderator will look at it.") { account.report(FlagBody("review", siteId = siteId, nickname = nickname, reason = reason, note = note.ifBlank { null })) }
+
+  /** Blocks a diver: the card comes back without their reviews. */
+  fun block(nickname: String) =
+    act("$nickname is blocked. Unblock them on your account screen.") {
+      account.block(nickname, true)
+      load()
+    }
+
+  private fun act(done: String, call: suspend () -> Unit) {
+    if (_state.value.busy) return
+    viewModelScope.launch {
+      _state.update { it.copy(busy = true, error = null, note = null) }
+      try {
+        call()
+        _state.update { it.copy(busy = false, note = done) }
+      } catch (_: SignedOutException) {
+        _state.update { it.copy(busy = false, error = "Sign in again first.") }
+      } catch (e: ApiException) {
+        _state.update { it.copy(busy = false, error = e.message) }
       }
     }
   }

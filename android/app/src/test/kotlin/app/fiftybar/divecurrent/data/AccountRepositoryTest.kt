@@ -44,7 +44,7 @@ class AccountRepositoryTest {
     assertEquals("""{"email":"diver@example.com"}""", sent.body.readUtf8())
 
     account.signIn("diver@example.com", "12 34 56", "Manta")
-    assertEquals("""{"email":"diver@example.com","code":"123456","nickname":"Manta"}""", server.takeRequest().body.readUtf8())
+    assertEquals("""{"email":"diver@example.com","code":"123456","nickname":"Manta","acceptTerms":true}""", server.takeRequest().body.readUtf8())
     assertEquals(Session("t.sig", "Manta", 9000), storage.saved)
     assertEquals("Manta", account.sessions.session.value?.nickname)
   }
@@ -194,6 +194,30 @@ class AccountRepositoryTest {
       fail("expected the server's error")
     } catch (_: ApiException.Server) {}
     assertEquals("t.sig", account.sessions.session.value?.token)
+  }
+
+  @Test
+  fun `reports content and blocks a diver with the token`() = runTest {
+    account.sessions.set(Session("t.sig", "Manta", 9000))
+    server.enqueue(reply(201, """{"apiVersion":1,"sent":true}"""))
+    account.report(app.fiftybar.divecurrent.data.api.FlagBody("review", siteId = "s1", nickname = "Rude", reason = "hate"))
+    val flag = server.takeRequest()
+    assertEquals("/api/v1/flags", flag.path)
+    assertEquals("""{"kind":"review","siteId":"s1","nickname":"Rude","reason":"hate"}""", flag.body.readUtf8())
+
+    server.enqueue(reply(200, """{"apiVersion":1,"blocked":true}"""))
+    account.block("Rude", true)
+    val block = server.takeRequest()
+    assertEquals("POST", block.method)
+    assertEquals("/api/v1/divers/Rude/block", block.path)
+
+    server.enqueue(reply(200, """{"apiVersion":1,"blocked":false}"""))
+    account.block("Rude", false)
+    assertEquals("DELETE", server.takeRequest().method)
+
+    server.enqueue(reply(200, """{"apiVersion":1,"acceptedTerms":true}"""))
+    account.acceptTerms()
+    assertEquals("/api/v1/me/terms", server.takeRequest().path)
   }
 
   private class MemoryStorage : SessionStorage {

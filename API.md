@@ -222,6 +222,25 @@ out.
 
 Signed in, body `{}`. Ends every session of the diver: this token, other phones and the web's cookies.
 
+### Content rules, reports and blocking
+
+Google Play's user-generated content policy, as on the web (`lib/moderation.ts`, rules at `/terms`):
+
+- **Sign-in** (`POST /api/v1/sign-in/token`) takes `"acceptTerms": true`, the "I agree to the content rules and privacy
+  policy" box. A first sign-in, or a diver who signed up before the rules, without it answers 400 `needs_terms`. A
+  banned diver's sign-in answers 400 with the reason.
+- `GET /api/v1/me` adds `acceptedTerms` (boolean) and `blocked` (nicknames). A diver with `acceptedTerms: false` who
+  posts a review, photo, site or About me gets 400 "Agree to the content rules first…": the app asks, then calls
+  **`POST /api/v1/me/terms`** (no body) → `{"apiVersion": 1, "acceptedTerms": true}`.
+- **`POST /api/v1/flags`**, signed in: `{"kind": "review" | "site" | "diver", "siteId"?, "nickname"?, "reason",
+  "note"?}`. A review is `siteId` + its author's `nickname`, a site added in the app is `siteId`, a diver is
+  `nickname`. `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
+  500 characters. 201 `{"apiVersion": 1, "sent": true}`; 400 for one's own content, at 20 a day, or gone content.
+  Moderators get an email and act at `/moderation` on the web.
+- **`POST /api/v1/divers/{nickname}/block`** and **`DELETE`** the same, signed in → `{"apiVersion": 1, "blocked":
+  true | false}`. A blocked diver's reviews and photos drop out of `GET /api/v1/sites/{id}/reviews` for the blocker,
+  and `GET /api/v1/divers/{nickname}` answers `blockedByMe: true` with an empty `about`.
+
 ### `DELETE /api/v1/me`
 
 Signed in, no body. Deletes the diver's account and data, as the web's account page does (`deleteAccountRecords` in

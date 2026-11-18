@@ -23,6 +23,8 @@ data class SignInUiState(
   val nickname: String = "",
   /** A new address: it picks its nickname with the code. */
   val newUser: Boolean = false,
+  /** The "I agree to the content rules and privacy policy" box; signing in needs it. */
+  val agreed: Boolean = false,
   val busy: Boolean = false,
   val error: String? = null,
 )
@@ -38,6 +40,8 @@ class SignInViewModel(private val account: AccountRepository) : ViewModel() {
 
   fun nickname(value: String) = _state.update { it.copy(nickname = value.take(20), error = null) }
 
+  fun agree(value: Boolean) = _state.update { it.copy(agreed = value, error = null) }
+
   /** Back to the address, to fix a typo. */
   fun changeEmail() = _state.update { it.copy(step = SignInStep.Email, code = "", error = null) }
 
@@ -52,9 +56,9 @@ class SignInViewModel(private val account: AccountRepository) : ViewModel() {
 
   fun signIn() {
     val s = _state.value
-    if (s.code.length != 6 || s.busy) return
+    if (s.code.length != 6 || s.busy || !s.agreed) return
     run {
-      account.signIn(s.email, s.code, s.nickname.takeIf { s.newUser })
+      account.signIn(s.email, s.code, s.nickname.takeIf { s.newUser }, acceptTerms = true)
       _state.update { it.copy(step = SignInStep.Done, busy = false) }
     }
   }

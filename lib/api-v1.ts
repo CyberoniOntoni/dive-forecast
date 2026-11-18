@@ -212,7 +212,8 @@ export type ApiErrorCode =
   | "server_error"
   | "unauthorized"
   | "forbidden"
-  | "needs_nickname";
+  | "needs_nickname"
+  | "needs_terms";
 
 export function apiSite(site: Site, atollName?: string | null): ApiSite {
   const userAdded = site.sourceUrl === "user";
@@ -1081,6 +1082,8 @@ export type ApiDiver = {
   badges: { id: string; label: string; detail: string }[];
   /** The signed-in diver's own page (always false without a token). */
   isMe: boolean;
+  /** The signed-in diver blocked this one (always false without a token): the app hides the About me. */
+  blockedByMe: boolean;
 };
 
 /**

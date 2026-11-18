@@ -10,9 +10,17 @@ import { loginEmailMessage, type LoginEmail } from "./login-email";
 export type MailgunConfig = { apiKey: string; domain: string; from: string; region: "us" | "eu" };
 
 export async function sendMailgunEmail(config: MailgunConfig, email: LoginEmail): Promise<void> {
+  await sendMailgunMessage(config, { to: email.to, ...loginEmailMessage(email) });
+}
+
+/** Any email through Mailgun; html is optional. */
+export async function sendMailgunMessage(
+  config: MailgunConfig,
+  message: { to: string; subject: string; text: string; html?: string },
+): Promise<void> {
   const host = config.region === "eu" ? "https://api.eu.mailgun.net" : "https://api.mailgun.net";
-  const { subject, text, html } = loginEmailMessage(email);
-  const body = new URLSearchParams({ from: config.from, to: email.to, subject, text, html });
+  const { to, subject, text, html } = message;
+  const body = new URLSearchParams({ from: config.from, to, subject, text, ...(html ? { html } : {}) });
   const response = await fetch(`${host}/v3/${encodeURIComponent(config.domain)}/messages`, {
     method: "POST",
     headers: { Authorization: `Basic ${btoa(`api:${config.apiKey}`)}` },

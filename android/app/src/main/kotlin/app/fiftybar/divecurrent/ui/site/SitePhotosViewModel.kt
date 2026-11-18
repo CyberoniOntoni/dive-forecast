@@ -5,7 +5,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.fiftybar.divecurrent.data.AccountRepository
+import app.fiftybar.divecurrent.data.SignedOutException
+import app.fiftybar.divecurrent.data.api.ApiException
 import app.fiftybar.divecurrent.data.api.ApiSite
+import app.fiftybar.divecurrent.data.api.FlagBody
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,6 +24,8 @@ data class SitePhotosUiState(
   val progress: String? = null,
   val error: String? = null,
   val note: String? = null,
+  /** After reporting the site: "Thanks. A moderator will look at it.", or why it failed. */
+  val reportNote: String? = null,
 )
 
 /** "Add photos" on a site the signed-in diver added in the app, as the web's site page (components/SiteAbout.tsx). */
@@ -63,6 +68,22 @@ class SitePhotosViewModel(private val siteId: String, private val account: Accou
                 .joinToString(" "),
         )
       }
+    }
+  }
+
+  /** Reports this site (added in the app: its notes and photos) to the moderators. */
+  fun report(reason: String, note: String) {
+    viewModelScope.launch {
+      val line =
+        try {
+          account.report(FlagBody("site", siteId = siteId, reason = reason, note = note.ifBlank { null }))
+          "Thanks. A moderator will look at it."
+        } catch (_: SignedOutException) {
+          "Sign in again first."
+        } catch (e: ApiException) {
+          e.message ?: "Could not send the report."
+        }
+      _state.update { it.copy(reportNote = line) }
     }
   }
 }

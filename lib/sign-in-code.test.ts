@@ -42,7 +42,7 @@ describe("checkSignInCode", () => {
   it("asks a new address for a nickname, then signs it up", async () => {
     await pending("a@example.com", "123456");
     expect(await checkSignInCode({ email: "A@example.com ", code: "123 456" })).toMatchObject({ ok: false, needsNickname: true });
-    const done = await checkSignInCode({ email: "a@example.com", code: "123456", nickname: "Ann" });
+    const done = await checkSignInCode({ email: "a@example.com", code: "123456", nickname: "Ann", acceptTerms: true });
     expect(done).toMatchObject({ ok: true, user: { email: "a@example.com", nickname: "Ann" } });
     expect(readStore().users).toHaveLength(1);
   });

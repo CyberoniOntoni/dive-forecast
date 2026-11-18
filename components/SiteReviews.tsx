@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { ContentActions } from "./ContentActions";
 import {
   addReviewPhoto,
   getSiteReviews,
@@ -256,7 +257,7 @@ export function SiteReviews({
       {shown.reviews.length > 0 ? (
         <ul className="flex flex-col gap-4 border-t border-foam/10 pt-4" aria-label="Reviews from other divers">
           {shown.reviews.map((review) => (
-            <ReviewItem key={review.userId} review={review} siteName={siteName} />
+            <ReviewItem key={review.userId} review={review} siteId={siteId} siteName={siteName} signedIn={signedIn} />
           ))}
         </ul>
       ) : null}
@@ -264,7 +265,7 @@ export function SiteReviews({
   );
 }
 
-function ReviewItem({ review, siteName }: { review: SiteReview; siteName: string }) {
+function ReviewItem({ review, siteId, siteName, signedIn }: { review: SiteReview; siteId: string; siteName: string; signedIn: boolean }) {
   return (
     <li className="flex min-w-0 flex-col gap-2">
       <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-foam">
@@ -303,6 +304,14 @@ function ReviewItem({ review, siteName }: { review: SiteReview; siteName: string
           ))}
         </ul>
       ) : null}
+      <ContentActions
+        kind="review"
+        siteId={siteId}
+        userId={review.userId}
+        nickname={review.nickname}
+        signedIn={signedIn}
+        returnTo={`/sites/${siteId}`}
+      />
     </li>
   );
 }

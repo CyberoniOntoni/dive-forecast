@@ -19,11 +19,13 @@ import { siteScouts } from "./site-scouts";
 import { hashLoginCode, newLoginCode } from "./session-token";
 import { checkSignInCode, NOT_SET_UP } from "./sign-in-code";
 import { localPath } from "./sign-in";
+import { appSetting } from "./cloudflare";
+import { hasAcceptedTerms, isModeratorEmail, requireTermsAccepted } from "./moderation";
 import { deletePhotoBytes } from "./site-photos";
 import { listMergedSites, mutateStore, readStore } from "./store";
 import type { StoreData } from "./types";
 
-export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean };
+export type SignInStep = { ok: boolean; error: string | null; newUser?: boolean; needsNickname?: boolean; needsTerms?: boolean };
 
 
 /**
@@ -60,11 +62,11 @@ export async function requestSignIn(emailInput: unknown, next?: unknown, codeOnl
 }
 
 /** Checks the code; a new address also picks its nickname here. Sets the session cookie. */
-export async function completeSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<SignInStep> {
+export async function completeSignIn(input: { email: unknown; code: unknown; nickname?: unknown; acceptTerms?: unknown }): Promise<SignInStep> {
   await ready();
   try {
     const result = await checkSignInCode(input);
-    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
+    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname, needsTerms: result.needsTerms };
     await setSessionCookie(result.user.id, result.user.nickname);
     return { ok: true, error: null };
   } catch (caught) {
@@ -78,11 +80,11 @@ export type AppSignInStep = SignInStep & { token?: string; nickname?: string; ex
  * The app's sign-in (POST /api/v1/sign-in/token): the same code check as completeSignIn, answered with the app's
  * encrypted bearer token instead of a cookie.
  */
-export async function completeAppSignIn(input: { email: unknown; code: unknown; nickname?: unknown }): Promise<AppSignInStep> {
+export async function completeAppSignIn(input: { email: unknown; code: unknown; nickname?: unknown; acceptTerms?: unknown }): Promise<AppSignInStep> {
   await ready();
   try {
     const result = await checkSignInCode(input);
-    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname };
+    if (!result.ok) return { ok: false, error: result.error, needsNickname: result.needsNickname, needsTerms: result.needsTerms };
     const { token, expiresAt } = await issueAppToken(result.user.id, result.user.nickname);
     return { ok: true, error: null, token, nickname: result.user.nickname, expiresAt };
   } catch (caught) {
@@ -162,6 +164,7 @@ export async function changeAbout(input: unknown): Promise<{ ok: boolean; error:
   try {
     const session = await requireSession();
     const about = requireAbout(input);
+    if (about) requireTermsAccepted(readStore(), session.userId);
     await mutateStore((store) => {
       const user = store.users.find((item) => item.id === session.userId);
       if (!user) throw new Error("This account no longer exists.");
@@ -210,6 +213,10 @@ export type AccountView = {
   nickname: string;
   email: string;
   about: string;
+  /** Agreed to the content rules (/terms); the account page asks once if not. */
+  acceptedTerms: boolean;
+  /** Email in MODERATOR_EMAILS: the account page links /moderation. */
+  moderator: boolean;
   stats: DiverNumbers;
   badges: BadgeView[];
   monthRank: number | null;
@@ -224,7 +231,15 @@ export async function getAccount(): Promise<AccountView | null> {
   const store = readStore();
   const user = store.users.find((item) => item.id === session.userId);
   if (!user) return null;
-  return { userId: user.id, nickname: user.nickname, email: user.email, about: user.about ?? "", ...diverSummary(store, user.id) };
+  return {
+    userId: user.id,
+    nickname: user.nickname,
+    email: user.email,
+    about: user.about ?? "",
+    acceptedTerms: hasAcceptedTerms(user),
+    moderator: !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS")),
+    ...diverSummary(store, user.id),
+  };
 }
 
 export type LeaderboardRow = {
@@ -303,6 +318,8 @@ export type DiverProfile = {
   /** Earned badges only. */
   badges: BadgeView[];
   isMe: boolean;
+  /** The signed-in diver blocked this one: the page hides their About me. */
+  blockedByMe: boolean;
 };
 
 /** A diver's public page: nickname, About me, numbers and earned badges. Never the email. Null for an unknown id. */
@@ -323,5 +340,6 @@ export async function getDiverProfile(userId: unknown): Promise<DiverProfile | n
     allRank,
     badges: badges.filter((badge) => badge.earned),
     isMe: session?.userId === user.id,
+    blockedByMe: Boolean(session && store.users.find((item) => item.id === session.userId)?.blocked?.includes(user.id)),
   };
 }

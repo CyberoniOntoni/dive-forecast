@@ -15,6 +15,7 @@ import { WALL_HOUR } from "./shelter-limits";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
+import { blockedIds, requireTermsAccepted } from "./moderation";
 import { ready, readyWith } from "./ready";
 import { currentSession, requireSession } from "./auth";
 import { requireReviewText, requireSiteDetails, type SiteDetailsInput } from "./site-details";
@@ -89,6 +90,7 @@ export type AddSiteInput = SiteDetailsInput & { name: string; lat: number; lon: 
 export async function addSite(input: AddSiteInput): Promise<Site> {
   await ready();
   const session = await requireSession();
+  requireTermsAccepted(readStore(), session.userId);
   const body = requireSiteInput(input);
   const name = requireSiteName(body.name);
   const lat = requireLatitude(body.lat);
@@ -139,6 +141,7 @@ export async function addSitePhoto(siteId: string, formData: FormData): Promise<
   await ready();
   try {
     const session = await requireSession();
+    requireTermsAccepted(readStore(), session.userId);
     requireSiteId(siteId);
     const site = readStore().sites.find((item) => item.id === siteId && !item.hidden);
     if (!site) return { ok: false, error: "Photos can only be added to sites added in the app." };
@@ -230,9 +233,13 @@ export async function getSiteReviews(siteId: string, options?: { signedOut?: boo
 
 function siteReviews(siteId: string, userId: string | null): SiteReviews {
   const ratings = ratingsForSite(siteId);
-  const nicknames = new Map(readStore().users.map((user) => [user.id, user.nickname]));
+  const store = readStore();
+  const nicknames = new Map(store.users.map((user) => [user.id, user.nickname]));
+  // Divers this one blocked: their reviews and photos are not shown to them.
+  const blocked = blockedIds(store, userId);
   const all = ratings
     .filter((rating): rating is Rating & { userId: string } => rating.userId != null && nicknames.has(rating.userId))
+    .filter((rating) => !blocked.has(rating.userId))
     .map(
       (rating): SiteReview => ({
         userId: rating.userId,
@@ -285,6 +292,7 @@ export async function submitRating(siteId: string, score: number): Promise<Revie
 export async function saveReview(siteId: string, text: string): Promise<ReviewActionResult> {
   return reviewAction(siteId, async (userId) => {
     const review = requireReviewText(text);
+    if (review) requireTermsAccepted(readStore(), userId);
     const saved = await saveReviewText(siteId, userId, review, new Date().toISOString());
     return saved ? null : "Rate the site first, then write your review.";
   });
@@ -298,6 +306,7 @@ export async function addReviewPhoto(siteId: string, formData: FormData): Promis
   await ready();
   try {
     const session = await requireSession();
+    requireTermsAccepted(readStore(), session.userId);
     requireSiteId(siteId);
     if (!findSite(siteId)) return { ok: false, error: "Unknown site." };
     const file = formData.get("photo");

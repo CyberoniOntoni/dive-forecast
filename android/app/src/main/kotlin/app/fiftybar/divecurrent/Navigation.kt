@@ -190,6 +190,7 @@ fun MainNavigation(startPlanId: String? = null) {
               onAccount = {
                 if (backStack.getOrNull(backStack.size - 2) == AccountKey) leave() else backStack.add(AccountKey)
               },
+              onSignIn = { backStack.add(SignInKey) },
             )
           }
           entry<PlansKey> { key ->

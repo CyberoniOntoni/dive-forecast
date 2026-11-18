@@ -96,8 +96,21 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
     post(listOf("api", "v1", "sign-in", "code"), ApiJson.encodeToString(CodeRequest(email)), token = null)
 
   /** Trades the emailed code (and a new diver's nickname) for the app's token. */
-  suspend fun token(email: String, code: String, nickname: String?): ApiToken =
-    post(listOf("api", "v1", "sign-in", "token"), ApiJson.encodeToString(TokenRequest(email, code, nickname)), token = null)
+  suspend fun token(email: String, code: String, nickname: String?, acceptTerms: Boolean): ApiToken =
+    post(listOf("api", "v1", "sign-in", "token"), ApiJson.encodeToString(TokenRequest(email, code, nickname, acceptTerms)), token = null)
+
+  /** Reports a review, a site added in the app or a diver to the moderators. */
+  suspend fun flag(token: String, body: FlagBody): ApiFlagSent = post(listOf("api", "v1", "flags"), ApiJson.encodeToString(body), token)
+
+  /** Blocks (or unblocks) a diver for the signed-in one. */
+  suspend fun block(token: String, nickname: String, blocked: Boolean): ApiBlocked =
+    // OkHttp needs a body on POST; the server reads none.
+    send(if (blocked) "POST" else "DELETE", listOf("api", "v1", "divers", nickname, "block"), if (blocked) "{}" else null, token)
+
+  /** Agrees to the content rules, for divers who signed up before them. */
+  suspend fun acceptTerms(token: String) {
+    post<ApiOk>(listOf("api", "v1", "me", "terms"), "{}", token)
+  }
 
   suspend fun me(token: String): ApiMe = get<ApiMe>(listOf("api", "v1", "me"), token).first
 

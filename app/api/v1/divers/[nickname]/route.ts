@@ -1,4 +1,5 @@
 import { getDiverProfile } from "@/lib/account-actions";
+import { userByNickname } from "@/lib/accounts";
 import { API_VERSION, apiError, apiHandler, apiJson, apiViewer, viewerCache, type ApiDiver } from "@/lib/api-v1";
 import { sinceLine } from "@/lib/profile-words";
 import { ready } from "@/lib/ready";
@@ -21,14 +22,13 @@ export async function GET(request: Request, context: { params: Promise<{ nicknam
     } catch {
       // Not encoded: keep it as it came.
     }
-    const key = name.trim().toLowerCase();
-    const user = readStore().users.find((item) => item.nickname.toLowerCase() === key);
+    const user = userByNickname(readStore(), name);
     const diver = user ? await getDiverProfile(user.id) : null;
     if (!user || !diver) return apiError(404, "not_found", "No diver by that nickname.");
     const body: ApiDiver = {
       apiVersion: API_VERSION,
       nickname: diver.nickname,
-      about: diver.about,
+      about: diver.blockedByMe ? "" : diver.about,
       sinceLine: sinceLine(diver.since, diver.allRank),
       points: diver.stats.points,
       reports: diver.stats.reports,
@@ -38,6 +38,7 @@ export async function GET(request: Request, context: { params: Promise<{ nicknam
       allRank: diver.allRank,
       badges: diver.badges.map((badge) => ({ id: badge.id, label: badge.label, detail: badge.detail })),
       isMe: viewer?.userId === user.id,
+      blockedByMe: diver.blockedByMe,
     };
     return apiJson(body, { cacheControl: viewerCache(viewer) });
   });

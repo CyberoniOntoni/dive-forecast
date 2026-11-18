@@ -244,6 +244,10 @@ data class ApiMe(
   /** "How points work", one line each. */
   val pointsRules: List<String> = emptyList(),
   val aboutMaxChars: Int = 300,
+  /** Agreed to the content rules (/terms); false for divers from before them, who agree once before posting. */
+  val acceptedTerms: Boolean = true,
+  /** Divers this one blocked, by nickname. */
+  val blocked: List<String> = emptyList(),
 )
 
 @Serializable data class ApiBadge(val id: String, val label: String, val detail: String, val earned: Boolean = true)
@@ -260,7 +264,8 @@ data class ApiAward(val points: Int, val reasons: List<String> = emptyList(), va
 
 @Serializable data class CodeRequest(val email: String)
 
-@Serializable data class TokenRequest(val email: String, val code: String, val nickname: String? = null)
+/** `acceptTerms`: the "I agree to the content rules and privacy policy" box, always sent (no default, so it is encoded). */
+@Serializable data class TokenRequest(val email: String, val code: String, val nickname: String? = null, val acceptTerms: Boolean)
 
 /** A report as the app files it: Maldives wall time, incoming | outgoing, and a Strength wire value. */
 @Serializable data class ReportRequest(val time: String, val direction: String, val strength: String)
@@ -631,7 +636,17 @@ data class ApiDiver(
   /** Earned badges only. */
   val badges: List<ApiBadge> = emptyList(),
   val isMe: Boolean = false,
+  /** The signed-in diver blocked this one: `about` comes empty. */
+  val blockedByMe: Boolean = false,
 )
+
+/** POST /api/v1/flags: a report of objectionable content (API.md § Content rules, reports and blocking). */
+@Serializable
+data class FlagBody(val kind: String, val siteId: String? = null, val nickname: String? = null, val reason: String, val note: String? = null)
+
+@Serializable data class ApiFlagSent(val apiVersion: Int = 1, val sent: Boolean = true)
+
+@Serializable data class ApiBlocked(val apiVersion: Int = 1, val blocked: Boolean = false)
 
 @Serializable data class AboutBody(val about: String)
 

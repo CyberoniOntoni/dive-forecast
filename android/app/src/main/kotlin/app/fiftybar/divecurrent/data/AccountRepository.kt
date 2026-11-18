@@ -13,6 +13,7 @@ import app.fiftybar.divecurrent.data.api.ApiReviews
 import app.fiftybar.divecurrent.data.api.ApiScoreboard
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
+import app.fiftybar.divecurrent.data.api.FlagBody
 import app.fiftybar.divecurrent.data.api.ReportRequest
 import app.fiftybar.divecurrent.data.session.Session
 import app.fiftybar.divecurrent.data.session.SessionStore
@@ -28,8 +29,8 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun requestCode(email: String): ApiCodeSent = api.requestCode(email.trim())
 
   /** Signs in with the emailed code; a new diver also gives a nickname. */
-  suspend fun signIn(email: String, code: String, nickname: String?): Session {
-    val token = api.token(email.trim(), code.filter(Char::isDigit), nickname?.trim()?.takeIf { it.isNotEmpty() })
+  suspend fun signIn(email: String, code: String, nickname: String?, acceptTerms: Boolean = true): Session {
+    val token = api.token(email.trim(), code.filter(Char::isDigit), nickname?.trim()?.takeIf { it.isNotEmpty() }, acceptTerms)
     val session = Session(token.token, token.nickname, token.expiresAt)
     sessions.set(session)
     return session
@@ -150,6 +151,15 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
     }
     sessions.set(null)
   }
+
+  /** Reports content to the moderators (FlagBody: a review is its site and author, a site its id, a diver a nickname). */
+  suspend fun report(body: FlagBody) = signedIn { api.flag(it, body) }
+
+  /** Blocks or unblocks a diver: their reviews and photos are no longer shown to this one. */
+  suspend fun block(nickname: String, blocked: Boolean) = signedIn { api.block(it, nickname, blocked) }
+
+  /** Agrees to the content rules (/terms). */
+  suspend fun acceptTerms() = signedIn { api.acceptTerms(it) }
 
   /** Deletes the account and its data on the server, then forgets the token here. Already gone reads as done. */
   suspend fun deleteAccount() {

@@ -36,6 +36,10 @@ export async function GET(request: Request) {
         badges: account.badges.map((badge) => ({ id: badge.id, label: badge.label, detail: badge.detail, earned: badge.earned })),
         pointsRules: pointsRuleLines(),
         aboutMaxChars: ABOUT_MAX,
+        // Agreed to the content rules (/terms): if not, the app asks before the diver posts (POST /api/v1/me/terms).
+        acceptedTerms: account.acceptedTerms,
+        // Divers this one blocked, by nickname, to unblock on the account screen.
+        blocked: blockedNicknames(account.userId),
       },
       { cacheControl: API_NO_STORE },
     );
@@ -58,4 +62,10 @@ export async function DELETE(request: Request) {
     }
     return apiJson({ apiVersion: API_VERSION, deleted: true }, { cacheControl: API_NO_STORE });
   });
+}
+
+function blockedNicknames(userId: string): string[] {
+  const store = readStore();
+  const ids = store.users.find((user) => user.id === userId)?.blocked ?? [];
+  return ids.flatMap((id) => store.users.find((user) => user.id === id)?.nickname ?? []);
 }

@@ -84,6 +84,11 @@ export default function PrivacyPage() {
             public on the map.
           </li>
           <li>
+            <strong className="text-foam">Reports of content and blocks</strong>: when you report a review, site or diver, we keep
+            what you reported, the reason and your note for our moderators, who see your nickname. Divers you block are kept on your
+            account. Neither is shown to anyone else.
+          </li>
+          <li>
             <strong className="text-foam">Dive plans</strong>: days, sites, times and notes. Anyone with a plan&rsquo;s
             link can see it; only you can change it.
           </li>
@@ -137,6 +142,14 @@ export default function PrivacyPage() {
         </ul>
       </Section>
 
+      <Section id="moderation" title="Moderation">
+        <p>
+          Reviews, photos, sites and profiles must follow our <Link href="/terms">content rules</Link>. Moderators read reported
+          content and may remove it. If a diver is banned for breaking the rules, we keep their account&rsquo;s email and the
+          reports about them, so they cannot sign up again; everything else they posted, except dive reports, is removed.
+        </p>
+      </Section>
+
       <Section id="why" title="Why we use it">
         <p>
           To sign you in, to show your contributions under your nickname, to improve the forecast with divers&rsquo;
@@ -155,7 +168,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong className="text-foam">Deleted:</strong> your email, nickname and About me, your pending sign-in
-          codes, your dive plans, your ratings and reviews, and every photo you uploaded.
+          codes, your dive plans, your ratings and reviews, every photo you uploaded, the reports you filed and the divers you
+          blocked.
         </p>
         <p>
           <strong className="text-foam">Kept without your name:</strong> your dive reports, which keep teaching the
