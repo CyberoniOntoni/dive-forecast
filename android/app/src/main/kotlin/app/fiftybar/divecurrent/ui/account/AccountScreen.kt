@@ -284,6 +284,7 @@ fun AccountScreen(
         TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/privacy") }) { Text("Privacy policy") }
         TextButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/terms") }) { Text("Content rules") }
       }
+      TextButton(onClick = { uri.openUri("mailto:support@50bar.app") }) { Text("Support: support@50bar.app") }
     }
   }
 

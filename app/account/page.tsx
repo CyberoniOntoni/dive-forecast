@@ -96,6 +96,10 @@ export default async function AccountPage() {
         <Link href="/terms" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
           Content rules
         </Link>
+        {" · "}
+        <a href="mailto:support@50bar.app" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
+          Support
+        </a>
         {account.moderator ? (
           <>
             {" · "}

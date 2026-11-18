@@ -154,9 +154,11 @@ REVIEW_CODE`; to change the code, put a new one and update Play Console.
 
 Two more owner steps for Google Play:
 
-- **`privacy@50bar.app`** is the contact on `/privacy` and `/terms`. Make it deliver: Cloudflare dashboard → the
-  `50bar.app` zone → Email → Email Routing → add a custom address `privacy` forwarding to your inbox (verify the
-  destination). Or change `PRIVACY_EMAIL` in `app/privacy/page.tsx` and the address in `app/terms/page.tsx`.
+- **`privacy@50bar.app`** (on `/privacy`) and **`support@50bar.app`** (on `/privacy`, `/terms`, `/account` and the
+  app's You tab) must deliver: Cloudflare dashboard → the `50bar.app` zone → Email → Email Routing → add each as a
+  custom address forwarding to your inbox (verify the destination). Both are set up. To change one, edit
+  `PRIVACY_EMAIL` / `SUPPORT_EMAIL` in `app/privacy/page.tsx`, `CONTACT` in `app/terms/page.tsx`, `app/account/page.tsx`
+  and `AccountScreen.kt`.
 - **Delete the old R2 `store.json`** (copied into D1 on 31 Oct, still holding accounts from then), so a deleted account
   leaves no copy behind: `npx wrangler r2 object delete dive-current-data/store.json --remote` (the `DATA`
   bucket). Run `npm run d1:export` first if you want a local copy.

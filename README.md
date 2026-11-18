@@ -35,7 +35,7 @@ Because divers post reviews, photos, sites and profiles, the app follows Google 
 - **`/moderation`**, for the addresses in the `MODERATOR_EMAILS` secret: remove content, ban a diver, or dismiss a report.
 - **Delete account**, on `/account` or the app's You tab (`DELETE /api/v1/me`): the account, codes, plans, ratings, reviews and photos go at once; dive reports stay without a name so they keep teaching the forecast.
 
-**[/privacy](https://50bar.app/privacy)** (`app/privacy/page.tsx`) is the policy Google Play links to. It describes what the code collects and keeps, so change it with any change to that. Privacy questions go to privacy@50bar.app (Cloudflare Email Routing).
+**[/privacy](https://50bar.app/privacy)** (`app/privacy/page.tsx`) is the policy Google Play links to. It describes what the code collects and keeps, so change it with any change to that. Privacy questions go to privacy@50bar.app and help with the site or app to support@50bar.app (both Cloudflare Email Routing). `/terms`, `/account` and the app's You tab link support.
 
 A store-review account (`lib/review-account.ts`) lets Google's reviewers sign in with a fixed code and no email. Its address and code are worker secrets (`REVIEW_EMAIL`, `REVIEW_CODE`; `CLOUDFLARE.md` § Sign-in) and are never written in the repository. What it posts is shown only to itself, never teaches the forecast and earns no points.
 
