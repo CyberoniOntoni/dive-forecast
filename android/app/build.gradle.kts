@@ -56,8 +56,13 @@ android {
     release {
       buildConfigField("String", "API_BASE_URL", "\"$releaseApiBaseUrl\"")
       if (uploadKeystore != null) signingConfig = signingConfigs.getByName("upload")
-      isMinifyEnabled = false
+      // R8 shrinks the app; the bundle carries its mapping file, so Play decodes crash traces itself. The libraries'
+      // own keep rules (kotlinx.serialization, Room, OkHttp, MapLibre) come with them; ours are in proguard-rules.pro.
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+      // No ndk { debugSymbolLevel }: the only native code is MapLibre's prebuilt, already-stripped .so files, so AGP
+      // has no symbols to pack (MapLibre publishes them as a separate debug-symbols archive on its GitHub releases).
     }
   }
   compileOptions {

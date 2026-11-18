@@ -28,7 +28,7 @@ jobs:
       - run: npm run build
       - run: npm run replay
 
-  # The Android app (android/, its own Gradle build). Unit tests and a debug APK; no device.
+  # The Android app (android/, its own Gradle build). Unit tests, a debug APK and an unsigned release bundle (R8); no device.
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -42,7 +42,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew --console=plain testDebugUnitTest assembleDebug
+      # bundleRelease runs R8 (unsigned here), so a shrinking problem fails CI rather than a Play upload.
+      - run: ./gradlew --console=plain testDebugUnitTest assembleDebug bundleRelease
       # The debug APK, to install and try a branch on a phone (Actions run page, Artifacts).
       - uses: actions/upload-artifact@v4
         with:
