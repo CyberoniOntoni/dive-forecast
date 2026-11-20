@@ -326,6 +326,8 @@ The owner pointed out that an outer wall with an island or unbroken reef behind 
 
 At ×3 the bands fall slack 35 %, mild 44 %, strong 19 %, too strong 3 %. Strong drift (Addu, 0.4–0.7 m/s) still holds some walls one way for days, which the owner expects. No observations back G or the bands yet; reports are what correct them (Stage C).
 
+**Gain cut for strong tidal cells (model 26, 20 Nov 2026).** The anomaly sweep found Kudarah (South Malé) very strong in 51 % of the week's hours. Its sample cell, the one sea cell in the gap toward Vaavu, already resolves a clean semi-diurnal stream of up to 1.3 m/s (spread 0.59 m/s, eight times the median wall), so ×3 gave 3–4 m/s. The owner asked to fix it. The gain is now cut so the gained tidal spread stays within 0.75 m/s (what the strongest other walls reach at ×3), never below 1 (`alongTideGain`). Kudarah: very strong 11 %, like the South Ari walls; no other wall changes by more than a point.
+
 ### 4.7 Model review (2026-10-01)
 
 A full review of the model after through-flow and along-reef flow, checked against the marine cache (337 series around 30 Sep, near spring tide) and the live map at 07:29 on 1 Oct (mid-ebb).

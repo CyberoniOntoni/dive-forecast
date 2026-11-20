@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { ALONG_REEF_TIDE_GAIN, alongReefHours, alongReefStrength, alongReportDirection } from "./forecast";
+import {
+  ALONG_REEF_TIDE_GAIN,
+  ALONG_REEF_TIDE_SPREAD_MS,
+  alongReefHours,
+  alongReefStrength,
+  alongReportDirection,
+  alongTideGain,
+} from "./forecast";
 import { replayReports } from "./replay";
 import { compassWord, nowcastGlance } from "./nowcast-glance";
 import type { SiteNowcast } from "./nowcast";
@@ -63,6 +70,19 @@ describe("alongReefHours", () => {
     // The drift lengthens the way it runs.
     const incoming = directions.filter((direction) => direction === "incoming").length;
     expect(incoming).toBeGreaterThan(directions.length / 2);
+  });
+
+  it("keeps the full gain for a smoothed tide and cuts it where the cell already carries a strong stream", () => {
+    expect(alongTideGain([0.1, -0.1, 0.1, -0.1])).toBe(ALONG_REEF_TIDE_GAIN);
+    // A spread of 0.5 m/s is held to ALONG_REEF_TIDE_SPREAD_MS once gained.
+    expect(alongTideGain([0.5, -0.5, 0.5, -0.5])).toBeCloseTo(ALONG_REEF_TIDE_SPREAD_MS / 0.5);
+    // Never below 1: a stream already past the spread is left as it is.
+    expect(alongTideGain([2, -2])).toBe(1);
+    // Kudarah's cell: a 1.3 m/s tidal stream reads very strong only at its peaks. At ×3 it would be over 1.3 m/s
+    // whenever the stream passes a third of its peak, about four hours in five.
+    const hours = alongReefHours({ hours: series(1.3, 0), alongHeadingDeg: 0 });
+    const veryStrong = hours.filter((hour) => hour.strength === "too_strong").length;
+    expect(veryStrong).toBeLessThan(hours.length / 4);
   });
 
   it("lets a drift stronger than the scaled tide hold one way", () => {
