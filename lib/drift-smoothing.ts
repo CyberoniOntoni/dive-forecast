@@ -38,7 +38,8 @@ export function driftWeight(distance: number): number {
 /**
  * The site's hours with each hour's current replaced by the weighted vector mean of its own current and the
  * neighbours' current at the same hour. Each weight is the pin's channel share times driftWeight. An hour where the
- * site has no current keeps none (the seasonal curve stands in later). A neighbour lends at an hour it has, or past
+ * site has no current takes the neighbours' mean alone, and keeps none only when no neighbour lends then either (the
+ * seasonal curve stands in later). A neighbour lends at an hour it has, or past
  * the ends of its series for up to DRIFT_EDGE_HOLD_HOURS its 25-hour mean at that end; otherwise it lends nothing
  * that hour. Sea level is untouched.
  */
@@ -52,11 +53,12 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
   if (others.length === 0) return [...own.hours];
   const ownWeight = own.share ?? 1;
   return own.hours.map((hour) => {
+    // A cell with no current at this hour (masked near the reef) takes its neighbours' alone, not the seasonal curve.
     const mine = currentVector(hour);
-    if (!mine) return hour;
-    let east = ownWeight * mine.east;
-    let north = ownWeight * mine.north;
-    let total = ownWeight;
+    const weight = mine ? ownWeight : 0;
+    let east = mine ? weight * mine.east : 0;
+    let north = mine ? weight * mine.north : 0;
+    let total = weight;
     for (const other of others) {
       const theirs = other.lend!(hour.time);
       if (!theirs) continue;

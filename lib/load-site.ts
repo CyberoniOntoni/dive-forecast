@@ -362,7 +362,7 @@ const lenderMemo = new Map<string, DriftLender[]>();
 const lineUpKeys = new WeakMap<readonly Site[], Map<string, string>>();
 
 /**
- * What decides a site's lenders: every same-atoll pin's place and kind, hashed (FNV-1a). Whether a mate crosses the
+ * What decides a site's lenders: every same-atoll pin's place and kind, hashed. Whether a mate crosses the
  * rim depends on the passes near it, and a fallback bearing on the seeded mates, so any change among them must miss
  * the memo.
  */
@@ -371,18 +371,21 @@ function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   if (!byAtoll) lineUpKeys.set(mates, (byAtoll = new Map()));
   const kept = byAtoll.get(atoll.id);
   if (kept) return kept;
-  let hash = 0x811c9dc5;
+  // Two FNV-1a hashes from different seeds, 64 bits together, so two line-ups sharing a key is out of reach.
+  let first = 0x811c9dc5;
+  let second = 0x01000193;
   let count = 0;
   for (const mate of mates) {
     if (mate.atollId !== atoll.id) continue;
     count += 1;
     const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}|`;
     for (let at = 0; at < text.length; at += 1) {
-      hash ^= text.charCodeAt(at);
-      hash = Math.imul(hash, 0x01000193);
+      const code = text.charCodeAt(at);
+      first = Math.imul(first ^ code, 0x01000193);
+      second = Math.imul(second ^ code, 0x01000193) ^ (second >>> 15);
     }
   }
-  const key = `${count}:${(hash >>> 0).toString(16)}`;
+  const key = `${count}:${(first >>> 0).toString(16)}:${(second >>> 0).toString(16)}`;
   byAtoll.set(atoll.id, key);
   return key;
 }

@@ -65,12 +65,16 @@ describe("smoothedDriftHours", () => {
     expect(out.some((h, i) => h.currentVelocityMs !== own.hours[i].currentVelocityMs)).toBe(true);
   });
 
-  it("skips a neighbour's missing hour or current, and leaves an hour with no current of its own alone", () => {
+  it("skips a neighbour's missing hour or current, and fills an hour with no current of its own from the neighbours", () => {
     const own = { point: here, hours: [hour("t1", 0.3, 0), hour("t2", null, null)] };
     const other = { point: near, hours: [hour("t2", 0.5, 0), hour("t3", 0.5, 0)] };
     const out = smoothedDriftHours(own, [other]);
     expect(out[0].currentVelocityMs).toBeCloseTo(0.3, 10);
-    expect(out[1].currentVelocityMs).toBeNull();
+    // No current of its own at t2: the neighbour's alone, not the seasonal curve.
+    expect(out[1].currentVelocityMs).toBeCloseTo(0.5, 10);
+    // No current of its own and none lent: still none.
+    const lone = smoothedDriftHours({ point: here, hours: [hour("t9", null, null)] }, [other]);
+    expect(lone[0].currentVelocityMs).toBeNull();
   });
 
   it("holds a lender's 25-hour edge mean past the end of its series, so the last day stays shared", () => {

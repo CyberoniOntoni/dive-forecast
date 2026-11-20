@@ -182,8 +182,9 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
     const known = remembered.get(name);
     if (known && withinTtl(known)) return known;
-    // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): they share
-    // one edge or R2 read, so the request's edge budget (EDGE_CALLS_PER_REQUEST) counts points, not askers.
+    // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): those that
+    // overlap share one edge or R2 read, so they spend one call of the request's edge budget (EDGE_CALLS_PER_REQUEST).
+    // A later ask for a copy within the TTL is served from `remembered` above.
     const reading = readsInFlight();
     const running = reading.get(name);
     if (running) return running;
