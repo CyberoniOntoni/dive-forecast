@@ -48,7 +48,11 @@ const MARINE_ENDPOINTS = [
   "https://api.open-meteo.com/v1/marine",
 ];
 
-export type MarineFetch = PointFetch<MarineHour>;
+/**
+ * A point's marine series. From siteMarineHours, `fromFallback` says the hours are the atoll's ocean point's, not
+ * the site's seaward point's.
+ */
+export type MarineFetch = PointFetch<MarineHour> & { fromFallback?: true };
 
 type HourlyColumns = {
   time: unknown[];
@@ -80,11 +84,12 @@ export async function siteMarineHours(
   if (!seaward.ok && seaward.pending) return seaward;
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
-  if (fallback.ok && !marineSeriesStale(fallback.hours)) return usableMarine(fallback);
-  const cached = (await readCachedHours(point.lat, point.lon)) ?? (await readCachedHours(fallbackLat, fallbackLon));
+  if (fallback.ok && !marineSeriesStale(fallback.hours)) return { ...usableMarine(fallback), fromFallback: true };
+  const ownCached = await readCachedHours(point.lat, point.lon);
+  const cached = ownCached ?? (await readCachedHours(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
-  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
+  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true, ...(ownCached ? {} : { fromFallback: true as const }) };
 }
 
 /** A series whose hours still reach ahead, keeping the point's stale flag (seriesOld: fetched long ago). */
@@ -177,13 +182,25 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
     const known = remembered.get(name);
     if (known && withinTtl(known)) return known;
-    // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). For a copy past the TTL,
-    // fetchPoint reads R2 before using it.
-    const edgeText = await edgeRead(workerKey(name));
-    const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
-    if (local) return remember(name, local);
-    return readR2(name, null);
+    // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): those that
+    // overlap share one edge or R2 read, so they spend one call of the request's edge budget (EDGE_CALLS_PER_REQUEST).
+    // A later ask for a copy within the TTL is served from `remembered` above.
+    const reading = readsInFlight();
+    const running = reading.get(name);
+    if (running) return running;
+    const read = (async () => {
+      // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). For a copy past the TTL,
+      // fetchPoint reads R2 before using it.
+      const edgeText = await edgeRead(workerKey(name));
+      const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
+      if (local) return remember(name, local);
+      return readR2(name, null);
+    })().finally(() => reading.delete(name));
+    reading.set(name, read);
+    return read;
   }
+  /** Per request on a worker (perRequest): cache reads in flight by file name. */
+  const readsInFlight = inFlightPerRequest<{ fetchedAt: number; hours: T[] } | null>();
 
   /** The series in R2 (or `local` when R2 has nothing newer), copied to this data centre's edge. */
   async function readR2(
