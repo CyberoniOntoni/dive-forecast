@@ -182,13 +182,24 @@ export function pointFetcher<T>(source: PointSource<T>) {
     }
     const known = remembered.get(name);
     if (known && withinTtl(known)) return known;
-    // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). For a copy past the TTL,
-    // fetchPoint reads R2 before using it.
-    const edgeText = await edgeRead(workerKey(name));
-    const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
-    if (local) return remember(name, local);
-    return readR2(name, null);
+    // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): they share
+    // one edge or R2 read, so the request's edge budget (EDGE_CALLS_PER_REQUEST) counts points, not askers.
+    const reading = readsInFlight();
+    const running = reading.get(name);
+    if (running) return running;
+    const read = (async () => {
+      // This data centre's copy first: an R2 read is far slower (lib/edge-cache.ts). For a copy past the TTL,
+      // fetchPoint reads R2 before using it.
+      const edgeText = await edgeRead(workerKey(name));
+      const local = newest(edgeText ? parsePointCache(edgeText, source.readHours) : null, known);
+      if (local) return remember(name, local);
+      return readR2(name, null);
+    })().finally(() => reading.delete(name));
+    reading.set(name, read);
+    return read;
   }
+  /** Per request on a worker (perRequest): cache reads in flight by file name. */
+  const readsInFlight = inFlightPerRequest<{ fetchedAt: number; hours: T[] } | null>();
 
   /** The series in R2 (or `local` when R2 has nothing newer), copied to this data centre's edge. */
   async function readR2(

@@ -160,4 +160,26 @@ describe("shared drift at a channel site", () => {
     expect(JSON.stringify(shared.hours)).not.toBe(JSON.stringify(unshared.hours));
     clearLagoonMemo();
   });
+
+  it("splits channel shares only among the lenders that loaded", async () => {
+    const twin = corner("twin", site.lat + 0.002, site.lon); // same channel as the site, 0.2 km
+    const other = corner("other", site.lat + 3 / 110.57, site.lon); // another channel, 3 km
+    const twinPoint = Marine.seawardPoint(twin.lat, twin.lon, 220);
+    const near = (a: { lat: number; lon: number }, lat: number, lon: number) =>
+      Math.abs(a.lat - lat) < 1e-9 && Math.abs(a.lon - lon) < 1e-9;
+    const throughflow = async (mates: Site[]) => {
+      vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: series(0, 0), fetchedAt: Date.now(), stale: false });
+      vi.mocked(Marine.fetchMarine).mockImplementation(async (lat, lon) =>
+        near(twinPoint, lat, lon)
+          ? { ok: true, hours: series(0.3, 220), fetchedAt: 1, stale: true }
+          : { ok: true, hours: series(0.3, 220), fetchedAt: Date.now(), stale: false },
+      );
+      return (await reportTideForSite(site, mates, atoll, series(0, 0)[48].time))?.throughflowM ?? null;
+    };
+    // The stale twin lends nothing, and the site keeps its channel's whole weight, as if the twin were not there.
+    const withStaleTwin = await throughflow([site, twin, other]);
+    const withoutTwin = await throughflow([site, other]);
+    expect(withStaleTwin).not.toBeNull();
+    expect(withStaleTwin!).toBeCloseTo(withoutTwin!, 12);
+  });
 });

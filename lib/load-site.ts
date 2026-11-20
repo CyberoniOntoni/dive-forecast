@@ -358,19 +358,43 @@ const LENDER_PIN_REACH_KM = DRIFT_SMOOTHING_MAX_KM + 2 * Math.max(...SEAWARD_STE
 const LENDER_MEMO_MAX = 2000;
 const lenderMemo = new Map<string, DriftLenders>();
 
+/** Line-up hashes by mates list and atoll: a map build asks for every site of an atoll with the same list. */
+const lineUpKeys = new WeakMap<readonly Site[], Map<string, string>>();
+
 /**
- * What decides a site's lenders: every same-atoll pin's place and kind. Whether a mate crosses the rim depends on the
- * passes near it, and a fallback bearing on the seeded mates, so any change among them must miss the memo.
+ * What decides a site's lenders: every same-atoll pin's place and kind, hashed (FNV-1a). Whether a mate crosses the
+ * rim depends on the passes near it, and a fallback bearing on the seeded mates, so any change among them must miss
+ * the memo.
  */
 function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
-  return mates
-    .filter((mate) => mate.atollId === atoll.id)
-    .map((mate) => `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}`)
-    .join("|");
+  let byAtoll = lineUpKeys.get(mates);
+  if (!byAtoll) lineUpKeys.set(mates, (byAtoll = new Map()));
+  const kept = byAtoll.get(atoll.id);
+  if (kept) return kept;
+  let hash = 0x811c9dc5;
+  let count = 0;
+  for (const mate of mates) {
+    if (mate.atollId !== atoll.id) continue;
+    count += 1;
+    const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}|`;
+    for (let at = 0; at < text.length; at += 1) {
+      hash ^= text.charCodeAt(at);
+      hash = Math.imul(hash, 0x01000193);
+    }
+  }
+  const key = `${count}:${(hash >>> 0).toString(16)}`;
+  byAtoll.set(atoll.id, key);
+  return key;
 }
 
-/** The site's own channel share, and each lender's sample point with its pin's channel share. */
-export type DriftLenders = { ownShare: number; lenders: { point: { lat: number; lon: number }; share: number }[] };
+/**
+ * Each lender's pin and sample point, and the channel shares when every lender loads: the site's own and each
+ * lender's. sharedDriftHours splits the shares again among the lenders that did load.
+ */
+export type DriftLenders = {
+  ownShare: number;
+  lenders: { pin: Site; point: { lat: number; lon: number }; share: number }[];
+};
 
 /**
  * The sample points that lend a site their drift (lib/drift-smoothing.ts): those of the other catalog channel sites
@@ -405,7 +429,7 @@ export function driftLenders(
   const shares = channelWeights([site, ...lending.map((item) => item.pin)], 1);
   const found: DriftLenders = {
     ownShare: shares[0],
-    lenders: lending.map((item, index) => ({ point: item.point, share: shares[index + 1] })),
+    lenders: lending.map((item, index) => ({ pin: item.pin, point: item.point, share: shares[index + 1] })),
   };
   if (lenderMemo.size >= LENDER_MEMO_MAX) lenderMemo.clear();
   lenderMemo.set(key, found);
@@ -431,18 +455,22 @@ async function sharedDriftHours(
   options: FetchOptions,
 ): Promise<{ hours: MarineHour[]; pending: boolean }> {
   const own = samplePoint(site, bearing);
-  const { ownShare, lenders } = driftLenders(site, mates, atoll, own);
+  const { lenders } = driftLenders(site, mates, atoll, own);
   let pending = false;
   const fetched = await Promise.all(
-    lenders.map(async ({ point, share }): Promise<DriftSample | null> => {
+    lenders.map(async ({ pin, point }) => {
       // Never waits: a lender with no cache yet is queued and lends nothing this time, the same on the map and on the
       // site page. The warm-up and the next request fill it in.
       const marine = await fetchMarine(point.lat, point.lon, { ...options, wait: false });
-      if (lendsDrift(marine)) return { point, hours: marine.hours, share };
+      if (lendsDrift(marine)) return { pin, point, hours: marine.hours };
       if (!marine.ok && marine.pending) pending = true;
       return null;
     }),
   );
-  const shared = smoothedDriftHours({ point: own, hours, share: ownShare }, fetched.filter((item) => item != null));
-  return { hours: shared, pending };
+  const loaded = fetched.filter((item) => item != null);
+  // Shares split among the pins that loaded (as the lagoon's channel weights are), so a pin that could not lend does
+  // not take part of its channel's weight with it.
+  const shares = channelWeights([site, ...loaded.map((item) => item.pin)], 1);
+  const samples: DriftSample[] = loaded.map((item, index) => ({ point: item.point, hours: item.hours, share: shares[index + 1] }));
+  return { hours: smoothedDriftHours({ point: own, hours, share: shares[0] }, samples), pending };
 }

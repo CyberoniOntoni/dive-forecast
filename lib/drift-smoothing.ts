@@ -1,3 +1,4 @@
+import { parseWall } from "./forecast";
 import { distanceKm } from "./geometry";
 import type { MarineHour } from "./types";
 
@@ -74,10 +75,6 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
 
 type Vector = { east: number; north: number };
 
-/** Hours as wall-clock strings ("2026-11-20T03:00") read as UTC, only to measure the gap between two of them. */
-function hourMs(time: string): number {
-  return Date.parse(`${time.slice(0, 16)}Z`);
-}
 
 /** A neighbour's current by hour, holding its edge means past either end. Null when it has no current at all. */
 function lender(hours: readonly MarineHour[]): ((time: string) => Vector | null) | null {
@@ -93,15 +90,15 @@ function lender(hours: readonly MarineHour[]): ((time: string) => Vector | null)
     }
     return { east: east / picked.length, north: north / picked.length };
   };
-  const firstMs = hourMs(times[0]);
-  const lastMs = hourMs(times[times.length - 1]);
+  const firstMs = parseWall(times[0]);
+  const lastMs = parseWall(times[times.length - 1]);
   const head = mean(times.slice(0, EDGE_MEAN_HOURS));
   const tail = mean(times.slice(-EDGE_MEAN_HOURS));
   const holdMs = DRIFT_EDGE_HOLD_HOURS * HOUR_MS;
   return (time) => {
     const exact = byTime.get(time);
     if (exact) return exact;
-    const at = hourMs(time);
+    const at = parseWall(time);
     if (!Number.isFinite(at)) return null;
     if (at > lastMs && at - lastMs <= holdMs) return tail;
     if (at < firstMs && firstMs - at <= holdMs) return head;
