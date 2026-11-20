@@ -356,7 +356,7 @@ const LENDER_PIN_REACH_KM = DRIFT_SMOOTHING_MAX_KM + 2 * Math.max(...SEAWARD_STE
 
 /** Lender points by site and atoll line-up. Cleared with the lagoon memo, and whenever it grows past this. */
 const LENDER_MEMO_MAX = 2000;
-const lenderMemo = new Map<string, DriftLenders>();
+const lenderMemo = new Map<string, DriftLender[]>();
 
 /** Line-up hashes by mates list and atoll: a map build asks for every site of an atoll with the same list. */
 const lineUpKeys = new WeakMap<readonly Site[], Map<string, string>>();
@@ -387,21 +387,14 @@ function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   return key;
 }
 
-/**
- * Each lender's pin and sample point, and the channel shares when every lender loads: the site's own and each
- * lender's. sharedDriftHours splits the shares again among the lenders that did load.
- */
-export type DriftLenders = {
-  ownShare: number;
-  lenders: { pin: Site; point: { lat: number; lon: number }; share: number }[];
-};
+/** A catalog pin that lends a site its drift, and where its series is fetched. */
+export type DriftLender = { pin: Site; point: { lat: number; lon: number } };
 
 /**
  * The sample points that lend a site their drift (lib/drift-smoothing.ts): those of the other catalog channel sites
  * of its atoll (crossing the rim, so passes, channel thilas, corners and funnel walls) within DRIFT_SMOOTHING_MAX_KM
- * of its own sample point. Pins within SAME_CHANNEL_KM of each other are one channel and split one weight
- * (channelWeights), the site's own pin included, so a channel lends once however many dive sites it has. Pins added in
- * the app never lend, so a new pin never shifts the catalog's forecasts; they still borrow. Kept per site and atoll
+ * of its own sample point. Pins added in the app never lend, so a new pin never shifts the catalog's forecasts; they
+ * still borrow. How much each lends is decided once their series are in (driftShares). Kept per site and atoll
  * line-up: resolving a bearing walks the outline.
  */
 export function driftLenders(
@@ -409,13 +402,13 @@ export function driftLenders(
   mates: readonly Site[],
   atoll: Atoll,
   own: { lat: number; lon: number },
-): DriftLenders {
+): DriftLender[] {
   const key = `${atoll.id}|${atoll.rimSourceUrl}|${site.id}|${own.lat}|${own.lon}|${atollMatesKey(atoll, mates)}`;
   const kept = lenderMemo.get(key);
   if (kept) return kept;
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const rim = rimForAtoll(atoll);
-  const lending = mates
+  const found = mates
     .filter(
       (mate) =>
         mate.id !== site.id &&
@@ -426,14 +419,19 @@ export function driftLenders(
     )
     .map((mate) => ({ pin: mate, point: samplePoint(mate, resolveBearing(mate, mates, outside, rim).deg) }))
     .filter((item) => distanceKm(item.point, own) <= DRIFT_SMOOTHING_MAX_KM);
-  const shares = channelWeights([site, ...lending.map((item) => item.pin)], 1);
-  const found: DriftLenders = {
-    ownShare: shares[0],
-    lenders: lending.map((item, index) => ({ pin: item.pin, point: item.point, share: shares[index + 1] })),
-  };
   if (lenderMemo.size >= LENDER_MEMO_MAX) lenderMemo.clear();
   lenderMemo.set(key, found);
   return found;
+}
+
+/**
+ * Channel shares among the site and the lenders whose series loaded: pins within SAME_CHANNEL_KM of each other are
+ * one channel and split one weight (channelWeights, as the lagoon's openings do), the site's own pin included. A
+ * channel lends once however many dive sites it has, and a pin that could not lend leaves its share to the others.
+ */
+export function driftShares(site: Site, loaded: readonly Site[]): { own: number; lenders: number[] } {
+  const shares = channelWeights([site, ...loaded], 1);
+  return { own: shares[0], lenders: shares.slice(1) };
 }
 
 /** A series fit to lend its drift: fetched at the lender's own sample point, fresh by age and by its newest hour. */
@@ -455,7 +453,7 @@ async function sharedDriftHours(
   options: FetchOptions,
 ): Promise<{ hours: MarineHour[]; pending: boolean }> {
   const own = samplePoint(site, bearing);
-  const { lenders } = driftLenders(site, mates, atoll, own);
+  const lenders = driftLenders(site, mates, atoll, own);
   let pending = false;
   const fetched = await Promise.all(
     lenders.map(async ({ pin, point }) => {
@@ -468,9 +466,7 @@ async function sharedDriftHours(
     }),
   );
   const loaded = fetched.filter((item) => item != null);
-  // Shares split among the pins that loaded (as the lagoon's channel weights are), so a pin that could not lend does
-  // not take part of its channel's weight with it.
-  const shares = channelWeights([site, ...loaded.map((item) => item.pin)], 1);
-  const samples: DriftSample[] = loaded.map((item, index) => ({ point: item.point, hours: item.hours, share: shares[index + 1] }));
-  return { hours: smoothedDriftHours({ point: own, hours, share: shares[0] }, samples), pending };
+  const shares = driftShares(site, loaded.map((item) => item.pin));
+  const samples: DriftSample[] = loaded.map((item, index) => ({ point: item.point, hours: item.hours, share: shares.lenders[index] }));
+  return { hours: smoothedDriftHours({ point: own, hours, share: shares.own }, samples), pending };
 }

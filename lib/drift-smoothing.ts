@@ -16,7 +16,7 @@ export const DRIFT_SMOOTHING_MAX_KM = 8;
 
 /**
  * A sample point's series. `share` (default 1) is its pin's share of its channel: pins of one channel split one weight
- * (channelWeights in lib/load-site.ts), so a channel with four dive sites lends as much as one with a single pin.
+ * (driftShares in lib/load-site.ts), so a channel with four dive sites lends as much as one with a single pin.
  */
 export type DriftSample = { point: { lat: number; lon: number }; hours: readonly MarineHour[]; share?: number };
 
@@ -46,7 +46,7 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
   const others = neighbours
     .map((sample) => ({
       weight: (sample.share ?? 1) * driftWeight(distanceKm(own.point, sample.point)),
-      lend: lender(sample.hours),
+      lend: edgeHeldCurrent(sample.hours),
     }))
     .filter((item) => item.weight > 0 && item.lend != null);
   if (others.length === 0) return [...own.hours];
@@ -76,8 +76,11 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
 type Vector = { east: number; north: number };
 
 
-/** A neighbour's current by hour, holding its edge means past either end. Null when it has no current at all. */
-function lender(hours: readonly MarineHour[]): ((time: string) => Vector | null) | null {
+/**
+ * A lookup of a neighbour's current by hour that holds its 25-hour edge means past either end of its series. Null
+ * when the series has no current at all.
+ */
+function edgeHeldCurrent(hours: readonly MarineHour[]): ((time: string) => Vector | null) | null {
   const byTime = currentByTime(hours);
   const times = [...byTime.keys()].sort();
   if (times.length === 0) return null;

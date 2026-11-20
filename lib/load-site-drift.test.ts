@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { clearLagoonMemo, driftLenders, loadSite, reportTideForSite } from "./load-site";
+import { clearLagoonMemo, driftLenders, driftShares, loadSite, reportTideForSite } from "./load-site";
+import { distanceKm } from "./geometry";
 import * as Marine from "./marine";
 import type { Atoll, MarineHour, Site } from "./types";
 
@@ -66,14 +67,14 @@ describe("shared drift at a channel site", () => {
   const own = Marine.seawardPoint(site.lat, site.lon, 220);
 
   it("borrows from a catalog channel site nearby, never from a pin added in the app or one too far off", () => {
-    expect(driftLenders(site, [site, catalogMate], atoll, own).lenders).toHaveLength(1);
-    expect(driftLenders(site, [site, userMate], atoll, own).lenders).toHaveLength(0);
-    expect(driftLenders(site, [site, farMate], atoll, own).lenders).toHaveLength(0);
+    expect(driftLenders(site, [site, catalogMate], atoll, own)).toHaveLength(1);
+    expect(driftLenders(site, [site, userMate], atoll, own)).toHaveLength(0);
+    expect(driftLenders(site, [site, farMate], atoll, own)).toHaveLength(0);
   });
 
   it("does not reuse lenders when the atoll's pins change but their count does not", () => {
-    expect(driftLenders(site, [site, catalogMate], atoll, own).lenders).toHaveLength(1);
-    expect(driftLenders(site, [site, { ...catalogMate, siteType: "lagoon" }], atoll, own).lenders).toHaveLength(0);
+    expect(driftLenders(site, [site, catalogMate], atoll, own)).toHaveLength(1);
+    expect(driftLenders(site, [site, { ...catalogMate, siteType: "lagoon" }], atoll, own)).toHaveLength(0);
   });
 
   it("takes a fresh lender's drift into the through-flow", async () => {
@@ -101,14 +102,10 @@ describe("shared drift at a channel site", () => {
 
   it("splits one weight among the pins of one channel, the site's own pin included", () => {
     const twin = corner("twin", catalogMate.lat + 0.001, catalogMate.lon);
-    const one = driftLenders(site, [site, catalogMate], atoll, own);
-    const two = driftLenders(site, [site, catalogMate, twin], atoll, own);
-    expect(one.lenders.map((item) => item.share)).toEqual([1]);
-    expect(two.lenders.map((item) => item.share)).toEqual([0.5, 0.5]);
-    expect(two.ownShare).toBe(1);
     const sameChannel = corner("same-channel", site.lat + 0.001, site.lon);
-    const mine = driftLenders(site, [site, sameChannel, catalogMate], atoll, own);
-    expect(mine.ownShare).toBe(0.5);
+    expect(driftShares(site, [catalogMate])).toEqual({ own: 1, lenders: [1] });
+    expect(driftShares(site, [catalogMate, twin])).toEqual({ own: 1, lenders: [0.5, 0.5] });
+    expect(driftShares(site, [sameChannel, catalogMate])).toEqual({ own: 0.5, lenders: [0.5, 1] });
   });
 
   it("fetches lenders without waiting, so a lender's first fetch never holds up the page", async () => {
@@ -125,12 +122,18 @@ describe("shared drift at a channel site", () => {
     expect(borrowed).toBe(0);
   });
 
-  it("cuts on the distance between sample points, at 8 km", () => {
-    // Same bearing, so the sample points sit as far apart as the pins.
-    const at7 = corner("seven-km", site.lat + 7 / 110.57, site.lon);
-    const at9 = corner("nine-km", site.lat + 9 / 110.57, site.lon);
-    expect(driftLenders(site, [site, at7], atoll, own).lenders).toHaveLength(1);
-    expect(driftLenders(site, [site, at9], atoll, own).lenders).toHaveLength(0);
+  it("cuts on the distance between sample points, at 8 km, not between pins", () => {
+    // The site's sample point is 3 km out to the north-east (inward 220°). A mate facing north samples 3 km south of
+    // its pin, one facing south 3 km north, so pin and sample distances differ on either side of the cut.
+    const pinsFar = corner("pins-far", site.lat + 10 / 110.57, site.lon, { inwardBearingDeg: 0 });
+    const pinsNear = corner("pins-near", site.lat + 7.5 / 110.57, site.lon, { inwardBearingDeg: 180 });
+    const sampleOf = (mate: Site) => Marine.seawardPoint(mate.lat, mate.lon, mate.inwardBearingDeg!);
+    expect(distanceKm(site, pinsFar)).toBeGreaterThan(8);
+    expect(distanceKm(own, sampleOf(pinsFar))).toBeLessThan(8);
+    expect(distanceKm(site, pinsNear)).toBeLessThan(8);
+    expect(distanceKm(own, sampleOf(pinsNear))).toBeGreaterThan(8);
+    expect(driftLenders(site, [site, pinsFar], atoll, own)).toHaveLength(1);
+    expect(driftLenders(site, [site, pinsNear], atoll, own)).toHaveLength(0);
   });
 
   it("gives a lagoon site's channel openings the same shared drift", async () => {

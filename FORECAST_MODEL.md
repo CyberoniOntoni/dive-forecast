@@ -272,7 +272,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `lagoon-calibrate` | checks the lagoon flow and sweeps the channel weight | same 99-day cache |
 | `strait-calibrate` | sweeps the strait gains | same 99-day cache |
 
-The calibrations ran before model 25 and read each site's own sample-point drift, not the drift shared with nearby channels. K, τ and the bands were set on that; a rerun that should match the forecast has to build each site's hours the way `sharedDriftHours` in `lib/load-site.ts` does (the `driftLenders` neighbour set with its channel shares, stale lenders left out, no sharing for a fallback series), not just call `smoothedDriftHours`.
+The calibrations ran before model 25 and read each site's own sample-point drift, not the drift shared with nearby channels. K, τ and the bands were set on that; a rerun that should match the forecast has to build each site's hours the way `sharedDriftHours` in `lib/load-site.ts` does (the `driftLenders` neighbour set, stale lenders left out, then `driftShares` over the lenders that loaded, no sharing for a fallback series), not just call `smoothedDriftHours`.
 
 ## Model versions
 
