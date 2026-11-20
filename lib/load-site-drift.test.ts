@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { driftLenders, reportTideForSite } from "./load-site";
+import { clearLagoonMemo, driftLenders, loadSite, reportTideForSite } from "./load-site";
 import * as Marine from "./marine";
 import type { Atoll, MarineHour, Site } from "./types";
 
@@ -123,5 +123,41 @@ describe("shared drift at a channel site", () => {
       true,
     );
     expect(borrowed).toBe(0);
+  });
+
+  it("cuts on the distance between sample points, at 8 km", () => {
+    // Same bearing, so the sample points sit as far apart as the pins.
+    const at7 = corner("seven-km", site.lat + 7 / 110.57, site.lon);
+    const at9 = corner("nine-km", site.lat + 9 / 110.57, site.lon);
+    expect(driftLenders(site, [site, at7], atoll, own).lenders).toHaveLength(1);
+    expect(driftLenders(site, [site, at9], atoll, own).lenders).toHaveLength(0);
+  });
+
+  it("gives a lagoon site's channel openings the same shared drift", async () => {
+    // A real outline (North Malé), so the lagoon model runs; every point but the lender's has a calm sea.
+    const northMale: Atoll = { ...atoll, id: "north-male", rimSourceUrl: "https://www.openstreetmap.org/way/671807044", oceanLat: 4.45451, oceanLon: 73.7604 };
+    const a = { ...site, atollId: northMale.id };
+    const b = { ...catalogMate, atollId: northMale.id };
+    const lagoon: Site = { ...site, id: "lagoon-site", atollId: northMale.id, siteType: "lagoon", lat: 4.40, lon: 73.55, inwardBearingDeg: undefined };
+    const mates = [a, b, lagoon];
+    const lenderPoint = Marine.seawardPoint(b.lat, b.lon, 220);
+    const isLender = (lat: number, lon: number) =>
+      Math.abs(lat - lenderPoint.lat) < 1e-9 && Math.abs(lon - lenderPoint.lon) < 1e-9;
+    const run = async (lenderStale: boolean) => {
+      clearLagoonMemo();
+      vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: series(0, 0), fetchedAt: Date.now(), stale: false });
+      vi.mocked(Marine.fetchMarine).mockImplementation(async (lat, lon) =>
+        isLender(lat, lon)
+          ? { ok: true, hours: series(1.5, 220), fetchedAt: Date.now(), stale: lenderStale }
+          : { ok: true, hours: series(0, 0), fetchedAt: Date.now(), stale: false },
+      );
+      return loadSite(lagoon, mates, northMale, []);
+    };
+    const shared = await run(false);
+    const unshared = await run(true);
+    expect(shared.forecastRoute).toBe("lagoon");
+    expect(unshared.forecastRoute).toBe("lagoon");
+    expect(JSON.stringify(shared.hours)).not.toBe(JSON.stringify(unshared.hours));
+    clearLagoonMemo();
   });
 });

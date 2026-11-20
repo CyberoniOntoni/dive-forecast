@@ -100,4 +100,23 @@ describe("smoothedDriftHours", () => {
     expect(split.currentVelocityMs).toBeCloseTo(lone.currentVelocityMs!, 12);
     expect(lone.currentVelocityMs).toBeCloseTo(0.2, 12);
   });
+
+  it("holds exactly the 25-hour mean at each end, for 48 hours and no longer", () => {
+    const at = (i: number) => new Date(Date.UTC(2026, 10, 20, 0) + i * 3_600_000).toISOString().slice(0, 16);
+    // The lender runs from hour 100 to 159, its northward current equal to its hour: every window has its own mean.
+    const other = { point: here, hours: Array.from({ length: 60 }, (_, i) => hour(at(100 + i), 100 + i, 0)) };
+    const own = { point: here, hours: Array.from({ length: 300 }, (_, i) => hour(at(i), 0, 0)) };
+    const out = smoothedDriftHours(own, [other]);
+    const north = (h: MarineHour) => h.currentVelocityMs! * Math.cos((h.currentDirectionDeg! * Math.PI) / 180);
+    // Own weight 1 at zero current, lender weight 1: half the lender's value.
+    const tail = (135 + 159) / 2; // mean of hours 135..159
+    const head = (100 + 124) / 2; // mean of hours 100..124
+    expect(north(out[130])).toBeCloseTo(130 / 2, 10); // inside: the hour's own value
+    expect(north(out[160])).toBeCloseTo(tail / 2, 10);
+    expect(north(out[159 + 48])).toBeCloseTo(tail / 2, 10);
+    expect(out[159 + 49].currentVelocityMs).toBe(0);
+    expect(north(out[99])).toBeCloseTo(head / 2, 10);
+    expect(north(out[100 - 48])).toBeCloseTo(head / 2, 10);
+    expect(out[100 - 49].currentVelocityMs).toBe(0);
+  });
 });
