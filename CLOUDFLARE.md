@@ -163,21 +163,6 @@ Two more owner steps for Google Play:
   leaves no copy behind: `npx wrangler r2 object delete dive-current-data/store.json --remote` (the `DATA`
   bucket). Run `npm run d1:export` first if you want a local copy.
 
-**Android beta invitation** (`lib/android-beta.ts`): a thin, closable line under the header on every page, and the
-how-to page `/android`, invite visitors to the app's closed test on Google Play (the iPhone app shown as coming soon).
-Both stay hidden until `ANDROID_BETA_JOIN` is set, to how testers get on the list in Play Console → Testing → Closed
-testing → Testers:
-
-```bash
-npx wrangler secret put ANDROID_BETA_JOIN   # the Google Group's https link, e.g. https://groups.google.com/g/<group>
-                                            # or the word email: visitors email support@50bar.app their Google account
-```
-
-It is read on each request, so it takes effect at once, with no deploy. `npx wrangler secret delete ANDROID_BETA_JOIN`
-hides it again (when the app is public, say). The opt-in step links `https://play.google.com/apps/testing/app.fiftybar`,
-which works only for accounts on the testers list. A diver who closes the line keeps it closed in that browser;
-`/android` stays linked from `/account`.
-
 ## Cost
 
 Workers Paid ($5/month) is needed: a map load spends about 2-4 s of CPU working out every site's nowcast, far over
