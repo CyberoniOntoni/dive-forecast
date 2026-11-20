@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/24`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/25`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -54,6 +54,7 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
 - **`S_tide`:** the residual slope at the site's sample point. The rising tide fills the lagoon.
 - **`K · F_inward`, through-flow:**
   - `F_inward` is the drift at the sample point along the inward bearing (`monsoonInwardFlux`). It is positive when the ocean current pushes into the channel.
+  - The drift is shared with nearby channels (`lib/drift-smoothing.ts`): each hour's current at the sample point is averaged, as a vector, with the current at the sample points of the atoll's other catalog channel sites (passes, channel thilas, corners) within 8 km, weighted by a Gaussian of distance (σ 3 km). The ocean model's current comes on a grid of about 8 km, so pins a few hundred metres apart can fall in different cells and get very different drift; sharing it keeps neighbours together. A site with no neighbour that close keeps its own drift. The tide, sea level and head stay the site's own. The lagoon model's channel openings take the same shared drift.
   - `K = THROUGHFLOW_SLOPE_PER_MS = 0.7`.
   - In the monsoon, channels facing the current run in most of the day and the far side runs out. The NE monsoon (about Dec–Apr) runs east-side channels in; the SW monsoon (about May–Nov) the reverse.
 - **`H / τ`, the head across the atoll:**
@@ -257,6 +258,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `LAGOON_BANDS` | 0.02 / 0.2 / 0.55 | `lagoon-flow.ts` | owner + 99 days, §4.10 |
 | `STRAIT_TIDE_GAIN`, `STRAIT_DRIFT_GAIN` | 2.5 m/s per m/h, 3.5 | `forecast.ts` | owner + 99 days, §4.11 |
 | `STRAIT_BANDS_MS` | 0.2 / 0.6 / 1.3 m/s | `forecast.ts` | owner's dive speeds, §4.11 |
+| `DRIFT_SMOOTHING_SIGMA_KM`, `DRIFT_SMOOTHING_MAX_KM` | 3 km, 8 km | `drift-smoothing.ts` | one ocean-model cell, model 25 |
 | Report half-life | 90 days | `forecast.ts` | original model |
 
 **Calibration scripts** (all `npm run <name>`):
@@ -293,6 +295,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `…/22` | 4 Nov | Reports pull walls, strait walls and lagoon sites and can lift them to medium confidence (`lib/axis-reports.ts`). Dive sites within 0.5 km of each other count as one channel opening in the lagoon flow and split its weight, instead of counting once per pin (South Malé, North Malé and Lhaviyani lagoon sites). |
 | `…/23` | 9 Nov | One vote per diver: a diver's reports together weigh as much as their heaviest one (across the site for the fits and confidence, among those pulling an hour for the pull), and the phase lag, the speed factor and channel confidence above low need reports from 2 different divers. Only changes forecasts where one account filed several reports at a site; the replay (fixture reports, one per diver) is unchanged. |
 | `…/24` | 16 Nov | Grid crossings whose deepest point is under 20 m, or 5 m or more above the depth divers reach, are `low` (the satellite limit) and no longer size the channel: Nenge Kandu, Vaagili Caves, Cave Corner, Embudhu Thila, Kanuhuraa Corner, Kandooma Thila, Kandooma Caves, Bodu Thila and Cocoa Corner lose their factor (1.06–1.76). Only the dive-depth test reads one way: a thila dived shallower than its channel floor says nothing. Week of 16 Nov: Nenge Kandu 75 very strong hours → 0, like Thuvarudhekunu and Kurali Kandu next to it. |
+| `…/25` | 20 Nov | Channel sites share the monsoon drift with catalog channel sites whose sample points are within 8 km (Gaussian, σ 3 km), instead of each reading its own ocean-model cell. Prisca Head and Prisca Corner (North Malé, 0.9 km apart, same bearing) drew from different 8 km cells, 0.3 m/s inward against almost none, and ran opposite ways 41 of 168 hours in the week of 20 Nov (20 of them with one side strong); now 12, all near a turn and only one with a side strong. Over the 63 catalog channel pairs within 2 km with bearings within 60°, the 3 pairs that ran opposite at least a fifth of the time are now all under that (Prisca Corner with Prisca Head, Cave Corner and Meeru Corner); the incoming share of a site's hours moves 1 point on average. 25 of 118 channel sites have no neighbour that close and are unchanged. K is unchanged.
 
 ## Known limits
 
