@@ -50,6 +50,22 @@ describe("landBackedShares", () => {
     expect(landBackedShares(RIM, [west, east, north], [LAGOON_ISLAND])).toEqual([0, 0, 0]);
   });
 
+  it("reaches LAND_BACK_KM inward and no further", () => {
+    expect(LAND_BACK_KM).toBe(1);
+    // Strips along the inside of the east rim (73.6°E), 0.72–0.94 km and 1.55–1.77 km in from the edge.
+    const strip = (fromLon: number, toLon: number): RimRing => [
+      [3.89, fromLon],
+      [3.89, toLon],
+      [4.11, toLon],
+      [4.11, fromLon],
+      [3.89, fromLon],
+    ];
+    const [within] = landBackedShares(RIM, [east, west, north, south], [strip(73.5915, 73.5935)]);
+    const [beyond] = landBackedShares(RIM, [east, west, north, south], [strip(73.584, 73.586)]);
+    expect(within).toBeGreaterThan(0.9);
+    expect(beyond).toBe(0);
+  });
+
   it("is all open with no islands", () => {
     expect(landBackedShares(RIM, [west, east], [])).toEqual([0, 0]);
   });

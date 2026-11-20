@@ -76,6 +76,9 @@ describe("alongReefHours", () => {
     expect(alongTideGain([0.1, -0.1, 0.1, -0.1])).toBe(ALONG_REEF_TIDE_GAIN);
     // A spread of 0.5 m/s is held to ALONG_REEF_TIDE_SPREAD_MS once gained.
     expect(alongTideGain([0.5, -0.5, 0.5, -0.5])).toBeCloseTo(ALONG_REEF_TIDE_SPREAD_MS / 0.5);
+    // The spread is a standard deviation: a constant offset in the tidal part does not cut the gain.
+    // (Root-mean-square about zero would read 0.51 here and cut it to about 1.5.)
+    expect(alongTideGain([0.6, 0.4, 0.6, 0.4])).toBe(ALONG_REEF_TIDE_GAIN);
     // Never below 1: a stream already past the spread is left as it is.
     expect(alongTideGain([2, -2])).toBe(1);
     // Kudarah's cell: a 1.3 m/s tidal stream reads very strong only at its peaks. At ×3 it would be over 1.3 m/s

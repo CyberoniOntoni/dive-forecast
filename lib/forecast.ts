@@ -278,7 +278,8 @@ export const ALONG_REEF_TIDE_SPREAD_MS = 0.75;
  */
 export function alongTideGain(tides: readonly number[]): number {
   if (tides.length === 0) return ALONG_REEF_TIDE_GAIN;
-  const spread = Math.sqrt(tides.reduce((sum, tide) => sum + tide * tide, 0) / tides.length);
+  const mean = tides.reduce((sum, tide) => sum + tide, 0) / tides.length;
+  const spread = Math.sqrt(tides.reduce((sum, tide) => sum + (tide - mean) ** 2, 0) / tides.length);
   if (!(spread > 0)) return ALONG_REEF_TIDE_GAIN;
   return Math.max(1, Math.min(ALONG_REEF_TIDE_GAIN, ALONG_REEF_TIDE_SPREAD_MS / spread));
 }

@@ -103,7 +103,7 @@ Over 99 days of ocean data (1 Jul – 7 Oct 2026):
 - **The reef heading** is the inward bearing turned 90° clockwise (`alongReefHeading`). "incoming" means toward that heading, "outgoing" the other way. The UI shows the compass point.
 - **The current along the reef** is the hourly current at the sample point projected on that heading. It is split into its tidal part (the hour less the 25-hour drift) and the drift:
 
-      v = 3 · (v_hour − v_drift) + v_drift      (ALONG_REEF_TIDE_GAIN = 3)
+      v = g · (v_hour − v_drift) + v_drift      (g = ALONG_REEF_TIDE_GAIN = 3, or less: see below)
 
   The 8 km grid smooths the tidal stream along the walls, so taken as is the drift would hold half the walls one way all day. Scaled by 3, most walls turn with the tide, and a strong monsoon still holds some one way. The tidal part follows the sea level and runs as one stream along a whole flank, with no split between channels.
   Where the cell already carries a strong tidal stream, the gain is cut (`alongTideGain`, since model 26): never more than keeps the gained tidal spread (the tidal part's standard deviation over the series) within `ALONG_REEF_TIDE_SPREAD_MS = 0.75` m/s, and never below 1. That is what the strongest other walls reach at ×3 (South Ari, Raa, Baa: about 0.25 m/s before the gain), so only Kudarah changes: its cell, the one sea cell in the gap between South Malé and Vaavu, runs a tidal stream of up to 1.3 m/s on its own (spread 0.59 m/s against a median 0.07), and ×3 made it very strong half the week.
