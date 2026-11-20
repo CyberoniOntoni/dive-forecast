@@ -54,7 +54,7 @@ The fallback heuristic draws a dashed arrow and an estimate note. See `lib/beari
 - **`S_tide`:** the residual slope at the site's sample point. The rising tide fills the lagoon.
 - **`K · F_inward`, through-flow:**
   - `F_inward` is the drift at the sample point along the inward bearing (`monsoonInwardFlux`). It is positive when the ocean current pushes into the channel.
-  - The drift is shared with nearby channels (`lib/drift-smoothing.ts`): each hour's current at the sample point is averaged, as a vector, with the current at the sample points of the atoll's other catalog channel sites (passes, channel thilas, corners) within 8 km, weighted by a Gaussian of distance (σ 3 km). The ocean model's current comes on a grid of about 8 km, so pins a few hundred metres apart can fall in different cells and get very different drift; sharing it keeps neighbours together. Each neighbour's series is the one fetched at its own sample point; one that is stale (fetched over 12 h ago or its newest hour over 12 h old), failed or still on its first fetch lends nothing. Pins added in the app borrow but never lend, so a new pin never shifts the catalog's forecasts. A site with no neighbour that close keeps its own drift. The tide, sea level and head stay the site's own. The lagoon model's channel openings go through the same step (`sharedDriftHours` in `lib/load-site.ts`), so each opening's drift is its channel's forecast drift.
+  - The drift is shared with nearby channels (`lib/drift-smoothing.ts`): each hour's current at the sample point is averaged, as a vector, with the current at the sample points of the atoll's other catalog channel sites (passes, channel thilas, corners) within 8 km, weighted by a Gaussian of distance (σ 3 km). The ocean model's current comes on a grid of about 8 km, so pins a few hundred metres apart can fall in different cells and get very different drift; sharing it keeps neighbours together. Each neighbour's series is the one fetched at its own sample point; one that is stale (fetched over 12 h ago or its newest hour over 12 h old), failed or still on its first fetch lends nothing. Pins added in the app borrow but never lend, so a new pin never shifts the catalog's forecasts. Pins within 0.5 km of each other are one channel (`channelWeights`, the site's own pin included) and split one weight, so a channel with four dive sites lends as much as one with a single pin. Lenders are fetched without waiting: one with no cache yet lends nothing until the warm-up or the next request has it, the same on the map and the site page. A lender whose series ends earlier or starts later than the site's (series refresh at different times) lends the mean of its 25 hours at that end for up to 48 h past it, so the last day of the week stays shared. A site whose own hours came from the atoll's ocean point, not its seaward point, shares nothing. A site with no neighbour that close keeps its own drift. The tide, sea level and head stay the site's own. The lagoon model's channel openings go through the same step (`sharedDriftHours` in `lib/load-site.ts`), so each opening's drift is its channel's forecast drift.
   - `K = THROUGHFLOW_SLOPE_PER_MS = 0.7`.
   - In the monsoon, channels facing the current run in most of the day and the far side runs out. The NE monsoon (about Dec–Apr) runs east-side channels in; the SW monsoon (about May–Nov) the reverse.
 - **`H / τ`, the head across the atoll:**
@@ -258,7 +258,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `LAGOON_BANDS` | 0.02 / 0.2 / 0.55 | `lagoon-flow.ts` | owner + 99 days, §4.10 |
 | `STRAIT_TIDE_GAIN`, `STRAIT_DRIFT_GAIN` | 2.5 m/s per m/h, 3.5 | `forecast.ts` | owner + 99 days, §4.11 |
 | `STRAIT_BANDS_MS` | 0.2 / 0.6 / 1.3 m/s | `forecast.ts` | owner's dive speeds, §4.11 |
-| `DRIFT_SMOOTHING_SIGMA_KM`, `DRIFT_SMOOTHING_MAX_KM` | 3 km, 8 km | `drift-smoothing.ts` | one ocean-model cell, model 25 |
+| `DRIFT_SMOOTHING_SIGMA_KM`, `DRIFT_SMOOTHING_MAX_KM`, `DRIFT_EDGE_HOLD_HOURS` | 3 km, 8 km, 48 h | `drift-smoothing.ts` | one ocean-model cell, model 25 |
 | Report half-life | 90 days | `forecast.ts` | original model |
 
 **Calibration scripts** (all `npm run <name>`):
@@ -271,6 +271,8 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | `strength-calibrate` | sweeps the channel and wall bands | 99 days, cached under the OS temp directory by `scripts/long-series.ts` |
 | `lagoon-calibrate` | checks the lagoon flow and sweeps the channel weight | same 99-day cache |
 | `strait-calibrate` | sweeps the strait gains | same 99-day cache |
+
+The calibrations ran before model 25 and read each site's own sample-point drift, not the drift shared with nearby channels. K, τ and the bands were set on that; a rerun that should match the forecast has to pass its series through `smoothedDriftHours` first.
 
 ## Model versions
 

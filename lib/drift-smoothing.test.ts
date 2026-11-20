@@ -72,4 +72,32 @@ describe("smoothedDriftHours", () => {
     expect(out[0].currentVelocityMs).toBeCloseTo(0.3, 10);
     expect(out[1].currentVelocityMs).toBeNull();
   });
+
+  it("holds a lender's 25-hour edge mean past the end of its series, so the last day stays shared", () => {
+    const at = (i: number) => new Date(Date.UTC(2026, 10, 20, i)).toISOString().slice(0, 16);
+    const own = { point: here, hours: Array.from({ length: 72 }, (_, i) => hour(at(i), 0.3, 180)) };
+    // Fetched a day earlier: ends 24 hours before the site's series. Its tidal swing averages out at the edge.
+    const other = {
+      point: near,
+      hours: Array.from({ length: 48 }, (_, i) => hour(at(i - 24), i % 2 === 0 ? 0.2 : 0, 0)),
+    };
+    const out = smoothedDriftHours(own, [other]);
+    const north = (h: MarineHour) => h.currentVelocityMs! * Math.cos((h.currentDirectionDeg! * Math.PI) / 180);
+    // Inside the lender's range and past its end the site's drift is shared, not its own -0.3 m/s.
+    expect(north(out[10])).toBeGreaterThan(-0.3);
+    expect(north(out[60])).toBeGreaterThan(-0.3);
+    // Past the end it lends its last 25 hours' mean, steady from hour to hour.
+    expect(out[60].currentVelocityMs).toBeCloseTo(out[70].currentVelocityMs!, 10);
+  });
+
+  it("lets a channel's pins split one weight", () => {
+    const own = { point: here, hours: [hour("t", 0, 0)] };
+    const lone = smoothedDriftHours(own, [{ point: here, hours: [hour("t", 0.4, 0)] }])[0];
+    const split = smoothedDriftHours(own, [
+      { point: here, hours: [hour("t", 0.4, 0)], share: 0.5 },
+      { point: here, hours: [hour("t", 0.4, 0)], share: 0.5 },
+    ])[0];
+    expect(split.currentVelocityMs).toBeCloseTo(lone.currentVelocityMs!, 12);
+    expect(lone.currentVelocityMs).toBeCloseTo(0.2, 12);
+  });
 });

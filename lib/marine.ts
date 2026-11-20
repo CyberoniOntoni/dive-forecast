@@ -48,7 +48,11 @@ const MARINE_ENDPOINTS = [
   "https://api.open-meteo.com/v1/marine",
 ];
 
-export type MarineFetch = PointFetch<MarineHour>;
+/**
+ * A point's marine series. From siteMarineHours, `fromFallback` says the hours are the atoll's ocean point's, not
+ * the site's seaward point's.
+ */
+export type MarineFetch = PointFetch<MarineHour> & { fromFallback?: true };
 
 type HourlyColumns = {
   time: unknown[];
@@ -80,11 +84,12 @@ export async function siteMarineHours(
   if (!seaward.ok && seaward.pending) return seaward;
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
-  if (fallback.ok && !marineSeriesStale(fallback.hours)) return usableMarine(fallback);
-  const cached = (await readCachedHours(point.lat, point.lon)) ?? (await readCachedHours(fallbackLat, fallbackLon));
+  if (fallback.ok && !marineSeriesStale(fallback.hours)) return { ...usableMarine(fallback), fromFallback: true };
+  const ownCached = await readCachedHours(point.lat, point.lon);
+  const cached = ownCached ?? (await readCachedHours(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
-  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true };
+  return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true, ...(ownCached ? {} : { fromFallback: true as const }) };
 }
 
 /** A series whose hours still reach ahead, keeping the point's stale flag (seriesOld: fetched long ago). */
