@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 
-/** localStorage key: once closed, the strip stays closed in this browser. /android stays reachable from /account. */
+/**
+ * localStorage key: once closed, the strip stays closed in this browser. /android stays reachable from /account. Named on
+ * /privacy (On your device).
+ */
 const DISMISSED_KEY = "android-beta-invite-closed";
 const CHANGED_EVENT = "android-beta-invite-changed";
 
@@ -69,7 +72,8 @@ export function BetaInviteStrip() {
     >
       <PhoneIcon />
       <p className="m-0 min-w-0 flex-1 truncate">
-        {/* A phone has room for about 36 characters beside the close button, so the short words go there. */}
+        {/* Below 640 px (a phone held upright) there is room for about 36 characters beside the close button, so the short
+            words go there; wider screens, iPads and phones on their side included, get the full line. */}
         {view === "ios" ? (
           <>
             <span className="text-foam">
