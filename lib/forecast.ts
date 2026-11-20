@@ -33,7 +33,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/25";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/26";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -264,6 +264,27 @@ function addSeries(left: readonly number[], right: readonly number[]): number[] 
 export const ALONG_REEF_TIDE_GAIN = 3;
 
 /**
+ * The gain makes up for a grid that smooths the tide away, so it should not lift a cell that already carries a strong
+ * tidal stream. The one sea cell in the gap between South Malé and Vaavu, off Kudarah, runs up to 1.3 m/s on its own
+ * (a tidal spread, standard deviation, of 0.59 m/s against a median 0.07 for the walls); ×3 gave it 3–4 m/s and very
+ * strong half the week. So a wall's gain is cut until its gained tidal spread is at most this, which is what the
+ * strongest other walls reach at ×3 (South Ari's, Maamunagau, about 0.25 m/s before the gain). Never below 1.
+ */
+export const ALONG_REEF_TIDE_SPREAD_MS = 0.75;
+
+/**
+ * The gain for a series' tidal part: ALONG_REEF_TIDE_GAIN, cut so the gained tidal spread (the standard deviation of
+ * the tidal part over the series) stays within ALONG_REEF_TIDE_SPREAD_MS, and never below 1.
+ */
+export function alongTideGain(tides: readonly number[]): number {
+  if (tides.length === 0) return ALONG_REEF_TIDE_GAIN;
+  const mean = tides.reduce((sum, tide) => sum + tide, 0) / tides.length;
+  const spread = Math.sqrt(tides.reduce((sum, tide) => sum + (tide - mean) ** 2, 0) / tides.length);
+  if (!(spread > 0)) return ALONG_REEF_TIDE_GAIN;
+  return Math.max(1, Math.min(ALONG_REEF_TIDE_GAIN, ALONG_REEF_TIDE_SPREAD_MS / spread));
+}
+
+/**
  * Along-reef index, m/s after the gain: slack below `slack`, then mild, strong, and very strong from `strong` up.
  * Mutable only so scripts/strength-calibrate.ts can sweep it.
  */
@@ -278,7 +299,7 @@ export type AlongReefInput = {
 /**
  * Outer walls with land or unbroken reef behind them: the water runs along the reef, not into the atoll.
  * The hourly current projected on the reef line, with its tidal part (the hour less the 25-hour drift) scaled by
- * ALONG_REEF_TIDE_GAIN. "incoming" means toward alongHeadingDeg, "outgoing" the opposite way along the reef.
+ * ALONG_REEF_TIDE_GAIN (less where the cell's own tidal stream is already strong, alongTideGain). "incoming" means toward alongHeadingDeg, "outgoing" the opposite way along the reef.
  * Before reports: lib/axis-reports.ts pulls it and sets its confidence (never high) in lib/load-site.ts.
  */
 export function alongReefHours(input: AlongReefInput): HourForecast[] {
@@ -286,13 +307,17 @@ export function alongReefHours(input: AlongReefInput): HourForecast[] {
   const drift = currentForNudge(hours);
   const residual = residualSeries(hours);
   const forecast: HourForecast[] = [];
-  hours.forEach((hour, index) => {
-    const level = residual[index];
-    if (level == null) return;
+  const parts = hours.map((hour, index) => {
     const total = alongComponent(hour, input.alongHeadingDeg);
     const mean = alongComponent(drift[index], input.alongHeadingDeg);
-    if (!Number.isFinite(total) || !Number.isFinite(mean)) return;
-    const along = ALONG_REEF_TIDE_GAIN * (total - mean) + mean;
+    return Number.isFinite(total) && Number.isFinite(mean) ? { tide: total - mean, mean } : null;
+  });
+  const gain = alongTideGain(parts.flatMap((part) => (part ? [part.tide] : [])));
+  hours.forEach((hour, index) => {
+    const level = residual[index];
+    const part = parts[index];
+    if (level == null || !part) return;
+    const along = gain * part.tide + part.mean;
     forecast.push({
       time: hour.time,
       direction: along >= 0 ? "incoming" : "outgoing",

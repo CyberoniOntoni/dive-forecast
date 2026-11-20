@@ -1,9 +1,10 @@
 import { ringLevelFromSeries, ringSamples, type AtollRing } from "../lib/atoll-ring";
 import { resolveBearing } from "../lib/bearing";
-import { CHANNEL_WEIGHT_KM, channelSource, channelWeights, LAGOON_BANDS, lagoonSink, lagoonVelocity, mainAxisDeg, rimSources, type LagoonSink, type LagoonSource } from "../lib/lagoon-flow";
+import { CHANNEL_WEIGHT_KM, channelSource, channelWeights, LAGOON_BANDS, lagoonSink, lagoonVelocity, mainAxisDeg, openRimSources, rimSources, type LagoonSink, type LagoonSource } from "../lib/lagoon-flow";
+import { readIslands } from "../lib/islands";
 import { seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
-import { rimForAtoll } from "../lib/rim";
+import { rimForAtoll, type RimRing } from "../lib/rim";
 import { crossesRim } from "../lib/site-type";
 import { readCatalog } from "../lib/store";
 import type { MarineHour, Site } from "../lib/types";
@@ -32,6 +33,8 @@ const KM_PER_DEG_LON = 111.32;
 type Atoll = {
   id: string;
   ring: AtollRing;
+  /** The atoll's outline, so its rim openings lose the stretches islands close (openRimSources), as in the app. */
+  rim: RimRing;
   sinks: Map<string, LagoonSink>;
   lagoon: Site[];
   channels: { site: Site; bearing: number; hours: MarineHour[] }[];
@@ -74,7 +77,7 @@ async function loadAtolls(): Promise<Atoll[]> {
       )
     ).filter((item): item is Atoll["channels"][number] => item != null);
     const sinks = new Map(lagoon.map((site) => [site.id, lagoonSink(site, rim)]));
-    atolls.push({ id: atoll.id, ring, sinks, lagoon, channels });
+    atolls.push({ id: atoll.id, ring, rim, sinks, lagoon, channels });
   }
   return atolls;
 }
@@ -91,6 +94,7 @@ function floodHours(ring: AtollRing): Set<string> {
 
 async function main(): Promise<void> {
   const atolls = await loadAtolls();
+  const islands = readIslands().map((island) => island.ring);
   const sites = atolls.reduce((sum, atoll) => sum + atoll.lagoon.length, 0);
   console.log(`${atolls.length} atolls, ${sites} lagoon sites, ${atolls.reduce((s, a) => s + a.channels.length, 0)} channels.\n`);
   for (const weight of WEIGHTS) {
@@ -106,7 +110,7 @@ async function main(): Promise<void> {
     for (const atoll of atolls) {
       const channelKm = channelWeights(atoll.channels.map((item) => item.site), weight);
       const sources: LagoonSource[] = [
-        ...rimSources(atoll.ring, TAU),
+        ...openRimSources(rimSources(atoll.ring, TAU), atoll.rim, islands),
         // Pins in one channel share its weight, as in lib/load-site.ts.
         ...atoll.channels.map((item, index) =>
           channelSource(item.site, item.hours, item.bearing, atoll.ring.level, channelKm[index], TAU),

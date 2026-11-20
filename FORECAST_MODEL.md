@@ -1,6 +1,6 @@
 # Forecast model
 
-How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/25`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
+How the current forecast works today: model version `tide+throughflow+head+alongreef+lagoon+strait/26`. This is the reference for what the code does. `HYDRODYNAMICS_PLAN.md` holds the reasoning, the calibration runs and the history behind each choice (§4.5–4.10), and `ROADMAP.md` holds what is planned.
 
 Nothing here is fitted to real dive observations yet. The constants were set from the ocean model's own data and the owner's experience of how Maldivian channels run. Diver reports are saved with the prediction they were made against so they can correct it later (see "Reports and scoring").
 
@@ -103,9 +103,10 @@ Over 99 days of ocean data (1 Jul – 7 Oct 2026):
 - **The reef heading** is the inward bearing turned 90° clockwise (`alongReefHeading`). "incoming" means toward that heading, "outgoing" the other way. The UI shows the compass point.
 - **The current along the reef** is the hourly current at the sample point projected on that heading. It is split into its tidal part (the hour less the 25-hour drift) and the drift:
 
-      v = 3 · (v_hour − v_drift) + v_drift      (ALONG_REEF_TIDE_GAIN = 3)
+      v = g · (v_hour − v_drift) + v_drift      (g = ALONG_REEF_TIDE_GAIN = 3, or less: see below)
 
   The 8 km grid smooths the tidal stream along the walls, so taken as is the drift would hold half the walls one way all day. Scaled by 3, most walls turn with the tide, and a strong monsoon still holds some one way. The tidal part follows the sea level and runs as one stream along a whole flank, with no split between channels.
+  Where the cell already carries a strong tidal stream, the gain is cut (`alongTideGain`, since model 26): never more than keeps the gained tidal spread (the tidal part's standard deviation over the series) within `ALONG_REEF_TIDE_SPREAD_MS = 0.75` m/s, and never below 1. That is what the strongest other walls reach at ×3 (South Ari, Raa, Baa: about 0.25 m/s before the gain), so only Kudarah changes: its cell, the one sea cell in the gap between South Malé and Vaavu, runs a tidal stream of up to 1.3 m/s on its own (spread 0.59 m/s against a median 0.07), and ×3 made it very strong half the week.
 - **Strength** comes from `|v|` (`ALONG_REEF_BANDS_MS`):
 
   | Band | `\|v\|` |
@@ -159,6 +160,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 
 - **Openings:**
   - The porous rim: the 12 ring points on the outline plus the midpoints between them, each standing for its share of the perimeter. Each opening's flow `q` is the channel model's `S_net` there, along the outline's inward normal.
+  - Islands close the rim (`openRimSources`, `lib/rim-land.ts`, since model 26). Each rim opening's weight is scaled by the share of its stretch of outline (the outline walked every 100 m, each step counted toward its nearest opening) with no island from `data/islands.json` within `LAND_BACK_KM = 1` km inward of the edge. Water crosses the rim over reef flats and through gaps, not through land. The share of outline backed by land is 60 % at Addu (the Hithadhoo–Maradhoo–Feydhoo–Gan chain), 31–37 % at North and South Malé, Lhaviyani, Laamu and Huvadhoo, and under 25 % elsewhere. An opening that is all land keeps its place with no weight. Channel dive sites are not scaled: they are the gaps.
   - Each across-rim dive site in the atoll, with its own `S_net` and a weight of `CHANNEL_WEIGHT_KM = 2` km per channel. Dive sites chained within `SAME_CHANNEL_KM = 0.5` km of each other, and all within 0.8 km of one another, are one channel and split its 2 km evenly among the pins whose data loaded (`channelWeights`, since model 22), so a channel with a pass, a thila and a corner pinned in it counts once. In the catalog that is 14 pins in 6 channels: Kandooma (Thila, Caves, Cocoa Corner), Embudhoo (Express, Thila), Guraidhoo (Lhosfushi Kandu, Medhu Faru, Guraidhoo Corner), Furana (North, Thila) and the Fushifaru pairs. Every catalog pair within 0.5 km is in one channel; from about 0.8 km neighbouring kandus start to pair up (Felidhoo and Keyodhoo, 0.99 km).
   - `data/openings.json`, when present, is a catalog of mouths walked around the reef crest of each atoll, including mouths with no dive site. The outline is only used to assign crest to an atoll. The width is the straight distance between crest shoulders, measured on the Atlas GeoPackage, except rows tagged `fromTiles` (Thaa, Laamu, Huvadhoo), which were walked on the map's simplified Atlas tiles and are coarser until the GeoPackage walk is rerun. A mouth that reef flat still bridges is marked and kept. The lagoon model does not read the file. A mouth has no depth and is not a channel section.
 - **The current at a site** is each opening's exchange spreading from it (running in) or drawing toward it (running out), as a 2-D source:
@@ -180,7 +182,7 @@ The flow at a wall, in m/s toward the east along the strait's axis:
   | strong | below 0.55 |
   | very strong | 0.55 and above |
 
-  Lagoon hours are 18 % strong, against 44 % for channels, and 2 % of lagoon-days reach very strong.
+  Lagoon hours are 18 % strong, against 44 % for channels, and 2 % of lagoon-days reach very strong (the 99-day calibration, before model 26 closed the island-backed rim; the week of 20 Nov went from 20 % to 13 % strong with it).
 - **Confidence** is low, or medium with reports (see "Reports at walls, the strait and the lagoon").
 - **Fallback:** an atoll with no outline or ring data keeps the channel model. On the fallback, a report filed on the lagoon axis is read against the inward bearing: kept, or flipped when its axis pointed more than 90° from it.
 
@@ -251,6 +253,7 @@ Bump `FORECAST_MODEL_VERSION` whenever a change alters what the forecast says fo
 | Constriction | ref 31,500 m², exponent 0.35, 1.0–2.5 | `forecast.ts` | channel sections before model 16 |
 | `SEASONAL_DRIFT_SCALE` | 0.4 | `forecast.ts` | measured drift, §4.7 |
 | `ALONG_REEF_TIDE_GAIN` | 3 | `forecast.ts` | owner, §4.6 |
+| `ALONG_REEF_TIDE_SPREAD_MS` | 0.75 m/s | `forecast.ts` | anomaly sweep, 20 Nov |
 | `ALONG_REEF_BANDS_MS` | 0.15 / 0.5 / 1.3 | `forecast.ts` | §4.6, §4.9 |
 | `CHANNEL_FUNNEL_KM` | 0.8 km | `site-type.ts` | owner, §4.6 |
 | Ring points | 12, at least 9 for a level | `atoll-ring.ts` | §4.8 |
@@ -298,6 +301,7 @@ The calibrations ran before model 25 and read each site's own sample-point drift
 | `…/23` | 9 Nov | One vote per diver: a diver's reports together weigh as much as their heaviest one (across the site for the fits and confidence, among those pulling an hour for the pull), and the phase lag, the speed factor and channel confidence above low need reports from 2 different divers. Only changes forecasts where one account filed several reports at a site; the replay (fixture reports, one per diver) is unchanged. |
 | `…/24` | 16 Nov | Grid crossings whose deepest point is under 20 m, or 5 m or more above the depth divers reach, are `low` (the satellite limit) and no longer size the channel: Nenge Kandu, Vaagili Caves, Cave Corner, Embudhu Thila, Kanuhuraa Corner, Kandooma Thila, Kandooma Caves, Bodu Thila and Cocoa Corner lose their factor (1.06–1.76). Only the dive-depth test reads one way: a thila dived shallower than its channel floor says nothing. Week of 16 Nov: Nenge Kandu 75 very strong hours → 0, like Thuvarudhekunu and Kurali Kandu next to it. |
 | `…/25` | 20 Nov | Channel sites share the monsoon drift with catalog channel sites whose sample points are within 8 km (Gaussian, σ 3 km; pins of one channel split one weight), instead of each reading its own ocean-model cell. Prisca Head and Prisca Corner (North Malé, 0.9 km apart, same bearing) drew from different 8 km cells, 0.3 m/s inward against almost none, and ran opposite ways 41 of 168 hours in the week of 20 Nov (20 of them with one side strong); now 12, all near a turn and only one with a side strong. Over the 63 catalog channel pairs within 2 km with bearings within 60°, opposite hours fall from 4.0% to 3.1% on average; of the 4 pairs opposite at least a fifth of the time, the three with Prisca Corner (with Prisca Head, Cave Corner, Meeru Corner) drop to 7–10%, and HP Reef with Middle Point stays at about 22%: their bearings differ by 29° on the curved reef, so the shared drift still projects differently on each. 71 of 118 channel sites show the same directions all week; the incoming share of a site's hours moves 1 point on average (Prisca Corner 63% → 86%, the most). K is unchanged. |
+| `…/26` | 20 Nov | Lagoon flow: the porous rim no longer leaks through islands. Each rim opening's weight is scaled by the open share of its stretch of outline (no island within 1 km inward of the edge). At Addu the equatorial jet (about 0.85 m/s east that week) had "entered" through the west rim (Hithadhoo, Maradhoo, Feydhoo, all island and causeway) and held Gan Inside, Viligili Inside, Kanandhou Kaleyge Galha and British Loyalty strong and one way all week (Gan Inside strong 88 % of hours, no turn); now they are mild, and British Loyalty turns twice a day. Week of 20 Nov, all 109 lagoon sites: strong 20 % → 13 % of hours (North Malé 25 % → 16 %), very strong unchanged at 0.3 %; outside Addu, 0–5 % of a site's hours change direction (Dhaalu and Rasdhoo, one site each, 13–14 %). Along the reef, the ×3 tide gain is cut where the cell's own tidal stream is already strong (gained tidal spread at most 0.75 m/s): Kudarah (South Malé), very strong 51 % → 11 % of hours, strong or above 84 % → 45 %, like the strongest South Ari walls; Ariyadhoo and Maamunagau move by a point, every other wall is unchanged. Channels and strait walls are unchanged. `CHANNEL_WEIGHT_KM` and the bands were not recalibrated. |
 
 ## Known limits
 

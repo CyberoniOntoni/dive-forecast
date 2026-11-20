@@ -326,6 +326,8 @@ The owner pointed out that an outer wall with an island or unbroken reef behind 
 
 At ×3 the bands fall slack 35 %, mild 44 %, strong 19 %, too strong 3 %. Strong drift (Addu, 0.4–0.7 m/s) still holds some walls one way for days, which the owner expects. No observations back G or the bands yet; reports are what correct them (Stage C).
 
+**Gain cut for strong tidal cells (model 26, 20 Nov 2026).** The anomaly sweep found Kudarah (South Malé) very strong in 51 % of the week's hours. Its sample cell, the one sea cell in the gap toward Vaavu, already resolves a clean semi-diurnal stream of up to 1.3 m/s (spread 0.59 m/s, eight times the median wall), so ×3 gave 3–4 m/s. The owner asked to fix it. The gain is now cut so the gained tidal spread stays within 0.75 m/s (what the strongest other walls reach at ×3), never below 1 (`alongTideGain`). Kudarah: very strong 11 %, like the South Ari walls; no other wall changes by more than a point.
+
 ### 4.7 Model review (2026-10-01)
 
 A full review of the model after through-flow and along-reef flow, checked against the marine cache (337 series around 30 Sep, near spring tide) and the live map at 07:29 on 1 Oct (mid-ebb).
@@ -441,6 +443,8 @@ At 2.0 the very-strong days fall almost all on channels facing this monsoon's cu
 - **The monsoon shows:** the 99-day mean lagoon flow heads east in 12 of 13 atolls, with the SW monsoon.
 - **Same direction at once:** sites across one lagoon mostly point the same way at once (0.91 on a 0–1 scale). That is because lagoon dive sites cluster near one rim (e.g. North Malé east), not a flaw. The planned gate on this did not pass, and the owner accepted the reading.
 - **Bands** (`LAGOON_BANDS`: slack 0.02, mild 0.2, strong 0.55): hours are slack 10 %, mild 71 %, strong 18 %, very strong under 1 %, against 44 % strong for channels. Very strong is reached on 2 % of lagoon-days. Thilas 1–2 km from a channel (Long Reef, Ilkka Reef, Maagiri Thila, Chicken Island) peak strong on a typical day. A first cut with mild below 0.15 gave 32 % strong hours. A local check then showed more lagoon sites strong than channels at the same hour, so mild went up to 0.2.
+
+**Islands close the rim (model 26, 20 Nov 2026).** A forecast sweep in the week of 20 Nov found Addu's lagoon sites strong and one way for the whole week (Gan Inside strong 88 % of hours, never turning). The equatorial (Wyrtki) jet ran about 0.85 m/s east past Addu, and the porous rim let it in along the west side, through Hithadhoo, Maradhoo and Feydhoo, which with Gan are one chain of islands and causeways: the three west ring samples carried a mean inflow of 0.45–0.56 m/h against a tidal swing of about 0.17. Each rim opening now counts only the share of its stretch with no island within 1 km behind the edge (`lib/rim-land.ts`). Addu's lagoon sites go mild and the north ones turn with the tide again; elsewhere lagoon sites lose some strong hours (20 % → 13 % that week) as island-backed rim stops feeding the drift in, nearer the 18 % this calibration set. `npm run lagoon-calibrate` builds its openings the same way now; it has not been rerun.
 
 **Reports:** lagoon reports from before this model meant into or out of the atoll and have no reading along the new axis. Replay leaves lagoon sites out, since it has no data for the lagoon's openings. This drops Alimatha's six fixture reports, and the benchmark scores 30 reports.
 

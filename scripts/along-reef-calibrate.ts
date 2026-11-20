@@ -1,5 +1,5 @@
 import { resolveBearing } from "../lib/bearing";
-import { ALONG_REEF_TIDE_GAIN, alongReefHours } from "../lib/forecast";
+import { ALONG_REEF_TIDE_GAIN, ALONG_REEF_TIDE_SPREAD_MS, alongReefHours } from "../lib/forecast";
 import { readCachedHours, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { rimForAtoll } from "../lib/rim";
@@ -93,7 +93,7 @@ async function main(): Promise<void> {
   console.log("Tidal stream (hour less its 25-hour mean):");
   console.log(`  turns per day, quartiles ${fmt(quantile(tideTurns, 0.25))} / ${fmt(quantile(tideTurns, 0.5))} / ${fmt(quantile(tideTurns, 0.75))}`);
   console.log(`  |correlation| with sea level, median ${fmt(quantile(tideFit, 0.5))}\n`);
-  console.log(`Forecast, tidal part ×${ALONG_REEF_TIDE_GAIN}:`);
+  console.log(`Forecast, tidal part ×${ALONG_REEF_TIDE_GAIN} (less where a cell's own tidal spread passes ${ALONG_REEF_TIDE_SPREAD_MS} m/s once gained, alongTideGain):`);
   console.log(`  turns per day, median ${fmt(quantile(forecastTurns, 0.5))}; sites turning at least twice a day: ${forecastTurns.filter((value) => value >= 2).length} of ${sites}`);
   console.log(`  share of hours running the more common way, median ${Math.round(100 * quantile(oneWay, 0.5))} %`);
   console.log(`  bands: ${STRENGTHS.map((strength) => `${strength} ${Math.round((100 * (bands.get(strength) ?? 0)) / total)} %`).join(", ")}`);

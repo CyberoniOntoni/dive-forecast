@@ -1,5 +1,6 @@
 import type { AtollRing } from "./atoll-ring";
 import { pointInRing, type RimRing } from "./rim";
+import { landBackedShares } from "./rim-land";
 import { netFlowSeries } from "./forecast";
 import { distanceKm } from "./geometry";
 import { STRENGTHS, type HourForecast, type MarineHour, type Strength } from "./types";
@@ -74,6 +75,19 @@ export function rimSources(ring: AtollRing, headTauHours?: number): LagoonSource
     sources.push({ lat: (point.lat + nextPoint.lat) / 2, lon: (point.lon + nextPoint.lon) / 2, weightKm, flow: mean });
   }
   return sources;
+}
+
+/**
+ * The porous rim's openings with land taken out: each one's weight scaled by the share of its stretch of rim that has
+ * no island behind it (`landBackedShares`). Water does not cross the rim through an island, so a stretch backed by
+ * land is closed. Without this, at Addu, whose west and south rims are one chain of islands and causeways, the
+ * equatorial jet's drift "entered" through Hithadhoo and Gan and held the lagoon sites one way, strong, all week.
+ * An opening that is all land keeps a zero weight, so it still counts as present for lagoonVelocity's half-the-
+ * openings test. Returned in the order given.
+ */
+export function openRimSources(sources: readonly LagoonSource[], rim: RimRing, islands: readonly RimRing[]): LagoonSource[] {
+  const backed = landBackedShares(rim, sources, islands);
+  return sources.map((source, index) => ({ ...source, weightKm: source.weightKm * (1 - backed[index]) }));
 }
 
 /**
