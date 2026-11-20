@@ -181,10 +181,13 @@ export function pointFetcher<T>(source: PointSource<T>) {
       }
     }
     const known = remembered.get(name);
-    if (known && withinTtl(known)) return known;
+    // Within the TTL, or past it but already checked against R2 in this request (R2 had nothing newer, as after an
+    // Open-Meteo outage): `remembered` is the newest there is, so neither the edge nor R2 is asked again. Without the
+    // second case every later ask in the request (a channel point is lent to several neighbours) spent another edge
+    // call of EDGE_CALLS_PER_REQUEST.
+    if (known && (withinTtl(known) || readFromR2().has(name))) return known;
     // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): those that
     // overlap share one edge or R2 read, so they spend one call of the request's edge budget (EDGE_CALLS_PER_REQUEST).
-    // A later ask for a copy within the TTL is served from `remembered` above.
     const reading = readsInFlight();
     const running = reading.get(name);
     if (running) return running;

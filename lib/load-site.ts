@@ -476,7 +476,8 @@ export function lendsDrift(marine: MarineFetch): marine is Extract<MarineFetch, 
 
 /**
  * A channel site's hours with the drift it shares with its lenders. Each lender is fetched at its own sample point;
- * one still on its first fetch, failed or stale lends nothing, and `pending` says one was still on its first fetch.
+ * one failed or stale lends nothing, and so does one still on its first fetch when the caller does not wait
+ * (wait: false); `pending` says one was.
  * The one path for a channel's own forecast and for its opening in the lagoon flow.
  */
 async function sharedDriftHours(
@@ -492,9 +493,10 @@ async function sharedDriftHours(
   let pending = false;
   const fetched = await Promise.all(
     lenders.map(async ({ pin, point }) => {
-      // Never waits: a lender with no cache yet is queued and lends nothing this time, the same on the map and on the
-      // site page. The warm-up and the next request fill it in.
-      const marine = await fetchMarine(point.lat, point.lon, { ...options, wait: false });
+      // Waits as the caller does. The map (wait: false) never waits: a lender with no cache yet is queued and lends
+      // nothing this time, until the warm-up or the next request fills it in. A site page, a report's saved prediction
+      // and the warm-up wait for it, so what is saved with a report is the forecast the same hour shows a moment later.
+      const marine = await fetchMarine(point.lat, point.lon, options);
       if (lendsDrift(marine)) return { pin, point, hours: marine.hours };
       if (!marine.ok && marine.pending) pending = true;
       return null;
