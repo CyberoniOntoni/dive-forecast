@@ -1,5 +1,5 @@
 import { resolveBearing } from "./bearing";
-import { rimForAtoll } from "./rim";
+import { rimForAtoll, type RimRing } from "./rim";
 import { inFlightPerRequest } from "./cloudflare";
 import { atollRing, atollRingLevel } from "./atoll-ring";
 import {
@@ -15,7 +15,17 @@ import {
   throughflowAt,
 } from "./forecast";
 import { applyAxisReports } from "./axis-reports";
-import { channelSource, channelWeights, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
+import {
+  channelSource,
+  channelWeights,
+  lagoonHours,
+  lagoonSink,
+  openRimSources,
+  rimSources,
+  type LagoonSink,
+  type LagoonSource,
+} from "./lagoon-flow";
+import { readIslands } from "./islands";
 import { crossesRim, siteRoute } from "./site-type";
 import { fetchMarine, marineSeriesStale, seawardPoint, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
 import { SEAWARD_STEPS_KM } from "./floor-sample";
@@ -74,6 +84,25 @@ function unavailableLoad(
 }
 
 const LAGOON_MEMO_MS = 10 * 60 * 1000;
+
+/** Each atoll's rim openings' weights once islands close their stretches, by the openings' positions. Static data. */
+const openRimMemo = new Map<string, number[]>();
+
+/**
+ * The porous rim with the stretches islands back taken out (openRimSources). The land shares depend only on the
+ * outline, the islands and where the openings sit, so they are worked out once per set of positions; an atoll whose
+ * ring is missing a sample has another set.
+ */
+function openRim(atollId: string, sources: LagoonSource[], rim: RimRing): LagoonSource[] {
+  const key = `${atollId}|${sources.map((source) => `${source.lat},${source.lon}`).join(";")}`;
+  let weights = openRimMemo.get(key);
+  if (!weights) {
+    weights = openRimSources(sources, rim, readIslands().map((island) => island.ring)).map((source) => source.weightKm);
+    openRimMemo.set(key, weights);
+  }
+  const kept = weights;
+  return sources.map((source, index) => ({ ...source, weightKm: kept[index] }));
+}
 const lagoonMemo = new Map<string, { at: number; sources: LagoonSource[] }>();
 /** Per request on a worker (perRequest); the memo above holds plain data and is shared. */
 const lagoonLoadsInFlight = inFlightPerRequest<LagoonSource[]>();
@@ -128,8 +157,10 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
     // Dive sites in one channel share its weight, so a channel counts once however many pins it has. Shared among
     // the pins that loaded, so a pin still fetching does not take part of its channel's weight with it.
     const weights = channelWeights(loadedChannels.map((item) => item.channel));
+    // The rim leaks over reef flats and through gaps, not through islands (openRimSources).
+    const porous = rimSources(ring);
     const sources = [
-      ...rimSources(ring),
+      ...(rim ? openRim(atoll.id, porous, rim) : porous),
       ...loadedChannels.map((item, index) => channelSource(item.channel, item.hours, item.deg, ring.level, weights[index])),
     ];
     if (!pending) lagoonMemo.set(atoll.id, { at: Date.now(), sources });
