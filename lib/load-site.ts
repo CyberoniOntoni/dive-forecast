@@ -371,7 +371,8 @@ function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   if (!byAtoll) lineUpKeys.set(mates, (byAtoll = new Map()));
   const kept = byAtoll.get(atoll.id);
   if (kept) return kept;
-  // Two FNV-1a hashes from different seeds, 64 bits together, so two line-ups sharing a key is out of reach.
+  // FNV-1a and a second, differently seeded and shifted FNV-style mix: 64 bits together, plus the count, so two
+  // line-ups sharing a key is out of reach.
   let first = 0x811c9dc5;
   let second = 0x01000193;
   let count = 0;

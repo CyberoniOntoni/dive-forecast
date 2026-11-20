@@ -94,6 +94,23 @@ describe("smoothedDriftHours", () => {
     expect(out[60].currentVelocityMs).toBeCloseTo(out[70].currentVelocityMs!, 10);
   });
 
+  it("lends nothing at a lender's masked hours inside its series, only past its real ends", () => {
+    const at = (i: number) => new Date(Date.UTC(2026, 10, 20, i)).toISOString().slice(0, 16);
+    // The lender's series runs hours 0 to 29, but only hours 10 to 19 have a current.
+    const other = {
+      point: here,
+      hours: Array.from({ length: 30 }, (_, i) => (i >= 10 && i < 20 ? hour(at(i), 0.4, 0) : hour(at(i), null, null))),
+    };
+    const own = { point: here, hours: Array.from({ length: 40 }, (_, i) => hour(at(i), null, null)) };
+    const out = smoothedDriftHours(own, [other]);
+    // Masked hours at either end of its series stay none: the site's own is masked too and no one lends.
+    expect(out[5].currentVelocityMs).toBeNull();
+    expect(out[25].currentVelocityMs).toBeNull();
+    expect(out[15].currentVelocityMs).toBeCloseTo(0.4, 10);
+    // Past the series' last hour (29) the edge mean holds.
+    expect(out[35].currentVelocityMs).toBeCloseTo(0.4, 10);
+  });
+
   it("lets a channel's pins split one weight", () => {
     const own = { point: here, hours: [hour("t", 0, 0)] };
     const lone = smoothedDriftHours(own, [{ point: here, hours: [hour("t", 0.4, 0)] }])[0];

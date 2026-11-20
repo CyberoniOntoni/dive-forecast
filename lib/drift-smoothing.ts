@@ -47,7 +47,7 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
   const others = neighbours
     .map((sample) => ({
       weight: (sample.share ?? 1) * driftWeight(distanceKm(own.point, sample.point)),
-      lend: edgeHeldCurrent(sample.hours),
+      lend: currentLookup(sample.hours),
     }))
     .filter((item) => item.weight > 0 && item.lend != null);
   if (others.length === 0) return [...own.hours];
@@ -77,12 +77,12 @@ export function smoothedDriftHours(own: DriftSample, neighbours: readonly DriftS
 
 type Vector = { east: number; north: number };
 
-
 /**
- * A lookup of a neighbour's current by hour that holds its 25-hour edge means past either end of its series. Null
- * when the series has no current at all.
+ * A lookup of a neighbour's current by hour. Inside its series it gives the hour's own current, or null where that
+ * hour has none (masked); past either end of the series, for up to DRIFT_EDGE_HOLD_HOURS, the mean of the 25 hours
+ * with a current at that end. Null when the series has no current at all.
  */
-function edgeHeldCurrent(hours: readonly MarineHour[]): ((time: string) => Vector | null) | null {
+function currentLookup(hours: readonly MarineHour[]): ((time: string) => Vector | null) | null {
   const byTime = currentByTime(hours);
   const times = [...byTime.keys()].sort();
   if (times.length === 0) return null;
@@ -95,8 +95,10 @@ function edgeHeldCurrent(hours: readonly MarineHour[]): ((time: string) => Vecto
     }
     return { east: east / picked.length, north: north / picked.length };
   };
-  const firstMs = parseWall(times[0]);
-  const lastMs = parseWall(times[times.length - 1]);
+  // The series' own ends, its hours without a current included: a masked hour inside it lends nothing.
+  const spanMs = hours.map((hour) => parseWall(hour.time)).filter((ms) => Number.isFinite(ms));
+  const firstMs = Math.min(...spanMs);
+  const lastMs = Math.max(...spanMs);
   const head = mean(times.slice(0, EDGE_MEAN_HOURS));
   const tail = mean(times.slice(-EDGE_MEAN_HOURS));
   const holdMs = DRIFT_EDGE_HOLD_HOURS * HOUR_MS;
