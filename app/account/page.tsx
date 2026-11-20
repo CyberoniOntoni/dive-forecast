@@ -100,6 +100,10 @@ export default async function AccountPage() {
         <a href="mailto:support@50bar.app" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
           Support
         </a>
+        {" · "}
+        <Link href="/android" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
+          Android app beta
+        </Link>
         {account.moderator ? (
           <>
             {" · "}

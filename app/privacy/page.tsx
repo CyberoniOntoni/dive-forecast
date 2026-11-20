@@ -12,7 +12,7 @@ export const metadata: Metadata = {
  * does: change it with any change to what is collected, sent or kept (lib/types.ts User, Report, Rating, Site,
  * DivePlan, PendingLogin; lib/accounts.ts deleteAccountRecords; lib/email.ts; the map layers' tile hosts).
  */
-const UPDATED = "18 November 2026";
+const UPDATED = "20 November 2026";
 /** Where privacy questions and deletion requests go. */
 const PRIVACY_EMAIL = "privacy@50bar.app";
 /** Help with the website or the app. */
@@ -111,7 +111,7 @@ export default function PrivacyPage() {
         </p>
         <p>
           <strong className="text-foam">On your device:</strong> the website keeps your sign-in in a cookie, your map
-          layers in your browser&rsquo;s storage, and the map view and list filter for the open tab only. The app keeps your sign-in token (never backed up
+          layers and whether you closed the app beta invitation in your browser&rsquo;s storage, and the map view and list filter for the open tab only. The app keeps your sign-in token (never backed up
           or moved to another phone), a copy of forecasts and maps for offline use, and your settings. These stay on
           your device.
         </p>
