@@ -17,7 +17,8 @@ import {
 import { applyAxisReports } from "./axis-reports";
 import { channelSource, channelWeights, lagoonHours, lagoonSink, rimSources, type LagoonSink, type LagoonSource } from "./lagoon-flow";
 import { crossesRim, siteRoute } from "./site-type";
-import { fetchMarine, marineSeriesStale, seawardPoint, siteMarineHours, type FetchOptions } from "./marine";
+import { fetchMarine, marineSeriesStale, seawardPoint, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
+import { SEAWARD_STEPS_KM } from "./floor-sample";
 import { DRIFT_SMOOTHING_MAX_KM, smoothedDriftHours, type DriftSample } from "./drift-smoothing";
 import { distanceKm } from "./geometry";
 import { seawardKmFor } from "./seaward-floor";
@@ -111,12 +112,17 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
           ...options,
           seawardKm: seawardKmFor(channel.id),
         });
-        if (marine.ok) return { channel, hours: marine.hours, deg };
-        if (marine.pending) pending = true;
-        return null;
+        if (!marine.ok) {
+          if (marine.pending) pending = true;
+          return null;
+        }
+        // The same shared drift the channel's own forecast uses (checkedMarine).
+        const shared = await sharedDriftHours(channel, mates, atoll, deg, marine.hours, options);
+        if (shared.pending) pending = true;
+        return { channel, hours: shared.hours, deg };
       }),
     );
-    const loadedChannels = shareChannelDrift(fetched.filter((item) => item != null));
+    const loadedChannels = fetched.filter((item) => item != null);
     // Dive sites in one channel share its weight, so a channel counts once however many pins it has. Shared among
     // the pins that loaded, so a pin still fetching does not take part of its channel's weight with it.
     const weights = channelWeights(loadedChannels.map((item) => item.channel));
@@ -207,10 +213,7 @@ async function checkedMarine(
   });
   if (!marine.ok) return { ok: false, bearing, bearingSource };
   const hours = crossesRim(site, mates)
-    ? smoothedDriftHours(
-        { point: samplePoint(site, bearing), hours: marine.hours },
-        await driftNeighbours(site, mates, atoll, samplePoint(site, bearing), options),
-      )
+    ? (await sharedDriftHours(site, mates, atoll, bearing, marine.hours, options)).hours
     : marine.hours;
 
   return {
@@ -342,21 +345,39 @@ function samplePoint(site: Pick<Site, "id" | "lat" | "lon">, bearing: number): {
   return seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
 }
 
-const neighbourPointMemo = new Map<string, { id: string; point: { lat: number; lon: number } }[]>();
+/**
+ * Two pins further apart than this cannot have sample points within DRIFT_SMOOTHING_MAX_KM: each sample point is at
+ * most the largest GEBCO step-out from its pin.
+ */
+const LENDER_PIN_REACH_KM = DRIFT_SMOOTHING_MAX_KM + 2 * Math.max(...SEAWARD_STEPS_KM);
+
+const lenderPointMemo = new Map<string, { lat: number; lon: number }[]>();
 
 /**
- * The catalog channel sites of the site's atoll (crossing the rim, so passes, channel thilas and corners) whose sample
- * points lie within DRIFT_SMOOTHING_MAX_KM of the site's own, with those points. Pins added in the app are left out,
- * so a new pin never shifts the catalog's forecasts. Kept per site: resolving a bearing walks the outline.
+ * What decides a site's lenders: every same-atoll pin's place and kind. Whether a mate crosses the rim depends on the
+ * passes near it, and a fallback bearing on the seeded mates, so any change among them must miss the memo.
  */
-function neighbourPoints(
+function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
+  return mates
+    .filter((mate) => mate.atollId === atoll.id)
+    .map((mate) => `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}`)
+    .join("|");
+}
+
+/**
+ * The sample points that lend a site their drift (lib/drift-smoothing.ts): those of the other catalog channel sites
+ * of its atoll (crossing the rim, so passes, channel thilas, corners and funnel walls) within DRIFT_SMOOTHING_MAX_KM
+ * of its own sample point. Pins added in the app never lend, so a new pin never shifts the catalog's forecasts; they
+ * still borrow. Kept per site and atoll line-up: resolving a bearing walks the outline.
+ */
+export function driftLenderPoints(
   site: Site,
   mates: readonly Site[],
   atoll: Atoll,
   own: { lat: number; lon: number },
-): { id: string; point: { lat: number; lon: number } }[] {
-  const key = `${atoll.id}|${atoll.rimSourceUrl}|${site.id}|${own.lat}|${own.lon}|${mates.length}`;
-  const kept = neighbourPointMemo.get(key);
+): { lat: number; lon: number }[] {
+  const key = `${atoll.id}|${atoll.rimSourceUrl}|${site.id}|${own.lat}|${own.lon}|${atollMatesKey(atoll, mates)}`;
+  const kept = lenderPointMemo.get(key);
   if (kept) return kept;
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
   const rim = rimForAtoll(atoll);
@@ -366,51 +387,42 @@ function neighbourPoints(
         mate.id !== site.id &&
         mate.atollId === atoll.id &&
         mate.sourceUrl !== "user" &&
-        // Only pins near the site are worth resolving a bearing for: the step-out is at most a few km.
-        distanceKm(mate, site) <= DRIFT_SMOOTHING_MAX_KM + 10 &&
+        distanceKm(mate, site) <= LENDER_PIN_REACH_KM &&
         crossesRim(mate, mates),
     )
-    .map((mate) => ({ id: mate.id, point: samplePoint(mate, resolveBearing(mate, mates, outside, rim).deg) }))
-    .filter((item) => distanceKm(item.point, own) <= DRIFT_SMOOTHING_MAX_KM);
-  neighbourPointMemo.set(key, points);
+    .map((mate) => samplePoint(mate, resolveBearing(mate, mates, outside, rim).deg))
+    .filter((point) => distanceKm(point, own) <= DRIFT_SMOOTHING_MAX_KM);
+  lenderPointMemo.set(key, points);
   return points;
 }
 
-/**
- * The marine series at the neighbours' sample points, for the drift a channel site shares with them
- * (lib/drift-smoothing.ts). A point still on its first fetch, failed or stale is left out.
- */
-async function driftNeighbours(
-  site: Site,
-  mates: readonly Site[],
-  atoll: Atoll,
-  own: { lat: number; lon: number },
-  options: FetchOptions,
-): Promise<DriftSample[]> {
-  const points = neighbourPoints(site, mates, atoll, own);
-  const fetched = await Promise.all(
-    points.map(async ({ point }) => {
-      const marine = await fetchMarine(point.lat, point.lon, options);
-      return marine.ok && !marineSeriesStale(marine.hours) ? { point, hours: marine.hours } : null;
-    }),
-  );
-  return fetched.filter((item) => item != null);
+/** A series fit to lend its drift: fetched at the lender's own sample point, fresh by age and by its newest hour. */
+export function lendsDrift(marine: MarineFetch): marine is Extract<MarineFetch, { ok: true }> {
+  return marine.ok && !marine.stale && !marineSeriesStale(marine.hours);
 }
 
 /**
- * The lagoon's channel openings with the same shared drift a channel site's own forecast uses: each catalog channel's
- * current averaged with the other catalog channels near it. Pins added in the app share in it but lend none.
+ * A channel site's hours with the drift it shares with its lenders. Each lender is fetched at its own sample point;
+ * one still on its first fetch, failed or stale lends nothing, and `pending` says one was still on its first fetch.
+ * The one path for a channel's own forecast and for its opening in the lagoon flow.
  */
-function shareChannelDrift<T extends { channel: Site; hours: MarineHour[]; deg: number }>(channels: T[]): T[] {
-  const samples = channels.map((item) => ({ item, point: samplePoint(item.channel, item.deg) }));
-  const lenders = samples.filter((sample) => sample.item.channel.sourceUrl !== "user");
-  return samples.map(({ item, point }) => ({
-    ...item,
-    hours: smoothedDriftHours(
-      { point, hours: item.hours },
-      lenders
-        .filter((other) => other.item !== item && distanceKm(other.point, point) <= DRIFT_SMOOTHING_MAX_KM)
-        .map((other) => ({ point: other.point, hours: other.item.hours })),
-    ),
-  }));
+async function sharedDriftHours(
+  site: Site,
+  mates: readonly Site[],
+  atoll: Atoll,
+  bearing: number,
+  hours: MarineHour[],
+  options: FetchOptions,
+): Promise<{ hours: MarineHour[]; pending: boolean }> {
+  const own = samplePoint(site, bearing);
+  let pending = false;
+  const lenders = await Promise.all(
+    driftLenderPoints(site, mates, atoll, own).map(async (point): Promise<DriftSample | null> => {
+      const marine = await fetchMarine(point.lat, point.lon, options);
+      if (lendsDrift(marine)) return { point, hours: marine.hours };
+      if (!marine.ok && marine.pending) pending = true;
+      return null;
+    }),
+  );
+  return { hours: smoothedDriftHours({ point: own, hours }, lenders.filter((item) => item != null)), pending };
 }

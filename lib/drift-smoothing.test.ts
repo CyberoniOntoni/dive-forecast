@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DRIFT_SMOOTHING_MAX_KM, driftWeight, smoothedDriftHours } from "./drift-smoothing";
+import { DRIFT_SMOOTHING_MAX_KM, DRIFT_SMOOTHING_SIGMA_KM, driftWeight, smoothedDriftHours } from "./drift-smoothing";
 import type { MarineHour } from "./types";
 
 const hour = (time: string, speed: number | null, direction: number | null, level = 0.1): MarineHour => ({
@@ -21,6 +21,13 @@ describe("driftWeight", () => {
     expect(driftWeight(1)).toBeGreaterThan(driftWeight(3));
     expect(driftWeight(DRIFT_SMOOTHING_MAX_KM + 0.1)).toBe(0);
     expect(driftWeight(Number.NaN)).toBe(0);
+  });
+
+  it("is a Gaussian with sigma 3 km", () => {
+    expect(DRIFT_SMOOTHING_SIGMA_KM).toBe(3);
+    expect(driftWeight(3)).toBeCloseTo(Math.exp(-0.5), 12);
+    expect(driftWeight(6)).toBeCloseTo(Math.exp(-2), 12);
+    expect(driftWeight(1)).toBeCloseTo(Math.exp(-1 / 18), 12);
   });
 });
 
@@ -48,6 +55,14 @@ describe("smoothedDriftHours", () => {
     expect(smoothedDriftHours(own, [{ point: far, hours: [hour("t", 1, 225)] }])).toEqual(own.hours);
     const shared = smoothedDriftHours(own, [{ point: near, hours: [hour("t", 0.1, 45, -0.3)] }])[0];
     expect(shared.seaLevelM).toBe(0.42);
+  });
+
+  it("changes only the current: every hour keeps its time and sea level, so the tide and head are the site's own", () => {
+    const own = { point: here, hours: [0, 1, 2, 3].map((i) => hour(`t${i}`, 0.1 * i, 30 * i, 0.2 * i - 0.3)) };
+    const other = { point: near, hours: [0, 1, 2, 3].map((i) => hour(`t${i}`, 0.4, 200, 9)) };
+    const out = smoothedDriftHours(own, [other]);
+    expect(out.map((h) => [h.time, h.seaLevelM])).toEqual(own.hours.map((h) => [h.time, h.seaLevelM]));
+    expect(out.some((h, i) => h.currentVelocityMs !== own.hours[i].currentVelocityMs)).toBe(true);
   });
 
   it("skips a neighbour's missing hour or current, and leaves an hour with no current of its own alone", () => {
