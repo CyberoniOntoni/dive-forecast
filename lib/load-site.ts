@@ -496,7 +496,9 @@ async function sharedDriftHours(
       // Waits as the caller does. The map (wait: false) never waits: a lender with no cache yet is queued and lends
       // nothing this time, until the warm-up or the next request fills it in. A site page, a report's saved prediction
       // and the warm-up wait for it, so what is saved with a report is the forecast the same hour shows a moment later.
-      const marine = await fetchMarine(point.lat, point.lon, options);
+      // A lender whose last fetch failed is not waited on again (skipFailed): during an Open-Meteo outage a page would
+      // otherwise sit through one timeout per uncached lender.
+      const marine = await fetchMarine(point.lat, point.lon, { ...options, skipFailed: true });
       if (lendsDrift(marine)) return { pin, point, hours: marine.hours };
       if (!marine.ok && marine.pending) pending = true;
       return null;

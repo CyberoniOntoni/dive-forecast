@@ -117,6 +117,11 @@ export function seawardPoint(
  */
 export type FetchOptions = {
   wait?: boolean;
+  /**
+   * Don't wait again for a point with no cache whose last fetch failed: answer unavailable at once and retry in the
+   * background, as the wave and wind points always do. Set for drift lenders, which are an extra a page can do without.
+   */
+  skipFailed?: boolean;
   /** Seaward distance in km. Absent means 3. The GEBCO table sets it when the 3 km cell is not open ocean. */
   seawardKm?: number;
   /**
@@ -327,7 +332,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: seriesOld(cached) };
     }
     const failed = failedPoints.has(fileName(lat, lon));
-    if (options.wait === false || (failed && source.skipFailedPoints)) {
+    if (options.wait === false || (failed && (source.skipFailedPoints || options.skipFailed))) {
       // A point whose last fetch failed is not waiting on anything: the caller falls back as when it waits.
       runInBackground(refresh(lat, lon));
       return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };
