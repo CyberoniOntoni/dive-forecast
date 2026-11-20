@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Suspense, type ReactNode } from "react";
 import { AccountLink } from "@/components/AccountLink";
 import { AppTabs } from "@/components/AppTabs";
+import { BetaInvite } from "@/components/BetaInvite";
 import { BrandMark } from "@/components/BrandMark";
 import { MapPageLink } from "@/components/MapPageLink";
 import "./globals.css";
@@ -51,6 +52,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             </Suspense>
           </div>
         </header>
+        <Suspense fallback={null}>
+          <BetaInvite />
+        </Suspense>
         <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
       </body>
     </html>

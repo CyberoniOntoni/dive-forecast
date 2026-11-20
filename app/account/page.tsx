@@ -8,6 +8,7 @@ import { BadgeGrid, Stat } from "@/components/ProfileParts";
 import { TermsPrompt } from "@/components/TermsPrompt";
 import { UnblockButton } from "@/components/UnblockButton";
 import { getAccount } from "@/lib/account-actions";
+import { androidBeta } from "@/lib/android-beta";
 import { getBlockedDivers } from "@/lib/moderation-actions";
 import { pointsRuleLines } from "@/lib/profile-words";
 import { signInHref } from "@/lib/sign-in";
@@ -21,6 +22,7 @@ export default async function AccountPage() {
   if (!account) redirect(signInHref("/account"));
   const { stats } = account;
   const blocked = await getBlockedDivers();
+  const beta = androidBeta();
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
@@ -100,6 +102,14 @@ export default async function AccountPage() {
         <a href="mailto:support@50bar.app" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
           Support
         </a>
+        {beta ? (
+          <>
+            {" · "}
+            <Link href="/android" className="underline decoration-foam/40 underline-offset-4 hover:text-foam">
+              Android app beta
+            </Link>
+          </>
+        ) : null}
         {account.moderator ? (
           <>
             {" · "}
