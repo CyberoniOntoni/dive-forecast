@@ -108,9 +108,21 @@ describe("shared drift at a channel site", () => {
     expect(driftShares(site, [sameChannel, catalogMate])).toEqual({ own: 0.5, lenders: [0.5, 1] });
   });
 
-  it("fetches lenders without waiting, so a lender's first fetch never holds up the page", async () => {
+  it("waits for lenders as the caller does, so a report saves the forecast the page shows a moment later", async () => {
     await throughflowWith([site, catalogMate], { ok: true, hours: series(0.3, 220), fetchedAt: Date.now(), stale: false });
-    expect(vi.mocked(Marine.fetchMarine).mock.calls.every(([, , options]) => options?.wait === false)).toBe(true);
+    const calls = vi.mocked(Marine.fetchMarine).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(([, , options]) => options?.wait !== false)).toBe(true);
+  });
+
+  it("does not wait for lenders when the caller does not (the map)", async () => {
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: series(0, 0), fetchedAt: Date.now(), stale: false });
+    vi.mocked(Marine.fetchMarine).mockClear();
+    vi.mocked(Marine.fetchMarine).mockResolvedValue({ ok: false, unavailable: true, pending: true });
+    await loadSite(site, [site, catalogMate], atoll, [], { wait: false });
+    const calls = vi.mocked(Marine.fetchMarine).mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    expect(calls.every(([, , options]) => options?.wait === false)).toBe(true);
   });
 
   it("shares nothing when the site's own hours came from the atoll's ocean point", async () => {

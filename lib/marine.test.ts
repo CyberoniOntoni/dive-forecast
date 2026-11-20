@@ -567,6 +567,43 @@ describe("stale marine cache", () => {
     }
   });
 
+  it("with skipFailed, does not wait again for a point whose last fetch failed, and retries it in the background", async () => {
+    vi.spyOn(fs, "readFileSync").mockImplementation(() => {
+      throw new Error("cache miss");
+    });
+    vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined as unknown as string);
+    vi.spyOn(fs, "writeFileSync").mockImplementation(() => undefined);
+    let fetches = 0;
+    vi.stubGlobal("fetch", async () => {
+      fetches += 1;
+      return new Response(null, { status: 503 });
+    });
+    const lat = 1.5432;
+    const lon = 73.31;
+    try {
+      // The first ask waits for its fetch, which fails.
+      expect(await fetchMarine(lat, lon)).toEqual({ ok: false, unavailable: true });
+      const failedFetches = fetches;
+      expect(failedFetches).toBeGreaterThan(0);
+      // Open-Meteo now answers slowly (still failing). A lender's ask answers before it does and retries behind.
+      let slowDone = false;
+      vi.stubGlobal("fetch", () => {
+        fetches += 1;
+        return new Promise<Response>((resolve) =>
+          setTimeout(() => ((slowDone = true), resolve(new Response(null, { status: 503 }))), 200),
+        );
+      });
+      expect(await fetchMarine(lat, lon, { skipFailed: true })).toEqual({ ok: false, unavailable: true });
+      expect(slowDone).toBe(false);
+      await vi.waitFor(() => expect(fetches).toBeGreaterThan(failedFetches));
+      await vi.waitFor(() => expect(slowDone).toBe(true));
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+      forgetMarineCache(lat, lon);
+    }
+  });
+
   it("without waiting, a site whose seaward point has no cache yet is pending, not the fallback point's series", async () => {
     const lat = 2.4444;
     const lon = 73.6666;

@@ -117,6 +117,11 @@ export function seawardPoint(
  */
 export type FetchOptions = {
   wait?: boolean;
+  /**
+   * Don't wait again for a point with no cache whose last fetch failed: answer unavailable at once and retry in the
+   * background, as the wave and wind points always do. Set for drift lenders, which are an extra a page can do without.
+   */
+  skipFailed?: boolean;
   /** Seaward distance in km. Absent means 3. The GEBCO table sets it when the 3 km cell is not open ocean. */
   seawardKm?: number;
   /**
@@ -181,10 +186,13 @@ export function pointFetcher<T>(source: PointSource<T>) {
       }
     }
     const known = remembered.get(name);
-    if (known && withinTtl(known)) return known;
+    // Within the TTL, or past it but already checked against R2 in this request (R2 had nothing newer, as after an
+    // Open-Meteo outage): `remembered` is the newest there is, so neither the edge nor R2 is asked again. Without the
+    // second case every later ask in the request (a channel point is lent to several neighbours) spent another edge
+    // call of EDGE_CALLS_PER_REQUEST.
+    if (known && (withinTtl(known) || readFromR2().has(name))) return known;
     // Many loads ask for one point at once (a channel site's own series is its neighbours' drift lender): those that
     // overlap share one edge or R2 read, so they spend one call of the request's edge budget (EDGE_CALLS_PER_REQUEST).
-    // A later ask for a copy within the TTL is served from `remembered` above.
     const reading = readsInFlight();
     const running = reading.get(name);
     if (running) return running;
@@ -324,7 +332,7 @@ export function pointFetcher<T>(source: PointSource<T>) {
       return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: seriesOld(cached) };
     }
     const failed = failedPoints.has(fileName(lat, lon));
-    if (options.wait === false || (failed && source.skipFailedPoints)) {
+    if (options.wait === false || (failed && (source.skipFailedPoints || options.skipFailed))) {
       // A point whose last fetch failed is not waiting on anything: the caller falls back as when it waits.
       runInBackground(refresh(lat, lon));
       return failed ? { ok: false, unavailable: true } : { ok: false, unavailable: true, pending: true };

@@ -603,6 +603,41 @@ describe("on a Cloudflare worker", () => {
     }
   });
 
+  it("reads a point past the TTL from the edge and R2 once per request, however often it is asked", async () => {
+    const edge = fakeEdgeCache();
+    let edgeMatches = 0;
+    vi.stubGlobal("caches", { default: { match: (url: string) => (edgeMatches++, edge.match(url)), put: edge.put.bind(edge) } });
+    vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new Error("offline"))));
+    try {
+      const bucket = fakeBucket();
+      const reads: string[] = [];
+      const get = bucket.get.bind(bucket);
+      bucket.get = (key) => (reads.push(key), get(key));
+      const env = { ASSETS: fakeAssets({}), DATA: bucket, DB: fakeD1(), APP_URL: "https://50bar.app" };
+      const hours = [{ time: "2026-10-30T10:00", seaLevelM: 0.4, currentVelocityMs: 0.2, currentDirectionDeg: 90 }];
+      const { marineCacheName } = await import("./marine");
+      const key = `marine-cache/${marineCacheName(4, 73)}`;
+      // After an outage: R2 and the edge both hold a series past the TTL.
+      const old = Date.now() - 20 * 60 * 60 * 1000;
+      await bucket.put(key, JSON.stringify({ fetchedAt: old, hours }));
+      vi.resetModules();
+      newRequest(env);
+      const { fetchMarine } = await import("./marine");
+      expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: old, stale: true });
+      await Promise.all(background);
+      edgeMatches = 0;
+      reads.length = 0;
+      // The next request asks for the point one after another, as a channel's lenders do.
+      newRequest(env);
+      for (let ask = 0; ask < 5; ask += 1) expect(await fetchMarine(4, 73)).toMatchObject({ ok: true, fetchedAt: old });
+      expect(edgeMatches).toBe(1);
+      expect(reads).toEqual([key]);
+      await Promise.all(background);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("stops using the edge copy once a request has spent its Cache API budget", async () => {
     const edge = fakeEdgeCache();
     let calls = 0;
