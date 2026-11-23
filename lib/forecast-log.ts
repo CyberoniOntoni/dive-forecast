@@ -7,8 +7,14 @@ import type { ForecastAtReport } from "./types";
  * The prediction to save with a report filed for `time` (Maldives wall time).
  * `shown` is the site's forecast with its earlier reports, as the page displays it; `modelOnly` is the same
  * site loaded with no reports. Null when there is no forecast hour within 90 minutes, so there is nothing to score.
+ * `hindcast` marks one worked out from the long past window for a report filed late (ForecastAtReport.hindcast).
  */
-export function forecastAtReport(shown: SiteLoad, modelOnly: SiteLoad, time: string): ForecastAtReport | null {
+export function forecastAtReport(
+  shown: SiteLoad,
+  modelOnly: SiteLoad,
+  time: string,
+  hindcast = false,
+): ForecastAtReport | null {
   const hour = nearestForecastHour(shown.hours, time);
   if (!hour || shown.bearing == null) return null;
   const plain = nearestForecastHour(modelOnly.hours, time);
@@ -21,5 +27,6 @@ export function forecastAtReport(shown: SiteLoad, modelOnly: SiteLoad, time: str
     bearingSource: shown.bearingSource,
     shown: { direction: hour.direction, strength: hour.strength, confidence: hour.confidence },
     modelOnly: plain ? { direction: plain.direction, strength: plain.strength } : null,
+    ...(hindcast ? { hindcast: true as const } : {}),
   };
 }

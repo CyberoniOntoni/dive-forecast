@@ -21,6 +21,18 @@ function report(direction: Report["direction"], strength: Strength, p?: Forecast
 }
 
 describe("summarizeReports", () => {
+  it("scores hindcasts for late reports apart from predictions made before the dive", () => {
+    const summaries = summarizeReports([
+      report("incoming", "strong", predicted()),
+      report("incoming", "strong", predicted({ hindcast: true })),
+      report("outgoing", "strong", predicted({ hindcast: true })),
+    ]);
+    expect(summaries.map((summary) => [summary.hindcast, summary.reports])).toEqual([
+      [false, 1],
+      [true, 2],
+    ]);
+  });
+
   it("leaves out reports with no saved prediction", () => {
     expect(summarizeReports([report("incoming", "strong")])).toEqual([]);
   });

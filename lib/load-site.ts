@@ -27,7 +27,7 @@ import {
 } from "./lagoon-flow";
 import { readIslands } from "./islands";
 import { crossesRim, siteRoute } from "./site-type";
-import { fetchMarine, marineSeriesStale, seawardPoint, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
+import { fetchMarine, marineSeriesStale, seawardPoint, seriesWindowKey, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
 import { SEAWARD_STEPS_KM } from "./floor-sample";
 import { DRIFT_SMOOTHING_MAX_KM, smoothedDriftHours, type DriftSample } from "./drift-smoothing";
 import { distanceKm } from "./geometry";
@@ -121,10 +121,12 @@ export function clearLagoonMemo(): void {
  * then the next load builds them again with whatever has arrived.
  */
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
-  const kept = lagoonMemo.get(atoll.id);
+  // The long past window (options.past) has openings of its own.
+  const memoKey = seriesWindowKey(options, atoll.id);
+  const kept = lagoonMemo.get(memoKey);
   if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
   const lagoonLoading = lagoonLoadsInFlight();
-  const running = lagoonLoading.get(atoll.id);
+  const running = lagoonLoading.get(memoKey);
   if (running) return running;
   const load = (async () => {
     const ring = await atollRing(atoll, options);
@@ -163,10 +165,10 @@ async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: Fetc
       ...(rim ? openRim(atoll.id, porous, rim) : porous),
       ...loadedChannels.map((item, index) => channelSource(item.channel, item.hours, item.deg, ring.level, weights[index])),
     ];
-    if (!pending) lagoonMemo.set(atoll.id, { at: Date.now(), sources });
+    if (!pending) lagoonMemo.set(memoKey, { at: Date.now(), sources });
     return sources;
-  })().finally(() => lagoonLoading.delete(atoll.id));
-  lagoonLoading.set(atoll.id, load);
+  })().finally(() => lagoonLoading.delete(memoKey));
+  lagoonLoading.set(memoKey, load);
   return load;
 }
 
@@ -360,12 +362,13 @@ export async function reportTideForSite(
   mates: readonly Site[],
   atoll: Atoll | undefined,
   time: string,
+  options: FetchOptions = {},
 ): Promise<ReportTide | null> {
-  const marine = await checkedMarine(site, mates, atoll);
+  const marine = await checkedMarine(site, mates, atoll, options);
   if (!marine.ok) return null;
   const slopeWindowM = residualSlopeWindow(marine.hours, time);
   if (!slopeWindowM) return null;
-  const ring = await ringLevelFor(siteRoute(site, mates, marine.bearing).route, atoll);
+  const ring = await ringLevelFor(siteRoute(site, mates, marine.bearing).route, atoll, options);
   return {
     headWindowM: headWindowAt(marine.hours, time, ring),
     slopeWindowM,

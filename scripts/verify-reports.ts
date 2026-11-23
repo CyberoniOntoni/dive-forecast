@@ -23,7 +23,8 @@ function main(): void {
     return;
   }
   for (const summary of summarizeReports(reports)) {
-    console.log(`\nmodel ${summary.modelVersion}  nudge ${summary.nudge}  (${summary.reports} reports)`);
+    const kind = summary.hindcast ? "  hindcast (reports filed after the week's series had passed the dive)" : "";
+    console.log(`\nmodel ${summary.modelVersion}  nudge ${summary.nudge}${kind}  (${summary.reports} reports)`);
     if (summary.reports < MIN_RELIABLE) {
       console.log(`  Only ${summary.reports} reports: treat every number below as anecdote (a reliable read needs about ${MIN_RELIABLE}+, from many days and sites).`);
     }

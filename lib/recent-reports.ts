@@ -48,7 +48,8 @@ export function recentReportRows(
     .map((report) => {
       const heading = typeof report.alongHeadingDeg === "number" ? report.alongHeadingDeg : null;
       const wayOf = (direction: Direction) => wayWord(direction, heading);
-      const shown = report.predicted?.shown;
+      // A hindcast was worked out after the dive (a late report), so it is not what the forecast said beforehand.
+      const shown = report.predicted?.hindcast ? undefined : report.predicted?.shown;
       return {
         time: report.time,
         when: wallLabel(report.time),

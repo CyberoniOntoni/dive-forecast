@@ -34,6 +34,26 @@ describe("recentReportRows", () => {
   });
   const now = "2026-10-01T12:00";
 
+  it("shows no forecast for a hindcast, which was worked out after the dive", () => {
+    const predicted = {
+      modelVersion: "x/27",
+      nudge: "drift" as const,
+      issuedAt: null,
+      stale: false,
+      bearingDeg: 90,
+      bearingSource: "override" as const,
+      shown: { direction: "incoming" as const, strength: "strong" as const, confidence: "low" as const },
+      modelOnly: null,
+    };
+    const [before] = recentReportRows([report("2026-09-30T09:00", { predicted })], { nowWall: now, route: "channel" });
+    expect(before.forecast).not.toBeNull();
+    const [late] = recentReportRows([report("2026-09-30T09:00", { predicted: { ...predicted, hindcast: true } })], {
+      nowWall: now,
+      route: "channel",
+    });
+    expect(late.forecast).toBeNull();
+  });
+
   it("lists the newest first, at most ten", () => {
     const reports = Array.from({ length: 12 }, (_, day) => report(`2026-09-${String(day + 10).padStart(2, "0")}T09:00`));
     const rows = recentReportRows(reports, { nowWall: now, route: "channel" });

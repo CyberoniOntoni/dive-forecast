@@ -10,6 +10,7 @@ import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
+import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
 import type { RimRing } from "./rim";
@@ -17,6 +18,7 @@ import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { blockedIds, requireTermsAccepted } from "./moderation";
 import { ready, readyWith } from "./ready";
+import { runInBackground } from "./cloudflare";
 import { currentSession, requireSession } from "./auth";
 import { requireReviewText, requireSiteDetails, type SiteDetailsInput } from "./site-details";
 import {
@@ -66,6 +68,8 @@ import {
 } from "./types";
 
 const REPORT_HOUR_INDEX = 6;
+/** A full saved tide: 13 slopes (6 hours either side of the dive) and the day's range. */
+const REPORT_TIDE_HOURS = 2 * REPORT_HOUR_INDEX + 2;
 
 export type ReportActionState = {
   success: boolean;
@@ -388,8 +392,12 @@ export async function addReport(input: unknown): Promise<Report> {
   requireNotAhead(time, zone, filedAt.getTime());
   requireNotTooOld(time, zone, filedAt.getTime());
   requireNotDuplicate(site.id, time, body.direction as Direction, body.strength as Strength, filedAt.getTime());
-  const tide = await reportTide(site, time);
-  const predicted = await predictionAtReport(site, time);
+  const deadline = pastWindowDeadline();
+  const { tide, past } = await reportTideAnyAge(site, time, deadline);
+  const predicted = past
+    ? await deadline.within(predictionAtReport(site, time, true), null)
+    : await predictionAtReport(site, time);
+  deadline.clear();
   const report: Report = {
     id: crypto.randomUUID(),
     siteId: body.siteId as string,
@@ -435,15 +443,16 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
  * The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report.
  * Only reports from before this dive count, as in the replay, so a back-dated report is not scored on later dives.
  */
-async function predictionAtReport(site: Site, time: string): Promise<ForecastAtReport | null> {
+async function predictionAtReport(site: Site, time: string, past = false): Promise<ForecastAtReport | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
     const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
-    const shown = await loadSite(site, catalog.sites, atoll, earlier);
-    const modelOnly = await loadSite(site, catalog.sites, atoll, []);
-    return forecastAtReport(shown, modelOnly, time);
+    const options = past ? PAST_WINDOW : {};
+    const shown = await loadSite(site, catalog.sites, atoll, earlier, options);
+    const modelOnly = await loadSite(site, catalog.sites, atoll, [], options);
+    return forecastAtReport(shown, modelOnly, time, past);
   } catch {
     return null;
   }
@@ -464,14 +473,76 @@ async function reportAlongHeading(site: Site): Promise<number | null> {
   }
 }
 
-async function reportTide(site: Site, time: string): Promise<ReportTide | null> {
+async function reportTide(site: Site, time: string, options: FetchOptions = {}): Promise<ReportTide | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    return await reportTideForSite(site, catalog.sites, atoll, time);
+    return await reportTideForSite(site, catalog.sites, atoll, time, options);
   } catch {
     return null;
   }
+}
+
+/**
+ * The long past window, refreshed first when its copy is past the TTL. Nothing warms it, so a cached copy can be days
+ * old and end before the dive; served as it is (refreshed only behind the response), the late report would save no
+ * tide, the case this window is for.
+ */
+const PAST_WINDOW: FetchOptions = { past: true, refreshOlderThanMs: MARINE_CACHE_TTL_MS };
+
+/**
+ * The most one report waits on the long past window, its tide and its prediction together: under the app's 30 s
+ * read timeout with the week's fetch before it. Its points are often cold (a lagoon site's take in every channel of
+ * the atoll), and in an outage each waits on its timeouts; past this the report is saved with what the week's series
+ * knew, and the fetches carry on in the background into the cache.
+ */
+const PAST_WINDOW_BUDGET_MS = 15_000;
+
+/** A deadline shared by a report's past-window waits; `within` gives `otherwise` once it has passed. */
+function pastWindowDeadline() {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let passed = false;
+  const expired = new Promise<void>((resolve) => {
+    timer = setTimeout(() => {
+      passed = true;
+      resolve();
+    }, PAST_WINDOW_BUDGET_MS);
+  });
+  return {
+    async within<T>(work: Promise<T>, otherwise: T): Promise<T> {
+      if (passed) return otherwise;
+      runInBackground(work);
+      return Promise.race([work, expired.then(() => otherwise)]);
+    },
+    clear: () => clearTimeout(timer),
+  };
+}
+
+/** Hours of a report's saved tide that are known: its slope window's, plus one for the day's range. */
+function tideHoursKnown(tide: ReportTide | null): number {
+  if (!tide) return 0;
+  return tide.slopeWindowM.filter((slope) => slope != null).length + (tide.rangeM != null ? 1 : 0);
+}
+
+/**
+ * The tide to save with a report. The week's series holds one past day, and its residual starts 12 hours in, so a
+ * dive from before about 7 PM yesterday (the slope window reaches 6 hours back) has no tide there, or only part of its window: such a report could never
+ * teach the forecast or be scored. Then the same is read from the long past window (REPORT_PAST_DAYS) instead, when
+ * that knows more; `past` says it did, and the prediction is then worked out from that window too.
+ */
+async function reportTideAnyAge(
+  site: Site,
+  time: string,
+  deadline: ReturnType<typeof pastWindowDeadline>,
+): Promise<{ tide: ReportTide | null; past: boolean }> {
+  const tide = await reportTide(site, time);
+  // No tide at all means the week's fetch failed (an old dive still gets a window, of nulls): Open-Meteo is down or
+  // the site has never loaded, and a second round of cold fetches for the past window would only wait on it again.
+  // Age empties the window from its start (6 hours before the dive); a hole elsewhere is a gap in the series, which
+  // the past window would not fill, and the dive is still the week's to forecast.
+  if (!tide || tide.slopeWindowM[0] != null || tideHoursKnown(tide) === REPORT_TIDE_HOURS) return { tide, past: false };
+  const older = await deadline.within(reportTide(site, time, PAST_WINDOW), null);
+  return tideHoursKnown(older) > tideHoursKnown(tide) ? { tide: older, past: true } : { tide, past: false };
 }
 
 export async function forecastSite(siteId: string): Promise<SiteForecast> {

@@ -7,6 +7,8 @@ import type { MarineHour } from "./types";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/** How old a cached series may be before it is refreshed (behind the response, unless refreshOlderThanMs asks to wait). */
+export const MARINE_CACHE_TTL_MS = CACHE_TTL_MS;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 /**
  * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is only used once R2 has been
@@ -85,8 +87,9 @@ export async function siteMarineHours(
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return { ...usableMarine(fallback), fromFallback: true };
-  const ownCached = await readCachedHours(point.lat, point.lon);
-  const cached = ownCached ?? (await readCachedHours(fallbackLat, fallbackLon));
+  const points = pointsFor(options);
+  const ownCached = await points.readCached(point.lat, point.lon);
+  const cached = ownCached ?? (await points.readCached(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
   if (!cached) return !fallback.ok && fallback.pending ? fallback : { ok: false, unavailable: true };
   return { ok: true, hours: cached.hours, fetchedAt: cached.fetchedAt, stale: true, ...(ownCached ? {} : { fromFallback: true as const }) };
@@ -122,6 +125,12 @@ export type FetchOptions = {
    * background, as the wave and wind points always do. Set for drift lenders, which are an extra a page can do without.
    */
   skipFailed?: boolean;
+  /**
+   * The long past window instead of the forecast week: REPORT_PAST_DAYS past days and 2 forecast days (today and
+   * tomorrow), cached apart (prefix
+   * `past_`). For a report whose dive is too far back for the week's series to hold its tide (lib/actions.ts).
+   */
+  past?: boolean;
   /** Seaward distance in km. Absent means 3. The GEBCO table sets it when the 3 km cell is not open ocean. */
   seawardKm?: number;
   /**
@@ -138,7 +147,12 @@ export type FetchOptions = {
  * point it has seen before. A point with no cache at all waits for its first fetch, unless the caller asked not to wait.
  */
 export function fetchMarine(lat: number, lon: number, options: FetchOptions = {}): Promise<MarineFetch> {
-  return marinePoints.fetch(lat, lon, options);
+  return pointsFor(options).fetch(lat, lon, options);
+}
+
+/** The week's points, or the long past window's (options.past). */
+function pointsFor(options: Pick<FetchOptions, "past">) {
+  return options.past ? marinePastPoints : marinePoints;
 }
 
 export type PointFetch<T> =
@@ -459,8 +473,19 @@ function readHourly(body: unknown): HourlyColumns | null {
   };
 }
 
-async function requestMarine(lat: number, lon: number): Promise<MarineHour[] | null> {
-  const query = marineQuery(lat, lon);
+/** A memo key for something built from fetched series: the long past window (options.past) gets its own. */
+export function seriesWindowKey(options: Pick<FetchOptions, "past">, key: string): string {
+  return options.past ? `past|${key}` : key;
+}
+
+/**
+ * Past days in the long window: a report can be filed up to 14 days after the dive (REPORT_MAX_AGE_DAYS in
+ * lib/actions.ts), and its residual needs 12 hours and its slope window 6 more before the dive.
+ */
+export const REPORT_PAST_DAYS = 16;
+
+async function requestMarine(lat: number, lon: number, past = false): Promise<MarineHour[] | null> {
+  const query = marineQuery(lat, lon, past);
   for (const endpoint of MARINE_ENDPOINTS) {
     const body = await fetchOpenMeteoJson(`${endpoint}?${query}`, "Marine");
     const hours = body == null ? null : marineHoursFromApi(body);
@@ -469,7 +494,7 @@ async function requestMarine(lat: number, lon: number): Promise<MarineHour[] | n
   return null;
 }
 
-function marineQuery(lat: number, lon: number): string {
+function marineQuery(lat: number, lon: number, past = false): string {
   const params = new URLSearchParams({
     latitude: String(lat),
     longitude: String(lon),
@@ -481,6 +506,11 @@ function marineQuery(lat: number, lon: number): string {
     // Seven days shows about six and a half ahead, for planning a trip. The current runs to the end of it.
     forecast_days: "7",
   });
+  if (past) {
+    // The past window: 2 forecast days (today and tomorrow) cover the slope window and residual of any dive already done.
+    params.set("past_days", String(REPORT_PAST_DAYS));
+    params.set("forecast_days", "2");
+  }
   return params.toString();
 }
 
@@ -554,6 +584,18 @@ export function parseMarineCache(raw: string): { fetchedAt: number; hours: Marin
 const marinePoints = pointFetcher<MarineHour>({
   prefix: "",
   request: requestMarine,
+  readHours: marineCacheHours,
+  skipFailedPoints: false,
+});
+
+/**
+ * The same points over the long past window, for reports filed after the week's series has moved past the dive. Open-
+ * Meteo's past hours are the same values the week's series held for them (checked 23 Nov 2026: identical sea level
+ * over the 48 shared hours), so a late report is saved with the tide it would have had if filed at once.
+ */
+const marinePastPoints = pointFetcher<MarineHour>({
+  prefix: "past_",
+  request: (lat, lon) => requestMarine(lat, lon, true),
   readHours: marineCacheHours,
   skipFailedPoints: false,
 });

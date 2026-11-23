@@ -148,7 +148,8 @@ export function recentActivity(
       const at = reportAt(report);
       if (!recent(at)) continue;
       const shown = report.predicted?.shown;
-      const forecast = shown ? `; forecast said ${shown.direction}, ${strengthLabel(shown.strength)}` : "";
+      const said = report.predicted?.hindcast ? "hindcast (worked out after the dive) said" : "forecast said";
+      const forecast = shown ? `; ${said} ${shown.direction}, ${strengthLabel(shown.strength)}` : "";
       push({
         key: `report:${report.id}`,
         kind: "report",

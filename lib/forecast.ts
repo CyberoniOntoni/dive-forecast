@@ -27,13 +27,15 @@ const MIN_MEAN_SAMPLES = 18;
 const WINDOW_HALF_HOURS = 6;
 const WINDOW_HOURS = WINDOW_HALF_HOURS * 2 + 1;
 const HOUR_MATCH_MS = 45 * 60 * 1000;
+/** A report's own model hour is the one its minute falls in, rounded: at most half an hour away. */
+const OWN_HOUR_MS = 30 * 60 * 1000;
 const DRIFT_HALF_HOURS = 12;
 
 /**
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/26";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/27";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -882,7 +884,12 @@ export function aggregateReportPull(
 
   for (const item of classified) {
     if (item.kind === "unusable") continue;
-    const reportMs = parseWall(item.report.time);
+    // Inside the series a report counts from the model hour it is about (seriesIndex), as at walls (axis-reports):
+    // a report at 10:20 pulls 10:00, the model hour its minute rounds to, not only from 11:00 on. Only that hour: where
+    // the series lacks it, the nearest hour can be one either side, so the report counts from its own minute.
+    const ownMs = parseWall(item.report.time);
+    const hourOfReport = item.seriesIndex >= 0 ? parseWall(hours[item.seriesIndex].time) : Number.NaN;
+    const reportMs = Math.abs(hourOfReport - ownMs) <= OWN_HOUR_MS ? hourOfReport : ownMs;
     if (Number.isNaN(reportMs)) continue;
     const sinceHours = (hourMs - reportMs) / HOUR_MS;
     if (!Number.isFinite(sinceHours) || sinceHours < 0 || sinceHours >= FADE_HOURS) continue;
