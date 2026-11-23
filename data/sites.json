@@ -817,7 +817,7 @@
           "basis": "position"
         }
       ],
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 630,
       "gridDepthMeanM": 26,
@@ -917,7 +917,7 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1760,
       "atlasWidthConfidence": "low",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 1620,
       "gridDepthMeanM": 15,
@@ -1313,7 +1313,7 @@
           "basis": "position"
         }
       ],
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -1601,7 +1601,7 @@
           "basis": "depth-only"
         }
       ],
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 3050,
       "gridDepthMeanM": 14,
@@ -1641,7 +1641,7 @@
       "lat": 4.484698,
       "lon": 73.368913,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 3050,
       "gridDepthMeanM": 16,
@@ -1732,7 +1732,7 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 9,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 3250,
       "gridDepthMeanM": 20,
@@ -1749,7 +1749,7 @@
       "diveTopM": 16,
       "diveMaxM": 28,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 3080,
       "gridDepthMeanM": 15,
@@ -1949,7 +1949,7 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 970,
       "atlasWidthConfidence": "checked",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 900,
       "gridDepthMeanM": 12,
@@ -2350,7 +2350,7 @@
       "diveTopM": 13,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2436,7 +2436,7 @@
       "lat": 4.152232,
       "lon": 72.932923,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2456,7 +2456,7 @@
       "lat": 4.115838,
       "lon": 72.949382,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2469,7 +2469,7 @@
       "diveTopM": 8,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2497,7 +2497,7 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1540,
       "atlasWidthConfidence": "checked",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 1560,
       "gridDepthMeanM": 17,
@@ -2852,7 +2852,7 @@
       "channelSourceUrl": "https://sharkrayareas.org/portfolio-item/fushifaru-kandu-isra/",
       "atlasWidthM": 840,
       "atlasWidthConfidence": "checked",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 910,
       "gridDepthMeanM": 13,
@@ -2903,7 +2903,7 @@
       "diveTopM": 6,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2918,7 +2918,7 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 1380,
       "atlasWidthConfidence": "checked",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 1360,
       "gridDepthMeanM": 18,
@@ -2935,7 +2935,7 @@
       "diveTopM": 10,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2948,7 +2948,7 @@
       "diveTopM": 12,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -2961,7 +2961,7 @@
       "diveTopM": 8,
       "diveMaxM": 25,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -3019,7 +3019,7 @@
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -3363,6 +3363,66 @@
       "siteTypeSource": "derived"
     },
     {
+      "id": "fugiri-corner",
+      "name": "Fugiri Corner",
+      "atollId": "raa",
+      "lat": 5.746399,
+      "lon": 72.84838,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "corner",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "fugiri-thila",
+      "name": "Fugiri Thila",
+      "atollId": "raa",
+      "lat": 5.735304,
+      "lon": 72.864916,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "lundhufushi-corner",
+      "name": "Lundhufushi Corner",
+      "atollId": "raa",
+      "lat": 5.641806,
+      "lon": 72.98782,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "arilandhoo-corner",
+      "name": "Arilandhoo Corner",
+      "atollId": "raa",
+      "lat": 5.658606,
+      "lon": 72.957636,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "hulhudhoo-corner",
+      "name": "Hulhudhoo Corner",
+      "atollId": "raa",
+      "lat": 5.739833,
+      "lon": 73.018228,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "corner",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "ifuru-uthuru-thila",
+      "name": "Ifuru Uthuru Thila",
+      "atollId": "raa",
+      "lat": 5.729152,
+      "lon": 73.021574,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
       "id": "bathalaa",
       "name": "Bathalaa",
       "atollId": "baa",
@@ -3585,7 +3645,7 @@
       "lat": 5.05896,
       "lon": 73.033946,
       "sourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -3714,7 +3774,7 @@
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
       "atlasWidthM": 2020,
       "atlasWidthConfidence": "checked",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived",
       "gridWidthM": 1980,
       "gridDepthMeanM": 18,
@@ -3786,7 +3846,7 @@
       "diveTopM": 7,
       "diveMaxM": 30,
       "depthSourceUrl": "https://www.seasketch.org/maldives/app/overlays",
-      "siteType": "channel-thila",
+      "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
     {
@@ -4360,11 +4420,9 @@
       "id": "nilandhoo-kandu",
       "name": "Nilandhoo Kandu",
       "atollId": "gaafu-alif",
-      "lat": 0.6297,
-      "lon": 73.4541,
-      "sourceUrl": "https://www.liveaboard.com/diving/maldives/huvadhoo-atoll",
-      "pinPlacement": "imagery",
-      "pinNote": "The gap between Nilandhoo and Dhaandhoo. The gap north of Nilandhoo is the other candidate.",
+      "lat": 0.650144,
+      "lon": 73.445488,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
       "siteTypeSource": "derived"
     },
@@ -4372,24 +4430,280 @@
       "id": "kondey-kandu",
       "name": "Kondey Kandu",
       "atollId": "gaafu-alif",
-      "lat": 0.488,
-      "lon": 73.5579,
-      "sourceUrl": "https://zentacle.com/loc/mv/gaafu-alif-atoll",
-      "pinPlacement": "imagery",
-      "pinNote": "The gap in the east rim between Kondey and Dhiyadhoo.",
+      "lat": 0.488081,
+      "lon": 73.558522,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "dhaandhoo-kandu",
+      "name": "Dhaandhoo Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.631756,
+      "lon": 73.45698,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "dhaandhoo-caves",
+      "name": "Dhaandhoo Caves",
+      "atollId": "gaafu-alif",
+      "lat": 0.629817,
+      "lon": 73.459047,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "vodamula",
+      "name": "Vodamula",
+      "atollId": "gaafu-alif",
+      "lat": 0.600553,
+      "lon": 73.497632,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "pass",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "mahadhoo",
+      "name": "Mahadhoo",
+      "atollId": "gaafu-alif",
+      "lat": 0.590129,
+      "lon": 73.503437,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "corner",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "mobula",
+      "name": "Mobula",
+      "atollId": "gaafu-alif",
+      "lat": 0.572105,
+      "lon": 73.5188,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "corner",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "funadhoo-kandu",
+      "name": "Funadhoo Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.569356,
+      "lon": 73.525837,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "park-thila",
+      "name": "Park Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.545196,
+      "lon": 73.483458,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kondey-coral-garden",
+      "name": "Coral Garden",
+      "atollId": "gaafu-alif",
+      "lat": 0.484132,
+      "lon": 73.541705,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "nemo-thila",
+      "name": "Nemo Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.467493,
+      "lon": 73.549268,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "gemanafushi-kandu",
+      "name": "Gemanafushi Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.456098,
+      "lon": 73.569854,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "gemanafushi-canyon",
+      "name": "Gemanafushi Canyon",
+      "atollId": "gaafu-alif",
+      "lat": 0.443059,
+      "lon": 73.578593,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "hula-thila",
+      "name": "Hula Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.450525,
+      "lon": 73.504805,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "kudafaru-thila",
+      "name": "Kudafaru Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.446215,
+      "lon": 73.499973,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "hassanbe-thila",
+      "name": "Hassanbe Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.44512,
+      "lon": 73.511182,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "coral-city",
+      "name": "Coral City (Dhuraghalla)",
+      "atollId": "gaafu-alif",
+      "lat": 0.6142,
+      "lon": 73.441186,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "coral-garden-2-gaafu-alif",
+      "name": "Coral Garden 2",
+      "atollId": "gaafu-alif",
+      "lat": 0.657396,
+      "lon": 73.41398,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "boddu",
+      "name": "Boddu",
+      "atollId": "gaafu-alif",
+      "lat": 0.705331,
+      "lon": 73.330384,
+      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "dhiyadhoo",
+      "name": "Dhiyadhoo",
+      "atollId": "gaafu-alif",
+      "lat": 0.477642,
+      "lon": 73.527374,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Dhiyadhoo/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "hootu-kandu",
+      "name": "Hootu Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.581235,
+      "lon": 73.035393,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Hootu_Kandu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "meradhoo-kandu",
+      "name": "Meradhoo Kandu",
+      "atollId": "gaafu-alif",
+      "lat": 0.606554,
+      "lon": 73.077106,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Meradhoo_Kandu/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "meradhoo-thila",
+      "name": "Meradhoo Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.590676,
+      "lon": 73.093586,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Meradhoo_Thila/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "short-cut-channel",
+      "name": "Short Cut Channel",
+      "atollId": "gaafu-alif",
+      "lat": 0.622217,
+      "lon": 73.096075,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Short_Cut_Channel/index.html",
+      "siteType": "pass",
+      "siteTypeSource": "manual"
+    },
+    {
+      "id": "maafushi-beyru",
+      "name": "Maafushi Beyru",
+      "atollId": "gaafu-alif",
+      "lat": 0.650883,
+      "lon": 73.105903,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Maafushi_Beru/index.html",
+      "siteType": "outer-reef",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "hafsa-thila",
+      "name": "Hafsa Thila",
+      "atollId": "gaafu-alif",
+      "lat": 0.626208,
+      "lon": 73.130836,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Hafsa_Thila/index.html",
+      "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
     {
       "id": "kaadedhdhoo-kandu",
       "name": "Kaadedhdhoo Kandu",
       "atollId": "gaafu-dhaalu",
-      "lat": 0.4714,
-      "lon": 72.9989,
-      "sourceUrl": "https://diveplannerpro.com/spots/mv/south-huvadhoo-atoll",
-      "pinPlacement": "imagery",
-      "pinNote": "The gap in the west rim south of Kaadedhdhoo. The gap north of it is the other candidate.",
+      "lat": 0.475497,
+      "lon": 72.995911,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Kaadedhdhoo_Kandu/index.html",
       "siteType": "pass",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "mofzaa-thila",
+      "name": "Mofzaa Thila",
+      "atollId": "gaafu-dhaalu",
+      "lat": 0.348814,
+      "lon": 73.414421,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/South_Huvadhoo_Atoll/Mofzaa_Thila/index.html",
+      "siteType": "lagoon",
+      "siteTypeSource": "derived"
+    },
+    {
+      "id": "vaadhoo-thila",
+      "name": "Vaadhoo Thila",
+      "atollId": "gaafu-dhaalu",
+      "lat": 0.251826,
+      "lon": 73.272114,
+      "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/South_Huvadhoo_Atoll/Vaadhoo_Thila/index.html",
+      "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
     {

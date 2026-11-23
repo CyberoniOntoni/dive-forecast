@@ -71,7 +71,13 @@ describe("the owner's site classification", () => {
 
   it("stores every Corner as a channel corner, except the owner's channel and lagoon ones", () => {
     // The type alone decides the model, so the data must say what the name used to imply.
-    const exceptions: Record<string, SiteType> = { "cave-corner": "pass", "kings-corner": "lagoon" };
+    // Lundhufushi and Arilandhoo Corner are reef corners 6 to 8 km inside Raa's lagoon (owner's pins).
+    const exceptions: Record<string, SiteType> = {
+      "cave-corner": "pass",
+      "kings-corner": "lagoon",
+      "lundhufushi-corner": "lagoon",
+      "arilandhoo-corner": "lagoon",
+    };
     for (const site of catalog.sites.filter((item) => /\bcorner\b/i.test(item.name))) {
       expect(site.siteType, site.id).toBe(exceptions[site.id] ?? "corner");
     }
