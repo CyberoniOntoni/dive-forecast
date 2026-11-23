@@ -29,9 +29,9 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <!-- Shared dive plan links open in the app when the diver picks it: only /plans/<16-letter id>, so the web
-                 editor's /plans/new and /plans/<id>/edit (the app's "on the web" buttons) still open in the browser. Not autoVerify: that needs
-                 /.well-known/assetlinks.json with the release signing key, which is not set up yet. -->
-            <intent-filter>
+                 editor's /plans/new and /plans/<id>/edit (the app's "on the web" buttons) still open in the browser. autoVerify: Android
+                 checks https://50bar.app/.well-known/assetlinks.json (lib/asset-links.ts, Play's signing keys) and then opens them here directly; debug builds fail it. -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

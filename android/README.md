@@ -44,7 +44,7 @@ What it does:
   listed on the page. The You tab opens sign-in or the account (points, sign out, sign out
   everywhere). A 401 from the server means the token stopped working, and the app forgets it.
 - **Dive plans**: plans made on the web (`/plans/new`) open in the app: a shared `https://50bar.app/plans/<id>` link
-  (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; not verified, so Android asks which app to use), a pasted link on the Plans
+  (the app offers itself for `/plans/<id>` only, so the web editor's `/plans/new` and `/plans/<id>/edit` stay in the browser; verified through `/.well-known/assetlinks.json`, `lib/asset-links.ts`, so a Play-signed build opens them directly; a debug or sideloaded build, signed with another key, fails verification and on Android 12+ the link opens in the browser), a pasted link on the Plans
   screen (the Plans tab, or "My dive plans" on the account), or the diver's own plans when signed
   in. Each day shows its dives on a small satellite map, numbered and coloured as on the web with the boat route between
   them (`ui/plan/PlanDayMap.kt`), then lists them with the forecast at the dive time, warnings and a better window, the
