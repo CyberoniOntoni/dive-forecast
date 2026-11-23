@@ -1318,7 +1318,6 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
   });
 });
 
-
 describe("report age", () => {
   const refMs = Date.parse("2026-07-20T00:00:00Z");
   const daysFromRef = (days: number) => new Date(refMs + days * 86_400_000).toISOString().slice(0, 16);

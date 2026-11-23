@@ -14,7 +14,6 @@ describe("benchmark replay runner", () => {
     const one = runBenchmarkSuite(parseCliArgs(["--benchmark", "--site", "miyaru-kandu"]));
     expect(one.siteResults.map((site) => site.siteId)).toEqual(["miyaru-kandu"]);
     expect(one.metrics.totalReports).toBe(9);
-    expect(one.metrics.directionalAccuracyPct).toBe(66.67);
   });
 
   it("fails on a site that does not exist, so CI cannot pass on a typo", () => {

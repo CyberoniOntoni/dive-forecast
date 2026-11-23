@@ -39,6 +39,7 @@ describe("monsoon drift climatology", () => {
     let worstHeadingStep = 0;
     let min = Infinity;
     let max = -Infinity;
+    let headingsInRange = true;
     let previous = getMaldivesMonsoonDrift(new Date(start));
     for (let hour = 1; hour <= 366 * 24; hour += 1) {
       const next = getMaldivesMonsoonDrift(new Date(start + hour * 3_600_000));
@@ -46,10 +47,10 @@ describe("monsoon drift climatology", () => {
       worstHeadingStep = Math.max(worstHeadingStep, Math.abs(next.directionDeg - previous.directionDeg));
       min = Math.min(min, next.velocityMs);
       max = Math.max(max, next.velocityMs);
-      expect(next.directionDeg).toBeGreaterThanOrEqual(0);
-      expect(next.directionDeg).toBeLessThan(360);
+      if (!(next.directionDeg >= 0 && next.directionDeg < 360)) headingsInRange = false;
       previous = next;
     }
+    expect(headingsInRange).toBe(true);
     expect(min).toBeGreaterThanOrEqual(0.05);
     expect(max).toBeLessThanOrEqual(0.45);
     expect(worstSpeedStep).toBeLessThan(0.005);

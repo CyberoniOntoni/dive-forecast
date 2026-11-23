@@ -228,13 +228,19 @@ describe("loadSite", () => {
         return { id: `r${index}`, siteId: "s", time, direction: hour.direction, strength: hour.strength };
       },
     );
-    const allowed = await loadSite(pass, [openSite], atoll, reports);
-
+    // Control both replay results here, so the test does not depend on the committed data/replay.json.
     const readFileSync = fs.readFileSync;
-    const failedReplay = vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof readFileSync>) =>
-      String(args[0]).endsWith("replay.json") ? JSON.stringify({ ok: false, failures: 1 }) : readFileSync(...args)) as typeof readFileSync);
-    const blocked = await loadSite(pass, [openSite], atoll, reports);
-    failedReplay.mockRestore();
+    const loadWithReplay = async (ok: boolean) => {
+      const spy = vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof readFileSync>) =>
+        String(args[0]).endsWith("replay.json") ? JSON.stringify({ ok, failures: ok ? 0 : 1 }) : readFileSync(...args)) as typeof readFileSync);
+      try {
+        return await loadSite(pass, [openSite], atoll, reports);
+      } finally {
+        spy.mockRestore();
+      }
+    };
+    const allowed = await loadWithReplay(true);
+    const blocked = await loadWithReplay(false);
     vi.mocked(Marine.siteMarineHours).mockReset();
 
     expect(allowed.hours.some((hour) => hour.confidence === "high")).toBe(true);
