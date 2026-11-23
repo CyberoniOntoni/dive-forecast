@@ -4528,7 +4528,7 @@
       "alongM": 1030,
       "reefFlatBridges": false,
       "sites": [
-        "nilandhoo-kandu"
+        "dhandhoo-channel"
       ],
       "fromTiles": true
     },
@@ -5041,7 +5041,9 @@
       "widthM": 166,
       "alongM": 295,
       "reefFlatBridges": true,
-      "sites": [],
+      "sites": [
+        "short-cut-channel"
+      ],
       "fromTiles": true
     },
     {
@@ -5055,7 +5057,9 @@
       "widthM": 555,
       "alongM": 870,
       "reefFlatBridges": false,
-      "sites": [],
+      "sites": [
+        "short-cut-channel"
+      ],
       "fromTiles": true
     },
     {
@@ -5895,7 +5899,9 @@
       "widthM": 716,
       "alongM": 600,
       "reefFlatBridges": false,
-      "sites": [],
+      "sites": [
+        "gemanafushi-channel"
+      ],
       "fromTiles": true
     },
     {
@@ -5923,7 +5929,9 @@
       "widthM": 381,
       "alongM": 273,
       "reefFlatBridges": true,
-      "sites": [],
+      "sites": [
+        "kondey-kandu"
+      ],
       "fromTiles": true
     },
     {

@@ -5,7 +5,7 @@
   "sites": [
     {
       "siteId": "nilandhoo-kandu",
-      "name": "Nilandhoo Kandu",
+      "name": "Nilandhoo Channel",
       "lat": 0.650144,
       "lon": 73.445488,
       "source": "owner-list",
@@ -17,8 +17,8 @@
       "change": "moved 2.5 km north from the imagery pin between Nilandhoo and Dhaandhoo, which was the other candidate gap"
     },
     {
-      "siteId": "dhaandhoo-kandu",
-      "name": "Dhaandhoo Kandu",
+      "siteId": "dhandhoo-channel",
+      "name": "Dhandhoo Channel",
       "lat": 0.631756,
       "lon": 73.45698,
       "source": "owner-list",
@@ -29,8 +29,8 @@
       ]
     },
     {
-      "siteId": "dhaandhoo-caves",
-      "name": "Dhaandhoo Caves",
+      "siteId": "dhandhoo-caves",
+      "name": "Dhandhoo Caves",
       "lat": 0.629817,
       "lon": 73.459047,
       "source": "owner-list",
@@ -40,7 +40,7 @@
         0.627826,
         73.462618
       ],
-      "note": "Drift along the outer wall SE from the channel mouth; pin is the start. Within 0.8 km of Dhaandhoo Kandu, so it takes the across-rim model."
+      "note": "Drift along the outer wall SE from the channel mouth; pin is the start. Within 0.8 km of Dhandhoo Channel, so it takes the across-rim model."
     },
     {
       "siteId": "vodamula",
@@ -73,8 +73,8 @@
       "typeNote": "manual corner: ocean-side mouth of the gap between Mahadhoo and the small island to the SE"
     },
     {
-      "siteId": "funadhoo-kandu",
-      "name": "Funadhoo Kandu",
+      "siteId": "funadhoo-channel",
+      "name": "Funadhoo Channel",
       "lat": 0.569356,
       "lon": 73.525837,
       "source": "owner-list",
@@ -91,7 +91,7 @@
     },
     {
       "siteId": "kondey-kandu",
-      "name": "Kondey Kandu",
+      "name": "Kondey Channel",
       "lat": 0.488081,
       "lon": 73.558522,
       "source": "owner-list",
@@ -117,8 +117,8 @@
       "confidence": "high"
     },
     {
-      "siteId": "gemanafushi-kandu",
-      "name": "Gemanafushi Kandu",
+      "siteId": "gemanafushi-channel",
+      "name": "Gemanafushi Channel",
       "lat": 0.456098,
       "lon": 73.569854,
       "source": "owner-list",
@@ -326,7 +326,7 @@
       "label": "Viligili Channel",
       "lat": 0.744136,
       "lon": 73.439025,
-      "why": "Vilingili Kandu is already 0.17 km away (Wannadive GPS); kept"
+      "why": "same site as vilingili-kandu, 0.17 km away (Wannadive GPS pin kept); renamed Viligili Channel"
     },
     {
       "label": "(unnamed pin)",

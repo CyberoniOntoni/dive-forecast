@@ -4387,13 +4387,13 @@
     },
     {
       "id": "vilingili-kandu",
-      "name": "Vilingili Kandu",
+      "name": "Viligili Channel",
       "atollId": "gaafu-alif",
       "lat": 0.74473,
       "lon": 73.4376,
       "sourceUrl": "https://www.wannadive.net/spot/Asia/Maldives/North_Huvadhoo_Atoll/Vilingili_Kandu/index.html",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "kooddoo-kandu",
@@ -4418,37 +4418,37 @@
     },
     {
       "id": "nilandhoo-kandu",
-      "name": "Nilandhoo Kandu",
+      "name": "Nilandhoo Channel",
       "atollId": "gaafu-alif",
       "lat": 0.650144,
       "lon": 73.445488,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "kondey-kandu",
-      "name": "Kondey Kandu",
+      "name": "Kondey Channel",
       "atollId": "gaafu-alif",
       "lat": 0.488081,
       "lon": 73.558522,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
-      "id": "dhaandhoo-kandu",
-      "name": "Dhaandhoo Kandu",
+      "id": "dhandhoo-channel",
+      "name": "Dhandhoo Channel",
       "atollId": "gaafu-alif",
       "lat": 0.631756,
       "lon": 73.45698,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
-      "id": "dhaandhoo-caves",
-      "name": "Dhaandhoo Caves",
+      "id": "dhandhoo-caves",
+      "name": "Dhandhoo Caves",
       "atollId": "gaafu-alif",
       "lat": 0.629817,
       "lon": 73.459047,
@@ -4487,14 +4487,14 @@
       "siteTypeSource": "manual"
     },
     {
-      "id": "funadhoo-kandu",
-      "name": "Funadhoo Kandu",
+      "id": "funadhoo-channel",
+      "name": "Funadhoo Channel",
       "atollId": "gaafu-alif",
       "lat": 0.569356,
       "lon": 73.525837,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "park-thila",
@@ -4527,14 +4527,14 @@
       "siteTypeSource": "derived"
     },
     {
-      "id": "gemanafushi-kandu",
-      "name": "Gemanafushi Kandu",
+      "id": "gemanafushi-channel",
+      "name": "Gemanafushi Channel",
       "atollId": "gaafu-alif",
       "lat": 0.456098,
       "lon": 73.569854,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual"
     },
     {
       "id": "gemanafushi-canyon",
