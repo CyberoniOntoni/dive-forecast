@@ -1,6 +1,6 @@
 import { residualLevels } from "./forecast";
 import { inFlightPerRequest } from "./cloudflare";
-import { fetchMarine, seawardPoint, type FetchOptions } from "./marine";
+import { fetchMarine, seawardPoint, seriesWindowKey, type FetchOptions } from "./marine";
 import { pointInRing, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Atoll, MarineHour, RingLevel } from "./types";
 
@@ -184,7 +184,7 @@ export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promi
   const rim = rimForAtoll(atoll);
   if (!rim) return EMPTY;
   // The long past window (options.past) is another ring: kept apart.
-  const key = options.past ? `past|${atoll.rimSourceUrl}` : atoll.rimSourceUrl;
+  const key = seriesWindowKey(options, atoll.rimSourceUrl);
   const kept = memo.get(key);
   if (kept && Date.now() - kept.at < MEMO_MS && kept.ring.level.length > 0) return kept.ring;
   const loading = ringLoadsInFlight();

@@ -221,16 +221,21 @@ describe("addReport", () => {
   });
 });
 
+/** Where a catalog site's marine series is fetched: its seaward sample point, as the app resolves it. */
+function samplePointFor(siteId: string): { lat: number; lon: number } {
+  const catalog = readCatalog();
+  const site = catalog.sites.find((item) => item.id === siteId)!;
+  const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
+  const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
+  return seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
+}
+
 /**
  * Writes a semidiurnal tide of `count` hours from `start` at a site's sample point into the test marine cache, under
  * `prefix` ("" for the week's series, "past_" for the long past window).
  */
 function seedSyntheticSeries(siteId: string, prefix: string, start: string, count: number): void {
-  const catalog = readCatalog();
-  const site = catalog.sites.find((item) => item.id === siteId)!;
-  const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
-  const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
-  const point = seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
+  const point = samplePointFor(siteId);
   const startMs = Date.parse(`${start}:00Z`);
   const hours = Array.from({ length: count }, (_, index) => ({
     time: new Date(startMs + index * 3_600_000).toISOString().slice(0, 16),
@@ -247,11 +252,7 @@ function seedSyntheticSeries(siteId: string, prefix: string, start: string, coun
 
 /** Puts a site's committed benchmark fixture in the test marine cache, under the name the cache reader looks for. */
 function seedMarineCache(siteId: string): void {
-  const catalog = readCatalog();
-  const site = catalog.sites.find((item) => item.id === siteId)!;
-  const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
-  const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
-  const point = seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
+  const point = samplePointFor(siteId);
   const fixtureName = `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.json`;
   const fixture = JSON.parse(
     fs.readFileSync(path.join(DATA_DIR, "benchmark-marine-cache", fixtureName), "utf8"),

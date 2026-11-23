@@ -465,6 +465,11 @@ function readHourly(body: unknown): HourlyColumns | null {
   };
 }
 
+/** A memo key for something built from fetched series: the long past window (options.past) gets its own. */
+export function seriesWindowKey(options: Pick<FetchOptions, "past">, key: string): string {
+  return options.past ? `past|${key}` : key;
+}
+
 /**
  * Past days in the long window: a report can be filed up to 14 days after the dive (REPORT_MAX_AGE_DAYS in
  * lib/actions.ts), and its residual needs 12 hours and its slope window 6 more before the dive.

@@ -27,7 +27,7 @@ import {
 } from "./lagoon-flow";
 import { readIslands } from "./islands";
 import { crossesRim, siteRoute } from "./site-type";
-import { fetchMarine, marineSeriesStale, seawardPoint, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
+import { fetchMarine, marineSeriesStale, seawardPoint, seriesWindowKey, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
 import { SEAWARD_STEPS_KM } from "./floor-sample";
 import { DRIFT_SMOOTHING_MAX_KM, smoothedDriftHours, type DriftSample } from "./drift-smoothing";
 import { distanceKm } from "./geometry";
@@ -122,7 +122,7 @@ export function clearLagoonMemo(): void {
  */
 async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   // The long past window (options.past) has openings of its own.
-  const memoKey = options.past ? `past|${atoll.id}` : atoll.id;
+  const memoKey = seriesWindowKey(options, atoll.id);
   const kept = lagoonMemo.get(memoKey);
   if (kept && Date.now() - kept.at < LAGOON_MEMO_MS && kept.sources.length > 0) return kept.sources;
   const lagoonLoading = lagoonLoadsInFlight();
