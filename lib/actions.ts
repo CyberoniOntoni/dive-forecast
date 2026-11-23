@@ -10,7 +10,7 @@ import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
-import type { FetchOptions } from "./marine";
+import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
 import type { RimRing } from "./rim";
@@ -444,7 +444,7 @@ async function predictionAtReport(site: Site, time: string, past = false): Promi
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
     const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
-    const options = past ? { past: true } : {};
+    const options = past ? PAST_WINDOW : {};
     const shown = await loadSite(site, catalog.sites, atoll, earlier, options);
     const modelOnly = await loadSite(site, catalog.sites, atoll, [], options);
     return forecastAtReport(shown, modelOnly, time, past);
@@ -478,6 +478,13 @@ async function reportTide(site: Site, time: string, options: FetchOptions = {}):
   }
 }
 
+/**
+ * The long past window, refreshed first when its copy is past the TTL. Nothing warms it, so a cached copy can be days
+ * old and end before the dive; served as it is (refreshed only behind the response), the late report would save no
+ * tide, the case this window is for.
+ */
+const PAST_WINDOW: FetchOptions = { past: true, refreshOlderThanMs: MARINE_CACHE_TTL_MS };
+
 /** Hours of a report's saved tide that are known: its slope window's, plus one for the day's range. */
 function tideHoursKnown(tide: ReportTide | null): number {
   if (!tide) return 0;
@@ -486,14 +493,16 @@ function tideHoursKnown(tide: ReportTide | null): number {
 
 /**
  * The tide to save with a report. The week's series holds one past day, and its residual starts 12 hours in, so a
- * dive from before about noon yesterday has no tide there, or only part of its window: such a report could never
+ * dive from before about 7 PM yesterday (the slope window reaches 6 hours back) has no tide there, or only part of its window: such a report could never
  * teach the forecast or be scored. Then the same is read from the long past window (REPORT_PAST_DAYS) instead, when
  * that knows more; `past` says it did, and the prediction is then worked out from that window too.
  */
 async function reportTideAnyAge(site: Site, time: string): Promise<{ tide: ReportTide | null; past: boolean }> {
   const tide = await reportTide(site, time);
-  if (tideHoursKnown(tide) === REPORT_TIDE_HOURS) return { tide, past: false };
-  const older = await reportTide(site, time, { past: true });
+  // No tide at all means the week's fetch failed (an old dive still gets a window, of nulls): Open-Meteo is down or
+  // the site has never loaded, and a second round of cold fetches for the past window would only wait on it again.
+  if (!tide || tideHoursKnown(tide) === REPORT_TIDE_HOURS) return { tide, past: false };
+  const older = await reportTide(site, time, PAST_WINDOW);
   return tideHoursKnown(older) > tideHoursKnown(tide) ? { tide: older, past: true } : { tide, past: false };
 }
 

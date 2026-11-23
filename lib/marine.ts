@@ -7,6 +7,8 @@ import type { MarineHour } from "./types";
 
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), "data", "marine-cache");
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+/** How old a cached series may be before it is refreshed (behind the response, unless refreshOlderThanMs asks to wait). */
+export const MARINE_CACHE_TTL_MS = CACHE_TTL_MS;
 const SERIES_STALE_MS = 12 * 60 * 60 * 1000;
 /**
  * How long a data centre keeps its edge copy of a series. Past the 6-hour TTL the copy is only used once R2 has been

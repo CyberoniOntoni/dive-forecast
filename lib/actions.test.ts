@@ -234,20 +234,42 @@ function samplePointFor(siteId: string): { lat: number; lon: number } {
  * Writes a semidiurnal tide of `count` hours from `start` at a site's sample point into the test marine cache, under
  * `prefix` ("" for the week's series, "past_" for the long past window).
  */
-function seedSyntheticSeries(siteId: string, prefix: string, start: string, count: number): void {
+function seedSyntheticSeries(siteId: string, prefix: string, start: string, count: number, fetchedAt = Date.now()): void {
   const point = samplePointFor(siteId);
+  fs.mkdirSync(marineCacheDir(), { recursive: true });
+  fs.writeFileSync(
+    path.join(marineCacheDir(), `${prefix}${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.`),
+    JSON.stringify({ fetchedAt, hours: syntheticHours(start, count) }),
+  );
+}
+
+/** A semidiurnal tide of `count` hours from `start` (Maldives wall clock). */
+function syntheticHours(start: string, count: number) {
   const startMs = Date.parse(`${start}:00Z`);
-  const hours = Array.from({ length: count }, (_, index) => ({
+  return Array.from({ length: count }, (_, index) => ({
     time: new Date(startMs + index * 3_600_000).toISOString().slice(0, 16),
     seaLevelM: 0.5 * Math.sin((2 * Math.PI * index) / 12.42),
     currentVelocityMs: 0.2,
     currentDirectionDeg: 270,
   }));
-  fs.mkdirSync(marineCacheDir(), { recursive: true });
-  fs.writeFileSync(
-    path.join(marineCacheDir(), `${prefix}${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.`),
-    JSON.stringify({ fetchedAt: Date.now(), hours }),
-  );
+}
+
+/** A fetch that answers only long-past-window requests, with the synthetic tide from `start`, and counts them. */
+function pastWindowFetch(start: string, count: number) {
+  const hours = syntheticHours(start, count);
+  const body = {
+    hourly_units: { ocean_current_velocity: "m/s" },
+    hourly: {
+      time: hours.map((hour) => hour.time),
+      sea_level_height_msl: hours.map((hour) => hour.seaLevelM),
+      ocean_current_velocity: hours.map((hour) => hour.currentVelocityMs),
+      ocean_current_direction: hours.map((hour) => hour.currentDirectionDeg),
+    },
+  };
+  return vi.fn(async (url: string | URL | Request) => {
+    if (!String(url).includes(`past_days=16`)) throw new Error("Network is disabled in tests");
+    return new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+  });
 }
 
 /** Puts a site's committed benchmark fixture in the test marine cache, under the name the cache reader looks for. */
@@ -324,6 +346,42 @@ describe("addReport saves the prediction", () => {
     expect(fresh.slopeWindowM?.every((slope) => typeof slope === "number")).toBe(true);
     expect(fresh.predicted).toBeDefined();
     expect(fresh.predicted?.hindcast).toBeUndefined();
+  });
+
+  it("refreshes a long past window cached days ago before reading a late report's tide from it", async () => {
+    seedSyntheticSeries("kandooma-thila", "", "2026-09-26T00:00", 8 * 24);
+    // Fetched on 16 Sep, so it ends on 18 Sep: before the dive. Nothing warms the past window.
+    const fetchedAt = Date.parse("2026-09-16T00:00:00Z");
+    seedSyntheticSeries("kandooma-thila", "past_", "2026-08-31T00:00", 18 * 24, fetchedAt);
+    // Its atoll's ocean point too, which a stale site series falls back to.
+    const atoll = readCatalog().atolls.find((item) => item.id === findSite("kandooma-thila")!.atollId)!;
+    fs.writeFileSync(
+      path.join(marineCacheDir(), `past_${atoll.oceanLat.toFixed(4)}_${atoll.oceanLon.toFixed(4)}.`),
+      JSON.stringify({ fetchedAt, hours: syntheticHours("2026-08-31T00:00", 18 * 24) }),
+    );
+    const fetchSpy = pastWindowFetch("2026-09-11T00:00", 19 * 24);
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const late = await addReport({ siteId: "kandooma-thila", time: "2026-09-20T08:00", direction: "incoming", strength: "strong" });
+      expect(fetchSpy).toHaveBeenCalled();
+      expect(late.slopeWindowM?.every((slope) => typeof slope === "number")).toBe(true);
+      expect(late.predicted?.hindcast).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("does not try the long past window when the week's own fetch failed", async () => {
+    // No cache for Banana Reef: the week's fetch fails, so the past window would only wait on the same outage.
+    const fetchSpy = pastWindowFetch("2026-09-11T00:00", 19 * 24);
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const report = await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
+      expect(report.slopeWindowM).toBeUndefined();
+      expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("past_days=16"))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("still saves the report when there is no ocean data, just without a prediction", async () => {

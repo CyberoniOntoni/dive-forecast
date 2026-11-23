@@ -65,6 +65,12 @@ export function ringPoints(ring: RimRing): { lat: number; lon: number }[] {
 
 /** Hours of full coverage needed before a ring with points missing at an hour is filled in from the others. */
 const MIN_FIT_HOURS = 48;
+/**
+ * Fill weights whose absolute values sum past this are not used (the plain mean is): large weights of opposite sign
+ * would turn a small difference between two points, such as a kept older fetch, into a large ring level. Real rings
+ * sum to 1.0 to 1.2 (all 20 atolls, 23 Nov 2026, 3 neighbouring points missing).
+ */
+const MAX_WEIGHT_SUM = 3;
 
 /**
  * The mean residual level of the ring points by hour: the lagoon level a channel's head is measured against.
@@ -77,7 +83,7 @@ const MIN_FIT_HOURS = 48;
  * mean of all the ring's points is predicted from the points it has, by least squares over the hours where every
  * point has data. The ring's levels are tidal and span a few constituents, so that prediction holds to under 0.5 cm
  * (checked on all 20 atolls, 23 Nov 2026, 1 to 3 neighbouring points missing). With fewer than MIN_FIT_HOURS of full
- * coverage it falls back to the plain mean.
+ * coverage, or weights summing past MAX_WEIGHT_SUM, it falls back to the plain mean.
  */
 export function ringLevelFromSeries(series: readonly (readonly MarineHour[] | null)[]): RingLevel[] {
   const points = series
@@ -116,7 +122,7 @@ export function ringLevelFromSeries(series: readonly (readonly MarineHour[] | nu
     if (present.length < MIN_RING_POINTS) continue;
     const values = present.map((index) => points[index].get(time)!);
     const weights = present.length < points.length ? fitFor(present) : null;
-    const levelM = weights ? values.reduce((sum, value, at) => sum + weights[at] * value, 0) : meanOf(values);
+    const levelM = weights && weights.reduce((sum, weight) => sum + Math.abs(weight), 0) <= MAX_WEIGHT_SUM ? values.reduce((sum, value, at) => sum + weights[at] * value, 0) : meanOf(values);
     levels.push({ time, levelM });
   }
   return levels;

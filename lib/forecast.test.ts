@@ -1379,4 +1379,14 @@ describe("a channel report's own hour", () => {
       expect(directionAt(pulled, "2026-09-23T01:00"), time).toBe("incoming");
     }
   });
+
+  it("counts from its own minute where the series lacks its hour, not from the hour before", () => {
+    const hours = repeatingHours().filter((hour) => hour.time !== "2026-09-23T02:00");
+    const report: Report = { id: "r", siteId: "s", time: "2026-09-23T02:00", direction: "outgoing", strength: "mild", slopeM: null };
+    const plain = forecastHours({ hours, inwardBearingDeg: 0, reports: [] });
+    const pulled = forecastHours({ hours, inwardBearingDeg: 0, reports: [report] });
+    // 01:00 and 03:00 are equally near a 02:00 report with no 02:00 row; the earlier one must not be pulled.
+    expect(directionAt(pulled, "2026-09-23T01:00")).toBe(directionAt(plain, "2026-09-23T01:00"));
+    expect(directionAt(pulled, "2026-09-23T03:00")).toBe("outgoing");
+  });
 });
