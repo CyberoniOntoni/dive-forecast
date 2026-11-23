@@ -172,8 +172,9 @@ export function reportsForSite(siteId: string): Report[] {
 }
 
 /**
- * The site's reports that teach the forecast: all of them but the store-review account's (lib/review-account.ts),
- * whose reports are app reviewers trying the form, not dives. Listed only to the reviewer (visibleReportsForSite).
+ * The site's reports that teach the forecast (countedReports): all of them but the store-review account's
+ * (lib/review-account.ts), whose reports are app reviewers trying the form, not dives, and those a moderator hid
+ * (`hiddenAt`). Listed only to the reviewer (visibleReportsForSite).
  */
 export function forecastReportsForSite(siteId: string): Report[] {
   return countedReports(readStore()).filter((report) => report.siteId === siteId);

@@ -226,7 +226,7 @@ describe("API v1 reports, blocks and moderation", () => {
     const mod = await signInApp("mod@example.com", "Mod");
     call("/api/v1/me", { token: mod });
     const item = (await listRecentActivity("reports"))!.items.find((entry) => entry.key === "report:t1")!;
-    expect(item.report).toEqual({ id: "t1", hidden: false, diverVisible: 2 });
+    expect(item.report).toMatchObject({ id: "t1", hidden: false, diverVisible: 2 });
     expect(await moderateReports("t1", "hide")).toEqual({ ok: true, error: null });
     expect(forecastReportsForSite("banana-reef").map((report) => report.id)).toEqual(["t2"]);
     expect(visibleReportsForSite("banana-reef", null).map((report) => report.id)).toEqual(["t2"]);

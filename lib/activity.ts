@@ -1,3 +1,4 @@
+import { countedReports } from "./accounts";
 import { parseWall } from "./forecast";
 import { banRefusal, FLAG_REASON_LABELS } from "./moderation";
 import { strengthLabel } from "./nowcast-glance";
@@ -65,10 +66,11 @@ export type ActivityItem = {
   /** Who to name when `diver` is null: a rating from before sign-in, or an account since deleted. */
   noDiver: string;
   /**
-   * On a dive report: its id, whether a moderator hid it, and how many of its diver's reports still teach the forecast
-   * (for "Hide all their reports"). Null on every other kind.
+   * On a dive report: its id, the id it was filed under (a deleted account keeps its `deleted-…` id), whether a
+   * moderator hid it, and how many of that id's reports still teach the forecast (countedReports, for "Hide all their
+   * reports"). Null on every other kind.
    */
-  report: { id: string; hidden: boolean; diverVisible: number } | null;
+  report: { id: string; userId: string | null; hidden: boolean; diverVisible: number } | null;
   /** Open content reports on the same thing. */
   openFlags: number;
 };
@@ -127,8 +129,8 @@ export function recentActivity(
   // Content reports name their reporter as the diver; banning is for whose content it is, so they get no Ban.
   // `subject` is what content reports on this item would name; it counts open ones even when nothing is left to remove.
   const visibleBy = new Map<string, number>();
-  for (const report of store.reports) {
-    if (report.userId && !report.hiddenAt) visibleBy.set(report.userId, (visibleBy.get(report.userId) ?? 0) + 1);
+  for (const report of countedReports(store)) {
+    if (report.userId) visibleBy.set(report.userId, (visibleBy.get(report.userId) ?? 0) + 1);
   }
   const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver" | "report"> & { report?: ActivityItem["report"] }, userId: string | undefined, subject: ActivityTarget | null = null) => {
     const bannable = moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null;
@@ -158,7 +160,7 @@ export function recentActivity(
         photos: [],
         href: null,
         removable: null,
-        report: { id: report.id, hidden: Boolean(report.hiddenAt), diverVisible: report.userId ? (visibleBy.get(report.userId) ?? 0) : 0 },
+        report: { id: report.id, userId: report.userId ?? null, hidden: Boolean(report.hiddenAt), diverVisible: report.userId ? (visibleBy.get(report.userId) ?? 0) : 0 },
       }, report.userId);
     }
   }

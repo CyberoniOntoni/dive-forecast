@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ModerationActions } from "@/components/ModerationActions";
 import { ModerationActivity } from "@/components/ModerationActivity";
 import { ModerationPhotos } from "@/components/ModerationPhotos";
+import { StoreReviewerChip } from "@/components/StoreReviewerChip";
 import { readActivityFilter } from "@/lib/activity";
 import { listOpenFlags, listRecentActivity } from "@/lib/moderation-actions";
 
@@ -47,7 +48,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
               Diver:{" "}
               {flag.diver.storeReview ? (
                 <>
-                  {flag.diver.nickname} <span className="rounded bg-foam/15 px-1.5 py-0.5 text-xs">Store reviewer: hidden from others</span>
+                  {flag.diver.nickname} <StoreReviewerChip />
                 </>
               ) : (
                 <Link href={`/divers/${flag.diver.userId}`} className="underline decoration-incoming underline-offset-4">

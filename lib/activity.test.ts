@@ -145,13 +145,17 @@ describe("recent activity for moderators", () => {
     expect(recentActivity(data, lookup, NOW).find((item) => item.key === "rating:cat:anonymous")?.noDiver).toBe("No account");
   });
 
-  it("marks hidden dive reports and counts each diver's reports still in the forecast", () => {
+  it("marks hidden dive reports and counts the reports still in the forecast under each id, deleted accounts too", () => {
     const data = store();
     data.reports.find((report) => report.id === "old")!.hiddenAt = "2026-11-01T00:00:00Z";
     data.reports.find((report) => report.id === "r1")!.hiddenAt = "2026-11-22T06:00:00Z";
+    data.reports.push({ id: "gone2", siteId: "cat", time: "2026-08-01T10:00", direction: "incoming", strength: "mild", userId: "deleted-x" });
     const byKey = new Map(recentActivity(data, lookup, NOW).map((item) => [item.key, item]));
-    expect(byKey.get("report:r1")).toMatchObject({ report: { id: "r1", hidden: true, diverVisible: 0 }, summary: expect.stringContaining("hidden, not in the forecast") });
-    expect(byKey.get("report:rev")?.report).toEqual({ id: "rev", hidden: false, diverVisible: 1 });
+    expect(byKey.get("report:r1")).toMatchObject({ report: { id: "r1", userId: "ann", hidden: true, diverVisible: 0 }, summary: expect.stringContaining("hidden, not in the forecast") });
+    // The store-review account's reports never teach the forecast, so none of them count.
+    expect(byKey.get("report:rev")?.report).toEqual({ id: "rev", userId: "store", hidden: false, diverVisible: 0 });
+    // A deleted account has no diver to show but keeps its id, and its older reports count too.
+    expect(byKey.get("report:gone")).toMatchObject({ diver: null, report: { id: "gone", userId: "deleted-x", hidden: false, diverVisible: 2 } });
     expect(byKey.get("plan:plan1")?.report).toBeNull();
   });
 });

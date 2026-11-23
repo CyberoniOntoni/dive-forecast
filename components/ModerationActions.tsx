@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { ModerationError, useModerationAction } from "@/components/useModerationAction";
 import type { ActivityTarget } from "@/lib/activity";
 import { REMOVE_LABELS } from "@/lib/moderation";
 import { moderateContent, moderateFlag } from "@/lib/moderation-actions";
@@ -18,10 +17,7 @@ export function ModerationActions(
     | { flagId: string; canBan: boolean; target?: never; banTarget?: never }
     | { target: ActivityTarget | null; banTarget: ActivityTarget | null; flagId?: never; canBan?: never },
 ) {
-  const router = useRouter();
-  const [confirm, setConfirm] = useState<Action | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const { confirm, pending, run, error } = useModerationAction<Action>();
   const fromReport = props.flagId != null;
   const target = props.target ?? null;
   const canBan = fromReport ? props.canBan : props.banTarget != null;
@@ -29,20 +25,9 @@ export function ModerationActions(
 
   function act(action: Action) {
     const needsConfirm = action === "ban" || (action === "remove" && !fromReport);
-    if (needsConfirm && confirm !== action) {
-      setConfirm(action);
-      return;
-    }
-    setError(null);
-    startTransition(async () => {
-      const result =
-        props.flagId != null
-          ? await moderateFlag(props.flagId, action)
-          : await moderateContent(action === "ban" ? props.banTarget : target, action);
-      setConfirm(null);
-      if (!result.ok) setError(result.error);
-      else router.refresh();
-    });
+    run(action, needsConfirm, () =>
+      props.flagId != null ? moderateFlag(props.flagId, action) : moderateContent(action === "ban" ? props.banTarget : target, action),
+    );
   }
 
   if (!fromReport && !target && !canBan) return null;
@@ -76,11 +61,7 @@ export function ModerationActions(
           </button>
         ) : null}
       </div>
-      {error ? (
-        <p role="alert" className="text-sm text-outgoing">
-          {error}
-        </p>
-      ) : null}
+      <ModerationError error={error} />
     </div>
   );
 }

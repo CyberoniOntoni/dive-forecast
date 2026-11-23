@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ModerationActions } from "@/components/ModerationActions";
 import { ModerationPhotos } from "@/components/ModerationPhotos";
 import { ReportModeration } from "@/components/ReportModeration";
+import { StoreReviewerChip } from "@/components/StoreReviewerChip";
 import { ACTIVITY_DAYS, ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, type ActivityFilter, type ActivityKind } from "@/lib/activity";
 import type { ActivityView } from "@/lib/moderation-actions";
 
@@ -74,7 +75,7 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
               ) : (
                 <span className="text-foam/70">{item.noDiver}</span>
               )}
-              {item.diver?.storeReview ? <span className="ml-1.5 rounded bg-foam/15 px-1.5 py-0.5 text-xs">Store reviewer: hidden from others</span> : null}
+              {item.diver?.storeReview ? <StoreReviewerChip className="ml-1.5" /> : null}
               {item.diver?.banned ? <span className="ml-1.5 rounded bg-stop/25 px-1.5 py-0.5 text-xs">Banned</span> : null}
               {item.site ? (
                 <>
@@ -99,7 +100,7 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
             <ModerationPhotos urls={item.photos} alt={`${KIND_LABELS[item.kind]} photo`} />
             <ModerationActions target={item.removable} banTarget={item.banTarget} />
             {item.report ? (
-              <ReportModeration reportId={item.report.id} hidden={item.report.hidden} userId={item.diver?.userId ?? null} diverVisible={item.report.diverVisible} />
+              <ReportModeration reportId={item.report.id} hidden={item.report.hidden} userId={item.report.userId} diverVisible={item.report.diverVisible} />
             ) : null}
           </li>
         ))}
