@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { finishLogin, TERMS_NEEDED } from "./accounts";
-import { addFlag, BANNED, banDiver, banRefusal, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
+import { addFlag, BANNED, banDiver, banRefusal, moderate, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-11-18T10:00:00Z");
@@ -132,5 +132,15 @@ describe("moderation", () => {
     expect(banRefusal(data, undefined, "ann")).toMatch("No diver");
     banDiver(data, "bad", NOW);
     expect(banRefusal(data, "bad", "ann")).toMatch("already");
+  });
+
+  it("removes or bans with or without a report, closing open reports on it, and refuses a ban banRefusal refuses", () => {
+    const data = store();
+    data.flags.push({ id: "f", reporterId: "ann", kind: "review", siteId: "s1", userId: "bad", reason: "hate", createdAt: "2026-11-01T00:00:00Z" });
+    expect(moderate(data, { kind: "review", siteId: "s1", userId: "bad" }, "remove", "ann", NOW).map((item) => item.photo.id)).toEqual(["r1"]);
+    expect(data.flags[0]).toMatchObject({ resolution: "removed" });
+    expect(() => moderate(data, { kind: "diver", userId: "ann" }, "ban", "ann", NOW)).toThrow("yourself");
+    expect(moderate(data, { kind: "site", siteId: "pin", userId: "bad" }, "ban", "ann", NOW).map((item) => item.photo.id)).toEqual(["p1"]);
+    expect(data.users.find((user) => user.id === "bad")?.bannedAt).toBeTruthy();
   });
 });

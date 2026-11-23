@@ -50,8 +50,9 @@ function store(): StoreData {
         id: "plan1",
         ownerId: "ann",
         title: "Safari week",
+        notes: "Bring torches",
         boatSpeedKn: 9,
-        days: [{ date: "2026-11-24", stops: [{ siteId: "cat", time: "09:00" }, { siteId: "pin", time: "14:00" }] }],
+        days: [{ date: "2026-11-24", stops: [{ siteId: "cat", time: "09:00" }, { siteId: "pin", time: "14:00", note: "Rude stop note" }] }],
         createdAt: "2026-11-21T00:00:00Z",
         updatedAt: "2026-11-22T00:00:00Z",
       },
@@ -105,14 +106,17 @@ describe("recent activity for moderators", () => {
       text: "Spam",
       removable: { kind: "site", siteId: "pin", userId: "bad" },
     });
-    expect(byKey.get("plan:plan1")).toMatchObject({ summary: "Dive plan edited: “Safari week”, 1 day, 2 dives", href: "/plans/plan1" });
+    expect(byKey.get("plan:plan1")).toMatchObject({
+      summary: "Dive plan edited: “Safari week”, 1 day, 2 dives",
+      href: "/plans/plan1",
+      text: "Bring torches\n2026-11-24 14:00: Rude stop note",
+    });
     expect(byKey.get("signup:bad")).toMatchObject({ text: "About me: Offensive", summary: expect.stringContaining("not agreed"), removable: { kind: "diver", userId: "bad" } });
     expect(byKey.get("flag:f1")).toMatchObject({ diver: { nickname: "Ann" }, summary: "Reported a review by Rude: Hate, harassment or bullying (open)", text: "Nasty" });
   });
 
   it("filters by kind and caps the list", () => {
     expect(recentActivity(store(), lookup, NOW, { kinds: ["review", "rating"] }).map((item) => item.kind)).toEqual(["review", "rating"]);
-    expect(recentActivity(store(), lookup, NOW, { max: 2 })).toHaveLength(2);
     expect(recentActivity(store(), lookup, NOW, { days: 2 }).map((item) => item.key)).toEqual(["report:rev", "report:r1", "plan:plan1"]);
     expect(readActivityFilter("reviews")).toBe("reviews");
     expect(readActivityFilter("constructor")).toBe("all");
@@ -123,6 +127,10 @@ describe("recent activity for moderators", () => {
     const data = store();
     data.sites[0].hidden = true;
     const byKey = new Map(recentActivity(data, lookup, NOW, { moderatorId: "ann" }).map((item) => [item.key, item]));
+    data.flags.push({ id: "f2", reporterId: "ann", kind: "site", siteId: "pin", userId: "bad", reason: "spam", createdAt: "2026-11-21T02:00:00Z" });
+    const after = new Map(recentActivity(data, lookup, NOW, { moderatorId: "ann" }).map((item) => [item.key, item]));
+    // Hidden: nothing to remove, but its diver can still be banned and its open report still counts.
+    expect(after.get("site:pin")).toMatchObject({ removable: null, banTarget: { kind: "diver", userId: "bad" }, openFlags: 1 });
     expect(byKey.get("site:pin")).toMatchObject({ removable: null, banTarget: { kind: "diver", userId: "bad" } });
     expect(byKey.get("rating:cat:bad")?.banTarget).toEqual({ kind: "diver", userId: "bad" });
     expect(byKey.get("report:rev")?.banTarget).toBeNull();

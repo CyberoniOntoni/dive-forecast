@@ -202,6 +202,27 @@ export function banRefusal(store: StoreData, userId: string | undefined, moderat
   return null;
 }
 
+/** The content a report, or a moderator acting from the activity feed, names. */
+export type ModeratedContent = Pick<ContentFlag, "kind" | "siteId" | "userId">;
+
+/**
+ * A moderator's Remove or Ban on some content, with or without a report: bans its diver (banRefusal first, and throws
+ * its reason) or takes it down, then closes every open report on it. Returns the photos to delete.
+ */
+export function moderate(store: StoreData, content: ModeratedContent, action: "remove" | "ban", moderatorId: string, nowMs: number): StoredPhoto[] {
+  const nowIso = new Date(nowMs).toISOString();
+  if (action === "ban") {
+    const refusal = banRefusal(store, content.userId, moderatorId);
+    if (refusal) throw new Error(refusal);
+    const removed = banDiver(store, content.userId!, nowMs) ?? [];
+    resolveFlags(store, content, "banned", nowIso);
+    return removed;
+  }
+  const removed = removeFlagged(store, content, nowIso);
+  resolveFlags(store, content, "removed", nowIso);
+  return removed;
+}
+
 /** Closes every open report on the same content as `flag` with this resolution. */
 export function resolveFlags(store: StoreData, flag: Pick<ContentFlag, "kind" | "siteId" | "userId">, resolution: NonNullable<ContentFlag["resolution"]>, nowIso: string): void {
   for (const item of store.flags) {

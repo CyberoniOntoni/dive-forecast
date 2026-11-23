@@ -40,6 +40,9 @@ export type ActivityDiver = {
 /** What a moderator can take down from the feed, in the shape of a content report (ContentFlag). */
 export type ActivityTarget = { kind: FlagKind; siteId?: string; userId?: string };
 
+/** What Remove does to each kind of content (removeFlagged in lib/moderation.ts), as the feed's button says it. */
+export const REMOVE_LABELS: Record<FlagKind, string> = { review: "Remove review", site: "Hide site", diver: "Reset profile" };
+
 export type ActivityItem = {
   key: string;
   kind: ActivityKind;
@@ -83,8 +86,8 @@ function plural(count: number, word: string): string {
 }
 
 /**
- * Recent activity, newest first: the last `days` days of the given kinds, all of it unless `max` is given. Ban is
- * offered on items whose diver `moderatorId` may ban (none without one).
+ * Recent activity, newest first: the last `days` days of the given kinds. Ban is offered on items whose diver
+ * `moderatorId` may ban (none without one).
  */
 export function recentActivity(
   store: StoreData,
@@ -92,10 +95,9 @@ export function recentActivity(
   nowMs: number,
   {
     days = ACTIVITY_DAYS,
-    max = Number.POSITIVE_INFINITY,
     kinds = ACTIVITY_KINDS,
     moderatorId,
-  }: { days?: number; max?: number; kinds?: readonly ActivityKind[]; moderatorId?: string } = {},
+  }: { days?: number; kinds?: readonly ActivityKind[]; moderatorId?: string } = {},
 ): ActivityItem[] {
   const since = nowMs - days * 24 * 60 * 60 * 1000;
   const recent = (at: string | null | undefined): at is string => {
@@ -121,15 +123,17 @@ export function recentActivity(
     store.flags.filter((flag) => !flag.resolvedAt && flag.kind === target.kind && flag.siteId === target.siteId && flag.userId === target.userId).length;
   const items: ActivityItem[] = [];
   // Content reports name their reporter as the diver; banning is for whose content it is, so they get no Ban.
-  const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver">, userId: string | undefined) => {
+  // `subject` is what content reports on this item would name; it counts open ones even when nothing is left to remove.
+  const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver">, userId: string | undefined, subject: ActivityTarget | null = null) => {
     const bannable = moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null;
     items.push({
       ...item,
-      openFlags: item.removable ? openFlags(item.removable) : 0,
+      openFlags: subject ? openFlags(subject) : 0,
       banTarget: bannable ? { kind: "diver", userId: item.diver!.userId } : null,
       noDiver: userId ? "Deleted account" : "No account",
     });
   };
+
 
   if (wanted.has("report")) {
     for (const report of store.reports) {
@@ -158,6 +162,7 @@ export function recentActivity(
       const written = Boolean(rating.review || rating.photos?.length);
       if (!wanted.has(written ? "review" : "rating")) continue;
       const photos = (rating.photos ?? []).map((photo) => photoUrl(rating.siteId, photo.id));
+      const subject: ActivityTarget | null = rating.userId ? { kind: "review", siteId: rating.siteId, userId: rating.userId } : null;
       push({
         key: `rating:${rating.siteId}:${rating.userId ?? "anonymous"}`,
         kind: written ? "review" : "rating",
@@ -170,8 +175,8 @@ export function recentActivity(
         text: rating.review ?? null,
         photos,
         href: null,
-        removable: written && rating.userId ? { kind: "review", siteId: rating.siteId, userId: rating.userId } : null,
-      }, rating.userId);
+        removable: written ? subject : null,
+      }, rating.userId, subject);
     }
   }
 
@@ -179,6 +184,7 @@ export function recentActivity(
     for (const added of store.sites) {
       if (added.sourceUrl !== "user" || !recent(added.addedAt)) continue;
       const photos = (added.photos ?? []).map((photo) => photoUrl(added.id, photo.id));
+      const subject: ActivityTarget = { kind: "site", siteId: added.id, ...(added.addedBy ? { userId: added.addedBy } : {}) };
       const depths = added.diveTopM != null || added.diveMaxM != null ? `, ${added.diveTopM ?? "?"}–${added.diveMaxM ?? "?"} m` : "";
       push({
         key: `site:${added.id}`,
@@ -190,8 +196,8 @@ export function recentActivity(
         text: added.howToDive ?? null,
         photos,
         href: null,
-        removable: added.hidden ? null : { kind: "site", siteId: added.id, ...(added.addedBy ? { userId: added.addedBy } : {}) },
-      }, added.addedBy);
+        removable: added.hidden ? null : subject,
+      }, added.addedBy, subject);
     }
   }
 
@@ -199,6 +205,9 @@ export function recentActivity(
     for (const plan of store.plans) {
       if (!recent(plan.updatedAt)) continue;
       const dives = plan.days.reduce((sum, day) => sum + day.stops.length, 0);
+      // The plan's notes and each dive's note: all shown on the public share page.
+      const stopNotes = plan.days.flatMap((day) => day.stops.flatMap((stop) => (stop.note ? [`${day.date} ${stop.time}: ${stop.note}`] : [])));
+      const planText = [plan.notes, ...stopNotes].filter(Boolean).join("\n");
       const edited = plan.updatedAt !== plan.createdAt;
       push({
         key: `plan:${plan.id}`,
@@ -207,7 +216,7 @@ export function recentActivity(
         diver: diver(plan.ownerId),
         site: null,
         summary: `Dive plan ${edited ? "edited" : "made"}: “${plan.title}”, ${plural(plan.days.length, "day")}, ${plural(dives, "dive")}`,
-        text: plan.notes ?? null,
+        text: planText || null,
         photos: [],
         href: `/plans/${plan.id}`,
         removable: null,
@@ -229,7 +238,7 @@ export function recentActivity(
         photos: [],
         href: null,
         removable: user.bannedAt ? null : { kind: "diver", userId: user.id },
-      }, user.id);
+      }, user.id, { kind: "diver", userId: user.id });
     }
   }
 
@@ -254,7 +263,7 @@ export function recentActivity(
     }
   }
 
-  return items.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.key.localeCompare(b.key)).slice(0, max);
+  return items.sort((a, b) => Date.parse(b.at) - Date.parse(a.at) || a.key.localeCompare(b.key));
 }
 
 /** Counts of recent activity by kind, for the filter tabs. */

@@ -6,12 +6,11 @@ import { appUrl, requireSession } from "./auth";
 import { sendNotice } from "./email";
 import {
   addFlag,
-  banDiver,
   banRefusal,
   FLAG_REASON_LABELS,
   isModeratorEmail,
+  moderate,
   readFlagInput,
-  removeFlagged,
   resolveFlags,
   setBlocked,
   type StoredPhoto,
@@ -137,7 +136,7 @@ export type FlagView = {
   createdAt: string;
   reporter: string | null;
   /** Whose content it is. */
-  diver: { userId: string; nickname: string; about: string | null; banned: boolean } | null;
+  diver: { userId: string; nickname: string; about: string | null; banned: boolean; storeReview: boolean } | null;
   site: { id: string; name: string; howToDive: string | null; hidden: boolean } | null;
   review: { score: number; text: string | null } | null;
   photos: string[];
@@ -179,7 +178,9 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
       note: flag.note ?? null,
       createdAt: flag.createdAt,
       reporter: nickname(flag.reporterId),
-      diver: user ? { userId: user.id, nickname: user.nickname, about: user.about ?? null, banned: Boolean(user.bannedAt) } : null,
+      diver: user
+        ? { userId: user.id, nickname: user.nickname, about: user.about ?? null, banned: Boolean(user.bannedAt), storeReview: Boolean(user.storeReview) }
+        : null,
       site: site ? { id: site.id, name: site.name, howToDive: site.howToDive ?? null, hidden: Boolean(site.hidden) } : null,
       review: rating ? { score: rating.score, text: rating.review ?? null } : null,
       photos,
@@ -209,16 +210,7 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
         resolveFlags(store, flag, "dismissed", nowIso);
         return [];
       }
-      if (action === "ban") {
-        const refusal = banRefusal(store, flag.userId, moderator);
-        if (refusal) throw new Error(refusal);
-        const removed = banDiver(store, flag.userId!, nowMs) ?? [];
-        resolveFlags(store, flag, "banned", nowIso);
-        return removed;
-      }
-      const removed = removeFlagged(store, flag, nowIso);
-      resolveFlags(store, flag, "removed", nowIso);
-      return removed;
+      return moderate(store, flag, action, moderator, nowMs);
     });
     if (!photos) return { ok: false, error: "That report is gone." };
     await Promise.all(photos.map(({ siteId, photo }) => deletePhotoBytes(siteId, photo.id).catch(() => undefined)));
@@ -268,20 +260,7 @@ export async function moderateContent(target: unknown, action: unknown): Promise
     const userId = text(record.userId);
     if (!kind || (kind !== "diver" && !siteId) || (kind !== "site" && !userId)) return { ok: false, error: "Unknown content." };
     const content = { kind, ...(siteId && kind !== "diver" ? { siteId } : {}), ...(userId ? { userId } : {}) };
-    const photos = await mutateStore((store): StoredPhoto[] => {
-      const nowMs = Date.now();
-      const nowIso = new Date(nowMs).toISOString();
-      if (action === "ban") {
-        const refusal = banRefusal(store, content.userId, moderator);
-        if (refusal) throw new Error(refusal);
-        const removed = banDiver(store, content.userId!, nowMs) ?? [];
-        resolveFlags(store, content, "banned", nowIso);
-        return removed;
-      }
-      const removed = removeFlagged(store, content, nowIso);
-      resolveFlags(store, content, "removed", nowIso);
-      return removed;
-    });
+    const photos = await mutateStore((store): StoredPhoto[] => moderate(store, content, action, moderator, Date.now()));
     await Promise.all(photos.map(({ siteId: site, photo }) => deletePhotoBytes(site, photo.id).catch(() => undefined)));
     return { ok: true, error: null };
   } catch (caught) {

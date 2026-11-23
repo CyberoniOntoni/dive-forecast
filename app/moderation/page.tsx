@@ -45,9 +45,15 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
           {flag.diver ? (
             <p className="text-sm text-foam/85">
               Diver:{" "}
-              <Link href={`/divers/${flag.diver.userId}`} className="underline decoration-incoming underline-offset-4">
-                {flag.diver.nickname}
-              </Link>
+              {flag.diver.storeReview ? (
+                <>
+                  {flag.diver.nickname} <span className="rounded bg-foam/15 px-1.5 py-0.5 text-xs">Store reviewer: hidden from others</span>
+                </>
+              ) : (
+                <Link href={`/divers/${flag.diver.userId}`} className="underline decoration-incoming underline-offset-4">
+                  {flag.diver.nickname}
+                </Link>
+              )}
               {flag.diver.banned ? " (banned)" : ""}
               {flag.kind === "diver" && flag.diver.about ? <span className="block whitespace-pre-line">About: {flag.diver.about}</span> : null}
             </p>

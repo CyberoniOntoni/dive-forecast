@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { ActivityTarget } from "@/lib/activity";
+import { REMOVE_LABELS, type ActivityTarget } from "@/lib/activity";
 import { moderateContent, moderateFlag } from "@/lib/moderation-actions";
 
 type Action = "remove" | "ban" | "dismiss";
@@ -24,7 +24,7 @@ export function ModerationActions(
   const fromReport = props.flagId != null;
   const target = props.target ?? null;
   const canBan = fromReport ? props.canBan : props.banTarget != null;
-  const removeLabel = fromReport ? "Remove content" : target?.kind === "review" ? "Remove review" : target?.kind === "site" ? "Hide site" : "Reset profile";
+  const removeLabel = fromReport || !target ? "Remove content" : REMOVE_LABELS[target.kind];
 
   function act(action: Action) {
     const needsConfirm = action === "ban" || (action === "remove" && !fromReport);
