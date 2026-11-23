@@ -12,7 +12,7 @@ import { POST as flag } from "@/app/api/v1/flags/route";
 import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as agree } from "@/app/api/v1/me/terms/route";
 import { listOpenFlags, listRecentActivity, moderateContent, moderateFlag } from "@/lib/moderation-actions";
-import { readStore, setStorePath } from "@/lib/store";
+import { mutateStore, readStore, setStorePath } from "@/lib/store";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 
@@ -182,12 +182,21 @@ describe("API v1 reports, blocks and moderation", () => {
     call("/api/v1/me", { token: mod });
     const view = (await listRecentActivity())!;
     expect(view.counts).toMatchObject({ review: 1, signup: 3 });
+    expect(view).toMatchObject({ page: 1, pages: 1 });
     expect(JSON.stringify(view)).not.toContain("@example.com");
     const written = view.items.find((item) => item.kind === "review")!;
     expect(written).toMatchObject({ text: "Offensive words", diver: { nickname: "Rude" }, site: { id: "banana-reef" } });
     expect((await listRecentActivity("divers"))!.items.map((item) => item.kind)).toEqual(["signup", "signup", "signup"]);
 
-    expect(await moderateContent({ kind: "diver", userId: view.moderatorId }, "ban")).toMatchObject({ ok: false, error: "You cannot ban yourself." });
+    const modId = readStore().users.find((user) => user.nickname === "Mod")!.id;
+    expect(await moderateContent({ kind: "diver", userId: modId }, "ban")).toMatchObject({ ok: false, error: "You cannot ban yourself." });
+    // The store-review account is never banned, even by a direct call.
+    const annId = readStore().users.find((user) => user.nickname === "Ann")!.id;
+    await mutateStore((store) => {
+      store.users.find((user) => user.id === annId)!.storeReview = true;
+    });
+    expect(await moderateContent({ kind: "diver", userId: annId }, "ban")).toMatchObject({ ok: false, error: expect.stringContaining("store-review") });
+    expect(readStore().users.find((user) => user.id === annId)?.bannedAt).toBeUndefined();
     expect(await moderateContent(written.removable, "remove")).toEqual({ ok: true, error: null });
     expect((await listRecentActivity("reviews"))!.items).toEqual([]);
     const rudeId = readStore().users.find((user) => user.nickname === "Rude")!.id;

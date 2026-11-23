@@ -187,6 +187,21 @@ export function banDiver(store: StoreData, userId: string, nowMs: number): Store
   return photos;
 }
 
+/**
+ * Why a moderator may not ban this diver, or null when they may: not oneself, not a diver already banned or gone, and
+ * never the store-review account, whose sign-in details are written down in Play Console (CLOUDFLARE.md § Store-review
+ * account: a ban would lock out the next review). The one rule for the buttons and the server alike.
+ */
+export function banRefusal(store: StoreData, userId: string | undefined, moderatorId: string): string | null {
+  if (!userId) return "No diver to ban.";
+  if (userId === moderatorId) return "You cannot ban yourself.";
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) return "That diver is gone.";
+  if (user.storeReview) return "The store-review account cannot be banned.";
+  if (user.bannedAt) return "That diver is already banned.";
+  return null;
+}
+
 /** Closes every open report on the same content as `flag` with this resolution. */
 export function resolveFlags(store: StoreData, flag: Pick<ContentFlag, "kind" | "siteId" | "userId">, resolution: NonNullable<ContentFlag["resolution"]>, nowIso: string): void {
   for (const item of store.flags) {

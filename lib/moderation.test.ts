@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { finishLogin, TERMS_NEEDED } from "./accounts";
-import { addFlag, BANNED, banDiver, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
+import { addFlag, BANNED, banDiver, banRefusal, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-11-18T10:00:00Z");
@@ -120,5 +120,17 @@ describe("moderation", () => {
     expect(isModeratorEmail("Owner@Example.com", " owner@example.com , other@example.com")).toBe(true);
     expect(isModeratorEmail("diver@example.com", "owner@example.com")).toBe(false);
     expect(isModeratorEmail("diver@example.com", null)).toBe(false);
+  });
+
+  it("refuses to ban oneself, the store-review account, a banned or unknown diver", () => {
+    const data = store();
+    data.users.push({ id: "review", email: "review@example.com", nickname: "Reviewer", createdAt: "", storeReview: true });
+    expect(banRefusal(data, "bad", "ann")).toBeNull();
+    expect(banRefusal(data, "ann", "ann")).toMatch("yourself");
+    expect(banRefusal(data, "review", "ann")).toMatch("store-review");
+    expect(banRefusal(data, "nobody", "ann")).toMatch("gone");
+    expect(banRefusal(data, undefined, "ann")).toMatch("No diver");
+    banDiver(data, "bad", NOW);
+    expect(banRefusal(data, "bad", "ann")).toMatch("already");
   });
 });

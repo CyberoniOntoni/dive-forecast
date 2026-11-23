@@ -118,4 +118,18 @@ describe("recent activity for moderators", () => {
     expect(readActivityFilter("constructor")).toBe("all");
     expect(readActivityFilter(["reviews"])).toBe("all");
   });
+
+  it("offers Ban only where the server allows it, hidden sites too, never on the store-review account or oneself", () => {
+    const data = store();
+    data.sites[0].hidden = true;
+    const byKey = new Map(recentActivity(data, lookup, NOW, { moderatorId: "ann" }).map((item) => [item.key, item]));
+    expect(byKey.get("site:pin")).toMatchObject({ removable: null, canBan: true });
+    expect(byKey.get("rating:cat:bad")?.canBan).toBe(true);
+    expect(byKey.get("report:rev")?.canBan).toBe(false);
+    expect(byKey.get("signup:store")?.canBan).toBe(false);
+    expect(byKey.get("report:r1")?.canBan).toBe(false);
+    expect(byKey.get("flag:f1")?.canBan).toBe(false);
+    expect(byKey.get("report:gone")?.canBan).toBe(false);
+    expect(recentActivity(data, lookup, NOW).every((item) => !item.canBan)).toBe(true);
+  });
 });

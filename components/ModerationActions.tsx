@@ -2,43 +2,72 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { moderateFlag } from "@/lib/moderation-actions";
+import type { ActivityTarget } from "@/lib/activity";
+import { moderateContent, moderateFlag } from "@/lib/moderation-actions";
 
-/** A moderator's three answers to a report. Ban takes a second tap. */
-export function ModerationActions({ flagId, canBan }: { flagId: string; canBan: boolean }) {
+type Action = "remove" | "ban" | "dismiss";
+
+/**
+ * A moderator's answers on /moderation: to an open report (`flagId`: Remove content, Ban diver, Dismiss), or to
+ * something in the activity feed with no report (`target`: Remove, Ban diver). Ban always takes a second tap; in the
+ * feed, Remove does too. Remove is left out when there is nothing to remove, Ban when the server would refuse it.
+ */
+export function ModerationActions(
+  props: ({ flagId: string; target?: never } | { target: ActivityTarget | null; flagId?: never }) & { canBan: boolean },
+) {
   const router = useRouter();
-  const [confirmBan, setConfirmBan] = useState(false);
+  const [confirm, setConfirm] = useState<Action | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const fromReport = props.flagId != null;
+  const target = props.target ?? null;
+  const removeLabel = fromReport ? "Remove content" : target?.kind === "review" ? "Remove review" : target?.kind === "site" ? "Hide site" : "Reset profile";
 
-  function act(action: "remove" | "ban" | "dismiss") {
+  function act(action: Action) {
+    const needsConfirm = action === "ban" || (action === "remove" && !fromReport);
+    if (needsConfirm && confirm !== action) {
+      setConfirm(action);
+      return;
+    }
     setError(null);
     startTransition(async () => {
-      const result = await moderateFlag(flagId, action);
+      const result = props.flagId != null ? await moderateFlag(props.flagId, action) : await moderateContent(target, action);
+      setConfirm(null);
       if (!result.ok) setError(result.error);
       else router.refresh();
     });
   }
 
+  if (!fromReport && !target && !props.canBan) return null;
+  const solid = "min-h-11 rounded-xl px-4 text-sm font-medium text-ink disabled:opacity-50";
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={pending} onClick={() => act("remove")} className="min-h-11 rounded-xl bg-outgoing px-4 text-sm font-medium text-ink disabled:opacity-50">
-          Remove content
-        </button>
-        {canBan ? (
+        {fromReport || target ? (
           <button
             type="button"
             disabled={pending}
-            onClick={() => (confirmBan ? act("ban") : setConfirmBan(true))}
-            className="min-h-11 rounded-xl bg-stop px-4 text-sm font-medium text-ink disabled:opacity-50"
+            onClick={() => act("remove")}
+            className={fromReport ? `${solid} bg-outgoing` : "button-quiet px-3 text-sm disabled:opacity-50"}
           >
-            {confirmBan ? "Tap again to ban and remove all their posts" : "Ban diver"}
+            {confirm === "remove" ? "Tap again to confirm" : removeLabel}
           </button>
         ) : null}
-        <button type="button" disabled={pending} onClick={() => act("dismiss")} className="button-quiet px-4 disabled:opacity-50">
-          Dismiss
-        </button>
+        {props.canBan ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => act("ban")}
+            className={fromReport ? `${solid} bg-stop` : "button-quiet px-3 text-sm text-stop disabled:opacity-50"}
+          >
+            {confirm === "ban" ? "Tap again to ban and remove all their posts" : "Ban diver"}
+          </button>
+        ) : null}
+        {fromReport ? (
+          <button type="button" disabled={pending} onClick={() => act("dismiss")} className="button-quiet px-4 disabled:opacity-50">
+            Dismiss
+          </button>
+        ) : null}
       </div>
       {error ? (
         <p role="alert" className="text-sm text-outgoing">

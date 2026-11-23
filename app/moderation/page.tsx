@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ModerationActions } from "@/components/ModerationActions";
 import { ModerationActivity } from "@/components/ModerationActivity";
+import { ModerationPhotos } from "@/components/ModerationPhotos";
 import { readActivityFilter } from "@/lib/activity";
 import { listOpenFlags, listRecentActivity } from "@/lib/moderation-actions";
 
@@ -15,8 +16,10 @@ export const metadata: Metadata = { title: "Moderation · 50Bar", robots: { inde
  * the last 30 days (lib/activity.ts). Anyone else gets a 404.
  */
 export default async function ModerationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const filter = readActivityFilter((await searchParams).show);
-  const [flags, activity] = await Promise.all([listOpenFlags(), listRecentActivity(filter)]);
+  const params = await searchParams;
+  const filter = readActivityFilter(params.show);
+  const page = typeof params.page === "string" ? Number.parseInt(params.page, 10) || 1 : 1;
+  const [flags, activity] = await Promise.all([listOpenFlags(), listRecentActivity(filter, page)]);
   if (!flags || !activity) notFound();
 
   return (
@@ -64,19 +67,8 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
               {flag.review.score}/5{flag.review.text ? `: ${flag.review.text}` : ""}
             </p>
           ) : null}
-          {flag.photos.length ? (
-            <ul className="grid grid-cols-3 gap-2">
-              {flag.photos.map((url) => (
-                <li key={url} className="aspect-square overflow-hidden rounded-lg bg-foam/10">
-                  <a href={url} target="_blank" rel="noopener" className="block h-full w-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- moderator view of user photos */}
-                    <img src={url} alt="Reported photo" loading="lazy" className="h-full w-full object-cover" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <ModerationActions flagId={flag.id} canBan={flag.diver != null && !flag.diver.banned} />
+          <ModerationPhotos urls={flag.photos} alt="Reported photo" />
+          <ModerationActions flagId={flag.id} canBan={flag.canBan} />
         </article>
       ))}
       <ModerationActivity view={activity} filter={filter} />

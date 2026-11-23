@@ -1,4 +1,4 @@
-import { FLAG_REASON_LABELS } from "./moderation";
+import { banRefusal, FLAG_REASON_LABELS } from "./moderation";
 import { strengthLabel } from "./nowcast-glance";
 import { photoUrl } from "./site-photos-limits";
 import type { ContentFlag, FlagKind, Report, StoreData, User } from "./types";
@@ -25,7 +25,8 @@ export const ACTIVITY_FILTERS = {
 export type ActivityFilter = keyof typeof ACTIVITY_FILTERS;
 
 export const ACTIVITY_DAYS = 30;
-export const ACTIVITY_MAX = 300;
+/** Items to a page on /moderation; older ones are on the next pages, so the whole window can be read. */
+export const ACTIVITY_PAGE_SIZE = 100;
 
 export type ActivityDiver = {
   userId: string;
@@ -55,6 +56,8 @@ export type ActivityItem = {
   href: string | null;
   /** What "Remove" takes down; null when there is nothing to remove. */
   removable: ActivityTarget | null;
+  /** Whether Ban diver is offered for whoever did it (banRefusal: never oneself or the store-review account). */
+  canBan: boolean;
   /** Open content reports on the same thing. */
   openFlags: number;
 };
@@ -72,12 +75,20 @@ function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
-/** Recent activity, newest first: the last `days` days, at most `max` items, of the given kinds. */
+/**
+ * Recent activity, newest first: the last `days` days of the given kinds, all of it unless `max` is given. Ban is
+ * offered on items whose diver `moderatorId` may ban (none without one).
+ */
 export function recentActivity(
   store: StoreData,
   lookupSite: ActivitySiteLookup,
   nowMs: number,
-  { days = ACTIVITY_DAYS, max = ACTIVITY_MAX, kinds = ACTIVITY_KINDS }: { days?: number; max?: number; kinds?: readonly ActivityKind[] } = {},
+  {
+    days = ACTIVITY_DAYS,
+    max = Number.POSITIVE_INFINITY,
+    kinds = ACTIVITY_KINDS,
+    moderatorId,
+  }: { days?: number; max?: number; kinds?: readonly ActivityKind[]; moderatorId?: string } = {},
 ): ActivityItem[] {
   const since = nowMs - days * 24 * 60 * 60 * 1000;
   const recent = (at: string | null | undefined): at is string => {
@@ -102,7 +113,13 @@ export function recentActivity(
   const openFlags = (target: ActivityTarget) =>
     store.flags.filter((flag) => !flag.resolvedAt && flag.kind === target.kind && flag.siteId === target.siteId && flag.userId === target.userId).length;
   const items: ActivityItem[] = [];
-  const push = (item: Omit<ActivityItem, "openFlags">) => items.push({ ...item, openFlags: item.removable ? openFlags(item.removable) : 0 });
+  // Content reports name their reporter as the diver; banning is for whose content it is, so they get no Ban.
+  const push = (item: Omit<ActivityItem, "openFlags" | "canBan">) =>
+    items.push({
+      ...item,
+      openFlags: item.removable ? openFlags(item.removable) : 0,
+      canBan: moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null,
+    });
 
   if (wanted.has("report")) {
     for (const report of store.reports) {

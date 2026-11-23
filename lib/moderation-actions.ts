@@ -1,12 +1,13 @@
 "use server";
 
-import { ACTIVITY_FILTERS, ACTIVITY_MAX, activityCounts, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
+import { ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, activityCounts, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
 import { appSetting, runInBackground } from "./cloudflare";
 import { appUrl, requireSession } from "./auth";
 import { sendNotice } from "./email";
 import {
   addFlag,
   banDiver,
+  banRefusal,
   FLAG_REASON_LABELS,
   isModeratorEmail,
   readFlagInput,
@@ -142,12 +143,15 @@ export type FlagView = {
   photos: string[];
   /** Other open reports on the same content. */
   alsoReported: number;
+  /** Whether Ban diver is offered (banRefusal). */
+  canBan: boolean;
 };
 
 /** Open reports, oldest first, with what they are about, for /moderation. Null for anyone but a moderator. */
 export async function listOpenFlags(): Promise<FlagView[] | null> {
   await ready();
-  if (!(await moderatorId())) return null;
+  const moderator = await moderatorId();
+  if (!moderator) return null;
   const store = readStore();
   const nickname = (id: string | undefined) => store.users.find((user) => user.id === id)?.nickname ?? null;
   const open = store.flags.filter((flag) => !flag.resolvedAt);
@@ -180,6 +184,7 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
       review: rating ? { score: rating.score, text: rating.review ?? null } : null,
       photos,
       alsoReported: open.filter((item) => `${item.kind}|${item.siteId ?? ""}|${item.userId ?? ""}` === key).length - 1,
+      canBan: banRefusal(store, flag.userId, moderator) == null,
     });
   }
   return views;
@@ -205,9 +210,9 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
         return [];
       }
       if (action === "ban") {
-        if (!flag.userId) throw new Error("This report names no diver to ban.");
-        if (flag.userId === moderator) throw new Error("You cannot ban yourself.");
-        const removed = banDiver(store, flag.userId, nowMs) ?? [];
+        const refusal = banRefusal(store, flag.userId, moderator);
+        if (refusal) throw new Error(refusal);
+        const removed = banDiver(store, flag.userId!, nowMs) ?? [];
         resolveFlags(store, flag, "banned", nowIso);
         return removed;
       }
@@ -223,21 +228,24 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
   }
 }
 
-export type ActivityView = { items: ActivityItem[]; counts: Record<ActivityKind, number>; total: number; moderatorId: string };
+export type ActivityView = { items: ActivityItem[]; counts: Record<ActivityKind, number>; total: number; page: number; pages: number };
 
 /**
- * What divers did in the last 30 days, newest first (lib/activity.ts), for /moderation: at most ACTIVITY_MAX items of
- * the filter's kinds, with counts of every kind. Null for anyone but a moderator.
+ * What divers did in the last 30 days, newest first (lib/activity.ts), for /moderation: the filter's kinds,
+ * ACTIVITY_PAGE_SIZE to a page, with counts of every kind. Null for anyone but a moderator.
  */
-export async function listRecentActivity(filter: ActivityFilter = "all"): Promise<ActivityView | null> {
+export async function listRecentActivity(filter: ActivityFilter = "all", page = 1): Promise<ActivityView | null> {
   await ready();
   const moderator = await moderatorId();
   if (!moderator) return null;
   const store = readStore();
-  const all = recentActivity(store, findSite, Date.now(), { max: Number.POSITIVE_INFINITY });
+  const all = recentActivity(store, findSite, Date.now(), { moderatorId: moderator });
   const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[filter].kinds);
   const shown = all.filter((item) => kinds.has(item.kind));
-  return { items: shown.slice(0, ACTIVITY_MAX), counts: activityCounts(all), total: shown.length, moderatorId: moderator };
+  const pages = Math.max(1, Math.ceil(shown.length / ACTIVITY_PAGE_SIZE));
+  const current = Math.min(Math.max(1, Math.floor(page) || 1), pages);
+  const items = shown.slice((current - 1) * ACTIVITY_PAGE_SIZE, current * ACTIVITY_PAGE_SIZE);
+  return { items, counts: activityCounts(all), total: shown.length, page: current, pages };
 }
 
 /**
@@ -261,10 +269,9 @@ export async function moderateContent(target: unknown, action: unknown): Promise
       const nowMs = Date.now();
       const nowIso = new Date(nowMs).toISOString();
       if (action === "ban") {
-        if (!content.userId) throw new Error("No diver to ban.");
-        if (content.userId === moderator) throw new Error("You cannot ban yourself.");
-        const removed = banDiver(store, content.userId, nowMs);
-        if (!removed) throw new Error("That diver is gone.");
+        const refusal = banRefusal(store, content.userId, moderator);
+        if (refusal) throw new Error(refusal);
+        const removed = banDiver(store, content.userId!, nowMs) ?? [];
         resolveFlags(store, content, "banned", nowIso);
         return removed;
       }

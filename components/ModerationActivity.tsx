@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ActivityModeration } from "@/components/ActivityModeration";
-import { ACTIVITY_DAYS, ACTIVITY_FILTERS, ACTIVITY_MAX, type ActivityFilter, type ActivityKind } from "@/lib/activity";
+import { ModerationActions } from "@/components/ModerationActions";
+import { ModerationPhotos } from "@/components/ModerationPhotos";
+import { ACTIVITY_DAYS, ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, type ActivityFilter, type ActivityKind } from "@/lib/activity";
 import type { ActivityView } from "@/lib/moderation-actions";
 
 const KIND_LABELS: Record<ActivityKind, string> = {
@@ -12,6 +13,14 @@ const KIND_LABELS: Record<ActivityKind, string> = {
   signup: "Sign-up",
   flag: "Content report",
 };
+
+function pageHref(filter: ActivityFilter, page: number): string {
+  const params = new URLSearchParams();
+  if (filter !== "all") params.set("show", filter);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `/moderation?${query}` : "/moderation";
+}
 
 const link = "underline decoration-incoming underline-offset-4";
 
@@ -25,8 +34,8 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
           Recent activity
         </h2>
         <p className="text-sm text-foam/75">
-          The last {ACTIVITY_DAYS} days, newest first{view.total > ACTIVITY_MAX ? `, the latest ${ACTIVITY_MAX} of ${view.total}` : ""}. Times
-          in UTC.
+          The last {ACTIVITY_DAYS} days, newest first
+          {view.pages > 1 ? `, ${ACTIVITY_PAGE_SIZE} to a page (page ${view.page} of ${view.pages})` : ""}. Times in UTC.
         </p>
       </header>
       <nav aria-label="Show" className="flex flex-wrap gap-1.5">
@@ -86,27 +95,25 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
               )}
             </p>
             {item.text ? <p className="text-sm whitespace-pre-line text-foam/80 italic">“{item.text}”</p> : null}
-            {item.photos.length ? (
-              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                {item.photos.map((url) => (
-                  <li key={url} className="aspect-square overflow-hidden rounded-lg bg-foam/10">
-                    <a href={url} target="_blank" rel="noopener" className="block h-full w-full">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- moderator view of user photos */}
-                      <img src={url} alt={`${KIND_LABELS[item.kind]} photo`} loading="lazy" className="h-full w-full object-cover" />
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {item.removable ? (
-              <ActivityModeration
-                target={item.removable}
-                canBan={Boolean(item.diver && !item.diver.banned && !item.diver.storeReview && item.diver.userId !== view.moderatorId)}
-              />
-            ) : null}
+            <ModerationPhotos urls={item.photos} alt={`${KIND_LABELS[item.kind]} photo`} />
+            <ModerationActions target={item.removable} canBan={item.canBan} />
           </li>
         ))}
       </ol>
+      {view.pages > 1 ? (
+        <nav aria-label="Pages" className="flex flex-wrap gap-2">
+          {view.page > 1 ? (
+            <Link href={pageHref(filter, view.page - 1)} className="button-quiet px-4">
+              Newer
+            </Link>
+          ) : null}
+          {view.page < view.pages ? (
+            <Link href={pageHref(filter, view.page + 1)} className="button-quiet px-4">
+              Older
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
     </section>
   );
 }
