@@ -8,7 +8,7 @@ import { marineCacheDir, marineCacheName, marineFixtureName, parseMarineCache, s
 import { seawardKmFor } from "../lib/seaward-floor";
 import { replayReports, type BenchmarkMetrics, type ReplayResult } from "../lib/replay";
 import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
-import { listMergedSites, readCatalog, readStore } from "../lib/store";
+import { countedReports, listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
 
 /** Committed fixture caches so CI can score benchmark reports without live Open-Meteo files. */
@@ -307,7 +307,8 @@ function loadReportsForMode(options: ReplayCliOptions): { reports: Report[]; dat
     console.warn("Benchmark dataset not found at", BENCHMARK_DATASET_PATH, "- falling back to store");
   }
 
-  const storeReports = readStore().reports;
+  // The reports that teach the forecast: not the store-review account's, not those a moderator hid.
+  const storeReports = countedReports(readStore());
   if (storeReports.length > 0) {
     return { reports: storeReports, datasetName: "data/store.json" };
   }

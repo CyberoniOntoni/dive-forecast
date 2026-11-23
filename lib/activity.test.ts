@@ -144,4 +144,14 @@ describe("recent activity for moderators", () => {
     data.ratings.push({ siteId: "cat", score: 3, updatedAt: "2026-11-22T00:00:00Z" });
     expect(recentActivity(data, lookup, NOW).find((item) => item.key === "rating:cat:anonymous")?.noDiver).toBe("No account");
   });
+
+  it("marks hidden dive reports and counts each diver's reports still in the forecast", () => {
+    const data = store();
+    data.reports.find((report) => report.id === "old")!.hiddenAt = "2026-11-01T00:00:00Z";
+    data.reports.find((report) => report.id === "r1")!.hiddenAt = "2026-11-22T06:00:00Z";
+    const byKey = new Map(recentActivity(data, lookup, NOW).map((item) => [item.key, item]));
+    expect(byKey.get("report:r1")).toMatchObject({ report: { id: "r1", hidden: true, diverVisible: 0 }, summary: expect.stringContaining("hidden, not in the forecast") });
+    expect(byKey.get("report:rev")?.report).toEqual({ id: "rev", hidden: false, diverVisible: 1 });
+    expect(byKey.get("plan:plan1")?.report).toBeNull();
+  });
 });

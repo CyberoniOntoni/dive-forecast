@@ -8,11 +8,13 @@ import {
   addFlag,
   banRefusal,
   FLAG_REASON_LABELS,
+  hideReportsBy,
   isModeratorEmail,
   moderate,
   readFlagInput,
   resolveFlags,
   setBlocked,
+  setReportHidden,
   type StoredPhoto,
 } from "./moderation";
 import { ready } from "./ready";
@@ -263,6 +265,28 @@ export async function moderateContent(target: unknown, action: unknown): Promise
     const photos = await mutateStore((store): StoredPhoto[] => moderate(store, content, action, moderator, Date.now()));
     await Promise.all(photos.map(({ siteId: site, photo }) => deletePhotoBytes(site, photo.id).catch(() => undefined)));
     return { ok: true, error: null };
+  } catch (caught) {
+    return failed(caught, "Could not do that.");
+  }
+}
+
+/**
+ * A moderator hides a malicious or made-up dive report, or shows it again ("hide" / "show"), or hides every report one
+ * diver filed ("hide-all", `target` their User.id). Hidden reports stop teaching the forecast at once (countedReports).
+ */
+export async function moderateReports(target: unknown, action: unknown): Promise<ModerationResult> {
+  await ready();
+  try {
+    const moderator = await moderatorId();
+    if (!moderator) return { ok: false, error: "Only moderators can do that." };
+    if (typeof target !== "string" || !target) return { ok: false, error: "Unknown report." };
+    if (action !== "hide" && action !== "show" && action !== "hide-all") return { ok: false, error: "Unknown action." };
+    const done = await mutateStore((store) => {
+      const nowIso = new Date().toISOString();
+      if (action === "hide-all") return hideReportsBy(store, target, nowIso) > 0;
+      return setReportHidden(store, target, action === "hide", nowIso);
+    });
+    return done ? { ok: true, error: null } : { ok: false, error: "No such report." };
   } catch (caught) {
     return failed(caught, "Could not do that.");
   }

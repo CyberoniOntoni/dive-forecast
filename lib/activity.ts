@@ -64,6 +64,11 @@ export type ActivityItem = {
   banTarget: ActivityTarget | null;
   /** Who to name when `diver` is null: a rating from before sign-in, or an account since deleted. */
   noDiver: string;
+  /**
+   * On a dive report: its id, whether a moderator hid it, and how many of its diver's reports still teach the forecast
+   * (for "Hide all their reports"). Null on every other kind.
+   */
+  report: { id: string; hidden: boolean; diverVisible: number } | null;
   /** Open content reports on the same thing. */
   openFlags: number;
 };
@@ -121,13 +126,18 @@ export function recentActivity(
   const items: ActivityItem[] = [];
   // Content reports name their reporter as the diver; banning is for whose content it is, so they get no Ban.
   // `subject` is what content reports on this item would name; it counts open ones even when nothing is left to remove.
-  const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver">, userId: string | undefined, subject: ActivityTarget | null = null) => {
+  const visibleBy = new Map<string, number>();
+  for (const report of store.reports) {
+    if (report.userId && !report.hiddenAt) visibleBy.set(report.userId, (visibleBy.get(report.userId) ?? 0) + 1);
+  }
+  const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver" | "report"> & { report?: ActivityItem["report"] }, userId: string | undefined, subject: ActivityTarget | null = null) => {
     const bannable = moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null;
     items.push({
       ...item,
       openFlags: subject ? openFlags(subject) : 0,
       banTarget: bannable ? { kind: "diver", userId: item.diver!.userId } : null,
       noDiver: userId ? "Deleted account" : "No account",
+      report: item.report ?? null,
     });
   };
 
@@ -143,11 +153,12 @@ export function recentActivity(
         at,
         diver: diver(report.userId),
         site: site(report.siteId),
-        summary: `Dive report: ${report.direction}, ${strengthLabel(report.strength)} at ${report.time.replace("T", " ")} (Maldives)${forecast}`,
+        summary: `Dive report: ${report.direction}, ${strengthLabel(report.strength)} at ${report.time.replace("T", " ")} (Maldives)${forecast}${report.hiddenAt ? "; hidden, not in the forecast" : ""}`,
         text: null,
         photos: [],
         href: null,
         removable: null,
+        report: { id: report.id, hidden: Boolean(report.hiddenAt), diverVisible: report.userId ? (visibleBy.get(report.userId) ?? 0) : 0 },
       }, report.userId);
     }
   }

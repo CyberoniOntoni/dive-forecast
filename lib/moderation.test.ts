@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { finishLogin, TERMS_NEEDED } from "./accounts";
-import { addFlag, BANNED, banDiver, banRefusal, moderate, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
+import { countedReports, finishLogin, TERMS_NEEDED } from "./accounts";
+import { addFlag, BANNED, banDiver, banRefusal, hideReportsBy, moderate, setReportHidden, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-11-18T10:00:00Z");
@@ -142,5 +142,19 @@ describe("moderation", () => {
     expect(() => moderate(data, { kind: "diver", userId: "ann" }, "ban", "ann", NOW)).toThrow("yourself");
     expect(moderate(data, { kind: "site", siteId: "pin", userId: "bad" }, "ban", "ann", NOW).map((item) => item.photo.id)).toEqual(["p1"]);
     expect(data.users.find((user) => user.id === "bad")?.bannedAt).toBeTruthy();
+  });
+
+  it("hides a dive report from the forecast and shows it again, or hides all of one diver's", () => {
+    const data = store();
+    const report = (id: string, userId: string) => ({ id, siteId: "s1", time: "2026-11-17T09:00", direction: "incoming" as const, strength: "mild" as const, userId });
+    data.reports.push(report("a", "bad"), report("b", "bad"), report("c", "ann"));
+    expect(setReportHidden(data, "a", true, "2026-11-18T00:00:00Z")).toBe(true);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["b", "c"]);
+    expect(setReportHidden(data, "a", false, "2026-11-18T00:00:00Z")).toBe(true);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["a", "b", "c"]);
+    expect(setReportHidden(data, "nope", true, "2026-11-18T00:00:00Z")).toBe(false);
+    expect(hideReportsBy(data, "bad", "2026-11-18T00:00:00Z")).toBe(2);
+    expect(hideReportsBy(data, "bad", "2026-11-18T00:00:00Z")).toBe(0);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["c"]);
   });
 });

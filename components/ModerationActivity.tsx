@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ModerationActions } from "@/components/ModerationActions";
 import { ModerationPhotos } from "@/components/ModerationPhotos";
+import { ReportModeration } from "@/components/ReportModeration";
 import { ACTIVITY_DAYS, ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, type ActivityFilter, type ActivityKind } from "@/lib/activity";
 import type { ActivityView } from "@/lib/moderation-actions";
 
@@ -97,6 +98,9 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
             {item.text ? <p className="text-sm whitespace-pre-line text-foam/80 italic">“{item.text}”</p> : null}
             <ModerationPhotos urls={item.photos} alt={`${KIND_LABELS[item.kind]} photo`} />
             <ModerationActions target={item.removable} banTarget={item.banTarget} />
+            {item.report ? (
+              <ReportModeration reportId={item.report.id} hidden={item.report.hidden} userId={item.diver?.userId ?? null} diverVisible={item.report.diverVisible} />
+            ) : null}
           </li>
         ))}
       </ol>

@@ -229,6 +229,29 @@ export function moderate(store: StoreData, content: ModeratedContent, action: "r
   return removed;
 }
 
+/**
+ * Hides a dive report a moderator judges malicious or made up, or shows it again: hidden, it stops teaching the
+ * forecast and leaves verify, points and listings (countedReports), but the row stays. False when there is no such report.
+ */
+export function setReportHidden(store: StoreData, reportId: string, hidden: boolean, nowIso: string): boolean {
+  const report = store.reports.find((item) => item.id === reportId);
+  if (!report) return false;
+  if (hidden) report.hiddenAt ??= nowIso;
+  else delete report.hiddenAt;
+  return true;
+}
+
+/** Hides every dive report a diver filed that is not hidden yet (one who sent made-up currents). Returns how many. */
+export function hideReportsBy(store: StoreData, userId: string, nowIso: string): number {
+  let count = 0;
+  for (const report of store.reports) {
+    if (report.userId !== userId || report.hiddenAt) continue;
+    report.hiddenAt = nowIso;
+    count += 1;
+  }
+  return count;
+}
+
 /** Closes every open report on the same content as `flag` with this resolution. */
 export function resolveFlags(store: StoreData, flag: Pick<ContentFlag, "kind" | "siteId" | "userId">, resolution: NonNullable<ContentFlag["resolution"]>, nowIso: string): void {
   for (const item of store.flags) {
