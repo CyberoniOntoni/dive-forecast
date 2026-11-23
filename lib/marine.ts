@@ -85,7 +85,7 @@ export async function siteMarineHours(
   if (seaward.ok && !marineSeriesStale(seaward.hours)) return usableMarine(seaward);
   const fallback = await fetchMarine(fallbackLat, fallbackLon, options);
   if (fallback.ok && !marineSeriesStale(fallback.hours)) return { ...usableMarine(fallback), fromFallback: true };
-  const points = options.past ? marinePastPoints : marinePoints;
+  const points = pointsFor(options);
   const ownCached = await points.readCached(point.lat, point.lon);
   const cached = ownCached ?? (await points.readCached(fallbackLat, fallbackLon));
   // The fallback point may itself still be on its first fetch: then the site is waiting too, not failed.
@@ -124,7 +124,8 @@ export type FetchOptions = {
    */
   skipFailed?: boolean;
   /**
-   * The long past window instead of the forecast week: REPORT_PAST_DAYS past days and one ahead, cached apart (prefix
+   * The long past window instead of the forecast week: REPORT_PAST_DAYS past days and 2 forecast days (today and
+   * tomorrow), cached apart (prefix
    * `past_`). For a report whose dive is too far back for the week's series to hold its tide (lib/actions.ts).
    */
   past?: boolean;
@@ -144,7 +145,12 @@ export type FetchOptions = {
  * point it has seen before. A point with no cache at all waits for its first fetch, unless the caller asked not to wait.
  */
 export function fetchMarine(lat: number, lon: number, options: FetchOptions = {}): Promise<MarineFetch> {
-  return (options.past ? marinePastPoints : marinePoints).fetch(lat, lon, options);
+  return pointsFor(options).fetch(lat, lon, options);
+}
+
+/** The week's points, or the long past window's (options.past). */
+function pointsFor(options: Pick<FetchOptions, "past">) {
+  return options.past ? marinePastPoints : marinePoints;
 }
 
 export type PointFetch<T> =
@@ -499,7 +505,7 @@ function marineQuery(lat: number, lon: number, past = false): string {
     forecast_days: "7",
   });
   if (past) {
-    // The past window: one day ahead is enough for the slope window and residual of any dive already done.
+    // The past window: 2 forecast days (today and tomorrow) cover the slope window and residual of any dive already done.
     params.set("past_days", String(REPORT_PAST_DAYS));
     params.set("forecast_days", "2");
   }
