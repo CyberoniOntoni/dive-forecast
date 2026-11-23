@@ -19,7 +19,7 @@ import {
 import { ready } from "./ready";
 import { reviewEmail } from "./review-account";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
-import { findSite, mutateStore, readStore } from "./store";
+import { findSite, mutateStore, readCatalog, readStore } from "./store";
 import { FLAG_KINDS, type ContentFlag, type FlagKind, type FlagReason } from "./types";
 
 /**
@@ -239,7 +239,9 @@ export async function listRecentActivity(filter: ActivityFilter = "all", page: n
   const moderator = await moderatorId();
   if (!moderator) return null;
   const store = readStore();
-  const all = recentActivity(store, findSite, Date.now(), { moderatorId: moderator });
+  // Added sites are in the store; the rest are catalog names. Not findSite, which places every added pin on each call.
+  const catalog = new Map(readCatalog().sites.map((site) => [site.id, site]));
+  const all = recentActivity(store, (id) => catalog.get(id), Date.now(), { moderatorId: moderator });
   // A server action can be called with anything: read the filter and page again rather than trust the types.
   const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[readActivityFilter(filter)].kinds);
   const shown = all.filter((item) => kinds.has(item.kind));

@@ -1,3 +1,4 @@
+import { parseWall } from "./forecast";
 import { banRefusal, FLAG_REASON_LABELS } from "./moderation";
 import { strengthLabel } from "./nowcast-glance";
 import { photoUrl } from "./site-photos-limits";
@@ -72,7 +73,8 @@ export type ActivitySiteLookup = (siteId: string) => { name: string; hidden?: bo
 /** When a report was filed, ISO UTC; reports from before filedAt was kept fall back to the dive time (UTC+5). */
 function reportAt(report: Report): string | null {
   if (report.filedAt) return report.filedAt;
-  const ms = Date.parse(`${report.time}:00+05:00`);
+  // parseWall reads Maldives wall time as if it were UTC; the Maldives are 5 hours ahead.
+  const ms = parseWall(report.time) - 5 * 60 * 60 * 1000;
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
