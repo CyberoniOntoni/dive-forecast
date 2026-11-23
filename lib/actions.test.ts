@@ -221,6 +221,30 @@ describe("addReport", () => {
   });
 });
 
+/**
+ * Writes a semidiurnal tide of `count` hours from `start` at a site's sample point into the test marine cache, under
+ * `prefix` ("" for the week's series, "past_" for the long past window).
+ */
+function seedSyntheticSeries(siteId: string, prefix: string, start: string, count: number): void {
+  const catalog = readCatalog();
+  const site = catalog.sites.find((item) => item.id === siteId)!;
+  const atoll = catalog.atolls.find((item) => item.id === site.atollId)!;
+  const bearing = inwardBearingDeg(site, catalog.sites, { lat: atoll.oceanLat, lon: atoll.oceanLon }, rimForAtoll(atoll));
+  const point = seawardPoint(site.lat, site.lon, bearing, seawardKmFor(site.id));
+  const startMs = Date.parse(`${start}:00Z`);
+  const hours = Array.from({ length: count }, (_, index) => ({
+    time: new Date(startMs + index * 3_600_000).toISOString().slice(0, 16),
+    seaLevelM: 0.5 * Math.sin((2 * Math.PI * index) / 12.42),
+    currentVelocityMs: 0.2,
+    currentDirectionDeg: 270,
+  }));
+  fs.mkdirSync(marineCacheDir(), { recursive: true });
+  fs.writeFileSync(
+    path.join(marineCacheDir(), `${prefix}${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.`),
+    JSON.stringify({ fetchedAt: Date.now(), hours }),
+  );
+}
+
 /** Puts a site's committed benchmark fixture in the test marine cache, under the name the cache reader looks for. */
 function seedMarineCache(siteId: string): void {
   const catalog = readCatalog();
@@ -280,6 +304,25 @@ describe("addReport saves the prediction", () => {
     const backDated = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T06:00", direction: "incoming", strength: "mild" });
     expect(backDated.predicted?.modelOnly).not.toBeNull();
     expect(backDated.predicted?.shown).toEqual({ ...backDated.predicted!.modelOnly, confidence: "low" });
+  });
+
+  it("reads a late report's tide from the long past window and marks its prediction a hindcast", async () => {
+    // The week's series as fetched on 27 Sep (one past day), and the long past window from 11 Sep.
+    seedSyntheticSeries("kandooma-thila", "", "2026-09-26T00:00", 8 * 24);
+    seedSyntheticSeries("kandooma-thila", "past_", "2026-09-11T00:00", 19 * 24);
+    // Eight days back: long gone from the week's series, inside the 14-day reporting window.
+    const late = await addReport({ siteId: "kandooma-thila", time: "2026-09-20T08:00", direction: "incoming", strength: "strong" });
+    expect(late.slopeWindowM).toHaveLength(13);
+    expect(late.slopeWindowM?.every((slope) => typeof slope === "number")).toBe(true);
+    expect(late.slopeM).toEqual(expect.any(Number));
+    expect(late.rangeM).toEqual(expect.any(Number));
+    expect(late.predicted?.hindcast).toBe(true);
+    expect(late.predicted?.modelOnly).not.toBeNull();
+    // A dive the week's series still holds whole keeps the forecast it had, not a hindcast.
+    const fresh = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T20:00", direction: "incoming", strength: "strong" });
+    expect(fresh.slopeWindowM?.every((slope) => typeof slope === "number")).toBe(true);
+    expect(fresh.predicted).toBeDefined();
+    expect(fresh.predicted?.hindcast).toBeUndefined();
   });
 
   it("still saves the report when there is no ocean data, just without a prediction", async () => {

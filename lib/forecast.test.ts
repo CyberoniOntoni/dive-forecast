@@ -1365,3 +1365,18 @@ describe("slack reports and confidence", () => {
     expect(forecast.some((hour) => hour.confidence === "high")).toBe(false);
   });
 });
+
+describe("a channel report's own hour", () => {
+  it("pulls the model hour it is about, as at walls, when filed at minutes past the hour", () => {
+    const hours = repeatingHours();
+    const at = "2026-09-23T02:00";
+    expect(directionAt(forecastHours({ hours, inwardBearingDeg: 0, reports: [] }), at)).toBe("incoming");
+    for (const time of ["2026-09-23T02:00", "2026-09-23T02:20"]) {
+      const report: Report = { id: "r", siteId: "s", time, direction: "outgoing", strength: "mild", slopeM: null };
+      const pulled = forecastHours({ hours, inwardBearingDeg: 0, reports: [report] });
+      expect(directionAt(pulled, at), time).toBe("outgoing");
+      // The hour before the dive is left alone.
+      expect(directionAt(pulled, "2026-09-23T01:00"), time).toBe("incoming");
+    }
+  });
+});

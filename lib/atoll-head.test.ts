@@ -108,3 +108,28 @@ describe("headWindowAt", () => {
     expect(headWindowAt(flat, flat[36].time, undefined)).toBeNull();
   });
 });
+
+describe("ringLevelFromSeries with points covering different hours", () => {
+  // The tide reaches the ring's points at different times: a cross-atoll head of a few centimetres.
+  const pointTide = (point: number) => (index: number) =>
+    0.5 * Math.sin((2 * Math.PI * (index - point * 0.12)) / 12.42) + 0.1 * Math.sin((2 * Math.PI * index) / 25.8);
+  const full = Array.from({ length: RING_POINTS }, (_, point) => hours(pointTide(point), 24 * 8));
+
+  it("matches the full ring where some points' series end a day earlier, with no step", () => {
+    const truth = new Map(ringLevelFromSeries(full).map((item) => [item.time, item.levelM]));
+    // Three neighbouring points fetched a Maldives day earlier: their series end 24 hours sooner.
+    const mixed = full.map((series, point) => (point < 3 ? series.slice(0, series.length - 24) : series));
+    const level = ringLevelFromSeries(mixed);
+    const worst = Math.max(...level.map((item) => Math.abs(item.levelM - truth.get(item.time)!)));
+    expect(worst).toBeLessThan(0.002);
+    // A plain mean over whichever points have the hour steps by centimetres there.
+    const plain = ringLevelFromSeries(mixed.slice(3));
+    const plainWorst = Math.max(...plain.map((item) => Math.abs(item.levelM - truth.get(item.time)!)));
+    expect(plainWorst).toBeGreaterThan(0.01);
+  });
+
+  it("skips a point with no series at all", () => {
+    const withGap = [null, ...full.slice(1)];
+    expect(ringLevelFromSeries(withGap).length).toBe(ringLevelFromSeries(full.slice(1)).length);
+  });
+});

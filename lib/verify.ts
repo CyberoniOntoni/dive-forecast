@@ -18,6 +18,8 @@ export type Score = {
 export type ModelSummary = {
   modelVersion: string;
   nudge: string;
+  /** Predictions worked out after the dive for reports filed late (ForecastAtReport.hindcast), scored apart. */
+  hindcast: boolean;
   reports: number;
   shown: Score;
   modelOnly: Score;
@@ -44,7 +46,8 @@ function add(score: Score, report: Report, predicted: { direction: string; stren
 }
 
 /**
- * Score saved predictions against the diver reports they were saved with, grouped by model version and nudge setting.
+ * Score saved predictions against the diver reports they were saved with, grouped by model version and nudge setting,
+ * with hindcasts (worked out after the dive for a report filed late) apart from predictions made before it.
  * Reports without a saved prediction (older ones, and the benchmark fixtures) are left out.
  */
 export function summarizeReports(reports: readonly Report[]): ModelSummary[] {
@@ -52,13 +55,14 @@ export function summarizeReports(reports: readonly Report[]): ModelSummary[] {
   for (const report of reports) {
     const predicted = report.predicted;
     if (!predicted) continue;
-    const key = `${predicted.modelVersion}|${predicted.nudge}`;
+    const hindcast = predicted.hindcast === true;
+    const key = `${predicted.modelVersion}|${predicted.nudge}|${hindcast}`;
     let group = groups.get(key);
     if (!group) {
       group = {
         list: [],
         summary: {
-          modelVersion: predicted.modelVersion, nudge: predicted.nudge, reports: 0,
+          modelVersion: predicted.modelVersion, nudge: predicted.nudge, hindcast, reports: 0,
           shown: emptyScore(), modelOnly: emptyScore(), baselineExact: 0,
         },
       };

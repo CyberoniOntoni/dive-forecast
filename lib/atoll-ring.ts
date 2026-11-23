@@ -63,27 +63,101 @@ export function ringPoints(ring: RimRing): { lat: number; lon: number }[] {
   return ringSamples(ring).map((sample) => sample.seaward);
 }
 
+/** Hours of full coverage needed before a ring with points missing at an hour is filled in from the others. */
+const MIN_FIT_HOURS = 48;
+
 /**
  * The mean residual level of the ring points by hour: the lagoon level a channel's head is measured against.
- * An hour present in fewer than MIN_RING_POINTS series is left out.
+ * An hour present in fewer than MIN_RING_POINTS series is left out. A series that is null (no data at all) is not a
+ * ring point; the mean is over the others.
+ *
+ * Series can cover different hours (one fetched on another Maldives date, or kept from an older fetch after a failed
+ * one). A plain mean over whichever points an hour has would step by up to 3.7 cm where the set changes, which the
+ * head's τ of 0.25 h turns into 0.15 m/h: as much as a typical tide slope. So at an hour with points missing, the
+ * mean of all the ring's points is predicted from the points it has, by least squares over the hours where every
+ * point has data. The ring's levels are tidal and span a few constituents, so that prediction holds to under 0.5 cm
+ * (checked on all 20 atolls, 23 Nov 2026, 1 to 3 neighbouring points missing). With fewer than MIN_FIT_HOURS of full
+ * coverage it falls back to the plain mean.
  */
-export function ringLevelFromSeries(series: readonly (readonly MarineHour[])[]): RingLevel[] {
-  const sums = new Map<string, { sum: number; count: number }>();
-  for (const hours of series) {
-    const residual = residualLevels(hours);
-    hours.forEach((hour, index) => {
-      const level = residual[index];
-      if (level == null) return;
-      const entry = sums.get(hour.time) ?? { sum: 0, count: 0 };
-      entry.sum += level;
-      entry.count += 1;
-      sums.set(hour.time, entry);
+export function ringLevelFromSeries(series: readonly (readonly MarineHour[] | null)[]): RingLevel[] {
+  const points = series
+    .filter((hours): hours is readonly MarineHour[] => hours != null)
+    .map((hours) => {
+      const residual = residualLevels(hours);
+      const byTime = new Map<string, number>();
+      hours.forEach((hour, index) => {
+        const level = residual[index];
+        if (level != null) byTime.set(hour.time, level);
+      });
+      return byTime;
     });
+  const times = [...new Set(points.flatMap((byTime) => [...byTime.keys()]))].sort();
+  const full = times.filter((time) => points.every((byTime) => byTime.has(time)));
+  const meanOf = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+  const fits = new Map<string, number[] | null>();
+  const fitFor = (present: readonly number[]): number[] | null => {
+    const key = present.join(",");
+    if (!fits.has(key)) {
+      fits.set(
+        key,
+        full.length >= MIN_FIT_HOURS
+          ? leastSquares(
+              full.map((time) => present.map((index) => points[index].get(time)!)),
+              full.map((time) => meanOf(points.map((byTime) => byTime.get(time)!))),
+            )
+          : null,
+      );
+    }
+    return fits.get(key)!;
+  };
+  const levels: RingLevel[] = [];
+  for (const time of times) {
+    const present = points.flatMap((byTime, index) => (byTime.has(time) ? [index] : []));
+    if (present.length < MIN_RING_POINTS) continue;
+    const values = present.map((index) => points[index].get(time)!);
+    const weights = present.length < points.length ? fitFor(present) : null;
+    const levelM = weights ? values.reduce((sum, value, at) => sum + weights[at] * value, 0) : meanOf(values);
+    levels.push({ time, levelM });
   }
-  return [...sums.entries()]
-    .filter(([, entry]) => entry.count >= MIN_RING_POINTS)
-    .map(([time, entry]) => ({ time, levelM: entry.sum / entry.count }))
-    .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
+  return levels;
+}
+
+/**
+ * Weights w minimising |A·w − b|², by the normal equations with a tiny ridge (the points' levels are close to
+ * collinear), solved by Gaussian elimination with partial pivoting. Null when the system is singular.
+ */
+function leastSquares(rows: readonly (readonly number[])[], target: readonly number[]): number[] | null {
+  const size = rows[0]?.length ?? 0;
+  if (size === 0) return null;
+  const matrix = Array.from({ length: size }, () => new Array<number>(size + 1).fill(0));
+  rows.forEach((row, r) => {
+    for (let i = 0; i < size; i += 1) {
+      matrix[i][size] += row[i] * target[r];
+      for (let j = 0; j < size; j += 1) matrix[i][j] += row[i] * row[j];
+    }
+  });
+  const scale = Math.max(...matrix.map((row, i) => row[i]));
+  if (!(scale > 0)) return null;
+  for (let i = 0; i < size; i += 1) matrix[i][i] += scale * 1e-9;
+  for (let column = 0; column < size; column += 1) {
+    let pivot = column;
+    for (let row = column + 1; row < size; row += 1) {
+      if (Math.abs(matrix[row][column]) > Math.abs(matrix[pivot][column])) pivot = row;
+    }
+    if (!(Math.abs(matrix[pivot][column]) > 0)) return null;
+    [matrix[column], matrix[pivot]] = [matrix[pivot], matrix[column]];
+    for (let row = column + 1; row < size; row += 1) {
+      const factor = matrix[row][column] / matrix[column][column];
+      for (let j = column; j <= size; j += 1) matrix[row][j] -= factor * matrix[column][j];
+    }
+  }
+  const weights = new Array<number>(size).fill(0);
+  for (let i = size - 1; i >= 0; i -= 1) {
+    let sum = matrix[i][size];
+    for (let j = i + 1; j < size; j += 1) sum -= matrix[i][j] * weights[j];
+    weights[i] = sum / matrix[i][i];
+  }
+  return weights.every(Number.isFinite) ? weights : null;
 }
 
 const MEMO_MS = 10 * 60 * 1000;
@@ -109,7 +183,8 @@ const EMPTY: AtollRing = { samples: [], series: [], level: [] };
 export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promise<AtollRing> {
   const rim = rimForAtoll(atoll);
   if (!rim) return EMPTY;
-  const key = atoll.rimSourceUrl;
+  // The long past window (options.past) is another ring: kept apart.
+  const key = options.past ? `past|${atoll.rimSourceUrl}` : atoll.rimSourceUrl;
   const kept = memo.get(key);
   if (kept && Date.now() - kept.at < MEMO_MS && kept.ring.level.length > 0) return kept.ring;
   const loading = ringLoadsInFlight();
@@ -121,7 +196,7 @@ export async function atollRing(atoll: Atoll, options: FetchOptions = {}): Promi
       const series = fetched.map((result) => (result.ok ? result.hours : null));
       const usable = series.filter((hours): hours is MarineHour[] => hours != null);
       const pending = fetched.filter((result) => !result.ok && result.pending).length;
-      const level = usable.length >= MIN_RING_POINTS ? ringLevelFromSeries(usable) : [];
+      const level = usable.length >= MIN_RING_POINTS ? ringLevelFromSeries(series) : [];
       const ring: AtollRing = { samples, series, level, pending };
       if (pending === 0) memo.set(key, { at: Date.now(), ring });
       else memo.delete(key);

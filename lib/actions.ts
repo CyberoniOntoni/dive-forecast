@@ -10,6 +10,7 @@ import { siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
+import type { FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
 import type { RimRing } from "./rim";
@@ -66,6 +67,8 @@ import {
 } from "./types";
 
 const REPORT_HOUR_INDEX = 6;
+/** A full saved tide: 13 slopes (6 hours either side of the dive) and the day's range. */
+const REPORT_TIDE_HOURS = 2 * REPORT_HOUR_INDEX + 2;
 
 export type ReportActionState = {
   success: boolean;
@@ -388,8 +391,8 @@ export async function addReport(input: unknown): Promise<Report> {
   requireNotAhead(time, zone, filedAt.getTime());
   requireNotTooOld(time, zone, filedAt.getTime());
   requireNotDuplicate(site.id, time, body.direction as Direction, body.strength as Strength, filedAt.getTime());
-  const tide = await reportTide(site, time);
-  const predicted = await predictionAtReport(site, time);
+  const { tide, past } = await reportTideAnyAge(site, time);
+  const predicted = await predictionAtReport(site, time, past);
   const report: Report = {
     id: crypto.randomUUID(),
     siteId: body.siteId as string,
@@ -435,15 +438,16 @@ export async function addReportAction(siteId: string, formData: FormData): Promi
  * The forecast for the report hour as the site page shows it, plus the model alone. Never blocks a report.
  * Only reports from before this dive count, as in the replay, so a back-dated report is not scored on later dives.
  */
-async function predictionAtReport(site: Site, time: string): Promise<ForecastAtReport | null> {
+async function predictionAtReport(site: Site, time: string, past = false): Promise<ForecastAtReport | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
     const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
-    const shown = await loadSite(site, catalog.sites, atoll, earlier);
-    const modelOnly = await loadSite(site, catalog.sites, atoll, []);
-    return forecastAtReport(shown, modelOnly, time);
+    const options = past ? { past: true } : {};
+    const shown = await loadSite(site, catalog.sites, atoll, earlier, options);
+    const modelOnly = await loadSite(site, catalog.sites, atoll, [], options);
+    return forecastAtReport(shown, modelOnly, time, past);
   } catch {
     return null;
   }
@@ -464,14 +468,33 @@ async function reportAlongHeading(site: Site): Promise<number | null> {
   }
 }
 
-async function reportTide(site: Site, time: string): Promise<ReportTide | null> {
+async function reportTide(site: Site, time: string, options: FetchOptions = {}): Promise<ReportTide | null> {
   try {
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
-    return await reportTideForSite(site, catalog.sites, atoll, time);
+    return await reportTideForSite(site, catalog.sites, atoll, time, options);
   } catch {
     return null;
   }
+}
+
+/** Hours of a report's saved tide that are known: its slope window's, plus one for the day's range. */
+function tideHoursKnown(tide: ReportTide | null): number {
+  if (!tide) return 0;
+  return tide.slopeWindowM.filter((slope) => slope != null).length + (tide.rangeM != null ? 1 : 0);
+}
+
+/**
+ * The tide to save with a report. The week's series holds one past day, and its residual starts 12 hours in, so a
+ * dive from before about noon yesterday has no tide there, or only part of its window: such a report could never
+ * teach the forecast or be scored. Then the same is read from the long past window (REPORT_PAST_DAYS) instead, when
+ * that knows more; `past` says it did, and the prediction is then worked out from that window too.
+ */
+async function reportTideAnyAge(site: Site, time: string): Promise<{ tide: ReportTide | null; past: boolean }> {
+  const tide = await reportTide(site, time);
+  if (tideHoursKnown(tide) === REPORT_TIDE_HOURS) return { tide, past: false };
+  const older = await reportTide(site, time, { past: true });
+  return tideHoursKnown(older) > tideHoursKnown(tide) ? { tide: older, past: true } : { tide, past: false };
 }
 
 export async function forecastSite(siteId: string): Promise<SiteForecast> {

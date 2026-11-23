@@ -227,6 +227,12 @@ export type ForecastAtReport = {
   shown: { direction: Direction; strength: Strength; confidence: Confidence };
   /** The model alone, with no reports pulling. Null if it produced no hour. */
   modelOnly: { direction: Direction; strength: Strength } | null;
+  /**
+   * True when the report was filed after the week's series had moved past the dive, so this was worked out then from
+   * the long past window (REPORT_PAST_DAYS in lib/marine.ts): what the model makes of that hour, not what a page
+   * showed before the dive. Absent otherwise.
+   */
+  hindcast?: true;
 };
 
 /** One diver's rating of a site. Ratings from before sign-in have no userId: one anonymous rating per site. */
