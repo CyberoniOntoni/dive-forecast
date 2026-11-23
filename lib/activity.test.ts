@@ -123,13 +123,17 @@ describe("recent activity for moderators", () => {
     const data = store();
     data.sites[0].hidden = true;
     const byKey = new Map(recentActivity(data, lookup, NOW, { moderatorId: "ann" }).map((item) => [item.key, item]));
-    expect(byKey.get("site:pin")).toMatchObject({ removable: null, canBan: true });
-    expect(byKey.get("rating:cat:bad")?.canBan).toBe(true);
-    expect(byKey.get("report:rev")?.canBan).toBe(false);
-    expect(byKey.get("signup:store")?.canBan).toBe(false);
-    expect(byKey.get("report:r1")?.canBan).toBe(false);
-    expect(byKey.get("flag:f1")?.canBan).toBe(false);
-    expect(byKey.get("report:gone")?.canBan).toBe(false);
-    expect(recentActivity(data, lookup, NOW).every((item) => !item.canBan)).toBe(true);
+    expect(byKey.get("site:pin")).toMatchObject({ removable: null, banTarget: { kind: "diver", userId: "bad" } });
+    expect(byKey.get("rating:cat:bad")?.banTarget).toEqual({ kind: "diver", userId: "bad" });
+    expect(byKey.get("report:rev")?.banTarget).toBeNull();
+    expect(byKey.get("signup:store")?.banTarget).toBeNull();
+    expect(byKey.get("report:r1")?.banTarget).toBeNull();
+    expect(byKey.get("flag:f1")?.banTarget).toBeNull();
+    expect(byKey.get("report:gone")?.banTarget).toBeNull();
+    expect(recentActivity(data, lookup, NOW).every((item) => item.banTarget == null)).toBe(true);
+    // Who to name with no diver: a deleted account keeps an id, a rating from before sign-in has none.
+    expect(byKey.get("report:gone")?.noDiver).toBe("Deleted account");
+    data.ratings.push({ siteId: "cat", score: 3, updatedAt: "2026-11-22T00:00:00Z" });
+    expect(recentActivity(data, lookup, NOW).find((item) => item.key === "rating:cat:anonymous")?.noDiver).toBe("No account");
   });
 });

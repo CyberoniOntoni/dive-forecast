@@ -201,7 +201,12 @@ describe("API v1 reports, blocks and moderation", () => {
     expect((await listRecentActivity("reviews"))!.items).toEqual([]);
     const rudeId = readStore().users.find((user) => user.nickname === "Rude")!.id;
     vi.setSystemTime(Date.now() + 1000);
-    expect(await moderateContent({ kind: "diver", userId: rudeId }, "ban")).toEqual({ ok: true, error: null });
+    // Ban from an item with nothing to remove (their plain rating is gone, so use their sign-up's ban target).
+    const signup = (await listRecentActivity("divers"))!.items.find((item) => item.diver?.userId === rudeId)!;
+    expect(signup.banTarget).toEqual({ kind: "diver", userId: rudeId });
+    expect((await listRecentActivity("all", Number.NaN))!.page).toBe(1);
+    expect((await listRecentActivity("__proto__" as never))!.items.length).toBeGreaterThan(0);
+    expect(await moderateContent(signup.banTarget, "ban")).toEqual({ ok: true, error: null });
     expect(readStore().users.find((user) => user.id === rudeId)?.bannedAt).toBeTruthy();
     expect((await getMe(call("/api/v1/me", { token: rude }))).status).toBe(401);
   });

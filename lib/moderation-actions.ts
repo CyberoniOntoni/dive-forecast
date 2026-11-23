@@ -1,6 +1,6 @@
 "use server";
 
-import { ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, activityCounts, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
+import { ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, activityCounts, readActivityFilter, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
 import { appSetting, runInBackground } from "./cloudflare";
 import { appUrl, requireSession } from "./auth";
 import { sendNotice } from "./email";
@@ -234,16 +234,17 @@ export type ActivityView = { items: ActivityItem[]; counts: Record<ActivityKind,
  * What divers did in the last 30 days, newest first (lib/activity.ts), for /moderation: the filter's kinds,
  * ACTIVITY_PAGE_SIZE to a page, with counts of every kind. Null for anyone but a moderator.
  */
-export async function listRecentActivity(filter: ActivityFilter = "all", page = 1): Promise<ActivityView | null> {
+export async function listRecentActivity(filter: ActivityFilter = "all", page: number = 1): Promise<ActivityView | null> {
   await ready();
   const moderator = await moderatorId();
   if (!moderator) return null;
   const store = readStore();
   const all = recentActivity(store, findSite, Date.now(), { moderatorId: moderator });
-  const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[filter].kinds);
+  // A server action can be called with anything: read the filter and page again rather than trust the types.
+  const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[readActivityFilter(filter)].kinds);
   const shown = all.filter((item) => kinds.has(item.kind));
   const pages = Math.max(1, Math.ceil(shown.length / ACTIVITY_PAGE_SIZE));
-  const current = Math.min(Math.max(1, Math.floor(page) || 1), pages);
+  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
   const items = shown.slice((current - 1) * ACTIVITY_PAGE_SIZE, current * ACTIVITY_PAGE_SIZE);
   return { items, counts: activityCounts(all), total: shown.length, page: current, pages };
 }

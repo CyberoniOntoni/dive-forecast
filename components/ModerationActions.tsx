@@ -13,7 +13,9 @@ type Action = "remove" | "ban" | "dismiss";
  * feed, Remove does too. Remove is left out when there is nothing to remove, Ban when the server would refuse it.
  */
 export function ModerationActions(
-  props: ({ flagId: string; target?: never } | { target: ActivityTarget | null; flagId?: never }) & { canBan: boolean },
+  props:
+    | { flagId: string; canBan: boolean; target?: never; banTarget?: never }
+    | { target: ActivityTarget | null; banTarget: ActivityTarget | null; flagId?: never; canBan?: never },
 ) {
   const router = useRouter();
   const [confirm, setConfirm] = useState<Action | null>(null);
@@ -21,6 +23,7 @@ export function ModerationActions(
   const [pending, startTransition] = useTransition();
   const fromReport = props.flagId != null;
   const target = props.target ?? null;
+  const canBan = fromReport ? props.canBan : props.banTarget != null;
   const removeLabel = fromReport ? "Remove content" : target?.kind === "review" ? "Remove review" : target?.kind === "site" ? "Hide site" : "Reset profile";
 
   function act(action: Action) {
@@ -31,14 +34,17 @@ export function ModerationActions(
     }
     setError(null);
     startTransition(async () => {
-      const result = props.flagId != null ? await moderateFlag(props.flagId, action) : await moderateContent(target, action);
+      const result =
+        props.flagId != null
+          ? await moderateFlag(props.flagId, action)
+          : await moderateContent(action === "ban" ? props.banTarget : target, action);
       setConfirm(null);
       if (!result.ok) setError(result.error);
       else router.refresh();
     });
   }
 
-  if (!fromReport && !target && !props.canBan) return null;
+  if (!fromReport && !target && !canBan) return null;
   const solid = "min-h-11 rounded-xl px-4 text-sm font-medium text-ink disabled:opacity-50";
   return (
     <div className="flex min-w-0 flex-col gap-2">
@@ -53,7 +59,7 @@ export function ModerationActions(
             {confirm === "remove" ? "Tap again to confirm" : removeLabel}
           </button>
         ) : null}
-        {props.canBan ? (
+        {canBan ? (
           <button
             type="button"
             disabled={pending}

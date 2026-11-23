@@ -71,7 +71,7 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
                   {item.diver.nickname}
                 </Link>
               ) : (
-                <span className="text-foam/70">{item.kind === "rating" || item.kind === "review" ? "Anonymous" : "Deleted account"}</span>
+                <span className="text-foam/70">{item.noDiver}</span>
               )}
               {item.diver?.storeReview ? <span className="ml-1.5 rounded bg-foam/15 px-1.5 py-0.5 text-xs">Store reviewer: hidden from others</span> : null}
               {item.diver?.banned ? <span className="ml-1.5 rounded bg-stop/25 px-1.5 py-0.5 text-xs">Banned</span> : null}
@@ -96,7 +96,7 @@ export function ModerationActivity({ view, filter }: { view: ActivityView; filte
             </p>
             {item.text ? <p className="text-sm whitespace-pre-line text-foam/80 italic">“{item.text}”</p> : null}
             <ModerationPhotos urls={item.photos} alt={`${KIND_LABELS[item.kind]} photo`} />
-            <ModerationActions target={item.removable} canBan={item.canBan} />
+            <ModerationActions target={item.removable} banTarget={item.banTarget} />
           </li>
         ))}
       </ol>

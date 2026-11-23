@@ -56,8 +56,13 @@ export type ActivityItem = {
   href: string | null;
   /** What "Remove" takes down; null when there is nothing to remove. */
   removable: ActivityTarget | null;
-  /** Whether Ban diver is offered for whoever did it (banRefusal: never oneself or the store-review account). */
-  canBan: boolean;
+  /**
+   * What "Ban diver" sends, when it is offered for whoever did it (banRefusal: never oneself or the store-review
+   * account); null otherwise. Apart from `removable`, so a dive report, a plan or a hidden site can still ban its diver.
+   */
+  banTarget: ActivityTarget | null;
+  /** Who to name when `diver` is null: a rating from before sign-in, or an account since deleted. */
+  noDiver: string;
   /** Open content reports on the same thing. */
   openFlags: number;
 };
@@ -114,12 +119,15 @@ export function recentActivity(
     store.flags.filter((flag) => !flag.resolvedAt && flag.kind === target.kind && flag.siteId === target.siteId && flag.userId === target.userId).length;
   const items: ActivityItem[] = [];
   // Content reports name their reporter as the diver; banning is for whose content it is, so they get no Ban.
-  const push = (item: Omit<ActivityItem, "openFlags" | "canBan">) =>
+  const push = (item: Omit<ActivityItem, "openFlags" | "banTarget" | "noDiver">, userId: string | undefined) => {
+    const bannable = moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null;
     items.push({
       ...item,
       openFlags: item.removable ? openFlags(item.removable) : 0,
-      canBan: moderatorId != null && item.kind !== "flag" && item.diver != null && banRefusal(store, item.diver.userId, moderatorId) == null,
+      banTarget: bannable ? { kind: "diver", userId: item.diver!.userId } : null,
+      noDiver: userId ? "Deleted account" : "No account",
     });
+  };
 
   if (wanted.has("report")) {
     for (const report of store.reports) {
@@ -138,7 +146,7 @@ export function recentActivity(
         photos: [],
         href: null,
         removable: null,
-      });
+      }, report.userId);
     }
   }
 
@@ -161,7 +169,7 @@ export function recentActivity(
         photos,
         href: null,
         removable: written && rating.userId ? { kind: "review", siteId: rating.siteId, userId: rating.userId } : null,
-      });
+      }, rating.userId);
     }
   }
 
@@ -181,7 +189,7 @@ export function recentActivity(
         photos,
         href: null,
         removable: added.hidden ? null : { kind: "site", siteId: added.id, ...(added.addedBy ? { userId: added.addedBy } : {}) },
-      });
+      }, added.addedBy);
     }
   }
 
@@ -201,7 +209,7 @@ export function recentActivity(
         photos: [],
         href: `/plans/${plan.id}`,
         removable: null,
-      });
+      }, plan.ownerId);
     }
   }
 
@@ -219,7 +227,7 @@ export function recentActivity(
         photos: [],
         href: null,
         removable: user.bannedAt ? null : { kind: "diver", userId: user.id },
-      });
+      }, user.id);
     }
   }
 
@@ -240,7 +248,7 @@ export function recentActivity(
         photos: [],
         href: null,
         removable: null,
-      });
+      }, flag.reporterId);
     }
   }
 
