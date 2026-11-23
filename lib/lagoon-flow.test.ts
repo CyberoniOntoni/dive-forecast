@@ -220,4 +220,24 @@ describe("channelWeights", () => {
     ]);
     for (const weight of weights) expect(weight).toBeCloseTo(CHANNEL_WEIGHT_KM / 3);
   });
+
+  it("gives each hour the strength of the whole flow when it runs straight along the axis", () => {
+    // One opening due west of the site and no sink: the flow runs east-west only, so the axis is 90° and the speed along
+    // it is the full speed. Several sizes of flow span the bands.
+    const times = ["2026-09-01T00:00", "2026-09-01T01:00", "2026-09-01T02:00", "2026-09-01T03:00", "2026-09-01T04:00"];
+    const flows = [0.05, 0.5, 2, 5, -2];
+    const west: LagoonSource = { lat: 4, lon: 73.45, weightKm: 1, flow: new Map(times.map((time, i) => [time, flows[i]])) };
+    const site = { lat: 4, lon: 73.47 };
+    const result = lagoonHours(site, [west], times.map((time) => ({ time, levelM: 0 })));
+    expect(result.axisDeg).toBeCloseTo(90, 6);
+    const bands = new Set<string>();
+    result.hours.forEach((hour, i) => {
+      const u = lagoonVelocity(site, [west], times[i])!;
+      expect(Math.abs(u.north)).toBeLessThan(1e-9);
+      expect(hour.strength).toBe(lagoonStrength(Math.hypot(u.east, u.north)));
+      expect(hour.direction).toBe(flows[i] > 0 ? "incoming" : "outgoing");
+      bands.add(hour.strength);
+    });
+    expect(bands.size).toBeGreaterThanOrEqual(3);
+  });
 });

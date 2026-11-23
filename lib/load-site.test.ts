@@ -1,3 +1,4 @@
+import fs from "fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { alongHeadingFor, loadSite, reportTideForSite } from "./load-site";
 import * as Marine from "./marine";
@@ -12,6 +13,18 @@ vi.mock("./marine", async () => {
     marineSeriesStale: vi.fn(() => false),
   };
 });
+
+/** Runs `run` with data/replay.json reading as ok or failed, so a test does not depend on the committed file. */
+async function withReplay<T>(ok: boolean, run: () => Promise<T>): Promise<T> {
+  const readFileSync = fs.readFileSync;
+  const spy = vi.spyOn(fs, "readFileSync").mockImplementation(((...args: Parameters<typeof readFileSync>) =>
+    String(args[0]).endsWith("replay.json") ? JSON.stringify({ ok, failures: ok ? 0 : 1 }) : readFileSync(...args)) as typeof readFileSync);
+  try {
+    return await run();
+  } finally {
+    spy.mockRestore();
+  }
+}
 
 describe("loadSite", () => {
   const atoll: Atoll = {
@@ -191,8 +204,9 @@ describe("loadSite", () => {
       },
     );
 
-    const pass = await loadSite({ ...openSite, siteType: "pass" }, [openSite], atoll, reports);
-    const lagoon = await loadSite({ ...openSite, siteType: "lagoon" }, [openSite], atoll, reports);
+    // With the replay passing, as the pass site needs it to reach high at all.
+    const pass = await withReplay(true, () => loadSite({ ...openSite, siteType: "pass" }, [openSite], atoll, reports));
+    const lagoon = await withReplay(true, () => loadSite({ ...openSite, siteType: "lagoon" }, [openSite], atoll, reports));
     vi.mocked(Marine.siteMarineHours).mockReset();
 
     expect(pass.siteType).toBe("pass");
@@ -203,6 +217,37 @@ describe("loadSite", () => {
     expect(lagoon.hours.map((hour) => [hour.direction, hour.strength])).toEqual(
       pass.hours.map((hour) => [hour.direction, hour.strength]),
     );
+  });
+
+  it("forecasts an outer wall with no pass nearby along the reef, with the heading it calls incoming", async () => {
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: syntheticHours, fetchedAt: 1234567890, stale: false });
+    const wall = await loadSite({ ...openSite, siteType: "outer-reef" }, [openSite], atoll, []);
+    vi.mocked(Marine.siteMarineHours).mockReset();
+    expect(wall.unavailable).toBeFalsy();
+    expect(wall.siteType).toBe("outer-reef");
+    expect(wall.alongHeadingDeg).toBeTypeOf("number");
+    expect(wall.hours.length).toBeGreaterThan(0);
+    expect(wall.hours.every((hour) => hour.confidence === "low")).toBe(true);
+  });
+
+  it("gives no hour high confidence while data/replay.json says the replay failed", async () => {
+    const fetched = { ok: true as const, hours: syntheticHours, fetchedAt: 1234567890, stale: false };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue(fetched);
+    const pass = { ...openSite, siteType: "pass" as const };
+    const plain = await loadSite(pass, [openSite], atoll, []);
+    const reports = ["2026-09-24T00:00", "2026-09-24T01:00", "2026-09-24T02:00", "2026-09-24T00:00", "2026-09-24T01:00"].map(
+      (time, index) => {
+        const hour = plain.hours.find((item) => item.time === time)!;
+        return { id: `r${index}`, siteId: "s", time, direction: hour.direction, strength: hour.strength };
+      },
+    );
+    const allowed = await withReplay(true, () => loadSite(pass, [openSite], atoll, reports));
+    const blocked = await withReplay(false, () => loadSite(pass, [openSite], atoll, reports));
+    vi.mocked(Marine.siteMarineHours).mockReset();
+
+    expect(allowed.hours.some((hour) => hour.confidence === "high")).toBe(true);
+    expect(blocked.hours.length).toBe(allowed.hours.length);
+    expect(blocked.hours.some((hour) => hour.confidence === "high")).toBe(false);
   });
 });
 

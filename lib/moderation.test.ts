@@ -37,6 +37,10 @@ describe("reports of content", () => {
     expect(() => readFlagInput({ kind: "diver", userId: "bad", reason: "rude" })).toThrow();
     expect(() => readFlagInput({ kind: "diver", userId: "bad", reason: "spam", note: "x".repeat(501) })).toThrow();
     expect(() => readFlagInput({ kind: "review", userId: "bad", reason: "spam" })).toThrow("site");
+    // A review and a diver need the diver; a site report needs only the site.
+    expect(() => readFlagInput({ kind: "review", siteId: "s1", reason: "spam" })).toThrow("diver");
+    expect(() => readFlagInput({ kind: "diver", reason: "spam" })).toThrow("diver");
+    expect(readFlagInput({ kind: "site", siteId: "s1", reason: "spam" })).toEqual({ kind: "site", siteId: "s1", reason: "spam" });
   });
 
   it("files one open report per diver and content, never on one's own, and caps a day's reports", () => {
