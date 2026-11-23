@@ -2,16 +2,22 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ModerationActions } from "@/components/ModerationActions";
-import { listOpenFlags } from "@/lib/moderation-actions";
+import { ModerationActivity } from "@/components/ModerationActivity";
+import { readActivityFilter } from "@/lib/activity";
+import { listOpenFlags, listRecentActivity } from "@/lib/moderation-actions";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Moderation · 50Bar", robots: { index: false, follow: false } };
 
-/** Open content reports for moderators (MODERATOR_EMAILS), one card per reported thing; anyone else gets a 404. */
-export default async function ModerationPage() {
-  const flags = await listOpenFlags();
-  if (!flags) notFound();
+/**
+ * For moderators (MODERATOR_EMAILS): open content reports, one card per reported thing, then everything divers did in
+ * the last 30 days (lib/activity.ts). Anyone else gets a 404.
+ */
+export default async function ModerationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const filter = readActivityFilter((await searchParams).show);
+  const [flags, activity] = await Promise.all([listOpenFlags(), listRecentActivity(filter)]);
+  if (!flags || !activity) notFound();
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
@@ -73,6 +79,7 @@ export default async function ModerationPage() {
           <ModerationActions flagId={flag.id} canBan={flag.diver != null && !flag.diver.banned} />
         </article>
       ))}
+      <ModerationActivity view={activity} filter={filter} />
     </main>
   );
 }

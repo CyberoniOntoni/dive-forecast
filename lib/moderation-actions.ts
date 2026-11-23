@@ -1,5 +1,6 @@
 "use server";
 
+import { ACTIVITY_FILTERS, ACTIVITY_MAX, activityCounts, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
 import { appSetting, runInBackground } from "./cloudflare";
 import { appUrl, requireSession } from "./auth";
 import { sendNotice } from "./email";
@@ -18,7 +19,7 @@ import { ready } from "./ready";
 import { reviewEmail } from "./review-account";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
 import { findSite, mutateStore, readStore } from "./store";
-import type { ContentFlag, FlagKind, FlagReason } from "./types";
+import { FLAG_KINDS, type ContentFlag, type FlagKind, type FlagReason } from "./types";
 
 /**
  * The signed-in diver's side of Google Play's user-generated content rules (lib/moderation.ts): agree to the content
@@ -216,6 +217,62 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
     });
     if (!photos) return { ok: false, error: "That report is gone." };
     await Promise.all(photos.map(({ siteId, photo }) => deletePhotoBytes(siteId, photo.id).catch(() => undefined)));
+    return { ok: true, error: null };
+  } catch (caught) {
+    return failed(caught, "Could not do that.");
+  }
+}
+
+export type ActivityView = { items: ActivityItem[]; counts: Record<ActivityKind, number>; total: number; moderatorId: string };
+
+/**
+ * What divers did in the last 30 days, newest first (lib/activity.ts), for /moderation: at most ACTIVITY_MAX items of
+ * the filter's kinds, with counts of every kind. Null for anyone but a moderator.
+ */
+export async function listRecentActivity(filter: ActivityFilter = "all"): Promise<ActivityView | null> {
+  await ready();
+  const moderator = await moderatorId();
+  if (!moderator) return null;
+  const store = readStore();
+  const all = recentActivity(store, findSite, Date.now(), { max: Number.POSITIVE_INFINITY });
+  const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[filter].kinds);
+  const shown = all.filter((item) => kinds.has(item.kind));
+  return { items: shown.slice(0, ACTIVITY_MAX), counts: activityCounts(all), total: shown.length, moderatorId: moderator };
+}
+
+/**
+ * A moderator acts on something in the activity feed without a content report: "remove" takes a review, an added site
+ * or a profile's text down; "ban" bans whoever posted it (and removes all they posted). Open reports on it close too.
+ */
+export async function moderateContent(target: unknown, action: unknown): Promise<ModerationResult> {
+  await ready();
+  try {
+    const moderator = await moderatorId();
+    if (!moderator) return { ok: false, error: "Only moderators can do that." };
+    if (action !== "remove" && action !== "ban") return { ok: false, error: "Unknown action." };
+    const record = (target ?? {}) as Record<string, unknown>;
+    const kind = FLAG_KINDS.find((item) => item === record.kind);
+    const text = (value: unknown) => (typeof value === "string" && value ? value : undefined);
+    const siteId = text(record.siteId);
+    const userId = text(record.userId);
+    if (!kind || (kind !== "diver" && !siteId) || (kind !== "site" && !userId)) return { ok: false, error: "Unknown content." };
+    const content = { kind, ...(siteId && kind !== "diver" ? { siteId } : {}), ...(userId ? { userId } : {}) };
+    const photos = await mutateStore((store): StoredPhoto[] => {
+      const nowMs = Date.now();
+      const nowIso = new Date(nowMs).toISOString();
+      if (action === "ban") {
+        if (!content.userId) throw new Error("No diver to ban.");
+        if (content.userId === moderator) throw new Error("You cannot ban yourself.");
+        const removed = banDiver(store, content.userId, nowMs);
+        if (!removed) throw new Error("That diver is gone.");
+        resolveFlags(store, content, "banned", nowIso);
+        return removed;
+      }
+      const removed = removeFlagged(store, content, nowIso);
+      resolveFlags(store, content, "removed", nowIso);
+      return removed;
+    });
+    await Promise.all(photos.map(({ siteId: site, photo }) => deletePhotoBytes(site, photo.id).catch(() => undefined)));
     return { ok: true, error: null };
   } catch (caught) {
     return failed(caught, "Could not do that.");

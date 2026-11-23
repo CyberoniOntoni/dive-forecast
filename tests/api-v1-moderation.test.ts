@@ -11,7 +11,7 @@ import { GET as getDiver } from "@/app/api/v1/divers/[nickname]/route";
 import { POST as flag } from "@/app/api/v1/flags/route";
 import { GET as getMe } from "@/app/api/v1/me/route";
 import { POST as agree } from "@/app/api/v1/me/terms/route";
-import { listOpenFlags, moderateFlag } from "@/lib/moderation-actions";
+import { listOpenFlags, listRecentActivity, moderateContent, moderateFlag } from "@/lib/moderation-actions";
 import { readStore, setStorePath } from "@/lib/store";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -166,5 +166,34 @@ describe("API v1 reports, blocks and moderation", () => {
     expect([400, 409]).toContain(blocked.status);
     expect((await agree(call("/api/v1/me/terms", { method: "POST", token }))).status).toBe(200);
     await review(token, "Nice");
+  });
+
+  it("shows moderators recent activity and lets them take a review down or ban without a report", async () => {
+    vi.stubEnv("MODERATOR_EMAILS", "mod@example.com");
+    const rude = await signInApp("rude@example.com", "Rude");
+    await review(rude, "Offensive words");
+    const ann = await signInApp("ann@example.com", "Ann");
+
+    call("/api/v1/me", { token: ann });
+    expect(await listRecentActivity()).toBeNull();
+    expect(await moderateContent({ kind: "review", siteId: "banana-reef", userId: "x" }, "remove")).toMatchObject({ ok: false });
+
+    const mod = await signInApp("mod@example.com", "Mod");
+    call("/api/v1/me", { token: mod });
+    const view = (await listRecentActivity())!;
+    expect(view.counts).toMatchObject({ review: 1, signup: 3 });
+    expect(JSON.stringify(view)).not.toContain("@example.com");
+    const written = view.items.find((item) => item.kind === "review")!;
+    expect(written).toMatchObject({ text: "Offensive words", diver: { nickname: "Rude" }, site: { id: "banana-reef" } });
+    expect((await listRecentActivity("divers"))!.items.map((item) => item.kind)).toEqual(["signup", "signup", "signup"]);
+
+    expect(await moderateContent({ kind: "diver", userId: view.moderatorId }, "ban")).toMatchObject({ ok: false, error: "You cannot ban yourself." });
+    expect(await moderateContent(written.removable, "remove")).toEqual({ ok: true, error: null });
+    expect((await listRecentActivity("reviews"))!.items).toEqual([]);
+    const rudeId = readStore().users.find((user) => user.nickname === "Rude")!.id;
+    vi.setSystemTime(Date.now() + 1000);
+    expect(await moderateContent({ kind: "diver", userId: rudeId }, "ban")).toEqual({ ok: true, error: null });
+    expect(readStore().users.find((user) => user.id === rudeId)?.bannedAt).toBeTruthy();
+    expect((await getMe(call("/api/v1/me", { token: rude }))).status).toBe(401);
   });
 });
