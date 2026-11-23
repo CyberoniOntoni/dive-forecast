@@ -128,6 +128,13 @@ describe("ringLevelFromSeries with points covering different hours", () => {
     expect(plainWorst).toBeGreaterThan(0.01);
   });
 
+  it("still fills where one more point has only a fragment of a series", () => {
+    const truth = new Map(ringLevelFromSeries(full.slice(1)).map((item) => [item.time, item.levelM]));
+    const mixed = full.map((series, point) => (point === 0 ? series.slice(0, 20) : point < 4 ? series.slice(0, series.length - 24) : series));
+    const worst = Math.max(...ringLevelFromSeries(mixed).map((item) => Math.abs(item.levelM - truth.get(item.time)!)));
+    expect(worst).toBeLessThan(0.002);
+  });
+
   it("skips a point with no series at all", () => {
     const withGap = [null, ...full.slice(1)];
     expect(ringLevelFromSeries(withGap).length).toBe(ringLevelFromSeries(full.slice(1)).length);

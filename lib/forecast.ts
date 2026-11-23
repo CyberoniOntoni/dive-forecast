@@ -885,7 +885,7 @@ export function aggregateReportPull(
   for (const item of classified) {
     if (item.kind === "unusable") continue;
     // Inside the series a report counts from the model hour it is about (seriesIndex), as at walls (axis-reports):
-    // a report at 10:20 pulls 10:00, the hour the diver was in, not only from 11:00 on. Only that hour's own: where
+    // a report at 10:20 pulls 10:00, the model hour its minute rounds to, not only from 11:00 on. Only that hour: where
     // the series lacks it, the nearest hour can be one either side, so the report counts from its own minute.
     const ownMs = parseWall(item.report.time);
     const hourOfReport = item.seriesIndex >= 0 ? parseWall(hours[item.seriesIndex].time) : Number.NaN;

@@ -74,8 +74,8 @@ const MAX_WEIGHT_SUM = 3;
 
 /**
  * The mean residual level of the ring points by hour: the lagoon level a channel's head is measured against.
- * An hour present in fewer than MIN_RING_POINTS series is left out. A series that is null (no data at all) is not a
- * ring point; the mean is over the others.
+ * An hour present in fewer than MIN_RING_POINTS series is left out. A series that is null (no data at all), or with fewer
+ * than MIN_FIT_HOURS of residual levels, is not a ring point; the mean is over the others.
  *
  * Series can cover different hours (one fetched on another Maldives date, or kept from an older fetch after a failed
  * one). A plain mean over whichever points an hour has would step by up to 3.7 cm where the set changes, which the
@@ -96,7 +96,10 @@ export function ringLevelFromSeries(series: readonly (readonly MarineHour[] | nu
         if (level != null) byTime.set(hour.time, level);
       });
       return byTime;
-    });
+    })
+    // A fragment (a partial response, or all its sea levels missing) is no ring point either: kept, it would leave
+    // fewer than MIN_FIT_HOURS where every point has data, and so no fill for any hour. A real series has days.
+    .filter((byTime) => byTime.size >= MIN_FIT_HOURS);
   const times = [...new Set(points.flatMap((byTime) => [...byTime.keys()]))].sort();
   const full = times.filter((time) => points.every((byTime) => byTime.has(time)));
   const meanOf = (values: readonly number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;

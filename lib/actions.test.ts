@@ -371,6 +371,26 @@ describe("addReport saves the prediction", () => {
     }
   });
 
+  it("does not try the long past window for a recent dive whose window has a gap in the series", async () => {
+    // The week's series with one sea level missing two hours after the dive: the past window would not fill it.
+    seedSyntheticSeries("kandooma-thila", "", "2026-09-26T00:00", 8 * 24);
+    const point = samplePointFor("kandooma-thila");
+    const file = path.join(marineCacheDir(), `${point.lat.toFixed(4)}_${point.lon.toFixed(4)}.`);
+    const cached = JSON.parse(fs.readFileSync(file, "utf8")) as { fetchedAt: number; hours: { time: string; seaLevelM: number | null }[] };
+    cached.hours.find((hour) => hour.time === "2026-09-27T22:00")!.seaLevelM = null;
+    fs.writeFileSync(file, JSON.stringify(cached));
+    const fetchSpy = pastWindowFetch("2026-09-11T00:00", 19 * 24);
+    vi.stubGlobal("fetch", fetchSpy);
+    try {
+      const report = await addReport({ siteId: "kandooma-thila", time: "2026-09-27T20:00", direction: "incoming", strength: "strong" });
+      expect(report.slopeWindowM?.some((slope) => slope == null)).toBe(true);
+      expect(fetchSpy.mock.calls.some(([url]) => String(url).includes("past_days=16"))).toBe(false);
+      expect(report.predicted?.hindcast).toBeUndefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("does not try the long past window when the week's own fetch failed", async () => {
     // No cache for Banana Reef: the week's fetch fails, so the past window would only wait on the same outage.
     const fetchSpy = pastWindowFetch("2026-09-11T00:00", 19 * 24);
