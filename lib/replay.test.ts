@@ -235,3 +235,48 @@ function fixedSeries(): MarineHour[] {
     currentDirectionDeg: 0,
   }));
 }
+
+describe("replay slack timing", () => {
+  // A 12 h sine starting 2026-09-22T00:00: the slope turns from in to out between 15:00 and 16:00, so slack is 15:30.
+  const sine: MarineHour[] = Array.from({ length: 72 }, (_, index) => ({
+    time: new Date(Date.UTC(2026, 8, 22, index)).toISOString().slice(0, 16),
+    seaLevelM: 0.5 + 0.35 * Math.sin((2 * Math.PI * index) / 12),
+    currentVelocityMs: 0.2,
+    currentDirectionDeg: 90,
+  }));
+  const slack = (id: string, time: string): Report => ({
+    id,
+    siteId: "s",
+    time,
+    direction: "incoming",
+    strength: "slack",
+    // Kept from training the speed factor, so only timing is measured.
+    slopeM: null,
+  });
+
+  it("measures how far each slack report is from the model's turn, as a mean in minutes", () => {
+    const exact = replayReports({ hours: sine, inwardBearingDeg: 0, reports: [slack("a", "2026-09-22T15:30")] });
+    expect(exact.metrics.slackTimingDeviationMins).toBe(0);
+    const late = replayReports({ hours: sine, inwardBearingDeg: 0, reports: [slack("a", "2026-09-22T15:45")] });
+    expect(late.metrics.slackTimingDeviationMins).toBe(15);
+    const three = replayReports({
+      hours: sine,
+      inwardBearingDeg: 0,
+      reports: [slack("a", "2026-09-22T15:30"), slack("b", "2026-09-23T03:45"), slack("c", "2026-09-23T16:00")],
+    });
+    expect(three.metrics.slackTimingDeviationMins).toBe(15);
+  });
+
+  it("leaves slack timing at 0 when no report is slack", () => {
+    const result = replayReports({
+      hours: sine,
+      inwardBearingDeg: 0,
+      reports: [
+        { id: "a", siteId: "s", time: "2026-09-22T14:00", direction: "incoming", strength: "strong" },
+        { id: "b", siteId: "s", time: "2026-09-22T18:00", direction: "outgoing", strength: "mild" },
+      ],
+    });
+    expect(result.metrics.totalReports).toBe(2);
+    expect(result.metrics.slackTimingDeviationMins).toBe(0);
+  });
+});

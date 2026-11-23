@@ -55,7 +55,7 @@ Data flow: `marine.ts` → `load-site.ts` → `forecast.ts` → pages/server act
 
 ## Tests layout
 
-Unit tests sit next to modules in `lib/`. `lib/e2e-requirements.test.ts` is a 4-tier requirements suite (see `TEST_INFRA.md`; filter with `-t "Tier 1"` etc.). `tests/challenger-*.test.ts` are milestone adversarial tests. `data/benchmark-reports.json` holds curated fixture scenarios, not real ground truth: the replay skips lagoon sites and reads walls along the reef, so it scores 30 of its reports. Tests that need the head term or the lagoon model build ring levels or sources themselves (no network).
+Unit tests sit next to modules in `lib/`; `tests/` holds the API route tests and `tests/replay-cli.test.ts` (the `npm run replay` runner, in process). A test must not write into `data/` (use a temp dir) and should catch a bug no other test catches: the 4-tier requirements suite and the milestone challenger tests were removed in Nov 2026 because they added no coverage the unit tests lacked. `data/benchmark-reports.json` holds curated fixture scenarios, not real ground truth: the replay skips lagoon sites and reads walls along the reef, so it scores 30 of its reports. Tests that need the head term or the lagoon model build ring levels or sources themselves (no network).
 
 ## Deployment
 

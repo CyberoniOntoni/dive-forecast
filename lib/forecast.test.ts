@@ -4,6 +4,8 @@ import {
   classifyReport,
   constrictionFactor,
   forecastHours,
+  REPORT_HALF_LIFE_MS,
+  reportTemporalWeight,
   residualRangeAt,
   residualSlopeWindow,
   seaLevelSlopeAt,
@@ -979,7 +981,8 @@ describe("forecastHours", () => {
       },
       [],
     );
-    expect(item.kind === "single-slope" && item.slope === 0.08).toBe(false);
+    // Outside the series with no slope of its own: it cannot be placed on any tide, so it teaches nothing.
+    expect(item.kind).toBe("unusable");
   });
 
   it("toMaldivesWall of 2026-09-23 10:00 equals 2026-09-23T10:00", () => {
@@ -1315,3 +1318,51 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
   });
 });
 
+
+describe("report age", () => {
+  const refMs = Date.parse("2026-07-20T00:00:00Z");
+  const daysAgo = (days: number) => new Date(refMs - days * 86_400_000).toISOString().slice(0, 16);
+
+  it("halves a report's weight every 90 days", () => {
+    expect(REPORT_HALF_LIFE_MS).toBe(90 * 86_400_000);
+    expect(reportTemporalWeight(daysAgo(0), refMs)).toBeCloseTo(1, 6);
+    expect(reportTemporalWeight(daysAgo(90), refMs)).toBeCloseTo(0.5, 6);
+    expect(reportTemporalWeight(daysAgo(180), refMs)).toBeCloseTo(0.25, 6);
+    expect(reportTemporalWeight(daysAgo(730), refMs)).toBeCloseTo(2 ** (-730 / 90), 6);
+  });
+
+  it("weighs a report after the reference time as new, and an unreadable time as nothing", () => {
+    expect(reportTemporalWeight(daysAgo(-10), refMs)).toBe(1);
+    expect(reportTemporalWeight("not a time", refMs)).toBe(0);
+    expect(reportTemporalWeight(daysAgo(5), Number.NaN)).toBe(1);
+  });
+});
+
+describe("slack reports and confidence", () => {
+  it("never gives high confidence on slack reports alone, since a slack dive saw no direction", () => {
+    const hours: MarineHour[] = Array.from({ length: 96 }, (_, index) => ({
+      time: new Date(Date.UTC(2026, 8, 22, index)).toISOString().slice(0, 16),
+      seaLevelM: 0.5 + 0.35 * Math.sin((2 * Math.PI * index) / 12.42),
+      currentVelocityMs: 0,
+      currentDirectionDeg: 0,
+    }));
+    const slackHours = forecastHours({ hours, inwardBearingDeg: 0, reports: [] })
+      .filter((hour) => hour.strength === "slack")
+      .map((hour) => hour.time);
+    expect(slackHours.length).toBeGreaterThanOrEqual(4);
+    // Four divers at each slack hour, matching the model's band, so only the missing direction can keep it from high.
+    const reports: Report[] = slackHours.flatMap((time, index) =>
+      [0, 1, 2, 3].map((diver) => ({
+        id: `r${index}-${diver}`,
+        userId: `u${diver}`,
+        siteId: "s",
+        time,
+        direction: diver % 2 ? ("incoming" as const) : ("outgoing" as const),
+        strength: "slack" as const,
+      })),
+    );
+    const forecast = forecastHours({ hours, inwardBearingDeg: 0, reports });
+    expect(forecast.length).toBeGreaterThan(0);
+    expect(forecast.some((hour) => hour.confidence === "high")).toBe(false);
+  });
+});
