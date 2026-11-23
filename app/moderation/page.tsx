@@ -2,16 +2,26 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ModerationActions } from "@/components/ModerationActions";
-import { listOpenFlags } from "@/lib/moderation-actions";
+import { ModerationActivity } from "@/components/ModerationActivity";
+import { ModerationPhotos } from "@/components/ModerationPhotos";
+import { StoreReviewerChip } from "@/components/StoreReviewerChip";
+import { readActivityFilter } from "@/lib/activity";
+import { listOpenFlags, listRecentActivity } from "@/lib/moderation-actions";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Moderation · 50Bar", robots: { index: false, follow: false } };
 
-/** Open content reports for moderators (MODERATOR_EMAILS), one card per reported thing; anyone else gets a 404. */
-export default async function ModerationPage() {
-  const flags = await listOpenFlags();
-  if (!flags) notFound();
+/**
+ * For moderators (MODERATOR_EMAILS): open content reports, one card per reported thing, then everything divers did in
+ * the last 30 days (lib/activity.ts). Anyone else gets a 404.
+ */
+export default async function ModerationPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const params = await searchParams;
+  const filter = readActivityFilter(params.show);
+  const page = typeof params.page === "string" ? Number.parseInt(params.page, 10) || 1 : 1;
+  const [flags, activity] = await Promise.all([listOpenFlags(), listRecentActivity(filter, page)]);
+  if (!flags || !activity) notFound();
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
@@ -36,9 +46,15 @@ export default async function ModerationPage() {
           {flag.diver ? (
             <p className="text-sm text-foam/85">
               Diver:{" "}
-              <Link href={`/divers/${flag.diver.userId}`} className="underline decoration-incoming underline-offset-4">
-                {flag.diver.nickname}
-              </Link>
+              {flag.diver.storeReview ? (
+                <>
+                  {flag.diver.nickname} <StoreReviewerChip />
+                </>
+              ) : (
+                <Link href={`/divers/${flag.diver.userId}`} className="underline decoration-incoming underline-offset-4">
+                  {flag.diver.nickname}
+                </Link>
+              )}
               {flag.diver.banned ? " (banned)" : ""}
               {flag.kind === "diver" && flag.diver.about ? <span className="block whitespace-pre-line">About: {flag.diver.about}</span> : null}
             </p>
@@ -58,21 +74,11 @@ export default async function ModerationPage() {
               {flag.review.score}/5{flag.review.text ? `: ${flag.review.text}` : ""}
             </p>
           ) : null}
-          {flag.photos.length ? (
-            <ul className="grid grid-cols-3 gap-2">
-              {flag.photos.map((url) => (
-                <li key={url} className="aspect-square overflow-hidden rounded-lg bg-foam/10">
-                  <a href={url} target="_blank" rel="noopener" className="block h-full w-full">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- moderator view of user photos */}
-                    <img src={url} alt="Reported photo" loading="lazy" className="h-full w-full object-cover" />
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <ModerationActions flagId={flag.id} canBan={flag.diver != null && !flag.diver.banned} />
+          <ModerationPhotos urls={flag.photos} alt="Reported photo" />
+          <ModerationActions flagId={flag.id} canBan={flag.canBan} />
         </article>
       ))}
+      <ModerationActivity view={activity} filter={filter} />
     </main>
   );
 }

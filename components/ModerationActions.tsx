@@ -1,50 +1,67 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { moderateFlag } from "@/lib/moderation-actions";
+import { ModerationError, useModerationAction } from "@/components/useModerationAction";
+import type { ActivityTarget } from "@/lib/activity";
+import { REMOVE_LABELS } from "@/lib/moderation";
+import { moderateContent, moderateFlag } from "@/lib/moderation-actions";
 
-/** A moderator's three answers to a report. Ban takes a second tap. */
-export function ModerationActions({ flagId, canBan }: { flagId: string; canBan: boolean }) {
-  const router = useRouter();
-  const [confirmBan, setConfirmBan] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+type Action = "remove" | "ban" | "dismiss";
 
-  function act(action: "remove" | "ban" | "dismiss") {
-    setError(null);
-    startTransition(async () => {
-      const result = await moderateFlag(flagId, action);
-      if (!result.ok) setError(result.error);
-      else router.refresh();
-    });
+/**
+ * A moderator's answers on /moderation: to an open report (`flagId`: Remove content, Ban diver, Dismiss), or to
+ * something in the activity feed with no report (`target`: Remove, Ban diver). Ban always takes a second tap; in the
+ * feed, Remove does too. Remove is left out when there is nothing to remove, Ban when the server would refuse it.
+ */
+export function ModerationActions(
+  props:
+    | { flagId: string; canBan: boolean; target?: never; banTarget?: never }
+    | { target: ActivityTarget | null; banTarget: ActivityTarget | null; flagId?: never; canBan?: never },
+) {
+  const { confirm, pending, run, error } = useModerationAction<Action>();
+  const fromReport = props.flagId != null;
+  const target = props.target ?? null;
+  const canBan = fromReport ? props.canBan : props.banTarget != null;
+  const removeLabel = fromReport || !target ? "Remove content" : REMOVE_LABELS[target.kind];
+
+  function act(action: Action) {
+    const needsConfirm = action === "ban" || (action === "remove" && !fromReport);
+    run(action, needsConfirm, () =>
+      props.flagId != null ? moderateFlag(props.flagId, action) : moderateContent(action === "ban" ? props.banTarget : target, action),
+    );
   }
 
+  if (!fromReport && !target && !canBan) return null;
+  const solid = "min-h-11 rounded-xl px-4 text-sm font-medium text-ink disabled:opacity-50";
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={pending} onClick={() => act("remove")} className="min-h-11 rounded-xl bg-outgoing px-4 text-sm font-medium text-ink disabled:opacity-50">
-          Remove content
-        </button>
+        {fromReport || target ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => act("remove")}
+            className={fromReport ? `${solid} bg-outgoing` : "button-quiet px-3 text-sm disabled:opacity-50"}
+          >
+            {confirm === "remove" ? "Tap again to confirm" : removeLabel}
+          </button>
+        ) : null}
         {canBan ? (
           <button
             type="button"
             disabled={pending}
-            onClick={() => (confirmBan ? act("ban") : setConfirmBan(true))}
-            className="min-h-11 rounded-xl bg-stop px-4 text-sm font-medium text-ink disabled:opacity-50"
+            onClick={() => act("ban")}
+            className={fromReport ? `${solid} bg-stop` : "button-quiet px-3 text-sm text-stop disabled:opacity-50"}
           >
-            {confirmBan ? "Tap again to ban and remove all their posts" : "Ban diver"}
+            {confirm === "ban" ? "Tap again to ban and remove all their posts" : "Ban diver"}
           </button>
         ) : null}
-        <button type="button" disabled={pending} onClick={() => act("dismiss")} className="button-quiet px-4 disabled:opacity-50">
-          Dismiss
-        </button>
+        {fromReport ? (
+          <button type="button" disabled={pending} onClick={() => act("dismiss")} className="button-quiet px-4 disabled:opacity-50">
+            Dismiss
+          </button>
+        ) : null}
       </div>
-      {error ? (
-        <p role="alert" className="text-sm text-outgoing">
-          {error}
-        </p>
-      ) : null}
+      <ModerationError error={error} />
     </div>
   );
 }

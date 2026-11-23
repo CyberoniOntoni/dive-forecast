@@ -200,6 +200,11 @@ export type Report = {
   filedAt?: string;
   /** The signed-in diver who filed it (User.id). Absent on reports filed before sign-in existed (Oct 2026). */
   userId?: string;
+  /**
+   * Hidden by a moderator as malicious or made up, ISO UTC (lib/moderation.ts). Kept, so it can be shown again, but it
+   * teaches no forecast and counts in no verify, points or listing (countedReports, visibleReportsForSite).
+   */
+  hiddenAt?: string;
 };
 
 /**

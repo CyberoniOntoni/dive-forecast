@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { finishLogin, TERMS_NEEDED } from "./accounts";
-import { addFlag, BANNED, banDiver, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
+import { countedReports, finishLogin, TERMS_NEEDED } from "./accounts";
+import { addFlag, BANNED, banDiver, banRefusal, hideReportsBy, moderate, setReportHidden, FLAGS_PER_DAY, isModeratorEmail, readFlagInput, removeFlagged, resolveFlags, setBlocked } from "./moderation";
 import type { StoreData } from "./types";
 
 const NOW = Date.parse("2026-11-18T10:00:00Z");
@@ -120,5 +120,41 @@ describe("moderation", () => {
     expect(isModeratorEmail("Owner@Example.com", " owner@example.com , other@example.com")).toBe(true);
     expect(isModeratorEmail("diver@example.com", "owner@example.com")).toBe(false);
     expect(isModeratorEmail("diver@example.com", null)).toBe(false);
+  });
+
+  it("refuses to ban oneself, the store-review account, a banned or unknown diver", () => {
+    const data = store();
+    data.users.push({ id: "review", email: "review@example.com", nickname: "Reviewer", createdAt: "", storeReview: true });
+    expect(banRefusal(data, "bad", "ann")).toBeNull();
+    expect(banRefusal(data, "ann", "ann")).toMatch("yourself");
+    expect(banRefusal(data, "review", "ann")).toMatch("store-review");
+    expect(banRefusal(data, "nobody", "ann")).toMatch("gone");
+    expect(banRefusal(data, undefined, "ann")).toMatch("No diver");
+    banDiver(data, "bad", NOW);
+    expect(banRefusal(data, "bad", "ann")).toMatch("already");
+  });
+
+  it("removes or bans with or without a report, closing open reports on it, and refuses a ban banRefusal refuses", () => {
+    const data = store();
+    data.flags.push({ id: "f", reporterId: "ann", kind: "review", siteId: "s1", userId: "bad", reason: "hate", createdAt: "2026-11-01T00:00:00Z" });
+    expect(moderate(data, { kind: "review", siteId: "s1", userId: "bad" }, "remove", "ann", NOW).map((item) => item.photo.id)).toEqual(["r1"]);
+    expect(data.flags[0]).toMatchObject({ resolution: "removed" });
+    expect(() => moderate(data, { kind: "diver", userId: "ann" }, "ban", "ann", NOW)).toThrow("yourself");
+    expect(moderate(data, { kind: "site", siteId: "pin", userId: "bad" }, "ban", "ann", NOW).map((item) => item.photo.id)).toEqual(["p1"]);
+    expect(data.users.find((user) => user.id === "bad")?.bannedAt).toBeTruthy();
+  });
+
+  it("hides a dive report from the forecast and shows it again, or hides all of one diver's", () => {
+    const data = store();
+    const report = (id: string, userId: string) => ({ id, siteId: "s1", time: "2026-11-17T09:00", direction: "incoming" as const, strength: "mild" as const, userId });
+    data.reports.push(report("a", "bad"), report("b", "bad"), report("c", "ann"));
+    expect(setReportHidden(data, "a", true, "2026-11-18T00:00:00Z")).toBe(true);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["b", "c"]);
+    expect(setReportHidden(data, "a", false, "2026-11-18T00:00:00Z")).toBe(true);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["a", "b", "c"]);
+    expect(setReportHidden(data, "nope", true, "2026-11-18T00:00:00Z")).toBe(false);
+    expect(hideReportsBy(data, "bad", "2026-11-18T00:00:00Z")).toBe(2);
+    expect(hideReportsBy(data, "bad", "2026-11-18T00:00:00Z")).toBe(0);
+    expect(countedReports(data).map((item) => item.id)).toEqual(["c"]);
   });
 });

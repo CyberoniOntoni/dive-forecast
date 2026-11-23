@@ -1,24 +1,27 @@
 "use server";
 
+import { ACTIVITY_FILTERS, ACTIVITY_PAGE_SIZE, activityCounts, readActivityFilter, recentActivity, type ActivityFilter, type ActivityItem, type ActivityKind } from "./activity";
 import { appSetting, runInBackground } from "./cloudflare";
 import { appUrl, requireSession } from "./auth";
 import { sendNotice } from "./email";
 import {
   addFlag,
-  banDiver,
+  banRefusal,
   FLAG_REASON_LABELS,
+  hideReportsBy,
   isModeratorEmail,
+  moderate,
   readFlagInput,
-  removeFlagged,
   resolveFlags,
   setBlocked,
+  setReportHidden,
   type StoredPhoto,
 } from "./moderation";
 import { ready } from "./ready";
 import { reviewEmail } from "./review-account";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
-import { findSite, mutateStore, readStore } from "./store";
-import type { ContentFlag, FlagKind, FlagReason } from "./types";
+import { findSite, mutateStore, readCatalog, readStore } from "./store";
+import { FLAG_KINDS, type ContentFlag, type FlagKind, type FlagReason } from "./types";
 
 /**
  * The signed-in diver's side of Google Play's user-generated content rules (lib/moderation.ts): agree to the content
@@ -135,18 +138,21 @@ export type FlagView = {
   createdAt: string;
   reporter: string | null;
   /** Whose content it is. */
-  diver: { userId: string; nickname: string; about: string | null; banned: boolean } | null;
+  diver: { userId: string; nickname: string; about: string | null; banned: boolean; storeReview: boolean } | null;
   site: { id: string; name: string; howToDive: string | null; hidden: boolean } | null;
   review: { score: number; text: string | null } | null;
   photos: string[];
   /** Other open reports on the same content. */
   alsoReported: number;
+  /** Whether Ban diver is offered (banRefusal). */
+  canBan: boolean;
 };
 
 /** Open reports, oldest first, with what they are about, for /moderation. Null for anyone but a moderator. */
 export async function listOpenFlags(): Promise<FlagView[] | null> {
   await ready();
-  if (!(await moderatorId())) return null;
+  const moderator = await moderatorId();
+  if (!moderator) return null;
   const store = readStore();
   const nickname = (id: string | undefined) => store.users.find((user) => user.id === id)?.nickname ?? null;
   const open = store.flags.filter((flag) => !flag.resolvedAt);
@@ -174,11 +180,14 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
       note: flag.note ?? null,
       createdAt: flag.createdAt,
       reporter: nickname(flag.reporterId),
-      diver: user ? { userId: user.id, nickname: user.nickname, about: user.about ?? null, banned: Boolean(user.bannedAt) } : null,
+      diver: user
+        ? { userId: user.id, nickname: user.nickname, about: user.about ?? null, banned: Boolean(user.bannedAt), storeReview: Boolean(user.storeReview) }
+        : null,
       site: site ? { id: site.id, name: site.name, howToDive: site.howToDive ?? null, hidden: Boolean(site.hidden) } : null,
       review: rating ? { score: rating.score, text: rating.review ?? null } : null,
       photos,
       alsoReported: open.filter((item) => `${item.kind}|${item.siteId ?? ""}|${item.userId ?? ""}` === key).length - 1,
+      canBan: banRefusal(store, flag.userId, moderator) == null,
     });
   }
   return views;
@@ -203,20 +212,83 @@ export async function moderateFlag(flagId: unknown, action: unknown): Promise<Mo
         resolveFlags(store, flag, "dismissed", nowIso);
         return [];
       }
-      if (action === "ban") {
-        if (!flag.userId) throw new Error("This report names no diver to ban.");
-        if (flag.userId === moderator) throw new Error("You cannot ban yourself.");
-        const removed = banDiver(store, flag.userId, nowMs) ?? [];
-        resolveFlags(store, flag, "banned", nowIso);
-        return removed;
-      }
-      const removed = removeFlagged(store, flag, nowIso);
-      resolveFlags(store, flag, "removed", nowIso);
-      return removed;
+      return moderate(store, flag, action, moderator, nowMs);
     });
     if (!photos) return { ok: false, error: "That report is gone." };
     await Promise.all(photos.map(({ siteId, photo }) => deletePhotoBytes(siteId, photo.id).catch(() => undefined)));
     return { ok: true, error: null };
+  } catch (caught) {
+    return failed(caught, "Could not do that.");
+  }
+}
+
+export type ActivityView = { items: ActivityItem[]; counts: Record<ActivityKind, number>; total: number; page: number; pages: number };
+
+/**
+ * What divers did in the last 30 days, newest first (lib/activity.ts), for /moderation: the filter's kinds,
+ * ACTIVITY_PAGE_SIZE to a page, with counts of every kind. Null for anyone but a moderator.
+ */
+export async function listRecentActivity(filter: ActivityFilter = "all", page: number = 1): Promise<ActivityView | null> {
+  await ready();
+  const moderator = await moderatorId();
+  if (!moderator) return null;
+  const store = readStore();
+  // Added sites are in the store; the rest are catalog names. Not findSite, which places every added pin on each call.
+  const catalog = new Map(readCatalog().sites.map((site) => [site.id, site]));
+  const all = recentActivity(store, (id) => catalog.get(id), Date.now(), { moderatorId: moderator });
+  // A server action can be called with anything: read the filter and page again rather than trust the types.
+  const kinds = new Set<ActivityKind>(ACTIVITY_FILTERS[readActivityFilter(filter)].kinds);
+  const shown = all.filter((item) => kinds.has(item.kind));
+  const pages = Math.max(1, Math.ceil(shown.length / ACTIVITY_PAGE_SIZE));
+  const current = Math.min(Math.max(1, Math.floor(Number(page)) || 1), pages);
+  const items = shown.slice((current - 1) * ACTIVITY_PAGE_SIZE, current * ACTIVITY_PAGE_SIZE);
+  return { items, counts: activityCounts(all), total: shown.length, page: current, pages };
+}
+
+/**
+ * A moderator acts on something in the activity feed without a content report: "remove" takes a review, an added site
+ * or a profile's text down; "ban" bans whoever posted it (and removes all they posted). Open reports on it close too.
+ */
+export async function moderateContent(target: unknown, action: unknown): Promise<ModerationResult> {
+  await ready();
+  try {
+    const moderator = await moderatorId();
+    if (!moderator) return { ok: false, error: "Only moderators can do that." };
+    if (action !== "remove" && action !== "ban") return { ok: false, error: "Unknown action." };
+    const record = (target ?? {}) as Record<string, unknown>;
+    const kind = FLAG_KINDS.find((item) => item === record.kind);
+    const text = (value: unknown) => (typeof value === "string" && value ? value : undefined);
+    const siteId = text(record.siteId);
+    const userId = text(record.userId);
+    if (!kind || (kind !== "diver" && !siteId) || (kind !== "site" && !userId)) return { ok: false, error: "Unknown content." };
+    const content = { kind, ...(siteId && kind !== "diver" ? { siteId } : {}), ...(userId ? { userId } : {}) };
+    const photos = await mutateStore((store): StoredPhoto[] => moderate(store, content, action, moderator, Date.now()));
+    await Promise.all(photos.map(({ siteId: site, photo }) => deletePhotoBytes(site, photo.id).catch(() => undefined)));
+    return { ok: true, error: null };
+  } catch (caught) {
+    return failed(caught, "Could not do that.");
+  }
+}
+
+/**
+ * A moderator hides a malicious or made-up dive report, or shows it again ("hide" / "show"), or hides every report one
+ * diver filed ("hide-all", `target` the id they were filed under: a User.id, or a deleted account's `deleted-…` id).
+ * Hidden reports stop teaching the forecast on the next read (countedReports); the map nowcast at its next rebuild.
+ */
+export async function moderateReports(target: unknown, action: unknown): Promise<ModerationResult> {
+  await ready();
+  try {
+    const moderator = await moderatorId();
+    if (!moderator) return { ok: false, error: "Only moderators can do that." };
+    if (typeof target !== "string" || !target) return { ok: false, error: "Unknown report." };
+    if (action !== "hide" && action !== "show" && action !== "hide-all") return { ok: false, error: "Unknown action." };
+    const done = await mutateStore((store) => {
+      const nowIso = new Date().toISOString();
+      // Nothing left to hide (all hidden already, say by a second moderator) still ends where the moderator wanted.
+      if (action === "hide-all") return hideReportsBy(store, target, nowIso) > 0 || store.reports.some((report) => report.userId === target);
+      return setReportHidden(store, target, action === "hide", nowIso);
+    });
+    return done ? { ok: true, error: null } : { ok: false, error: "No such report." };
   } catch (caught) {
     return failed(caught, "Could not do that.");
   }

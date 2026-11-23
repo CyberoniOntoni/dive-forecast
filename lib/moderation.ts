@@ -27,6 +27,12 @@ export const FLAG_REASON_LABELS: Record<FlagReason, string> = {
   other: "Something else",
 };
 
+/**
+ * What Remove does to each kind of content (removeFlagged), as the feed's button on /moderation says it. Here, not in
+ * lib/activity.ts, because a client component reads it and lib/activity.ts pulls in the forecast code.
+ */
+export const REMOVE_LABELS: Record<FlagKind, string> = { review: "Remove review", site: "Hide site", diver: "Reset profile" };
+
 export function hasAcceptedTerms(user: Pick<User, "acceptedTermsAt"> | null | undefined): boolean {
   return Boolean(user?.acceptedTermsAt);
 }
@@ -185,6 +191,65 @@ export function banDiver(store: StoreData, userId: string, nowMs: number): Store
   }
   resetProfile(store, userId);
   return photos;
+}
+
+/**
+ * Why a moderator may not ban this diver, or null when they may: not oneself, not a diver already banned or gone, and
+ * never the store-review account, whose sign-in details are written down in Play Console (CLOUDFLARE.md § Store-review
+ * account: a ban would lock out the next review). The one rule for the buttons and the server alike.
+ */
+export function banRefusal(store: StoreData, userId: string | undefined, moderatorId: string): string | null {
+  if (!userId) return "No diver to ban.";
+  if (userId === moderatorId) return "You cannot ban yourself.";
+  const user = store.users.find((item) => item.id === userId);
+  if (!user) return "That diver is gone.";
+  if (user.storeReview) return "The store-review account cannot be banned.";
+  if (user.bannedAt) return "That diver is already banned.";
+  return null;
+}
+
+/** The content a report, or a moderator acting from the activity feed, names. */
+export type ModeratedContent = Pick<ContentFlag, "kind" | "siteId" | "userId">;
+
+/**
+ * A moderator's Remove or Ban on some content, with or without a report: bans its diver (banRefusal first, and throws
+ * its reason) or takes it down, then closes every open report on it. Returns the photos to delete.
+ */
+export function moderate(store: StoreData, content: ModeratedContent, action: "remove" | "ban", moderatorId: string, nowMs: number): StoredPhoto[] {
+  const nowIso = new Date(nowMs).toISOString();
+  if (action === "ban") {
+    const refusal = banRefusal(store, content.userId, moderatorId);
+    if (refusal) throw new Error(refusal);
+    const removed = banDiver(store, content.userId!, nowMs) ?? [];
+    resolveFlags(store, content, "banned", nowIso);
+    return removed;
+  }
+  const removed = removeFlagged(store, content, nowIso);
+  resolveFlags(store, content, "removed", nowIso);
+  return removed;
+}
+
+/**
+ * Hides a dive report a moderator judges malicious or made up, or shows it again: hidden, it stops teaching the
+ * forecast and leaves verify, points and listings (countedReports), but the row stays. False when there is no such report.
+ */
+export function setReportHidden(store: StoreData, reportId: string, hidden: boolean, nowIso: string): boolean {
+  const report = store.reports.find((item) => item.id === reportId);
+  if (!report) return false;
+  if (hidden) report.hiddenAt ??= nowIso;
+  else delete report.hiddenAt;
+  return true;
+}
+
+/** Hides every dive report a diver filed that is not hidden yet (one who sent made-up currents). Returns how many. */
+export function hideReportsBy(store: StoreData, userId: string, nowIso: string): number {
+  let count = 0;
+  for (const report of store.reports) {
+    if (report.userId !== userId || report.hiddenAt) continue;
+    report.hiddenAt = nowIso;
+    count += 1;
+  }
+  return count;
 }
 
 /** Closes every open report on the same content as `flag` with this resolution. */

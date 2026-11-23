@@ -172,8 +172,9 @@ export function reportsForSite(siteId: string): Report[] {
 }
 
 /**
- * The site's reports that teach the forecast: all of them but the store-review account's (lib/review-account.ts),
- * whose reports are app reviewers trying the form, not dives. Listed only to the reviewer (visibleReportsForSite).
+ * The site's reports that teach the forecast (countedReports): all of them but the store-review account's
+ * (lib/review-account.ts), whose reports are app reviewers trying the form, not dives, and those a moderator hid
+ * (`hiddenAt`). Listed only to the reviewer (visibleReportsForSite).
  */
 export function forecastReportsForSite(siteId: string): Report[] {
   return countedReports(readStore()).filter((report) => report.siteId === siteId);
@@ -182,12 +183,14 @@ export function forecastReportsForSite(siteId: string): Report[] {
 
 /**
  * The site's reports as `viewerId` sees them listed: the store-review account's only to itself, so a reviewer's
- * made-up current never shows to divers checking the site.
+ * made-up current never shows to divers checking the site, and none a moderator hid (`hiddenAt`).
  */
 export function visibleReportsForSite(siteId: string, viewerId: string | null): Report[] {
   const store = readStore();
   const reviewers = storeReviewIds(store.users);
-  return store.reports.filter((report) => report.siteId === siteId && !hiddenReviewerContent(report.userId, reviewers, viewerId));
+  return store.reports.filter(
+    (report) => report.siteId === siteId && !report.hiddenAt && !hiddenReviewerContent(report.userId, reviewers, viewerId),
+  );
 }
 
 /**

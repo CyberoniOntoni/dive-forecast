@@ -119,12 +119,12 @@ export function storeReviewIds(users: readonly Pick<User, "id" | "storeReview">[
 }
 
 /**
- * Reports that count: for the forecast, points, awards and the scoreboard. All but the store-review account's
- * (`User.storeReview`), which are app reviewers trying the form, not dives.
+ * Reports that count: for the forecast, verify, points, awards and the scoreboard. All but the store-review account's
+ * (`User.storeReview`), which are app reviewers trying the form, not dives, and those a moderator hid (`hiddenAt`).
  */
 export function countedReports(store: Pick<StoreData, "reports" | "users">): StoreData["reports"] {
   const reviewers = storeReviewIds(store.users);
-  return reviewers.size ? store.reports.filter((report) => !(report.userId && reviewers.has(report.userId))) : store.reports;
+  return store.reports.filter((report) => !report.hiddenAt && !(report.userId && reviewers.has(report.userId)));
 }
 
 /**

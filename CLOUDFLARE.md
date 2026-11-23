@@ -130,7 +130,15 @@ npx wrangler secret put MODERATOR_EMAILS
 
 Each new report emails them (same routes as sign-in codes), and signed in with one of those emails, the account page
 links `/moderation`: open reports with Remove content, Ban diver (signs them out, refuses their sign-in, removes all they
-posted except dive reports) and Dismiss. Photos are cached an hour (`app/site-photos`), so a removed one stops showing
+posted except dive reports) and Dismiss. Below them, Recent activity lists the last 30 days of dive reports, reviews
+and ratings, added sites, dive plans, sign-ups and content reports (100 to a page, with tabs by kind; the store-review
+account's are labelled), with Remove (a review, an added site, a profile's text) and Ban diver straight from the feed,
+no report needed; open reports on the same thing close with it. A malicious or made-up dive report can be hidden there
+(Hide report, or Hide all their reports): it stays stored and can be shown again, but stops teaching the forecast (on
+the site page at once, on the map from its next rebuild, as with a new report) and leaves verify, points and the site
+page. Banning a diver keeps their dive reports; hide them as well if they
+were made up. The server never bans a moderator themselves or the
+store-review account (`banRefusal` in `lib/moderation.ts`). Photos are cached an hour (`app/site-photos`), so a removed one stops showing
 within the hour.
 
 **Store-review account** (Play Console → App content → Sign in details; `lib/review-account.ts`): reviewers cannot read
