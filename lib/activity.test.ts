@@ -115,7 +115,7 @@ describe("recent activity for moderators", () => {
     expect(byKey.get("flag:f1")).toMatchObject({ diver: { nickname: "Ann" }, summary: "Reported a review by Rude: Hate, harassment or bullying (open)", text: "Nasty" });
   });
 
-  it("filters by kind and caps the list", () => {
+  it("filters by kind and window, and reads the filter tab safely", () => {
     expect(recentActivity(store(), lookup, NOW, { kinds: ["review", "rating"] }).map((item) => item.kind)).toEqual(["review", "rating"]);
     expect(recentActivity(store(), lookup, NOW, { days: 2 }).map((item) => item.key)).toEqual(["report:rev", "report:r1", "plan:plan1"]);
     expect(readActivityFilter("reviews")).toBe("reviews");

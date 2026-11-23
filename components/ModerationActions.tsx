@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { REMOVE_LABELS, type ActivityTarget } from "@/lib/activity";
+import type { ActivityTarget } from "@/lib/activity";
+import { REMOVE_LABELS } from "@/lib/moderation";
 import { moderateContent, moderateFlag } from "@/lib/moderation-actions";
 
 type Action = "remove" | "ban" | "dismiss";

@@ -27,6 +27,12 @@ export const FLAG_REASON_LABELS: Record<FlagReason, string> = {
   other: "Something else",
 };
 
+/**
+ * What Remove does to each kind of content (removeFlagged), as the feed's button on /moderation says it. Here, not in
+ * lib/activity.ts, because a client component reads it and lib/activity.ts pulls in the forecast code.
+ */
+export const REMOVE_LABELS: Record<FlagKind, string> = { review: "Remove review", site: "Hide site", diver: "Reset profile" };
+
 export function hasAcceptedTerms(user: Pick<User, "acceptedTermsAt"> | null | undefined): boolean {
   return Boolean(user?.acceptedTermsAt);
 }

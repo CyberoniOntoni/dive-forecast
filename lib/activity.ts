@@ -40,9 +40,6 @@ export type ActivityDiver = {
 /** What a moderator can take down from the feed, in the shape of a content report (ContentFlag). */
 export type ActivityTarget = { kind: FlagKind; siteId?: string; userId?: string };
 
-/** What Remove does to each kind of content (removeFlagged in lib/moderation.ts), as the feed's button says it. */
-export const REMOVE_LABELS: Record<FlagKind, string> = { review: "Remove review", site: "Hide site", diver: "Reset profile" };
-
 export type ActivityItem = {
   key: string;
   kind: ActivityKind;
@@ -133,7 +130,6 @@ export function recentActivity(
       noDiver: userId ? "Deleted account" : "No account",
     });
   };
-
 
   if (wanted.has("report")) {
     for (const report of store.reports) {
