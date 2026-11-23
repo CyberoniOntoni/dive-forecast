@@ -272,7 +272,8 @@ export async function moderateContent(target: unknown, action: unknown): Promise
 
 /**
  * A moderator hides a malicious or made-up dive report, or shows it again ("hide" / "show"), or hides every report one
- * diver filed ("hide-all", `target` their User.id). Hidden reports stop teaching the forecast at once (countedReports).
+ * diver filed ("hide-all", `target` the id they were filed under: a User.id, or a deleted account's `deleted-…` id).
+ * Hidden reports stop teaching the forecast on the next read (countedReports); the map nowcast at its next rebuild.
  */
 export async function moderateReports(target: unknown, action: unknown): Promise<ModerationResult> {
   await ready();
@@ -283,7 +284,8 @@ export async function moderateReports(target: unknown, action: unknown): Promise
     if (action !== "hide" && action !== "show" && action !== "hide-all") return { ok: false, error: "Unknown action." };
     const done = await mutateStore((store) => {
       const nowIso = new Date().toISOString();
-      if (action === "hide-all") return hideReportsBy(store, target, nowIso) > 0;
+      // Nothing left to hide (all hidden already, say by a second moderator) still ends where the moderator wanted.
+      if (action === "hide-all") return hideReportsBy(store, target, nowIso) > 0 || store.reports.some((report) => report.userId === target);
       return setReportHidden(store, target, action === "hide", nowIso);
     });
     return done ? { ok: true, error: null } : { ok: false, error: "No such report." };

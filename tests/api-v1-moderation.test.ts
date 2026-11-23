@@ -234,6 +234,9 @@ describe("API v1 reports, blocks and moderation", () => {
     expect(forecastReportsForSite("banana-reef").map((report) => report.id)).toEqual(["t1", "t2"]);
     expect(await moderateReports(trollId, "hide-all")).toEqual({ ok: true, error: null });
     expect(forecastReportsForSite("banana-reef")).toEqual([]);
+    // A second Hide all (another moderator got there first) finds nothing left but is no error; an unknown id is.
+    expect(await moderateReports(trollId, "hide-all")).toEqual({ ok: true, error: null });
+    expect(await moderateReports("deleted-nobody", "hide-all")).toMatchObject({ ok: false, error: "No such report." });
     expect(await moderateReports("nope", "hide")).toMatchObject({ ok: false, error: "No such report." });
     expect(await moderateReports("t1", "delete")).toMatchObject({ ok: false, error: "Unknown action." });
   });
