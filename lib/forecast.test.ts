@@ -1321,20 +1321,20 @@ describe("M1: Hydrodynamic Channel Constriction & Tidal Range Modeling", () => {
 
 describe("report age", () => {
   const refMs = Date.parse("2026-07-20T00:00:00Z");
-  const daysAgo = (days: number) => new Date(refMs - days * 86_400_000).toISOString().slice(0, 16);
+  const daysFromRef = (days: number) => new Date(refMs + days * 86_400_000).toISOString().slice(0, 16);
 
   it("halves a report's weight every 90 days", () => {
     expect(REPORT_HALF_LIFE_MS).toBe(90 * 86_400_000);
-    expect(reportTemporalWeight(daysAgo(0), refMs)).toBeCloseTo(1, 6);
-    expect(reportTemporalWeight(daysAgo(90), refMs)).toBeCloseTo(0.5, 6);
-    expect(reportTemporalWeight(daysAgo(180), refMs)).toBeCloseTo(0.25, 6);
-    expect(reportTemporalWeight(daysAgo(730), refMs)).toBeCloseTo(2 ** (-730 / 90), 6);
+    expect(reportTemporalWeight(daysFromRef(0), refMs)).toBeCloseTo(1, 6);
+    expect(reportTemporalWeight(daysFromRef(-90), refMs)).toBeCloseTo(0.5, 6);
+    expect(reportTemporalWeight(daysFromRef(-180), refMs)).toBeCloseTo(0.25, 6);
+    expect(reportTemporalWeight(daysFromRef(-730), refMs)).toBeCloseTo(2 ** (-730 / 90), 6);
   });
 
   it("weighs a report after the reference time as new, and an unreadable time as nothing", () => {
-    expect(reportTemporalWeight(daysAgo(-10), refMs)).toBe(1);
+    expect(reportTemporalWeight(daysFromRef(10), refMs)).toBe(1);
     expect(reportTemporalWeight("not a time", refMs)).toBe(0);
-    expect(reportTemporalWeight(daysAgo(5), Number.NaN)).toBe(1);
+    expect(reportTemporalWeight(daysFromRef(-5), Number.NaN)).toBe(1);
   });
 });
 

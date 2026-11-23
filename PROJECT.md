@@ -33,17 +33,17 @@ Crowdsourced Diver Reports (store.ts) ─────────┘        ▼
 | F10 | Benchmark Fixture Dataset | Curated benchmark dataset (`data/benchmark-reports.json`) covering canonical passes, turns, and outliers | M4 | ORIGINAL_REQUEST §R4 |
 | F11 | Quantitative Evaluation Harness | Calculate Directional Accuracy (%), Slack Timing Deviation MAE (mins), False-High-Confidence Rate (%) | M4 | ORIGINAL_REQUEST §R4 |
 | F12 | Automated Benchmark CLI | Upgrade `scripts/replay.ts` to execute evaluation, print statistics table, and write `data/replay.json` | M4 | ORIGINAL_REQUEST §R4 |
-| F13 | Full E2E & Adversarial Verification | 100% E2E test pass across all 4 tiers, zero regression in `npm test`, `npm run build`, and clean audit | M5 | ORIGINAL_REQUEST Acceptance Criteria |
+| F13 | Full E2E & Adversarial Verification | Zero regression in `npm test`, `npm run build`, and clean audit (the 4-tier suite was removed in Nov 2026, see CLAUDE.md § Tests layout) | M5 | ORIGINAL_REQUEST Acceptance Criteria |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M0 | E2E Testing Track | Independent requirement-driven test suite (Tiers 1–4) & `TEST_READY.md` | none | DONE |
+| M0 | E2E Testing Track | Independent requirement-driven test suite (Tiers 1–4); removed in Nov 2026 with `TEST_READY.md` and `TEST_INFRA.md`, as it caught nothing the unit tests missed | none | DONE, then removed |
 | M1 | Hydrodynamic Pass & Tidal Range Physics | F1, F2, F3: channel constriction factor, tidal amplitude scaling, site geometry wiring | none | DONE |
 | M2 | Monsoon & Seasonal Current Integration | F4, F5, F6: SW/NE climatological drift, perimeter flux projection, net axial flow | M1 | IN_PROGRESS |
 | M3 | Calibrated Diver Report Learning & Confidence Scoring | F7, F8, F9: temporal decay, outlier dampening, calibrated confidence guards | M1 | PLANNED |
 | M4 | Automated Backtesting & Reliability Benchmark | F10, F11, F12: benchmark fixture, quantitative evaluation harness, CLI execution | M1, M2, M3 | PLANNED |
-| M5 | Final Verification & Adversarial Hardening | F13: Pass 100% E2E suite, Vitest, build, adversarial challenge, forensic audit | M0, M4 | PLANNED |
+| M5 | Final Verification & Adversarial Hardening | F13: Pass Vitest, build, replay, forensic audit | M4 | PLANNED |
 
 ## Interface Contracts
 ### Channel Geometry (`lib/types.ts` & `lib/forecast.ts`)
