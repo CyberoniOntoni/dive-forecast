@@ -3368,7 +3368,7 @@
       "atollId": "raa",
       "lat": 5.746399,
       "lon": 72.84838,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -3378,7 +3378,7 @@
       "atollId": "raa",
       "lat": 5.735304,
       "lon": 72.864916,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -3388,7 +3388,7 @@
       "atollId": "raa",
       "lat": 5.641806,
       "lon": 72.98782,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "manual"
     },
@@ -3398,7 +3398,7 @@
       "atollId": "raa",
       "lat": 5.658606,
       "lon": 72.957636,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "manual"
     },
@@ -3408,7 +3408,7 @@
       "atollId": "raa",
       "lat": 5.739833,
       "lon": 73.018228,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "corner",
       "siteTypeSource": "derived"
     },
@@ -3418,7 +3418,7 @@
       "atollId": "raa",
       "lat": 5.729152,
       "lon": 73.021574,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
@@ -4422,7 +4422,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.650144,
       "lon": 73.445488,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -4432,7 +4432,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.488081,
       "lon": 73.558522,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual",
       "diveMaxM": 40
@@ -4443,7 +4443,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.631756,
       "lon": 73.45698,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual",
       "diveMaxM": 32
@@ -4454,7 +4454,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.629817,
       "lon": 73.459047,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
@@ -4464,7 +4464,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.600553,
       "lon": 73.497632,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -4474,7 +4474,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.590129,
       "lon": 73.503437,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -4484,7 +4484,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.572105,
       "lon": 73.5188,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "corner",
       "siteTypeSource": "manual"
     },
@@ -4494,7 +4494,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.569356,
       "lon": 73.525837,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual"
     },
@@ -4504,7 +4504,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.545196,
       "lon": 73.483458,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4514,7 +4514,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.484132,
       "lon": 73.541705,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4524,7 +4524,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.467493,
       "lon": 73.549268,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4534,7 +4534,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.456098,
       "lon": 73.569854,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "pass",
       "siteTypeSource": "manual",
       "diveTopM": 12,
@@ -4547,7 +4547,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.443059,
       "lon": 73.578593,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "outer-reef",
       "siteTypeSource": "derived"
     },
@@ -4557,7 +4557,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.450525,
       "lon": 73.504805,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4567,7 +4567,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.446215,
       "lon": 73.499973,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4577,7 +4577,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.44512,
       "lon": 73.511182,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4587,7 +4587,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.6142,
       "lon": 73.441186,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived",
       "diveTopM": 12,
@@ -4600,7 +4600,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.657396,
       "lon": 73.41398,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },
@@ -4610,7 +4610,7 @@
       "atollId": "gaafu-alif",
       "lat": 0.705331,
       "lon": 73.330384,
-      "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
+      "sourceUrl": "",
       "siteType": "lagoon",
       "siteTypeSource": "derived"
     },

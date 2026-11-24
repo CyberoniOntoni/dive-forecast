@@ -36,6 +36,12 @@ function params(id: string) {
 }
 
 describe("API v1 shapes", () => {
+  it("sends a catalog site's source only when it is a web page", () => {
+    const catalog: Site = { id: "k", name: "K", atollId: "north-male", lat: 4.3, lon: 73.5, sourceUrl: "https://example.com/k" };
+    expect(apiSite(catalog).sourceUrl).toBe("https://example.com/k");
+    expect(apiSite({ ...catalog, sourceUrl: "" }).sourceUrl).toBeNull();
+  });
+
   it("gives a site its display fields only, with no diver id", () => {
     const site = apiSite(userPin, null, "Reefer");
     expect(site).toEqual({

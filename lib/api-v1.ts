@@ -233,7 +233,7 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     siteTypeLabel: site.siteType ? SITE_TYPE_LABEL[site.siteType] : null,
     atollName: atollName ?? null,
     userAdded,
-    sourceUrl: userAdded ? null : site.sourceUrl,
+    sourceUrl: userAdded || !/^https?:\/\//i.test(site.sourceUrl) ? null : site.sourceUrl,
     diveTopM: site.diveTopM ?? null,
     diveMaxM: site.diveMaxM ?? null,
     approximatePin: site.pinPlacement === "imagery",
