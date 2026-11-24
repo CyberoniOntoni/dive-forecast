@@ -26,7 +26,8 @@
       "sourceLabel": "Dhandhoo Channel",
       "aliases": [
         "Nilandhoo Kandu (Wannadive)"
-      ]
+      ],
+      "depthFromOwner": "about 32 m in the middle of the channel"
     },
     {
       "siteId": "dhandhoo-caves",
@@ -97,7 +98,8 @@
       "source": "owner-list",
       "confidence": "high",
       "sourceLabel": "Kondey Channel",
-      "change": "re-pinned 70 m from the imagery pin; Wannadive agrees within 200 m"
+      "change": "re-pinned 70 m from the imagery pin; Wannadive agrees within 200 m",
+      "depthFromOwner": "goes to about 40 m"
     },
     {
       "siteId": "kondey-coral-garden",
@@ -126,7 +128,8 @@
       "sourceLabel": "Gemanafushi Channel",
       "aliases": [
         "Maarehaa Kandu (Wannadive)"
-      ]
+      ],
+      "depthFromOwner": "12-30 m, sandy bottom strips, eagle rays"
     },
     {
       "siteId": "gemanafushi-canyon",
@@ -170,7 +173,8 @@
       "sourceLabel": "Coral City (Dhuraghalla)",
       "aliases": [
         "Nilandhoo Giri (Wannadive, same reef, 0.6 km SW)"
-      ]
+      ],
+      "depthFromOwner": "12-30 m, coral garden, mostly dived shallow; affected by channel flow but many areas sheltered by coral formations"
     },
     {
       "siteId": "coral-garden-2-gaafu-alif",
@@ -346,5 +350,6 @@
       "lon": 73.464367,
       "why": "0.24 km from Kuredu Caves (Lhaviyani); likely the same wall"
     }
-  ]
+  ],
+  "depthNote": "depthFromOwner: depths and notes the owner gave in the project thread on 24 Nov 2026 (no published page, so no depthSourceUrl). Display only."
 }

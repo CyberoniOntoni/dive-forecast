@@ -4434,7 +4434,8 @@
       "lon": 73.558522,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "diveMaxM": 40
     },
     {
       "id": "dhandhoo-channel",
@@ -4444,7 +4445,8 @@
       "lon": 73.45698,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "diveMaxM": 32
     },
     {
       "id": "dhandhoo-caves",
@@ -4534,7 +4536,10 @@
       "lon": 73.569854,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "pass",
-      "siteTypeSource": "manual"
+      "siteTypeSource": "manual",
+      "diveTopM": 12,
+      "diveMaxM": 30,
+      "howToDive": "Sandy bottom strips between the reef, and eagle rays."
     },
     {
       "id": "gemanafushi-canyon",
@@ -4584,7 +4589,10 @@
       "lon": 73.441186,
       "sourceUrl": "https://www.google.com/maps/placelists/list/9PAl1MOgtmjSu3fBfTeR2I2cZ-_dtg",
       "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "derived",
+      "diveTopM": 12,
+      "diveMaxM": 30,
+      "howToDive": "A typical coral garden; most people dive it shallow. Channel flow reaches it, but many spots are sheltered by the coral formations."
     },
     {
       "id": "coral-garden-2-gaafu-alif",
