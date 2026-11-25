@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -121,7 +122,7 @@ fun RouteLimitation(modifier: Modifier = Modifier) {
   val colors = CurrentTheme.colors
   var open by remember { mutableStateOf(false) }
   Row(
-    modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Why") { open = true }.padding(horizontal = 4.dp),
+    modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Show why", role = Role.Button) { open = true }.padding(horizontal = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(5.dp),
   ) {
