@@ -135,6 +135,12 @@ describe("API v1 site texts", () => {
     const elsewhere = await withdraw(call(`/api/v1/sites/maaya-thila/texts/${proposed.mine.id}`, { method: "DELETE", token }), edit("maaya-thila", proposed.mine.id));
     expect(elsewhere.status).toBe(404);
 
+    // Another diver cannot withdraw it, and is not told it exists.
+    const other = await signInApp("c@example.com", "Cy");
+    const theirs = await withdraw(call(`/api/v1/sites/${SITE}/texts/${proposed.mine.id}`, { method: "DELETE", token: other }), edit(SITE, proposed.mine.id));
+    expect(theirs.status).toBe(404);
+    expect(readStore().siteEdits).toHaveLength(1);
+
     const gone = await withdraw(call(`/api/v1/sites/${SITE}/texts/${proposed.mine.id}`, { method: "DELETE", token }), edit(SITE, proposed.mine.id));
     expect(gone.status).toBe(200);
     expect((await gone.json()).mine).toBeNull();

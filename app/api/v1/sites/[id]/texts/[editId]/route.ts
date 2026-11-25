@@ -1,5 +1,6 @@
 import { apiError, apiHandler, apiSiteTextsResult } from "@/lib/api-v1";
 import { reviewWriteSite } from "@/lib/api-review-route";
+import { currentSession } from "@/lib/auth";
 import { readStore } from "@/lib/store";
 import { withdrawSiteEdit } from "@/lib/wiki-actions";
 
@@ -9,8 +10,14 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const { id, editId } = await context.params;
     const siteId = await reviewWriteSite(request, id);
     if (siteId instanceof Response) return siteId;
-    // An edit on another site is not this one's: the same answer as an unknown edit.
-    if (readStore().siteEdits.find((edit) => edit.id === editId)?.siteId !== siteId) return apiError(404, "not_found", "Unknown edit.");
+    const session = await currentSession();
+    if (!session) return apiError(401, "unauthorized", "Sign in again.");
+    // Only the diver's own edit on this site, still waiting: another diver's, one on another site, or one already
+    // looked at is not there to withdraw.
+    const edit = readStore().siteEdits.find((item) => item.id === editId);
+    if (!edit || edit.siteId !== siteId || edit.userId !== session.userId || edit.status !== "pending") {
+      return apiError(404, "not_found", "That edit is not waiting for review.");
+    }
     return apiSiteTextsResult(await withdrawSiteEdit(editId));
   });
 }

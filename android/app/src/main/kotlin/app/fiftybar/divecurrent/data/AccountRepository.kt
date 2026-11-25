@@ -119,13 +119,14 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
 
   suspend fun removeReviewPhoto(siteId: String, photoId: String): ApiReviews = signedIn { api.removeReviewPhoto(it, siteId, photoId) }
 
-  /** Adds a site at a pin; the map and lists read it again. */
+  /** The edit form for a site's texts, with the diver's own edit (API.md § Site texts). */
   suspend fun siteTexts(siteId: String): ApiSiteTexts = signedIn { api.siteTexts(it, siteId) }
 
   suspend fun proposeSiteTexts(siteId: String, body: SiteTextsBody): ApiSiteTexts = signedIn { api.proposeSiteTexts(it, siteId, body) }
 
   suspend fun withdrawSiteEdit(siteId: String, editId: String): ApiSiteTexts = signedIn { api.withdrawSiteEdit(it, siteId, editId) }
 
+  /** Adds a site at a pin; the map and lists read it again. */
   suspend fun addSite(site: AddSiteBody): ApiSite = signedIn { api.addSite(it, site) }.site
 
   /** One photo for a site the diver added; answers with the site as it is now. */

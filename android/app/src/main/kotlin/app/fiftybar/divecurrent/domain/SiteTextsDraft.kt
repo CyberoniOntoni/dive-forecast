@@ -27,9 +27,10 @@ data class SiteTextsDraft(val description: String, val howToDive: String, val no
      */
     fun body(form: ApiSiteTexts, draft: SiteTextsDraft): SiteTextsBody? {
       val waiting = form.mine?.takeIf { it.status == "pending" }?.changes
-      val description = draft.description.takeIf { it != form.texts.description || waiting?.description != null }
+      // Compared and sent as the server will keep them, so a trailing space alone is no change.
+      val description = clean(draft.description).takeIf { it != form.texts.description || waiting?.description != null }
       val howToDive =
-        draft.howToDive.takeIf { !form.adderTextHidden && (it != form.texts.howToDive || waiting?.howToDive != null) }
+        clean(draft.howToDive).takeIf { !form.adderTextHidden && (it != form.texts.howToDive || waiting?.howToDive != null) }
       if (description == null && howToDive == null) return null
       return SiteTextsBody(
         texts = ApiTextChanges(description = description, howToDive = howToDive),
@@ -38,8 +39,16 @@ data class SiteTextsDraft(val description: String, val howToDive: String, val no
             description = form.texts.description.takeIf { description != null },
             howToDive = form.texts.howToDive.takeIf { howToDive != null },
           ),
-        note = draft.note.trim().takeIf { it.isNotEmpty() },
+        note = clean(draft.note).takeIf { it.isNotEmpty() },
       )
     }
+
+    /** As cleanText in lib/site-details.ts: control characters dropped (newlines kept), blank-line runs squeezed, ends trimmed. */
+    fun clean(text: String): String =
+      text
+        .replace(Regex("\r\n?"), "\n")
+        .replace(Regex("[\u0000-\u0008\u000b-\u001f\u007f]"), "")
+        .replace(Regex("\n{3,}"), "\n\n")
+        .trim()
   }
 }

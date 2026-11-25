@@ -130,7 +130,22 @@ class SiteTextsViewModel(
         _state.update { it.copy(busy = false, error = "Sign in again to edit this site.") }
       } catch (e: ApiException) {
         _state.update { it.copy(busy = false, error = e.message) }
+        // Refused: often the edit changed under the form (a moderator looked at it, or it was withdrawn elsewhere).
+        // Read the form again so the card and buttons are true, keeping what the diver typed.
+        if (e is ApiException.Server && (e.status == 400 || e.status == 404)) catchUp()
       }
     }
+  }
+
+  private suspend fun catchUp() {
+    val form =
+      try {
+        account.siteTexts(siteId)
+      } catch (_: ApiException) {
+        return
+      } catch (_: SignedOutException) {
+        return
+      }
+    _state.update { it.copy(form = form, start = SiteTextsDraft.start(form)) }
   }
 }

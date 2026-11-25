@@ -48,4 +48,11 @@ class SiteTextsDraftTest {
   fun `never sends how to dive it while it is hidden`() {
     assertNull(SiteTextsDraft.body(form(hidden = true), SiteTextsDraft("A slope.", "Changed.", "")))
   }
+
+  @Test
+  fun `a trailing space or extra blank lines are no change, and what goes out is cleaned`() {
+    assertNull(SiteTextsDraft.body(form(), SiteTextsDraft("A slope. \n", "Drop north.", "")))
+    val body = SiteTextsDraft.body(form(), SiteTextsDraft("  A slope.\r\n\n\n\nSharks.  ", "Drop north.", ""))!!
+    assertEquals("A slope.\n\nSharks.", body.texts.description)
+  }
 }

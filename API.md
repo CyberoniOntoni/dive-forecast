@@ -534,7 +534,7 @@ Moderators approve or reject it on the web; a moderator's own edit goes live at 
 on the site itself (`GET /api/v1/sites/{id}`: `description`, `howToDive`, `writtenBy`). All three take the app's
 token and answer with the form below, `Cache-Control: private, no-store`. A refusal is 400 with the web form's words
 ("Write something first."), 401 without a token or when it stopped working, 404 for a site not on the map or an
-edit that is not the diver's waiting one there.
+edit that is not the diver's own waiting one on that site (another diver's, or one a moderator already looked at).
 
 ### `GET /api/v1/sites/{id}/texts`
 

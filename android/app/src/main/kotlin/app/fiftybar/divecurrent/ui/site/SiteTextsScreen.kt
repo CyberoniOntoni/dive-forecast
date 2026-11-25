@@ -65,6 +65,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
   var confirmLeave by remember { mutableStateOf(false) }
+  var confirmWithdraw by remember { mutableStateOf(false) }
   val leave: () -> Unit = { if (state.dirty) confirmLeave = true else onBack() }
   // Leaving while sending would drop the answer unseen; leaving a changed form asks first.
   BackHandler(enabled = state.busy || state.dirty) { if (!state.busy) confirmLeave = true }
@@ -129,7 +130,8 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         Text("This account cannot edit sites.", style = MaterialTheme.typography.bodyMedium, color = colors.stop)
         return@Column
       }
-      MyEditCard(form, busy = state.busy, onWithdraw = viewModel::withdraw)
+      // Withdrawing resets the form to what the site says: typed changes would go with it, so ask first.
+      MyEditCard(form, busy = state.busy, onWithdraw = { if (state.dirty) confirmWithdraw = true else viewModel.withdraw() })
       val locked = state.busy
       OutlinedTextField(
         value = state.draft.description,
@@ -196,6 +198,22 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
       }
       Spacer(Modifier.height(24.dp))
     }
+  }
+  if (confirmWithdraw) {
+    AlertDialog(
+      onDismissRequest = { confirmWithdraw = false },
+      title = { Text("Withdraw your edit?") },
+      text = { Text("The form goes back to what the site says, and what you typed since is lost.") },
+      confirmButton = {
+        TextButton(
+          onClick = {
+            confirmWithdraw = false
+            viewModel.withdraw()
+          },
+        ) { Text("Withdraw") }
+      },
+      dismissButton = { TextButton(onClick = { confirmWithdraw = false }) { Text("Keep editing") } },
+    )
   }
   if (confirmLeave) {
     AlertDialog(
