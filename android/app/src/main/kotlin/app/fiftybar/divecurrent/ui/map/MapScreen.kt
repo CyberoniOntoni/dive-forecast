@@ -1,5 +1,7 @@
 package app.fiftybar.divecurrent.ui.map
 
+import app.fiftybar.divecurrent.ui.components.ForecastIntroDialog
+import app.fiftybar.divecurrent.ui.components.IntroPrefs
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
@@ -151,6 +153,8 @@ fun MapScreen(
   val shelter: ShelterViewModel = viewModel { ShelterViewModel(repository) }
   val shelterState by shelter.state.collectAsStateWithLifecycle()
   val context = LocalContext.current
+  // The first-launch introduction, until it is closed once.
+  var introOpen by remember { mutableStateOf(!IntroPrefs.closed(context)) }
   var layers by remember { mutableStateOf(MapLayersPrefs.read(context)) }
   fun choose(next: MapLayers) {
     layers = next
@@ -172,7 +176,7 @@ fun MapScreen(
   // Kept out here: the list leaves composition while the map shows, and should come back where it was.
   val listState = rememberLazyListState()
   val colors = CurrentTheme.colors
-  // A point long-pressed on the map, waiting for "Navigate here" or "Add a dive site here".
+  // A point long-pressed on the map, waiting for "Boat route here" or "Add a dive site here".
   var pressed by remember { mutableStateOf<LatLon?>(null) }
   // "Add a dive site" asked from the list: says where the pin goes.
   var addHint by remember { mutableStateOf(false) }
@@ -368,6 +372,14 @@ fun MapScreen(
       modifier = Modifier.align(Alignment.TopCenter),
     )
   }
+  if (introOpen && !covered) {
+    ForecastIntroDialog(
+      onClose = {
+        introOpen = false
+        IntroPrefs.close(context)
+      }
+    )
+  }
   if (addHint) {
     AlertDialog(
       onDismissRequest = { addHint = false },
@@ -392,7 +404,7 @@ fun MapScreen(
       title = { Text(name) },
       text = {
         Text(
-          "Navigate there by boat, round the islands and reef the app knows of" +
+          "Preview a boat route there, round the islands and reef the app knows of (not a chart, not for navigation)" +
             if (NewSite.inBounds(point.lat, point.lon)) ", or add a dive site at this spot." else "."
         )
       },
@@ -404,7 +416,7 @@ fun MapScreen(
               onNavigateTo(PointDestination.id(point), name, point.lat, point.lon)
             }
           ) {
-            Text("Navigate here")
+            Text("Boat route here")
           }
           // Only where the server takes a new pin: the Maldives box, a little smaller than the boat routes'.
           if (NewSite.inBounds(point.lat, point.lon)) {

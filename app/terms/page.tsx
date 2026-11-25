@@ -80,8 +80,9 @@ export default function TermsPage() {
       <Section id="forecast" title="About the forecast">
         <p>
           The current forecast is a model built from tide and ocean data and divers&rsquo; reports. It can be wrong. Use it as one guide among
-          others, never instead of local knowledge, your dive guide and your own judgment. Diving is at your own risk. Boat routes follow
-          satellite outlines, not a nautical chart, and are not for navigation.
+          others, never instead of local knowledge, your dive guide and your own judgment. Diving is at your own risk. Boat routes (the Route tab
+          and a site&rsquo;s Boat route button) are a preview: they follow satellite outlines, not a nautical chart, the current along
+          them is a forecast, and they are not for navigation.
         </p>
       </Section>
 

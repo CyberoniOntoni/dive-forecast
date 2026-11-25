@@ -110,14 +110,14 @@ export default function PrivacyPage() {
           position) before they are stored.
         </p>
         <p>
-          <strong className="text-foam">Your location:</strong> boat navigation uses your phone&rsquo;s GPS while its
+          <strong className="text-foam">Your location:</strong> the boat route uses your phone&rsquo;s GPS while its
           screen is open, never in the background. To plan a route your position is sent to our server with the
           request, used for that answer and not stored. The Android app asks for location permission only for this, and
           everything else works without it.
         </p>
         <p>
           <strong className="text-foam">On your device:</strong> the website keeps your sign-in in a cookie, your map
-          layers and whether you closed the app beta invitation in your browser&rsquo;s storage, and the map view and list filter for the open tab only. The app keeps your sign-in token (never backed up
+          layers and whether you closed the app beta invitation or the forecast introduction in your browser&rsquo;s storage, and the map view and list filter for the open tab only. The app keeps your sign-in token (never backed up
           or moved to another phone), a copy of forecasts and maps for offline use, and your settings. These stay on
           your device.
         </p>
