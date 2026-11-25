@@ -84,8 +84,8 @@ describe("the owner's site classification", () => {
   });
 
   it("keeps the owner's Gaafu Alif corrections (25 Nov 2026)", () => {
-    // Mahadhoo runs along the island's inner reef; Dhandhoo Caves and Gemanafushi Canyon along the outer reef beside
-    // their channels; Coral Garden sits on Kondey Channel's wall and shows its forecast.
+    // Mahadhoo runs along the island's inner reef; Dhandhoo Caves along the outer reef beside its channel (Gemanafushi
+    // Canyon too, 1.7 km from its channel's pin); Coral Garden sits on Kondey Channel's wall and shows its forecast.
     const mahadhoo = byId.get("mahadhoo")!;
     expect([mahadhoo.siteType, mahadhoo.flowAxisDeg]).toEqual(["lagoon", 125]);
     for (const id of ["dhandhoo-caves", "gemanafushi-canyon"]) {

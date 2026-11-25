@@ -126,8 +126,8 @@ const channelForecast: SiteForecast = {
 };
 
 describe("API v1 glance", () => {
-  it("bends a curved channel's outgoing arrow and words with the site's outgoing bearing (HP Reef)", () => {
-    const body = apiForecast({ ...userPin, id: "hp", outgoingBearingDeg: 150 }, channelForecast);
+  it("bends a curved channel's outgoing arrow and words with the forecast's outgoing bearing (HP Reef)", () => {
+    const body = apiForecast({ ...userPin, id: "hp" }, { ...channelForecast, outgoingBearingDeg: 150 });
     expect(body.outgoingBearingDeg).toBe(150);
     expect(body.hours[0].glance).toEqual({
       arrowBearing: 150,

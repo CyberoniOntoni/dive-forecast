@@ -47,6 +47,7 @@ import {
   removeReviewPhotoRecord,
   countedReports,
   visibleReportsForSite,
+  forecastReportsForFlow,
   forecastReportsForSite,
   saveRating,
   saveReviewText,
@@ -448,7 +449,7 @@ async function predictionAtReport(site: Site, time: string, past = false): Promi
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
-    const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
+    const earlier = forecastReportsForFlow(site, catalog.sites).filter((report) => parseWall(report.time) < diveMs);
     const options = past ? PAST_WINDOW : {};
     const shown = await loadSite(site, catalog.sites, atoll, earlier, options);
     const modelOnly = await loadSite(site, catalog.sites, atoll, [], options);
@@ -554,7 +555,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
   const atoll = catalog.atolls.find((item) => item.id === site.atollId);
   // The offshore waves do not depend on the current, so they load alongside it rather than after it.
   const [loaded, offshore] = await Promise.all([
-    loadSite(site, catalog.sites, atoll, forecastReportsForSite(site.id)),
+    loadSite(site, catalog.sites, atoll, forecastReportsForFlow(site, catalog.sites)),
     loadOffshore(atoll).catch(() => undefined),
   ]);
   const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);
@@ -568,6 +569,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     notice: FORECAST_NOTICE,
     inwardBearingDeg: loaded.bearing,
     bearingSource: loaded.bearingSource,
+    outgoingBearingDeg: loaded.outgoingBearingDeg ?? null,
     siteType: loaded.siteType,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,

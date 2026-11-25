@@ -122,7 +122,7 @@ export type Site = {
   flowAxisDeg?: number;
   /**
    * Another catalog site whose forecast this one shows: a pin inside that site's channel that the coarse outline puts
-   * in the lagoon (Coral Garden on Kondey Channel's wall). Its own reports still teach its own forecast.
+   * in the lagoon (Coral Garden on Kondey Channel's wall). Reports at either pin teach both (forecastReportsForFlow).
    */
   flowFromSiteId?: string;
   /**
@@ -413,6 +413,8 @@ export type SiteForecast = {
   inwardBearingDeg: number | null;
   /** Where that bearing came from. Null when there is no bearing. */
   bearingSource: BearingSource | null;
+  /** The curved outgoing heading of the channel this forecast is for (the followed site's at a follower); null when straight. */
+  outgoingBearingDeg?: number | null;
   /** Where the site sits, when classified. */
   siteType: SiteType | null;
   /** Which model made these hours, and so how their direction reads. */

@@ -58,6 +58,11 @@ export type SiteLoad = {
    * site's flow. The heading its "incoming" means. Null for a channel, where incoming follows the inward bearing.
    */
   alongHeadingDeg: number | null;
+  /**
+   * The curved outgoing heading of the channel whose forecast this is (Site.outgoingBearingDeg; the followed site's
+   * for a pin with flowFromSiteId). Null or absent when outgoing is opposite incoming.
+   */
+  outgoingBearingDeg?: number | null;
   hours: HourForecast[];
   unavailable: boolean;
   stale: boolean;
@@ -304,13 +309,15 @@ export async function loadSite(
   const marine = await checkedMarine(flow, mates, atoll, options);
   const route = siteRoute(flow, mates, marine.bearing);
   const siteType = site.siteType ?? null;
-  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, siteType, route);
+  const outgoingBearingDeg = flow.outgoingBearingDeg ?? null;
+  if (!marine.ok) return { ...unavailableLoad(marine.bearing, marine.bearingSource, siteType, route), outgoingBearingDeg };
   const loaded = (forecastRoute: ForecastRoute, alongHeadingDeg: number | null, hours: HourForecast[]): SiteLoad => ({
     bearing: marine.bearing,
     bearingSource: marine.bearingSource,
     siteType,
     forecastRoute,
     alongHeadingDeg,
+    outgoingBearingDeg,
     hours,
     unavailable: false,
     stale: marine.stale,
@@ -337,7 +344,7 @@ export async function loadSite(
   const hours = forecastHours({
     hours: marine.hours,
     inwardBearingDeg: marine.bearing,
-    reports: route.route === "lagoon" ? lagoonReportsOnBearing(reports, marine.bearing) : reports,
+    reports: axisReportsOnBearing(reports, marine.bearing),
     ringLevel: await ringLevelFor(route.route, atoll, options),
     ...sectionInput(flow),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
@@ -346,11 +353,12 @@ export async function loadSite(
 }
 
 /**
- * A lagoon site's reports for the channel model it falls back to. A report filed while the lagoon model ran says
- * "incoming" toward its saved lagoon axis, not along the inward bearing, so it is read against the bearing like a
- * wall report against a changed heading. A report with no saved axis was filed on the channel model.
+ * Reports for the channel model. One filed on an axis (a wall, the strait or the lagoon, before the site fell back to
+ * the channel model or was retyped as a channel) says "incoming" toward its saved heading, not along the inward
+ * bearing, so it is read against the bearing like a wall report against a changed heading. A report with no saved
+ * heading was filed on the channel model.
  */
-function lagoonReportsOnBearing(reports: readonly Report[], inwardBearingDeg: number): Report[] {
+function axisReportsOnBearing(reports: readonly Report[], inwardBearingDeg: number): Report[] {
   return reports.map((report) => {
     const direction = alongReportDirection(report, inwardBearingDeg, "lagoon");
     return direction ? { ...report, direction } : report;

@@ -120,6 +120,8 @@ describe("loadSite", () => {
       expect(follower.bearing).toBe(246);
       expect(follower.siteType).toBe("pass");
       expect(follower.hours).toEqual(own.hours);
+      // A curved channel's outgoing heading comes with its forecast.
+      expect((await loadSite(garden, [{ ...channel, outgoingBearingDeg: 150 }, garden], atoll, [])).outgoingBearingDeg).toBe(150);
       // Fetched at the channel's pin, not the garden's.
       for (const call of vi.mocked(Marine.siteMarineHours).mock.calls) expect([call[0], call[1]]).toEqual([channel.lat, channel.lon]);
       // The pin's reports are read as if filed at the channel: in and out along its bearing.
@@ -130,6 +132,23 @@ describe("loadSite", () => {
       // A target that is not in the catalog is not followed: the pin keeps its own place.
       const stray = { ...garden, flowFromSiteId: "nowhere" };
       expect((await loadSite(stray, [channel, stray], atoll, [])).bearing).not.toBe(246);
+    } finally {
+      vi.mocked(Marine.siteMarineHours).mockReset();
+    }
+  });
+
+  it("reads a report filed on an axis against the bearing at a site now typed as a channel", async () => {
+    const pass: Site = { ...openSite, siteType: "pass" };
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: syntheticHours, fetchedAt: 1, stale: false });
+    try {
+      const plain = await loadSite(pass, [pass], atoll, []);
+      const bearing = plain.bearing as number;
+      const at = plain.hours.find((hour) => hour.time >= "2026-09-24T00:00" && hour.direction === "incoming")!;
+      const directionAt = (load: { hours: { time: string; direction: string }[] }) =>
+        load.hours.find((hour) => hour.time === at.time)?.direction;
+      // Filed while it was a lagoon site: "incoming" toward an axis pointing out of the atoll was water leaving it.
+      const report: Report = { id: "r", siteId: pass.id, time: at.time, direction: "incoming", strength: "strong", alongHeadingDeg: (bearing + 180) % 360 };
+      expect(directionAt(await loadSite(pass, [pass], atoll, [report]))).toBe("outgoing");
     } finally {
       vi.mocked(Marine.siteMarineHours).mockReset();
     }

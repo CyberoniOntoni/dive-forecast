@@ -137,9 +137,9 @@ async function buildPlanView(id: string): Promise<PlanView | null> {
           want: route === "channel" ? (stop.want ?? null) : null,
           route,
           outlook,
-          way: hour && forecast ? wayWords(hour, forecast, site) : null,
-          arrowDeg: hour && forecast ? arrowHeading(hour, forecast, site) : null,
-          betterWay: better && forecast ? wayWords(better, forecast, site) : null,
+          way: hour && forecast ? wayWords(hour, forecast) : null,
+          arrowDeg: hour && forecast ? arrowHeading(hour, forecast) : null,
+          betterWay: better && forecast ? wayWords(better, forecast) : null,
           reportHref: canReportDive(day.date, stop.time, nowWall)
             ? `/sites/${encodeURIComponent(site.id)}?at=${encodeURIComponent(time)}#report`
             : null,
@@ -171,7 +171,7 @@ function farOutlook(date: string, time: string, today: string): StopOutlook {
 }
 
 /** "Incoming, toward NE" at a channel; "Running SW along the reef" at a wall; "Running SW" in a lagoon. */
-function wayWords(hour: HourForecast, forecast: SiteForecast, site: Site): string {
+function wayWords(hour: HourForecast, forecast: SiteForecast): string {
   if (hour.strength === "slack") return "Slack";
   return capital(
     routeWayToward(
@@ -179,19 +179,19 @@ function wayWords(hour: HourForecast, forecast: SiteForecast, site: Site): strin
       hour.direction,
       forecast.inwardBearingDeg,
       forecast.alongHeadingDeg,
-      site.outgoingBearingDeg ?? null,
+      forecast.outgoingBearingDeg ?? null,
     ),
   );
 }
 
-function arrowHeading(hour: HourForecast, forecast: SiteForecast, site: Site): number | null {
+function arrowHeading(hour: HourForecast, forecast: SiteForecast): number | null {
   if (forecast.inwardBearingDeg == null) return null;
   return routeArrowBearing(
     forecast.forecastRoute,
     hour.direction,
     forecast.inwardBearingDeg,
     forecast.alongHeadingDeg,
-    site.outgoingBearingDeg ?? null,
+    forecast.outgoingBearingDeg ?? null,
   );
 }
 

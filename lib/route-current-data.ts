@@ -7,7 +7,7 @@ import { routeArrowBearing } from "./nowcast-glance";
 import { allRims, boxesOverlap, pointInRing, ringBox, type RimRing, type RingBox } from "./rim";
 import { currentVector, STRENGTH_KNOTS, type RouteCurrent, type RouteCurrentHour, type RouteCurrentSource } from "./route-current";
 import { MALDIVES_TIME } from "./site-time";
-import { forecastReportsForSite, readCatalog } from "./store";
+import { forecastReportsForFlow, readCatalog } from "./store";
 import type { ForecastRoute, MarineHour, Site } from "./types";
 
 /**
@@ -126,7 +126,7 @@ async function siteSource(site: Site, window: Window): Promise<SiteCurrent | nul
   const catalog = readCatalog();
   const atoll = catalog.atolls.find((item) => item.id === site.atollId);
   // Like the map: never wait on a first fetch here, the route must not hang on Open-Meteo.
-  const loaded = await loadSite(site, catalog.sites, atoll, forecastReportsForSite(site.id), { wait: false });
+  const loaded = await loadSite(site, catalog.sites, atoll, forecastReportsForFlow(site, catalog.sites), { wait: false });
   if (loaded.bearing == null || loaded.hours.length === 0) return null;
   const hours: RouteCurrentHour[] = [];
   for (const hour of loaded.hours) {
@@ -137,7 +137,7 @@ async function siteSource(site: Site, window: Window): Promise<SiteCurrent | nul
       hour.direction,
       loaded.bearing,
       loaded.alongHeadingDeg,
-      site.outgoingBearingDeg ?? null,
+      loaded.outgoingBearingDeg ?? null,
     );
     hours.push({ timeMs, strength: hour.strength, ...currentVector(heading, STRENGTH_KNOTS[hour.strength]) });
   }

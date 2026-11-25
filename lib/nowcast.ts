@@ -1,7 +1,7 @@
 import { parseWall } from "./forecast";
 import { loadSite } from "./load-site";
 import type { FetchOptions } from "./marine";
-import { forecastReportsForSite, readCatalog } from "./store";
+import { forecastReportsForFlow, readCatalog } from "./store";
 import type { Atoll, BearingSource, ForecastRoute, HourForecast, Site } from "./types";
 
 export type SiteNowcast = {
@@ -72,14 +72,14 @@ async function nowcastOne(
 ): Promise<SiteNowcast> {
   // The map never waits for a first fetch (options.wait false): a site with no cache yet shows no forecast until its
   // fetch lands. The scheduled warm-up waits, and refreshes series that are nearly due.
-  const loaded = await loadSite(site, mates, atoll, forecastReportsForSite(site.id), options);
+  const loaded = await loadSite(site, mates, atoll, forecastReportsForFlow(site, mates), options);
   const hour = nearestForecastHour(loaded.hours, maldivesWall);
   const hasHours = loaded.hours.length > 0;
   return {
     siteId: site.id,
     atollId: site.atollId,
     inwardBearingDeg: loaded.bearing,
-    outgoingBearingDeg: site.outgoingBearingDeg ?? null,
+    outgoingBearingDeg: loaded.outgoingBearingDeg ?? null,
     bearingSource: loaded.bearingSource,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,

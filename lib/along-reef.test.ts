@@ -155,6 +155,16 @@ describe("flowsAlongReef", () => {
     expect(crossesRim(follower, [{ ...channel, atollId: "b" }])).toBe(true);
     expect(crossesRim(follower, [{ ...channel, sourceUrl: "user" }])).toBe(true);
     expect(crossesRim(follower, [{ ...channel, flowFromSiteId: "other" }])).toBe(true);
+    // Only a channel can be followed: not a lagoon site or a wall.
+    expect(crossesRim(follower, [{ ...channel, siteType: "lagoon" }])).toBe(true);
+    expect(crossesRim(follower, [{ ...channel, siteType: "outer-reef" }])).toBe(true);
+  });
+
+  it("adds no channel funnel for a pin that shows a pass's forecast", () => {
+    const channel = { ...pass(4.02), id: "kondey-kandu" };
+    const follower = { ...pass(4.0045), id: "garden", flowFromSiteId: "kondey-kandu" };
+    expect(flowsAlongReef(wall, [channel, follower])).toBe(true);
+    expect(flowsAlongReef(wall, [channel, { ...follower, flowFromSiteId: undefined }])).toBe(false);
   });
 
   it("turns the inward bearing 90° clockwise for the reef heading", () => {
@@ -232,6 +242,13 @@ describe("alongReportDirection", () => {
   it("has no reading for a report filed when walls were forecast into and out of the atoll", () => {
     expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow/7", 270) }, 0)).toBeNull();
     expect(alongReportDirection(base, 0)).toBeNull();
+  });
+
+  it("has no reading for an in/out report filed from model 21 on, when the site was still a channel", () => {
+    // From 21 a wall report saves its heading, so a later one without was filed into or out of the atoll.
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow+alongreef/20", 270) }, 0)).toBe("incoming");
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow+head+alongreef+lagoon+strait/21", 270) }, 0)).toBeNull();
+    expect(alongReportDirection({ ...base, predicted: predicted("tide+throughflow+head+alongreef+lagoon+strait/28", 270) }, 0)).toBeNull();
   });
 });
 
