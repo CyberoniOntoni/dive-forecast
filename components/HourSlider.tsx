@@ -202,7 +202,13 @@ export function HourSlider({
           </button>
         )}
       </div>
-      <p className="mt-3 text-xs leading-5 text-foam/80">{FORECAST_GUIDANCE}</p>
+      <p className="mt-4 flex items-start gap-2 border-t border-foam/10 pt-3 text-xs leading-5 text-foam/75">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="mt-0.5 shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+        <span>{FORECAST_GUIDANCE}</span>
+      </p>
       {/* Folded so a phone shows the week without scrolling past the method; the confidence above still says how sure. */}
       {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <details className="group mt-3 text-sm leading-6 text-foam/80">

@@ -27,7 +27,7 @@ import {
   type CurrentHere,
   type VeryStrongSite,
 } from "@/lib/route-current";
-import { ROUTE_LIMITATION } from "@/lib/safety-copy";
+import { ROUTE_LIMITATION, ROUTE_LIMITATION_TITLE } from "@/lib/safety-copy";
 import { currentWallTime, MALDIVES_TIME } from "@/lib/site-time";
 
 /** What the map draws while navigating. */
@@ -244,13 +244,19 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
 }
 
 /**
- * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): an amber bar down
- * the left so it reads as a caution without shouting over the readouts.
+ * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): a
+ * soft amber card with a warning mark, so it reads as a caution without shouting over the readouts.
  */
 export function RouteLimitation() {
   return (
-    <p className="mt-1.5 border-l-2 border-outgoing bg-outgoing/10 py-1 pr-2 pl-2.5 text-xs leading-4 text-foam/90">
-      {ROUTE_LIMITATION}
+    <p className="mt-2 flex items-start gap-2.5 rounded-2xl bg-outgoing/10 px-3 py-2 ring-1 ring-outgoing/30">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" className="mt-0.5 shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3.5l9.5 16.5h-19zM12 10v4.5M12 17.5h.01" />
+      </svg>
+      <span className="min-w-0 text-xs leading-[1.1rem] text-foam/80">
+        <strong className="block text-[13px] font-semibold text-outgoing">{ROUTE_LIMITATION_TITLE}</strong>
+        {ROUTE_LIMITATION}
+      </span>
     </p>
   );
 }
