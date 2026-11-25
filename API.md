@@ -66,6 +66,7 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "howToDive": null,
       "howToDiveByAdder": false,
       "writtenBy": [],
+      "writtenByLine": null,
       "photoUrls": ["/site-photos/<site>/<photo>.jpg"],
       "adderNickname": null
     }
@@ -81,7 +82,8 @@ hides that site's `photoUrls`, and its `howToDive` while `howToDiveByAdder` is t
 `description` and `howToDive` are the site's texts as divers wrote them together, each edit approved by a moderator
 (`lib/site-wiki.ts`; edits are proposed on the web page's "About this site" card for now); `howToDiveByAdder` is true
 while `howToDive` is still the adder's own text on a pin added in the app, and `writtenBy` the nicknames of the divers
-whose approved edits wrote them, in the order they first did.
+whose approved edits wrote them, in the order they first did; `writtenByLine` is that credit as the web says it
+("Written by Ann, Bob and Cy."), or null.
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 

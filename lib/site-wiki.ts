@@ -128,9 +128,12 @@ export function proposeEdit(
   if (!mine && !moderator) {
     const waiting = store.siteEdits.filter((edit) => edit.userId === userId && edit.status === "pending").length;
     if (waiting >= PENDING_EDITS_MAX) throw new Error(`You have ${PENDING_EDITS_MAX} edits waiting for review. Try again once they are looked at.`);
+    // Counted from the diver's own log of new edits, not the rows still kept, so withdrawing an edit (which deletes
+    // it) never gives the slot back, and changing one that waits takes none.
     const since = nowMs - 24 * 60 * 60 * 1000;
-    const today = store.siteEdits.filter((edit) => edit.userId === userId && Date.parse(edit.createdAt) > since).length;
-    if (today >= EDITS_PER_DAY) throw new Error(`You can propose ${EDITS_PER_DAY} edits a day. Try again tomorrow.`);
+    const today = (user.siteEditProposals ?? []).filter((at) => Date.parse(at) > since);
+    if (today.length >= EDITS_PER_DAY) throw new Error(`You can propose ${EDITS_PER_DAY} edits a day. Try again tomorrow.`);
+    user.siteEditProposals = [...today, nowIso];
   }
   const edit: SiteEdit = mine ?? { id: crypto.randomUUID(), siteId: input.siteId, userId, createdAt: nowIso, status: "pending", changes, based };
   edit.createdAt = nowIso;
@@ -253,7 +256,7 @@ export function staleFields(edit: SiteEdit, live: Record<WikiField, string>): Wi
 }
 
 /**
- * The Maldives day of each diver's approved edits that earn points: at most EDIT_POINTS_PER_DAY a day, by when each
+ * The Maldives day of each diver's approved edits that earn points: at most `perDay` a day, by when each
  * went live. A moderator's own edit (approved by themselves) and an edit taken back earn nothing.
  */
 export function countedEdits(edits: readonly SiteEdit[], perDay: number): Map<string, { day: string }[]> {

@@ -50,6 +50,8 @@ data class ApiSite(
   val howToDiveByAdder: Boolean = true,
   /** Nicknames of the divers whose approved edits wrote description and howToDive. */
   val writtenBy: List<String> = emptyList(),
+  /** The credit as the web says it ("Written by Ann and Bob."), or null with nobody to credit. */
+  val writtenByLine: String? = null,
   /** Paths on the server, oldest first. */
   val photoUrls: List<String> = emptyList(),
   /** Who added the pin (null on a catalog site): their notes and photos are hidden from a diver who blocked them. */

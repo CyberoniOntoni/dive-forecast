@@ -487,9 +487,9 @@ private fun AboutCard(
       Text("How to dive it", style = MaterialTheme.typography.labelLarge)
       Text(it, style = MaterialTheme.typography.bodyMedium)
     }
-    if (site.writtenBy.isNotEmpty()) {
+    site.writtenByLine?.let { credit ->
       Text(
-        "Written by ${writtenByLine(site.writtenBy)}.",
+        credit,
         style = MaterialTheme.typography.bodySmall,
         color = colors.foam.copy(alpha = 0.8f),
       )
@@ -681,7 +681,3 @@ private val PULL_TO_MAP = 96.dp
 
 /** How far past [PULL_TO_MAP] the page can be dragged, as a multiple of it. */
 private const val PULL_STRETCH = 1.6f
-
-/** "Ann", "Ann and Bob", "Ann, Bob and Cy": the divers credited for a site's texts, as the web says it. */
-internal fun writtenByLine(names: List<String>): String =
-  if (names.size <= 1) names.joinToString("") else names.dropLast(1).joinToString(", ") + " and " + names.last()

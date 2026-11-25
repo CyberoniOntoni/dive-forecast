@@ -75,6 +75,8 @@ describe("proposing an edit", () => {
     expect(again.created).toBe(false);
     expect(data.siteEdits).toHaveLength(1);
     expect(data.siteEdits[0]).toMatchObject({ id: first.id, changes: { description: "Two" }, note: "fixed a typo" });
+    // Changing a waiting edit takes no new slot for the day.
+    expect(data.users[0].siteEditProposals).toHaveLength(1);
 
     const busy = store();
     for (let index = 0; index < PENDING_EDITS_MAX; index += 1) {
@@ -83,8 +85,9 @@ describe("proposing an edit", () => {
     expect(() => proposeEdit(busy, "bob", readEditInput({ siteId: "more", texts: { description: "x" } }), { description: "", howToDive: "" }, T0)).toThrow(
       /waiting for review/,
     );
-    // Looked-at edits leave the queue but still count for the day.
-    for (const edit of busy.siteEdits) edit.status = "rejected";
+    // Withdrawn edits leave the queue (their rows are deleted) but still count for the day.
+    for (const edit of [...busy.siteEdits]) withdrawEdit(busy, "bob", edit.id);
+    expect(busy.siteEdits).toEqual([]);
     expect(EDITS_PER_DAY).toBe(PENDING_EDITS_MAX);
     expect(() => proposeEdit(busy, "bob", readEditInput({ siteId: "more", texts: { description: "x" } }), { description: "", howToDive: "" }, T0)).toThrow(
       /a day/,
@@ -191,5 +194,15 @@ describe("points for edits", () => {
     expect(countedEdits(data.siteEdits, 3).get("mod")).toBeUndefined();
     const stats = diverStats([], data.users, [], T0, [], data.siteEdits);
     expect(stats.find((row) => row.userId === "ann")).toMatchObject({ points: 15, monthPoints: 15, edits: 3 });
+  });
+});
+
+describe("the credit line", () => {
+  it("names the divers the way the web card and the app say it", async () => {
+    const { writtenByLine } = await import("./site-wiki-limits");
+    expect(writtenByLine([])).toBeNull();
+    expect(writtenByLine(["Ann"])).toBe("Written by Ann.");
+    expect(writtenByLine(["Ann", "Bob"])).toBe("Written by Ann and Bob.");
+    expect(writtenByLine(["Ann", "Bob", "Cy"])).toBe("Written by Ann, Bob and Cy.");
   });
 });

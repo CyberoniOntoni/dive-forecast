@@ -35,6 +35,7 @@ import type { BoatTrip } from "./boat-route-data";
 import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
 import { REVIEW_MAX } from "./site-details";
 import { editedSiteIds, liveTexts, originalTexts, siteContributors } from "./site-wiki";
+import { writtenByLine } from "./site-wiki-limits";
 import { reviewDate, reviewSummaryLine } from "./review-words";
 import { ringBox, type RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
@@ -115,6 +116,8 @@ export type ApiSite = {
   howToDiveByAdder: boolean;
   /** Nicknames of the divers whose approved edits wrote `description` and `howToDive`, in the order they first did. */
   writtenBy: string[];
+  /** The credit as the web says it, "Written by Ann and Bob.", or null with nobody to credit. */
+  writtenByLine: string | null;
   /** Paths on this server, oldest first. */
   photoUrls: string[];
   /**
@@ -255,6 +258,7 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     howToDive: site.howToDive ?? null,
     howToDiveByAdder: userAdded && Boolean(site.howToDive) && !wiki?.howToDiveEdited,
     writtenBy: wiki?.writtenBy ?? [],
+    writtenByLine: writtenByLine(wiki?.writtenBy ?? []),
     photoUrls: (site.photos ?? []).map((photo) => photoUrl(site.id, photo.id)),
     adderNickname: userAdded ? (adderNickname ?? null) : null,
   };

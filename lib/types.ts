@@ -288,6 +288,11 @@ export type User = {
    * from the photos, so deleting a photo or a rating does not give the upload back.
    */
   reviewPhotoUploads?: string[];
+  /**
+   * When the diver proposed each new site edit in the last 24 hours, ISO UTC, for the daily limit (lib/site-wiki.ts).
+   * Kept apart from the edits, so withdrawing one does not give the slot back.
+   */
+  siteEditProposals?: string[];
   /** When the diver agreed to the content rules (/terms), ISO UTC. Needed before they post anything others see. */
   acceptedTermsAt?: string;
   /** Divers this one blocked (User.id): their reviews, photos and pages are hidden from this diver. */
@@ -343,7 +348,7 @@ export type SiteEdit = {
   siteId: string;
   /** Who proposed it (User.id; a deleted account's `deleted-…` id on an approved edit kept for the history). */
   userId: string;
-  /** When it was proposed (or last changed while pending), ISO UTC. */
+  /** When it was proposed, or last changed while it waited (the queue lists it from then), ISO UTC. */
   createdAt: string;
   status: "pending" | "approved" | "rejected";
   /** The new full text of each field it changes; "" clears the field. Fields it leaves alone are absent. */

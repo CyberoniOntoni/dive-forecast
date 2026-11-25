@@ -48,7 +48,10 @@ export type SiteWiki = {
   /** Approved revisions in the history, taken-back ones included. */
   revisions: number;
   signedIn: boolean;
-  /** Signed in, not banned, and agreed to the content rules: the form can be sent. */
+  /**
+   * Signed in, not banned, and agreed to the content rules: the form can be sent. While `adderTextHidden`, it offers
+   * About the site only.
+   */
   canEdit: boolean;
   /** Signed in but has not agreed to the content rules yet. */
   needsTerms: boolean;
@@ -82,7 +85,7 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
     contributors: siteContributors(store, siteId),
     revisions: store.siteEdits.filter((edit) => edit.siteId === siteId && edit.status === "approved").length,
     signedIn: viewer != null,
-    canEdit: Boolean(viewer && !viewer.bannedAt && hasAcceptedTerms(viewer)) && !adderTextHidden,
+    canEdit: Boolean(viewer && !viewer.bannedAt && hasAcceptedTerms(viewer)),
     needsTerms: Boolean(viewer && !hasAcceptedTerms(viewer)),
     moderator,
     mine: latest

@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { POINTS } from "@/lib/points-rules";
 import { signInHref } from "@/lib/sign-in";
-import { EDIT_NOTE_MAX, WIKI_LABELS, WIKI_MAX } from "@/lib/site-wiki-limits";
+import { creditJoiner, EDIT_NOTE_MAX, WIKI_LABELS, WIKI_MAX } from "@/lib/site-wiki-limits";
 import type { WikiField } from "@/lib/types";
 import { proposeSiteEdit, withdrawSiteEdit, type SiteWiki as Wiki, type WikiResult } from "@/lib/wiki-actions";
 
@@ -36,6 +36,8 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
   const [done, setDone] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const pendingEdit = wiki.mine?.status === "pending" ? wiki.mine : null;
+  // While how to dive it is hidden (the viewer blocked the adder), the form offers About the site only.
+  const fields = wiki.adderTextHidden ? FIELDS.filter((field) => field !== "howToDive") : FIELDS;
   const empty = !wiki.texts.description && !wiki.texts.howToDive;
   const here = `/sites/${wiki.siteId}#about`;
 
@@ -70,7 +72,13 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
 
   function send() {
     run(
-      () => proposeSiteEdit({ siteId: wiki.siteId, texts: drafts, based, note }),
+      () =>
+        proposeSiteEdit({
+          siteId: wiki.siteId,
+          texts: Object.fromEntries(fields.map((field) => [field, drafts[field]])),
+          based: Object.fromEntries(fields.map((field) => [field, based[field]])),
+          note,
+        }),
       (result) =>
         result.live
           ? "Saved. Your edit is live."
@@ -92,7 +100,7 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
             send();
           }}
         >
-          {FIELDS.map((field) => (
+          {fields.map((field) => (
             <label key={field} className="flex min-w-0 flex-col gap-1.5 text-sm text-foam">
               <span className="font-medium">{WIKI_LABELS[field]}</span>
               <span className="text-xs text-foam/70">{HINTS[field]}</span>
@@ -157,7 +165,7 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
               Written by{" "}
               {wiki.contributors.map((diver, index) => (
                 <span key={diver.userId}>
-                  {index > 0 ? (index === wiki.contributors.length - 1 ? " and " : ", ") : ""}
+                  {creditJoiner(index, wiki.contributors.length)}
                   <Link href={`/divers/${diver.userId}`} className={link}>
                     {diver.nickname}
                   </Link>

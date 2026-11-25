@@ -64,6 +64,7 @@ describe("API v1 shapes", () => {
       howToDive: "Drop on the east side.",
       howToDiveByAdder: true,
       writtenBy: [],
+      writtenByLine: null,
       photoUrls: ["/site-photos/my-reef-1a2b3c4d/p1.jpg"],
       adderNickname: "Reefer",
     });
@@ -92,7 +93,7 @@ describe("API v1 shapes", () => {
     const wiki = wikiOf(store, () => userPin)(userPin);
     expect(wiki).toEqual({ writtenBy: ["Ann"], howToDiveEdited: true });
     const site = apiSite({ ...userPin, howToDive: "Ann's way." }, null, "Reefer", wiki);
-    expect(site).toMatchObject({ howToDive: "Ann's way.", howToDiveByAdder: false, writtenBy: ["Ann"] });
+    expect(site).toMatchObject({ howToDive: "Ann's way.", howToDiveByAdder: false, writtenBy: ["Ann"], writtenByLine: "Written by Ann." });
     expect(JSON.stringify(site)).not.toContain("ann-id");
     expect(wikiOf(store, () => userPin)({ ...userPin, id: "other" })).toEqual({ writtenBy: [], howToDiveEdited: false });
   });
