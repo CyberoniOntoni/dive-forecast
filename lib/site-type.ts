@@ -90,18 +90,30 @@ export function flowsAlongReef(
   );
 }
 
+type FollowMate = Pick<Site, "id" | "atollId"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl">>;
+
+/**
+ * The catalog site whose forecast a site shows (`flowFromSiteId`): named, in the same atoll, a catalog pin, and showing
+ * its own. Null when the site follows none, or the id does not resolve to such a site (then it keeps its own forecast).
+ */
+export function followTarget<T extends FollowMate>(site: FollowMate, mates: readonly T[]): T | null {
+  if (!site.flowFromSiteId) return null;
+  const target = mates.find((mate) => mate.id === site.flowFromSiteId);
+  return target && target.atollId === site.atollId && !target.flowFromSiteId && target.sourceUrl !== "user" ? target : null;
+}
+
 /**
  * True for a site whose current runs into and out of the atoll across the rim: a pass, a channel thila, or an outer
  * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not. A site that shows
- * another's forecast (`flowFromSiteId`) is not either: its channel is already counted once, by that site, as a drift
+ * another's forecast (`followTarget`) is not either: its channel is already counted once, by that site, as a drift
  * lender and a lagoon opening.
  */
 export function crossesRim(
   site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef" | "flowFromSiteId">,
-  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
+  mates: readonly (Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl">>)[] = [],
 ): boolean {
   if (!site.siteType || site.siteType === "lagoon" || site.siteType === "strait-wall") return false;
-  if (site.flowFromSiteId) return false;
+  if (followTarget(site, mates)) return false;
   return !flowsAlongReef(site, mates);
 }
 

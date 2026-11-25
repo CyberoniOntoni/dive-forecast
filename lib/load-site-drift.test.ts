@@ -77,6 +77,16 @@ describe("shared drift at a channel site", () => {
     expect(driftLenders(site, [site, { ...catalogMate, siteType: "lagoon" }], atoll, own)).toHaveLength(0);
   });
 
+  it("does not reuse lenders when only a pin's alongReef or flowFromSiteId changes", () => {
+    const wall = { ...catalogMate, siteType: "outer-reef" as const };
+    // A wall in the pass's funnel lends until it is marked alongReef; a corner lends until it follows the pass.
+    const pass = corner("pass", 4.4895, 73.689, { siteType: "pass" });
+    expect(driftLenders(site, [site, wall, pass], atoll, own)).toHaveLength(2);
+    expect(driftLenders(site, [site, { ...wall, alongReef: true }, pass], atoll, own)).toHaveLength(1);
+    expect(driftLenders(site, [site, catalogMate, pass], atoll, own)).toHaveLength(2);
+    expect(driftLenders(site, [site, { ...catalogMate, flowFromSiteId: "pass" }, pass], atoll, own)).toHaveLength(1);
+  });
+
   it("takes a fresh lender's drift into the through-flow", async () => {
     const inward = await throughflowWith([site, catalogMate], { ok: true, hours: series(0.3, 220), fetchedAt: Date.now(), stale: false });
     expect(inward).toBeGreaterThan(0.05);

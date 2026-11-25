@@ -145,9 +145,16 @@ describe("flowsAlongReef", () => {
     expect(flowsAlongReef({ ...wall, siteType: "pass", alongReef: true }, [pass(4.0045)])).toBe(false);
   });
 
-  it("never lets a site that shows another's forecast cross the rim itself", () => {
+  it("never lets a site that shows another's forecast cross the rim itself, unless the follow fails", () => {
+    const channel = { ...pass(4.02), id: "kondey-kandu" };
+    const follower = { ...wall, siteType: "pass" as const, flowFromSiteId: "kondey-kandu" };
     expect(crossesRim({ ...wall, siteType: "pass" })).toBe(true);
-    expect(crossesRim({ ...wall, siteType: "pass", flowFromSiteId: "kondey-kandu" })).toBe(false);
+    expect(crossesRim(follower, [channel])).toBe(false);
+    // A missing target, one in another atoll, an app pin or a follower itself is not followed: the pin stays a channel.
+    expect(crossesRim(follower, [])).toBe(true);
+    expect(crossesRim(follower, [{ ...channel, atollId: "b" }])).toBe(true);
+    expect(crossesRim(follower, [{ ...channel, sourceUrl: "user" }])).toBe(true);
+    expect(crossesRim(follower, [{ ...channel, flowFromSiteId: "other" }])).toBe(true);
   });
 
   it("turns the inward bearing 90° clockwise for the reef heading", () => {

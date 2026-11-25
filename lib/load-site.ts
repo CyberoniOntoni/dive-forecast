@@ -26,7 +26,7 @@ import {
   type LagoonSource,
 } from "./lagoon-flow";
 import { readIslands } from "./islands";
-import { crossesRim, siteRoute } from "./site-type";
+import { crossesRim, followTarget, siteRoute } from "./site-type";
 import { fetchMarine, marineSeriesStale, seawardPoint, seriesWindowKey, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
 import { SEAWARD_STEPS_KM } from "./floor-sample";
 import { DRIFT_SMOOTHING_MAX_KM, smoothedDriftHours, type DriftSample } from "./drift-smoothing";
@@ -283,9 +283,7 @@ export function routeFor(
  * and shows its own; otherwise the site itself.
  */
 export function flowSite(site: Site, mates: readonly Site[]): Site {
-  if (!site.flowFromSiteId) return site;
-  const target = mates.find((mate) => mate.id === site.flowFromSiteId);
-  return target && target.atollId === site.atollId && !target.flowFromSiteId && target.sourceUrl !== "user" ? target : site;
+  return followTarget(site, mates) ?? site;
 }
 
 /** The axis "incoming" means at a strait wall or a wall whose current runs along the reef; null elsewhere or with no atoll. */
@@ -411,8 +409,8 @@ const lineUpKeys = new WeakMap<readonly Site[], Map<string, string>>();
 
 /**
  * What decides a site's lenders: every same-atoll pin's place and kind, hashed. Whether a mate crosses the
- * rim depends on the passes near it, and a fallback bearing on the seeded mates, so any change among them must miss
- * the memo.
+ * rim depends on the passes near it and on its alongReef and flowFromSiteId, and a fallback bearing on the seeded
+ * mates, so any change among them must miss the memo.
  */
 function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   let byAtoll = lineUpKeys.get(mates);
@@ -427,7 +425,7 @@ function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   for (const mate of mates) {
     if (mate.atollId !== atoll.id) continue;
     count += 1;
-    const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}|`;
+    const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}:${mate.alongReef ?? ""}:${mate.flowFromSiteId ?? ""}|`;
     for (let at = 0; at < text.length; at += 1) {
       const code = text.charCodeAt(at);
       first = Math.imul(first ^ code, 0x01000193);

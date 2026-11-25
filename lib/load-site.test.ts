@@ -100,7 +100,7 @@ describe("loadSite", () => {
     }
   });
 
-  it("shows the forecast of the site a pin names in flowFromSiteId, with the pin's own reports", async () => {
+  it("shows the forecast of the site a pin names in flowFromSiteId, pulled by the pin's own reports", async () => {
     const channel: Site = { ...openSite, id: "kondey", name: "Kondey Channel", siteType: "pass", inwardBearingDeg: 246, siteTypeSource: "manual" };
     const garden: Site = {
       ...openSite,
@@ -122,6 +122,11 @@ describe("loadSite", () => {
       expect(follower.hours).toEqual(own.hours);
       // Fetched at the channel's pin, not the garden's.
       for (const call of vi.mocked(Marine.siteMarineHours).mock.calls) expect([call[0], call[1]]).toEqual([channel.lat, channel.lon]);
+      // The pin's reports are read as if filed at the channel: in and out along its bearing.
+      const report: Report = { id: "r", siteId: garden.id, time: "2026-09-24T06:00", direction: "outgoing", strength: "strong" };
+      const pulled = await loadSite(garden, mates, atoll, [report]);
+      expect(pulled.hours).toEqual((await loadSite(channel, mates, atoll, [report])).hours);
+      expect(pulled.hours).not.toEqual(own.hours);
       // A target that is not in the catalog is not followed: the pin keeps its own place.
       const stray = { ...garden, flowFromSiteId: "nowhere" };
       expect((await loadSite(stray, [channel, stray], atoll, [])).bearing).not.toBe(246);

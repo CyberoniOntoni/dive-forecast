@@ -7,6 +7,7 @@ import { routeCurrent } from "./route-current-data";
 import type { RouteCurrent } from "./route-current";
 import { readPointDestination } from "./point-destination";
 import { readShoals } from "./shoals";
+import { followTarget } from "./site-type";
 import { listMergedSites } from "./store";
 import type { Site } from "./types";
 
@@ -48,7 +49,7 @@ export function planLeg(from: LatLon, to: LatLon, sites: readonly Site[]): BoatR
   return planRoute(from, to, routeShapes(sites));
 }
 
-function routeShapes(sites: readonly { lat: number; lon: number; siteType?: string; sourceUrl?: string }[]): RouteShapes {
+function routeShapes(sites: readonly Site[]): RouteShapes {
   if (!shapeCache) {
     shapeCache = {
       blockers: [...readIslands().map((island) => island.ring), ...readShoals().map((shoal) => shoal.ring)],
@@ -64,9 +65,10 @@ function routeShapes(sites: readonly { lat: number; lon: number; siteType?: stri
   const { blockers, rims, gaps } = shapeCache;
   // A pass dive site is a way through its outline even where the crest map shows no gap. The reach is the one the
   // forecast uses to tie a pass to its outline, so a pass the coarse outline puts inside the lagoon still opens it.
-  // Only catalog passes: a diver's pick on an app-added pin never opens the reef to the route.
+  // Only catalog passes: a diver's pick on an app-added pin never opens the reef to the route. A pin that shows another
+  // pass's forecast (Coral Garden on Kondey Channel's wall) is in that pass, which opens the reef once.
   const passes = sites
-    .filter((site) => site.siteType === "pass" && site.sourceUrl !== "user")
+    .filter((site) => site.siteType === "pass" && site.sourceUrl !== "user" && !followTarget(site, sites))
     .flatMap((site) => {
       const foot = nearestRimWithin(site, rims, CHANNEL_RIM_REACH_KM);
       return foot ? [{ lat: foot.lat, lon: foot.lon, widthM: PASS_OPEN_M * 2, shallow: false }] : [];
