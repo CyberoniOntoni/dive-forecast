@@ -1,31 +1,25 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addUserSite, findSite, listMergedSites, mutateStore, readStore, saveRating, setStorePath } from "./store";
+import { addReport, addUserSite, findSite, listMergedSites, mutateStore, readStore, saveRating, setStoreDir, setStorePath } from "./store";
 import { UNSEEDED_ATOLL_ID, type Report, type Site } from "./types";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const LIVE_STORE = path.join(DATA_DIR, "store.json");
-
+// The store under test lives in a fresh temp dir per test, never in data/ (CLAUDE.md § Tests layout).
+let DATA_DIR = "";
 let testFile = "";
-let liveSnapshot = "";
 
 beforeEach(() => {
-  liveSnapshot = fs.readFileSync(LIVE_STORE, "utf8");
+  DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "store-test-"));
   testFile = `.store-test-${crypto.randomUUID()}.json`;
+  setStoreDir(DATA_DIR);
   setStorePath(testFile);
 });
 
 afterEach(() => {
-  for (const name of fs.readdirSync(DATA_DIR)) {
-    // Only this process's temp files: another test file's worker may be mid-write to its own.
-    const ownTmp = name.startsWith(`.store.${process.pid}.`) && name.endsWith(".tmp");
-    if (name === testFile || name.startsWith(`${testFile}.corrupt.`) || ownTmp) {
-      fs.rmSync(path.join(DATA_DIR, name), { recursive: true, force: true });
-    }
-  }
   setStorePath("store.json");
-  expect(fs.readFileSync(LIVE_STORE, "utf8")).toBe(liveSnapshot);
+  setStoreDir(null);
+  fs.rmSync(DATA_DIR, { recursive: true, force: true });
 });
 
 function sampleReport(id: string): Report {

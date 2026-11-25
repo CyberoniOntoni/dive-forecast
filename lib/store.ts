@@ -41,6 +41,17 @@ export function setStorePath(filePath: string) {
   storeFile = base;
 }
 
+let storeDir: string | null = null;
+
+/** Tests only: keep the store file in this folder (a temp dir) instead of data/. Null goes back to data/. */
+export function setStoreDir(dir: string | null) {
+  storeDir = dir;
+}
+
+function storeFilePath(): string {
+  return path.join(storeDir ?? path.join(process.cwd(), "data"), storeFile);
+}
+
 export function readCatalog(): Catalog {
   const raw = readDataFile("sites.json");
   return JSON.parse(raw) as Catalog;
@@ -86,7 +97,7 @@ export function readStore(): StoreData {
     if (!store) throw new Error("readStore() before refreshStore()");
     return store;
   }
-  const file = path.join(process.cwd(), "data", storeFile);
+  const file = storeFilePath();
   try {
     const raw = fs.readFileSync(file, "utf8");
     return normalizeStore(JSON.parse(raw));
@@ -478,7 +489,7 @@ function serializeStore(store: StoreData): string {
 }
 
 function writeStore(store: StoreData) {
-  const file = path.join(process.cwd(), "data", storeFile);
+  const file = storeFilePath();
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const tmpPath = path.join(dir, `.store.${process.pid}.${crypto.randomUUID()}.tmp`);
