@@ -31,6 +31,7 @@ export async function GET(request: Request) {
         // The rest of the web's account page: About me, the other numbers, every badge and how points work.
         about: account.about,
         ratings: account.stats.ratings,
+        siteEdits: account.stats.edits,
         reportSites: account.stats.sites,
         atolls: account.stats.atolls,
         badges: account.badges.map((badge) => ({ id: badge.id, label: badge.label, detail: badge.detail, earned: badge.earned })),

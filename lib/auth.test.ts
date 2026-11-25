@@ -100,7 +100,7 @@ describe("the app's bearer token", () => {
     // Both divers exist: a session whose diver is gone (a deleted account) no longer counts.
     const file = `.store-test-${crypto.randomUUID()}.json`;
     const users = ["u1", "u2"].map((id) => ({ id, email: `${id}@example.com`, nickname: id, createdAt: "2026-11-01T00:00:00Z" }));
-    fs.writeFileSync(path.join(process.cwd(), "data", file), JSON.stringify({ reports: [], ratings: [], sites: [], users, logins: [], plans: [], flags: [] }));
+    fs.writeFileSync(path.join(process.cwd(), "data", file), JSON.stringify({ reports: [], ratings: [], sites: [], users, logins: [], plans: [], flags: [], siteEdits: [] }));
     setStorePath(file);
     onTestFinished(() => {
       setStorePath("store.json");

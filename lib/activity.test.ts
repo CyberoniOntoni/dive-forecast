@@ -58,12 +58,27 @@ function store(): StoreData {
       },
     ],
     flags: [{ id: "f1", reporterId: "ann", kind: "review", siteId: "cat", userId: "bad", reason: "hate", note: "Nasty", createdAt: "2026-11-21T01:00:00Z" }],
+    siteEdits: [],
   };
 }
 
 const lookup = (id: string) => (id === "cat" ? { name: "Catalog Kandu" } : null);
 
 describe("recent activity for moderators", () => {
+  it("lists site edits with their status, the reviewer's name and the diver's words", () => {
+    const data = store();
+    data.siteEdits.push(
+      { id: "e1", siteId: "cat", userId: "ann", createdAt: "2026-11-22T00:00:00Z", status: "pending", changes: { description: "A thila." }, based: { description: "" }, note: "Dived it" },
+      { id: "e2", siteId: "cat", userId: "bad", createdAt: "2026-11-22T01:00:00Z", status: "rejected", changes: { howToDive: "" }, based: { howToDive: "x" }, reviewerId: "ann", reviewedAt: "2026-11-22T02:00:00Z", rejectReason: "Vandalism" },
+    );
+    const items = recentActivity(data, lookup, NOW, { kinds: ["edit"] });
+    expect(items.map((item) => [item.summary, item.text, item.href])).toEqual([
+      ["Edit to How to dive it (rejected by Ann: Vandalism)", "How to dive it: (cleared)", null],
+      ["Edit to About the site (waiting for review)", "Note: Dived it\nAbout the site: A thila.", "/moderation#site-edits"],
+    ]);
+    expect(items[0].site?.name).toBe("Catalog Kandu");
+  });
+
   it("lists every kind from the last 30 days, newest first, and never an email", () => {
     const items = recentActivity(store(), lookup, NOW);
     expect(items.map((item) => item.key)).toEqual([
@@ -79,7 +94,7 @@ describe("recent activity for moderators", () => {
       "signup:bad",
     ]);
     expect(JSON.stringify(items)).not.toContain("@example.com");
-    expect(activityCounts(items)).toEqual({ report: 3, review: 1, rating: 1, site: 1, plan: 1, signup: 2, flag: 1 });
+    expect(activityCounts(items)).toEqual({ report: 3, review: 1, rating: 1, site: 1, edit: 0, plan: 1, signup: 2, flag: 1 });
   });
 
   it("describes each item and what a moderator can take down", () => {

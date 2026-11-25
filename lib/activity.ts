@@ -3,15 +3,16 @@ import { parseWall } from "./forecast";
 import { banRefusal, FLAG_REASON_LABELS } from "./moderation";
 import { strengthLabel } from "./nowcast-glance";
 import { photoUrl } from "./site-photos-limits";
-import type { ContentFlag, FlagKind, Report, StoreData, User } from "./types";
+import { WIKI_LABELS } from "./site-wiki-limits";
+import type { ContentFlag, FlagKind, Report, StoreData, User, WikiField } from "./types";
 
 /**
  * Everything divers did lately, newest first, for moderators at /moderation: dive reports, ratings and reviews with
- * their photos, sites added in the app, dive plans, sign-ups and content reports. Built from the store as it stands;
+ * their photos, sites added in the app, edits to site texts, dive plans, sign-ups and content reports. Built from the store as it stands;
  * nothing here is shown to anyone but a moderator, and never an email.
  */
 
-export const ACTIVITY_KINDS = ["report", "review", "rating", "site", "plan", "signup", "flag"] as const;
+export const ACTIVITY_KINDS = ["report", "review", "rating", "site", "edit", "plan", "signup", "flag"] as const;
 export type ActivityKind = (typeof ACTIVITY_KINDS)[number];
 
 /** The filter tabs on /moderation, each a set of kinds. */
@@ -20,6 +21,7 @@ export const ACTIVITY_FILTERS = {
   reports: { label: "Dive reports", kinds: ["report"] },
   reviews: { label: "Reviews and ratings", kinds: ["review", "rating"] },
   sites: { label: "New sites", kinds: ["site"] },
+  edits: { label: "Site edits", kinds: ["edit"] },
   plans: { label: "Dive plans", kinds: ["plan"] },
   divers: { label: "Sign-ups", kinds: ["signup"] },
   flags: { label: "Content reports", kinds: ["flag"] },
@@ -208,6 +210,37 @@ export function recentActivity(
         href: null,
         removable: added.hidden ? null : subject,
       }, added.addedBy, subject);
+    }
+  }
+
+  if (wanted.has("edit")) {
+    for (const edit of store.siteEdits) {
+      if (!recent(edit.createdAt)) continue;
+      const fields = (Object.keys(edit.changes) as WikiField[]).map((field) => WIKI_LABELS[field]).join(" and ");
+      const reviewer = edit.reviewerId && edit.reviewerId !== edit.userId ? diver(edit.reviewerId)?.nickname : null;
+      const status =
+        edit.status === "pending"
+          ? "waiting for review"
+          : edit.status === "rejected"
+            ? `rejected${reviewer ? ` by ${reviewer}` : ""}${edit.rejectReason ? `: ${edit.rejectReason}` : ""}`
+            : edit.revertedAt
+              ? "approved, then taken back"
+              : edit.reviewerId === edit.userId
+                ? "live (a moderator's own)"
+                : `approved${reviewer ? ` by ${reviewer}` : ""}`;
+      const texts = (Object.keys(edit.changes) as WikiField[]).map((field) => `${WIKI_LABELS[field]}: ${edit.changes[field] || "(cleared)"}`);
+      push({
+        key: `edit:${edit.id}`,
+        kind: "edit",
+        at: edit.createdAt,
+        diver: diver(edit.userId),
+        site: site(edit.siteId),
+        summary: `Edit to ${fields} (${status})`,
+        text: [edit.note ? `Note: ${edit.note}` : null, ...texts].filter(Boolean).join("\n") || null,
+        photos: [],
+        href: edit.status === "approved" ? `/sites/${edit.siteId}/history` : edit.status === "pending" ? "/moderation#site-edits" : null,
+        removable: null,
+      }, edit.userId);
     }
   }
 

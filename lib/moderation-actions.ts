@@ -9,7 +9,6 @@ import {
   banRefusal,
   FLAG_REASON_LABELS,
   hideReportsBy,
-  isModeratorEmail,
   moderate,
   readFlagInput,
   resolveFlags,
@@ -17,8 +16,8 @@ import {
   setReportHidden,
   type StoredPhoto,
 } from "./moderation";
+import { moderatorId } from "./moderator";
 import { ready } from "./ready";
-import { reviewEmail } from "./review-account";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
 import { findSite, mutateStore, readCatalog, readStore } from "./store";
 import { FLAG_KINDS, type ContentFlag, type FlagKind, type FlagReason } from "./types";
@@ -116,13 +115,6 @@ export async function getBlockedDivers(): Promise<{ userId: string; nickname: st
   });
 }
 
-/** Whether the signed-in diver is a moderator (their email is in MODERATOR_EMAILS). */
-async function moderatorId(): Promise<string | null> {
-  const session = await requireSession().catch(() => null);
-  if (!session) return null;
-  const user = readStore().users.find((item) => item.id === session.userId);
-  return user && !user.bannedAt && isModeratorEmail(user.email, appSetting("MODERATOR_EMAILS"), reviewEmail()) ? user.id : null;
-}
 
 export async function isModerator(): Promise<boolean> {
   await ready();

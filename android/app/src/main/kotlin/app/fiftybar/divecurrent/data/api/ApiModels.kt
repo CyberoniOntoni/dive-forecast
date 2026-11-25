@@ -43,7 +43,13 @@ data class ApiSite(
   val diveMaxM: Double? = null,
   val approximatePin: Boolean = false,
   val pinNote: String? = null,
+  /** What the site is, written by divers and approved by a moderator; null until somebody has. */
+  val description: String? = null,
   val howToDive: String? = null,
+  /** True while howToDive is still the adder's own text (hidden from a diver who blocked them); false once edited. */
+  val howToDiveByAdder: Boolean = true,
+  /** Nicknames of the divers whose approved edits wrote description and howToDive. */
+  val writtenBy: List<String> = emptyList(),
   /** Paths on the server, oldest first. */
   val photoUrls: List<String> = emptyList(),
   /** Who added the pin (null on a catalog site): their notes and photos are hidden from a diver who blocked them. */

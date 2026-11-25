@@ -12,6 +12,7 @@ import {
   apiSite,
   apiSites,
   type ApiSites,
+  wikiOf,
 } from "@/lib/api-v1";
 import { FORECAST_MODEL_VERSION } from "@/lib/forecast";
 import type { HourForecast, Site, SiteForecast } from "@/lib/types";
@@ -59,11 +60,41 @@ describe("API v1 shapes", () => {
       diveMaxM: 25,
       approximatePin: false,
       pinNote: null,
+      description: null,
       howToDive: "Drop on the east side.",
+      howToDiveByAdder: true,
+      writtenBy: [],
       photoUrls: ["/site-photos/my-reef-1a2b3c4d/p1.jpg"],
       adderNickname: "Reefer",
     });
     expect(JSON.stringify(site)).not.toContain("user-123");
+  });
+
+  it("credits the divers whose approved edits wrote a site's texts, by nickname only", () => {
+    const edit = (id: string, userId: string, changes: Record<string, string>, status: "approved" | "pending" = "approved") => ({
+      id,
+      siteId: userPin.id,
+      userId,
+      createdAt: "2026-11-25T00:00:00Z",
+      status,
+      changes,
+      based: {},
+      reviewedAt: `2026-11-25T0${id.length}:00:00Z`,
+      reviewerId: "mod",
+    });
+    const store = {
+      users: [
+        { id: "ann-id", email: "ann@example.com", nickname: "Ann", createdAt: "" },
+        { id: "rev-id", email: "rev@example.com", nickname: "Reviewer", createdAt: "", storeReview: true as const },
+      ],
+      siteEdits: [edit("e1", "ann-id", { howToDive: "Ann's way." }), edit("e22", "rev-id", { description: "Test" }), edit("e333", "bob-id", { description: "x" }, "pending")],
+    };
+    const wiki = wikiOf(store, () => userPin)(userPin);
+    expect(wiki).toEqual({ writtenBy: ["Ann"], howToDiveEdited: true });
+    const site = apiSite({ ...userPin, howToDive: "Ann's way." }, null, "Reefer", wiki);
+    expect(site).toMatchObject({ howToDive: "Ann's way.", howToDiveByAdder: false, writtenBy: ["Ann"] });
+    expect(JSON.stringify(site)).not.toContain("ann-id");
+    expect(wikiOf(store, () => userPin)({ ...userPin, id: "other" })).toEqual({ writtenBy: [], howToDiveEdited: false });
   });
 
   it("leaves hidden pins out of the list", () => {

@@ -192,6 +192,7 @@ export type AccountPhoto = { siteId: string; photo: SitePhoto };
  * - Dive reports, which train the forecast: their userId becomes one new random id that no account has, so the
  *   reports drop off the scoreboard but still count as one diver where the forecast asks how many divers agree.
  * - Sites the diver added, so other divers' reports and reviews there keep their place: `addedBy` goes.
+ * - Site edits a moderator approved, which are the site's text now: under the same random id, uncredited, note gone.
  *
  * Returns the photos whose JPEGs the caller deletes, or null when there is no such user. Safe to run again on a fresh
  * store (mutateStore may retry it).
@@ -220,13 +221,21 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
 
   // Dive reports stay, anonymised, to keep teaching the forecast. The store-review account's are reviewers trying the
   // form, and with the user gone nothing would mark them any more (storeReviewIds), so they go with it.
+  const anonymous = `deleted-${crypto.randomUUID()}`;
   if (user.storeReview) {
     store.reports = store.reports.filter((report) => report.userId !== userId);
   } else {
-    const anonymous = `deleted-${crypto.randomUUID()}`;
     for (const report of store.reports) {
       if (report.userId === userId) report.userId = anonymous;
     }
+  }
+  // Site edits waiting or rejected go. Approved ones are the site's text now: they stay in its history under the
+  // anonymous id, with no credit (siteContributors finds no diver) and without the diver's note to the moderators.
+  store.siteEdits = store.siteEdits.filter((edit) => edit.userId !== userId || edit.status === "approved");
+  for (const edit of store.siteEdits) {
+    if (edit.userId !== userId) continue;
+    edit.userId = anonymous;
+    delete edit.note;
   }
   for (const site of store.sites) {
     const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);

@@ -62,7 +62,10 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "diveMaxM": 30,
       "approximatePin": false,
       "pinNote": null,
+      "description": null,
       "howToDive": null,
+      "howToDiveByAdder": false,
+      "writtenBy": [],
       "photoUrls": ["/site-photos/<site>/<photo>.jpg"],
       "adderNickname": null
     }
@@ -73,8 +76,12 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
 classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `sourceUrl` is the web page a catalog site's position came from, or null for a pin added in the app and for a catalog site with no page to link. `photoUrls` are paths on this server.
 `adderNickname` is who added a pin in the app (null on a catalog site, or once they deleted their account); a client
-hides that site's `howToDive` and `photoUrls` from a diver whose `blocked` list (`GET /api/v1/me`) holds it, as the web
-does.
+hides that site's `photoUrls`, and its `howToDive` while `howToDiveByAdder` is true, from a diver whose `blocked` list
+(`GET /api/v1/me`) holds it, as the web does.
+`description` and `howToDive` are the site's texts as divers wrote them together, each edit approved by a moderator
+(`lib/site-wiki.ts`; edits are proposed on the web page's "About this site" card for now); `howToDiveByAdder` is true
+while `howToDive` is still the adder's own text on a pin added in the app, and `writtenBy` the nicknames of the divers
+whose approved edits wrote them, in the order they first did.
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 
@@ -571,7 +578,7 @@ On the reporters' boards `detail` reads "12 reports · 5 sites · 3 ratings · 2
 ### `GET /api/v1/divers/{nickname}`
 
 Any case. `{"apiVersion": 1, "nickname": "Manta", "about": "…", "sinceLine": "Diving with us since Oct 2026 · #3 all
-time", "points": 40, "reports": 2, "reportSites": 2, "ratings": 1, "sitesAdded": 0, "allRank": 3, "badges": [{"id":
+time", "points": 40, "reports": 2, "reportSites": 2, "ratings": 1, "siteEdits": 0, "sitesAdded": 0, "allRank": 3, "badges": [{"id":
 "first-report", "label": "First report", "detail": "Filed a first current report"}], "isMe": false}`: earned badges
 only, never the email. 404 for a nickname nobody has (a renamed diver's old one included).
 
@@ -582,7 +589,8 @@ answers `{"apiVersion": 1, "about": "…"}`. `{"nickname": "…"}` renames the d
 dots, dashes or underscores, not taken in any case) and answers `{"apiVersion": 1, "nickname": "…"}`; the token keeps
 working, and no web cookie is set. A refusal is 400 with the web form's words ("That nickname is taken.").
 
-`GET /api/v1/me` also carries what the web's account page shows: `about`, `ratings`, `reportSites`, `atolls`, every
+`GET /api/v1/me` also carries what the web's account page shows: `about`, `ratings`, `siteEdits` (approved site edits
+that earned points), `reportSites`, `atolls`, every
 badge with `earned`, `pointsRules` (the "How points work" lines) and `aboutMaxChars`.
 
 ## Next

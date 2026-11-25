@@ -482,9 +482,17 @@ private fun AboutCard(
         color = colors.foam.copy(alpha = 0.8f),
       )
     }
-    site.howToDive?.takeUnless { adderBlocked }?.let {
+    site.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+    site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }?.let {
       Text("How to dive it", style = MaterialTheme.typography.labelLarge)
       Text(it, style = MaterialTheme.typography.bodyMedium)
+    }
+    if (site.writtenBy.isNotEmpty()) {
+      Text(
+        "Written by ${writtenByLine(site.writtenBy)}.",
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.8f),
+      )
     }
     if (site.photoUrls.isNotEmpty() && !adderBlocked) {
       LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
@@ -499,6 +507,10 @@ private fun AboutCard(
       }
     }
     adder()
+    // Divers write the site's texts together on the web; a moderator approves each edit.
+    OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}#about") }, modifier = Modifier.heightIn(min = 44.dp)) {
+      Text(if (site.description == null && site.howToDive == null) "Write about this site on the web" else "Suggest an edit on the web")
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
         Text("Open on the web")
@@ -669,3 +681,7 @@ private val PULL_TO_MAP = 96.dp
 
 /** How far past [PULL_TO_MAP] the page can be dragged, as a multiple of it. */
 private const val PULL_STRETCH = 1.6f
+
+/** "Ann", "Ann and Bob", "Ann, Bob and Cy": the divers credited for a site's texts, as the web says it. */
+internal fun writtenByLine(names: List<String>): String =
+  if (names.size <= 1) names.joinToString("") else names.dropLast(1).joinToString(", ") + " and " + names.last()

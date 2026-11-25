@@ -7,6 +7,7 @@ import { deriveSiteType, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
 import { countedReports, storeReviewIds } from "./accounts";
+import { editedSiteIds, withWikiTexts } from "./site-wiki";
 
 export { countedReports };
 import {
@@ -118,15 +119,26 @@ function isMissingFile(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
+/**
+ * The catalog's sites and the pins added in the app (not hidden), each with the texts divers wrote and a moderator
+ * approved (lib/site-wiki.ts) in place of its own.
+ */
 export function listMergedSites(): Site[] {
   const catalog = readCatalog();
   const published = catalog.sites;
-  const added = readStore().sites;
+  const store = readStore();
   const publishedIds = new Set(published.map((site) => site.id));
-  const onlyAdded = added
+  const onlyAdded = store.sites
     .filter((site) => !publishedIds.has(site.id) && !site.hidden)
     .map((site) => withCurrentPlace(site, catalog));
-  return [...published, ...onlyAdded];
+  const edited = editedSiteIds(store.siteEdits);
+  const all = [...published, ...onlyAdded];
+  return edited.size === 0 ? all : all.map((site) => (edited.has(site.id) ? withWikiTexts(site, store.siteEdits) : site));
+}
+
+/** A site's record as stored, before any diver's approved edit is laid over it: an added pin's, or the catalog's. */
+export function siteRecord(store: StoreData, siteId: string): Site | null {
+  return store.sites.find((site) => site.id === siteId) ?? readCatalog().sites.find((site) => site.id === siteId) ?? null;
 }
 
 /**

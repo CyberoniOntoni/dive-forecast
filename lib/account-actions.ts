@@ -193,7 +193,7 @@ function allDiverStats(store: StoreData): DiverStats[] {
   // The store-review account's reports and ratings earn nothing (lib/review-account.ts).
   const reviewers = storeReviewIds(store.users);
   const ratings = store.ratings.filter((rating) => !(rating.userId && reviewers.has(rating.userId)));
-  return diverStats(countedReports(store), store.users, listMergedSites(), Date.now(), ratings);
+  return diverStats(countedReports(store), store.users, listMergedSites(), Date.now(), ratings, store.siteEdits);
 }
 
 /** One diver's numbers, every badge (earned or not) and their ranks, worked out from the whole store. */
@@ -206,6 +206,7 @@ function diverSummary(store: StoreData, userId: string) {
     monthPoints: mine?.monthPoints ?? 0,
     reports: mine?.reports ?? 0,
     ratings: mine?.ratings ?? 0,
+    edits: mine?.edits ?? 0,
     sites: mine?.sites ?? 0,
     atolls: mine?.atolls ?? 0,
     bestStreak: mine?.bestStreak ?? 0,

@@ -1,4 +1,4 @@
-import { FRESH_HOURS, PATHFINDER_DAYS, POINTS, RATINGS_PER_DAY, REPORTS_PER_DAY } from "./points-rules";
+import { EDITS_COUNTED_PER_DAY, FRESH_HOURS, PATHFINDER_DAYS, POINTS, RATINGS_PER_DAY, REPORTS_PER_DAY } from "./points-rules";
 
 /**
  * The scoreboard's and diver pages' words, shared by the web pages (app/scoreboard, app/divers, app/account) and the
@@ -7,12 +7,13 @@ import { FRESH_HOURS, PATHFINDER_DAYS, POINTS, RATINGS_PER_DAY, REPORTS_PER_DAY 
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** "12 reports · 5 sites · 3 ratings · 2 ★" under a reporter's nickname. */
-export function reporterDetail(row: { reports: number; sites: number; ratings: number; badges: number }): string {
+/** "12 reports · 5 sites · 3 ratings · 1 site edit · 2 ★" under a reporter's nickname. */
+export function reporterDetail(row: { reports: number; sites: number; ratings: number; edits?: number; badges: number }): string {
   return [
     row.reports ? count(row.reports, "report", "reports") : null,
     row.reports ? count(row.sites, "site", "sites") : null,
     row.ratings ? count(row.ratings, "rating", "ratings") : null,
+    row.edits ? count(row.edits, "site edit", "site edits") : null,
     row.badges ? `${row.badges} ★` : null,
   ]
     .filter(Boolean)
@@ -39,6 +40,7 @@ export function pointsRuleLines(): string[] {
     `+${POINTS.fresh} when you file it within ${FRESH_HOURS} hours of the dive, while it is fresh.`,
     `+${POINTS.pathfinder} when nobody had reported that site in the ${PATHFINDER_DAYS} days before your dive.`,
     `${POINTS.rating} points for rating a site, once per site, up to ${RATINGS_PER_DAY} ratings a day.`,
+    `${POINTS.edit} points for each edit to a site's description or how to dive it that a moderator approves, up to ${EDITS_COUNTED_PER_DAY} a day.`,
     `Up to ${REPORTS_PER_DAY} reports a day count, and one per dive. Agreeing with the forecast earns nothing: report what you felt.`,
   ];
 }

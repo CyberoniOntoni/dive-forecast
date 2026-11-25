@@ -32,7 +32,7 @@ export default async function AccountPage() {
       {account.acceptedTerms ? null : <TermsPrompt />}
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Your numbers">
-        <Stat label="Points" value={stats.points} />
+        <Stat label="Points" value={stats.points} note={stats.edits ? `${stats.edits} site edit${stats.edits === 1 ? "" : "s"}` : null} />
         <Stat label="This month" value={stats.monthPoints} note={account.monthRank ? `#${account.monthRank}` : null} />
         <Stat label="Reports" value={stats.reports} note={stats.ratings ? `${stats.ratings} rating${stats.ratings === 1 ? "" : "s"}` : null} />
         <Stat label="Sites" value={stats.sites} note={stats.atolls ? `${stats.atolls} atoll${stats.atolls === 1 ? "" : "s"}` : null} />

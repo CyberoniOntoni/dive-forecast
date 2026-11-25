@@ -1,6 +1,8 @@
 import { parseWall, toMaldivesWall } from "./forecast";
+import { countedEdits } from "./site-wiki";
 import {
   BADGES,
+  EDITS_COUNTED_PER_DAY,
   FRESH_HOURS,
   PATHFINDER_DAYS,
   POINTS,
@@ -11,7 +13,7 @@ import {
   type BadgeId,
   type ReportAward,
 } from "./points-rules";
-import type { Rating, Report, Site, User } from "./types";
+import type { Rating, Report, Site, SiteEdit, User } from "./types";
 
 /**
  * Points and badges for signed-in divers' reports, worked out from the reports each time, never stored, so a rule can
@@ -33,6 +35,8 @@ export type DiverStats = {
   reports: number;
   /** Sites rated (each site once). */
   ratings: number;
+  /** Approved site edits that earned points. */
+  edits: number;
   sites: number;
   atolls: number;
   /** Longest run of consecutive dive days with a counted report. */
@@ -117,16 +121,18 @@ export function countedRatings(ratings: readonly Rating[]): Map<string, { day: s
   return byUser;
 }
 
-/** Each signed-in diver's points, counts and badges. Divers with no reports, ratings or badges are left out. */
+/** Each signed-in diver's points, counts and badges. Divers with no reports, ratings, edits or badges are left out. */
 export function diverStats(
   reports: readonly Report[],
   users: readonly User[],
   sites: readonly Pick<Site, "id" | "atollId" | "addedBy">[],
   nowMs: number = Date.now(),
   ratings: readonly Rating[] = [],
+  siteEdits: readonly SiteEdit[] = [],
 ): DiverStats[] {
   const awards = reportAwards(reports);
   const rated = countedRatings(ratings);
+  const edited = countedEdits(siteEdits, EDITS_COUNTED_PER_DAY);
   const atollOf = new Map(sites.map((site) => [site.id, site.atollId]));
   const month = toMaldivesWall(new Date(nowMs).toISOString()).slice(0, 7);
   const reportersBySite = new Map<string, Set<string>>();
@@ -142,10 +148,13 @@ export function diverStats(
       const counted = reports.filter((report) => report.userId === user.id && (awards.get(report.id)?.points ?? 0) > 0);
       const mine = counted.map((report) => ({ report, award: awards.get(report.id)! }));
       const myRatings = rated.get(user.id) ?? [];
-      const points = mine.reduce((sum, item) => sum + item.award.points, 0) + myRatings.length * POINTS.rating;
+      const myEdits = edited.get(user.id) ?? [];
+      const points =
+        mine.reduce((sum, item) => sum + item.award.points, 0) + myRatings.length * POINTS.rating + myEdits.length * POINTS.edit;
       const monthPoints =
         mine.filter((item) => item.report.time.slice(0, 7) === month).reduce((sum, item) => sum + item.award.points, 0) +
-        myRatings.filter((item) => item.day.slice(0, 7) === month).length * POINTS.rating;
+        myRatings.filter((item) => item.day.slice(0, 7) === month).length * POINTS.rating +
+        myEdits.filter((item) => item.day.slice(0, 7) === month).length * POINTS.edit;
       const siteIds = new Set(counted.map((report) => report.siteId));
       const atollIds = new Set([...siteIds].map((id) => atollOf.get(id)).filter((id): id is string => id != null));
       const bestStreak = longestDayRun(counted.map((report) => report.time.slice(0, 10)));
@@ -167,6 +176,7 @@ export function diverStats(
         "streak-7": bestStreak >= 7,
         "site-scout": scout,
         "ratings-10": myRatings.length >= 10,
+        "edits-5": myEdits.length >= 5,
       };
       return {
         userId: user.id,
@@ -175,13 +185,14 @@ export function diverStats(
         monthPoints,
         reports: counted.length,
         ratings: myRatings.length,
+        edits: myEdits.length,
         sites: siteIds.size,
         atolls: atollIds.size,
         bestStreak,
         badges: BADGES.map((badge) => badge.id).filter((id) => earned[id]),
       };
     })
-    .filter((stats) => stats.reports > 0 || stats.ratings > 0 || stats.badges.length > 0);
+    .filter((stats) => stats.reports > 0 || stats.ratings > 0 || stats.edits > 0 || stats.badges.length > 0);
 }
 
 export type LeaderboardPeriod = "month" | "all";

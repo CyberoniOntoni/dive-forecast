@@ -9,6 +9,8 @@ export const POINTS = {
   pathfinder: 10,
   /** Rating a dive site (one per site; changing, removing or giving it again earns nothing more). Reviews and photos earn nothing. */
   rating: 3,
+  /** A site edit a moderator approved (lib/site-wiki.ts); a moderator's own, or one taken back, earns nothing. */
+  edit: 5,
 } as const;
 
 export const FRESH_HOURS = 3;
@@ -17,6 +19,8 @@ export const PATHFINDER_DAYS = 30;
 export const REPORTS_PER_DAY = 4;
 /** Counted site ratings per diver per day, so rating every pin on the map is not a way up the scoreboard. */
 export const RATINGS_PER_DAY = 4;
+/** Counted approved site edits per diver per day. */
+export const EDITS_COUNTED_PER_DAY = 3;
 /** A second report at the same site within this many hours of a counted one is the same dive. */
 export const SAME_DIVE_HOURS = 2;
 
@@ -42,7 +46,8 @@ export type BadgeId =
   | "streak-3"
   | "streak-7"
   | "site-scout"
-  | "ratings-10";
+  | "ratings-10"
+  | "edits-5";
 
 export const BADGES: readonly { id: BadgeId; label: string; detail: string }[] = [
   { id: "first-report", label: "First report", detail: "Filed a first current report" },
@@ -57,6 +62,7 @@ export const BADGES: readonly { id: BadgeId; label: string; detail: string }[] =
   { id: "streak-7", label: "Week aboard", detail: "Reported on 7 dive days in a row" },
   { id: "site-scout", label: "Site scout", detail: "Added a site that another diver then reported at" },
   { id: "ratings-10", label: "Reef critic", detail: "Rated 10 dive sites" },
+  { id: "edits-5", label: "Site scribe", detail: "5 site edits approved" },
 ];
 
 const REASON_WORDS: Record<AwardReason, string> = {

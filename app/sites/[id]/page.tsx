@@ -6,10 +6,12 @@ import { HourSlider } from "@/components/HourSlider";
 import { RecentReports } from "@/components/RecentReports";
 import { SiteAbout } from "@/components/SiteAbout";
 import { SiteReviews } from "@/components/SiteReviews";
+import { SiteWiki } from "@/components/SiteWiki";
 import { ReportForm } from "@/components/ReportForm";
 import { NavigateIcon } from "@/components/site-ui";
 import { forecastSite, getRecentReports, getSite, getSiteReviews, siteAdderNickname } from "@/lib/actions";
 import { getBlockedDivers } from "@/lib/moderation-actions";
+import { getSiteWiki } from "@/lib/wiki-actions";
 import { currentSession } from "@/lib/auth";
 import { toMaldivesWall } from "@/lib/forecast";
 import { navigateHref } from "@/lib/navigate-tab";
@@ -51,11 +53,12 @@ export default async function SitePage({
   if (!site) notFound();
 
   const session = await currentSession();
-  const [forecast, reviews, adderNickname, blocked] = await Promise.all([
+  const [forecast, reviews, adderNickname, blocked, wiki] = await Promise.all([
     forecastSite(site.id),
     getSiteReviews(site.id),
     siteAdderNickname(site.id),
     getBlockedDivers(),
+    getSiteWiki(site.id),
   ]);
   // Wall and lagoon reports read as compass directions, so the list needs to know which route this site takes.
   const recent = await getRecentReports(site.id, forecast.forecastRoute);
@@ -108,6 +111,7 @@ export default async function SitePage({
         seaState={forecast.seaState}
         seaStale={forecast.seaStale}
       />
+      {wiki ? <SiteWiki key={`wiki-${site.id}`} initial={wiki} siteName={site.name} /> : null}
       <SiteAbout
         site={site}
         adderNickname={adderNickname}

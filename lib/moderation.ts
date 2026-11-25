@@ -11,6 +11,9 @@ export const TERMS_FIRST = "Agree to the content rules first (your account page)
 /** A banned diver's sign-in. */
 export const BANNED = "This account is suspended for breaking the content rules.";
 
+/** What a ban says on the site edits its diver had waiting. */
+export const BANNED_EDIT_REASON = "Account suspended.";
+
 export const FLAG_NOTE_MAX = 500;
 /** Reports one diver can file in 24 hours. */
 export const FLAGS_PER_DAY = 20;
@@ -174,7 +177,7 @@ export function removeFlagged(store: StoreData, flag: Pick<ContentFlag, "kind" |
 
 /**
  * Bans a diver: signs them out everywhere, refuses their sign-in from now on, and removes every review, photo and site
- * they posted and their profile text. Their dive reports stay. Returns the photos to delete.
+ * they posted and their profile text, and rejects the site edits they had waiting. Their dive reports stay. Returns the photos to delete.
  */
 export function banDiver(store: StoreData, userId: string, nowMs: number): StoredPhoto[] | null {
   const user = store.users.find((item) => item.id === userId);
@@ -188,6 +191,13 @@ export function banDiver(store: StoreData, userId: string, nowMs: number): Store
   }
   for (const site of store.sites.filter((item) => item.addedBy === userId && !item.hidden)) {
     photos.push(...removeSite(store, site.id));
+  }
+  // Edits they had waiting for review close; revisions a moderator already approved stay in the site's history.
+  for (const edit of store.siteEdits) {
+    if (edit.userId !== userId || edit.status !== "pending") continue;
+    edit.status = "rejected";
+    edit.reviewedAt = nowIso;
+    edit.rejectReason = BANNED_EDIT_REASON;
   }
   resetProfile(store, userId);
   return photos;

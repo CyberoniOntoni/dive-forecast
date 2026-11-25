@@ -34,6 +34,7 @@ import {
 import type { BoatTrip } from "./boat-route-data";
 import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
 import { REVIEW_MAX } from "./site-details";
+import { editedSiteIds, liveTexts, originalTexts, siteContributors } from "./site-wiki";
 import { reviewDate, reviewSummaryLine } from "./review-words";
 import { ringBox, type RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
@@ -104,12 +105,21 @@ export type ApiSite = {
   /** True when the pin was placed from imagery, so its position is approximate. */
   approximatePin: boolean;
   pinNote: string | null;
+  /** What the site is, written by divers and approved by a moderator (lib/site-wiki.ts); null when nobody has yet. */
+  description: string | null;
   howToDive: string | null;
+  /**
+   * True when `howToDive` is still the adder's own text on a pin added in the app, false once a diver's approved edit
+   * replaced it (or on a catalog site). A client hides it from a diver who blocked the adder only while this is true.
+   */
+  howToDiveByAdder: boolean;
+  /** Nicknames of the divers whose approved edits wrote `description` and `howToDive`, in the order they first did. */
+  writtenBy: string[];
   /** Paths on this server, oldest first. */
   photoUrls: string[];
   /**
    * The nickname of the diver who added the pin; null on a catalog site or once they deleted their account. A client
-   * hides `howToDive` and `photoUrls` from a diver who blocked them, as the web does.
+   * hides `photoUrls`, and `howToDive` while `howToDiveByAdder`, from a diver who blocked them, as the web does.
    */
   adderNickname: string | null;
 };
@@ -221,7 +231,10 @@ export type ApiErrorCode =
   | "needs_nickname"
   | "needs_terms";
 
-export function apiSite(site: Site, atollName?: string | null, adderNickname?: string | null): ApiSite {
+/** Who wrote a site's texts, for apiSite: by default nobody, with how to dive it the adder's own. */
+export type ApiSiteWiki = { writtenBy: string[]; howToDiveEdited: boolean };
+
+export function apiSite(site: Site, atollName?: string | null, adderNickname?: string | null, wiki?: ApiSiteWiki): ApiSite {
   const userAdded = site.sourceUrl === "user";
   return {
     id: site.id,
@@ -238,9 +251,25 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     diveMaxM: site.diveMaxM ?? null,
     approximatePin: site.pinPlacement === "imagery",
     pinNote: site.pinNote ?? null,
+    description: site.description ?? null,
     howToDive: site.howToDive ?? null,
+    howToDiveByAdder: userAdded && Boolean(site.howToDive) && !wiki?.howToDiveEdited,
+    writtenBy: wiki?.writtenBy ?? [],
     photoUrls: (site.photos ?? []).map((photo) => photoUrl(site.id, photo.id)),
     adderNickname: userAdded ? (adderNickname ?? null) : null,
+  };
+}
+
+/**
+ * Who wrote each site's texts (lib/site-wiki.ts), for apiSite. `record` finds a site's stored record, before any edit
+ * is laid over it (lib/store.ts siteRecord).
+ */
+export function wikiOf(store: Pick<StoreData, "users" | "siteEdits">, record: (siteId: string) => Site | null): (site: Site) => ApiSiteWiki {
+  const edited = editedSiteIds(store.siteEdits);
+  return (site) => {
+    if (!edited.has(site.id)) return { writtenBy: [], howToDiveEdited: false };
+    const { source } = liveTexts(originalTexts(record(site.id)), store.siteEdits, site.id);
+    return { writtenBy: siteContributors(store, site.id).map((diver) => diver.nickname), howToDiveEdited: source.howToDive != null };
   };
 }
 
@@ -268,11 +297,12 @@ export function apiSites(
   atolls: readonly Atoll[],
   outline: (atoll: Atoll) => RimRing | null,
   adder: (site: Site) => string | null = () => null,
+  wiki?: (site: Site) => ApiSiteWiki,
 ): ApiSites {
   return {
     apiVersion: API_VERSION,
     atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),
-    sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId), adder(site))),
+    sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId), adder(site), wiki?.(site))),
   };
 }
 
@@ -1094,6 +1124,8 @@ export type ApiDiver = {
   /** Different sites reported at. */
   reportSites: number;
   ratings: number;
+  /** Site edits a moderator approved that earned points. */
+  siteEdits: number;
   sitesAdded: number;
   allRank: number | null;
   /** Earned badges only. */

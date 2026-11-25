@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addUserSite, listMergedSites, readStore, saveRating, setStorePath } from "./store";
+import { addReport, addUserSite, findSite, listMergedSites, mutateStore, readStore, saveRating, setStorePath } from "./store";
 import { UNSEEDED_ATOLL_ID, type Report, type Site } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -55,13 +55,13 @@ function tmpLeftovers() {
 
 describe("readStore", () => {
   it("returns an empty store when the file is missing", () => {
-    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [] });
+    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [], siteEdits: [] });
   });
 
   it("quarantines truncated JSON and returns an empty store", () => {
     const truncated = '{"reports":[{"id":"r1"';
     fs.writeFileSync(path.join(DATA_DIR, testFile), truncated);
-    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [] });
+    expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [], siteEdits: [] });
     const corrupt = fs.readdirSync(DATA_DIR).filter((name) => name.startsWith(`${testFile}.corrupt.`));
     expect(corrupt).toHaveLength(1);
     expect(fs.readFileSync(path.join(DATA_DIR, corrupt[0]), "utf8")).toBe(truncated);
@@ -77,7 +77,7 @@ describe("readStore", () => {
     });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     try {
-      expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [] });
+      expect(readStore()).toEqual({ reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [], siteEdits: [] });
       expect(errorSpy).toHaveBeenCalledWith("Failed to quarantine corrupt store file", renameError);
       expect(fs.existsSync(path.join(DATA_DIR, testFile))).toBe(true);
     } finally {
@@ -136,5 +136,28 @@ describe("listMergedSites atoll for app-added pins", () => {
     const merged = listMergedSites();
     expect(merged.find((site) => site.id === "pin-a")?.atollId).toBe("north-male");
     expect(merged.find((site) => site.id === "pin-b")?.atollId).toBe(UNSEEDED_ATOLL_ID);
+  });
+});
+
+describe("divers' site texts", () => {
+  it("lays an approved edit over a catalog site, never a waiting one, and leaves the catalog record alone", async () => {
+    const before = findSite("banana-reef")!;
+    const edit = (id: string, status: "approved" | "pending", description: string) => ({
+      id,
+      siteId: "banana-reef",
+      userId: "ann",
+      createdAt: "2026-11-25T00:00:00Z",
+      status,
+      changes: { description },
+      based: { description: "" },
+      ...(status === "approved" ? { reviewedAt: "2026-11-25T01:00:00Z", reviewerId: "mod" } : {}),
+    });
+    await mutateStore((store) => {
+      store.siteEdits.push(edit("e1", "approved", "A sheltered reef."), edit("e2", "pending", "Spam"));
+    });
+    const after = findSite("banana-reef")!;
+    expect(after.description).toBe("A sheltered reef.");
+    expect(after.howToDive).toBe(before.howToDive);
+    expect(listMergedSites().filter((site) => site.description === "Spam")).toEqual([]);
   });
 });

@@ -61,7 +61,7 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Numbers">
         <Stat label="Points" value={diver.stats.points} />
         <Stat label="Reports" value={diver.stats.reports} note={diver.stats.sites ? `at ${diver.stats.sites} site${diver.stats.sites === 1 ? "" : "s"}` : null} />
-        <Stat label="Ratings" value={diver.stats.ratings} />
+        <Stat label="Ratings" value={diver.stats.ratings} note={diver.stats.edits ? `${diver.stats.edits} site edit${diver.stats.edits === 1 ? "" : "s"}` : null} />
         <Stat label="Sites added" value={diver.sitesAdded} />
       </section>
 
