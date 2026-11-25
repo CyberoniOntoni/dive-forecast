@@ -1,6 +1,7 @@
 package app.fiftybar.divecurrent.ui.site
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,7 +58,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiSiteTexts
-import app.fiftybar.divecurrent.domain.SiteTextsDraft
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -91,7 +91,15 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
       TopAppBar(
         title = {
           Column {
-            Text(if (form?.moderator == true) "Edit site texts" else "Suggest an edit", maxLines = 1)
+            val empty = form != null && form.texts.description.isEmpty() && form.texts.howToDive.isEmpty()
+            Text(
+              when {
+                form?.moderator == true -> "Edit site texts"
+                empty -> "Write about this site"
+                else -> "Suggest an edit"
+              },
+              maxLines = 1,
+            )
             Text(siteName, style = MaterialTheme.typography.bodySmall, color = colors.mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
           }
         },
@@ -113,6 +121,10 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         ) {
           state.error?.let {
             Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+          }
+          // Why Send is off on a waiting edit: there is nothing new in it yet.
+          if (!state.busy && !state.dirty && form?.mine?.status == "pending") {
+            Text("Change a text to update your edit.", style = MaterialTheme.typography.bodySmall, color = colors.mist)
           }
           Button(
             onClick = viewModel::send,
@@ -192,8 +204,15 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         return@Column
       }
       // Withdrawing resets the form to what the site says: typed changes would go with it, so ask first.
-      MyEditCard(form, busy = state.busy, onWithdraw = { if (state.dirty) confirmWithdraw = true else viewModel.withdraw() })
-      state.done?.let {
+      val waiting = form.mine?.status == "pending"
+      MyEditCard(
+        form,
+        busy = state.busy,
+        // Just sent: the thanks goes in the waiting card rather than a second line saying much the same.
+        thanks = state.done.takeIf { waiting },
+        onWithdraw = { if (state.dirty) confirmWithdraw = true else viewModel.withdraw() },
+      )
+      state.done?.takeUnless { waiting }?.let {
         StatusRow(color = colors.incoming, title = it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
       }
       TextSection(
@@ -201,7 +220,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         hint = "What the site is: the reef, its depth, what lives there, what makes it special.",
         value = state.draft.description,
         max = form.limits.description,
-        changed = SiteTextsDraft.clean(state.draft.description) != form.texts.description,
+        changed = state.draft.description != state.start?.description,
         enabled = !state.busy,
         minLines = 5,
         onChange = { text -> viewModel.edit { it.copy(description = text) } },
@@ -218,7 +237,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           hint = "Where to drop in, which way to go on an incoming or outgoing current, hazards.",
           value = state.draft.howToDive,
           max = form.limits.howToDive,
-          changed = SiteTextsDraft.clean(state.draft.howToDive) != form.texts.howToDive,
+          changed = state.draft.howToDive != state.start?.howToDive,
           enabled = !state.busy,
           minLines = 5,
           onChange = { text -> viewModel.edit { it.copy(howToDive = text) } },
@@ -276,7 +295,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   }
 }
 
-/** One text: a heading with "Edited" once it differs from the site, the field, and a count that warns near the limit. */
+/** One text: a heading with "Not sent" while it holds typing not sent yet, the field, and a count that warns near the limit. */
 @Composable
 private fun TextSection(
   label: String,
@@ -292,7 +311,7 @@ private fun TextSection(
   Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
-      if (changed) Pill("Edited", colors.tide)
+      if (changed) Pill("Not sent")
     }
     OutlinedTextField(
       value = value,
@@ -323,12 +342,13 @@ private fun TextSection(
 
 /** A small rounded label. */
 @Composable
-private fun Pill(text: String, color: Color) {
+private fun Pill(text: String) {
+  val colors = CurrentTheme.colors
   Text(
     text,
-    style = MaterialTheme.typography.labelSmall,
-    color = color,
-    modifier = Modifier.background(color.copy(alpha = 0.14f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp),
+    style = MaterialTheme.typography.labelMedium,
+    color = colors.foam,
+    modifier = Modifier.background(colors.tide.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 3.dp),
   )
 }
 
@@ -347,7 +367,7 @@ private fun StatusRow(color: Color, title: String, detail: String? = null, modif
 
 /** The diver's own edit: waiting (with Withdraw), or the last one a moderator looked at. */
 @Composable
-private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, onWithdraw: () -> Unit) {
+private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, thanks: String?, onWithdraw: () -> Unit) {
   val mine = form.mine ?: return
   val colors = CurrentTheme.colors
   SurfaceCard {
@@ -356,9 +376,15 @@ private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, onWithdraw: () -> Unit
         StatusRow(
           colors.tide,
           "Your edit is waiting for a moderator",
-          "It's in the form below. Change it and send again, or set a text back to what the site says to drop that part.",
+          thanks ?: "It's in the form below. Change it and send again, or set a text back to what the site says to drop that part.",
         )
-        OutlinedButton(onClick = onWithdraw, enabled = !busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("Withdraw my edit") }
+        OutlinedButton(
+          onClick = onWithdraw,
+          enabled = !busy,
+          border = BorderStroke(1.dp, colors.foam.copy(alpha = 0.5f)),
+          colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.foam),
+          modifier = Modifier.heightIn(min = 48.dp),
+        ) { Text("Withdraw my edit") }
       }
       "rejected" ->
         StatusRow(colors.stop, "A moderator didn't take your last edit", mine.rejectReason?.let { "Their reason: $it" })
