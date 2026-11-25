@@ -226,7 +226,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
           </dl>
           {stopped && remainingKm != null ? (
             <p className="mt-1 text-xs text-foam/75">
-              {REFERENCE_KNOTS.map((knots) => referenceTime(knots, referenceMinutes(knots))).join(", ")}
+              {REFERENCE_KNOTS.map((knots) => referenceTime(knots, referenceMinutes(knots))).join(" · ")}
             </p>
           ) : null}
           <RouteNote

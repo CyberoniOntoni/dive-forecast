@@ -136,7 +136,7 @@ class RouteCurrentTest {
     val readout = NavReadouts.of(target, stopped, route(null), routeFailed = false, nowMs = t0)!!
     assertTrue(readout.stopped)
     assertNull(readout.etaMinutes)
-    assertEquals("At 8 kn about 38 min, At 20 kn about 15 min", readout.referenceLine)
+    assertEquals("At 8 kn about 38 min · At 20 kn about 15 min", readout.referenceLine)
     val waiting = NavReadouts.of(target, stopped, null, routeFailed = false, nowMs = t0)!!
     assertTrue(waiting.note.startsWith("Planning the route… · "))
     val failed = NavReadouts.of(target, stopped, null, routeFailed = true, nowMs = t0)!!

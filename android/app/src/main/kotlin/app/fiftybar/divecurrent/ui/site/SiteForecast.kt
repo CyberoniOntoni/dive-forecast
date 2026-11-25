@@ -525,7 +525,7 @@ internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
     SeaTile(
       "SURFACE",
       heightLabel(hour.feltM),
-      "${band?.let(::seaBandLabel)?.replaceFirstChar { it.uppercase() } ?: hour.band}, chop ${heightLabel(hour.windWaveM)}",
+      "${band?.let(::seaBandLabel)?.replaceFirstChar { it.uppercase() } ?: hour.band}, chop\u00A0${heightLabel(hour.windWaveM).replace(' ', '\u00A0')}",
       valueColor = if (band == SeaBand.Rough) colors.stop else colors.foam,
       modifier = Modifier.weight(1f),
     )

@@ -26,7 +26,7 @@ data class NavReadout(
   val arrival: String?,
   /** Under way, but the current ahead is stronger than the boat makes through the water. */
   val currentBeatsBoat: Boolean,
-  /** While stopped: "At 8 kn about 25 min, At 20 kn about 10 min". */
+  /** While stopped: "At 8 kn about 25 min · At 20 kn about 10 min". */
   val referenceLine: String?,
   /** The small line under the readouts: steer, current, course, route, gaps, GPS (the not-for-navigation notice is RouteLimitation). */
   val note: String,
@@ -90,7 +90,7 @@ object NavReadouts {
     val currentBeatsBoat = throughWater != null && timed != null && timed.minutes == null
     val referenceLine =
       if (stopped) {
-        BoatNav.REFERENCE_KNOTS.joinToString(", ") { knots ->
+        BoatNav.REFERENCE_KNOTS.joinToString(" · ") { knots ->
           val walked = timeAt(knots)
           val minutes = if (walked != null) walked.minutes else BoatNav.etaMinutes(remainingKm, knots)
           val kn = knots.toInt()
