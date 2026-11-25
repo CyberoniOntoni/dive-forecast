@@ -1,7 +1,9 @@
 package app.fiftybar.divecurrent.ui.site
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,19 +14,24 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,17 +42,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiSiteTexts
+import app.fiftybar.divecurrent.domain.SiteTextsDraft
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -69,17 +81,59 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   val leave: () -> Unit = { if (state.dirty) confirmLeave = true else onBack() }
   // Leaving while sending would drop the answer unseen; leaving a changed form asks first.
   BackHandler(enabled = state.busy || state.dirty) { if (!state.busy) confirmLeave = true }
+  val form = state.form
+  // The form proper, with Send held at the bottom above the keyboard.
+  val editing = session != null && form != null && form.canEdit && !form.needsTerms
 
   Scaffold(
     containerColor = colors.ink,
     topBar = {
       TopAppBar(
-        title = { Text(siteName) },
+        title = {
+          Column {
+            Text(if (form?.moderator == true) "Edit site texts" else "Suggest an edit", maxLines = 1)
+            Text(siteName, style = MaterialTheme.typography.bodySmall, color = colors.mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          }
+        },
         navigationIcon = {
           IconButton(onClick = leave, enabled = !state.busy) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the site") }
         },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
+    },
+    bottomBar = {
+      if (editing) {
+        Column(
+          Modifier.fillMaxWidth()
+            .background(colors.ink)
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+          state.error?.let {
+            Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+          }
+          Button(
+            onClick = viewModel::send,
+            // Untouched, a waiting edit would only be sent again as it is (and go to the back of the queue).
+            enabled = !state.busy && state.dirty && state.body != null,
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = colors.incoming, contentColor = colors.ink),
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+          ) {
+            Text(
+              when {
+                state.busy -> "Sending…"
+                form?.moderator == true -> "Save · goes live at once"
+                form?.mine?.status == "pending" -> "Update my waiting edit"
+                else -> "Send for review"
+              },
+              style = MaterialTheme.typography.titleMedium,
+            )
+          }
+        }
+      }
     },
   ) { padding ->
     Column(
@@ -87,24 +141,28 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         .padding(padding)
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp)
-        .navigationBarsPadding()
-        .imePadding(),
-      verticalArrangement = Arrangement.spacedBy(12.dp),
+        .then(if (editing) Modifier else Modifier.navigationBarsPadding()),
+      verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-      Text("Write about this site", style = MaterialTheme.typography.titleMedium)
       Text(
-        "Divers write these texts together. A moderator looks at each edit before it shows; once approved, your name shows under the texts.",
+        if (form?.moderator == true) {
+          "You're a moderator: what you save shows on the site at once."
+        } else {
+          "Divers write these texts together. A moderator reads each edit before it shows; once approved, your name is in the credits."
+        },
         style = MaterialTheme.typography.bodyMedium,
-        color = colors.foam.copy(alpha = 0.85f),
+        color = colors.mist,
       )
       if (session == null) {
-        Text("Sign in with your email to suggest an edit.", style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Sign in") }
+        SurfaceCard {
+          Text("Sign in to write about sites", style = MaterialTheme.typography.titleSmall)
+          Text("It takes your email and a code we send you.", style = MaterialTheme.typography.bodyMedium, color = colors.mist)
+          Button(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Sign in") }
+        }
         return@Column
       }
-      val form = state.form
       if (form == null) {
-        if (state.loading) Text("Loading…", style = MaterialTheme.typography.bodyMedium)
+        if (state.loading) Text("Loading…", style = MaterialTheme.typography.bodyMedium, color = colors.mist)
         state.error?.let {
           Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium)
           OutlinedButton(onClick = viewModel::load, modifier = Modifier.heightIn(min = 48.dp)) { Text("Try again") }
@@ -127,76 +185,61 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         return@Column
       }
       if (!form.canEdit) {
-        Text("This account cannot edit sites.", style = MaterialTheme.typography.bodyMedium, color = colors.stop)
+        SurfaceCard {
+          Text("This account can't edit sites", style = MaterialTheme.typography.titleSmall, color = colors.stop)
+          Text("Write to support@50bar.app if you think that's a mistake.", style = MaterialTheme.typography.bodyMedium, color = colors.mist)
+        }
         return@Column
       }
       // Withdrawing resets the form to what the site says: typed changes would go with it, so ask first.
       MyEditCard(form, busy = state.busy, onWithdraw = { if (state.dirty) confirmWithdraw = true else viewModel.withdraw() })
-      val locked = state.busy
-      OutlinedTextField(
+      state.done?.let {
+        StatusRow(color = colors.incoming, title = it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+      }
+      TextSection(
+        label = "About the site",
+        hint = "What the site is: the reef, its depth, what lives there, what makes it special.",
         value = state.draft.description,
-        onValueChange = { text -> viewModel.edit { it.copy(description = text.take(form.limits.description)) } },
-        enabled = !locked,
-        label = { Text("About the site") },
-        placeholder = { Text("What the site is: reef, depth, what lives there, what makes it special.") },
-        supportingText = { Text("${state.draft.description.length} of ${form.limits.description}") },
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        minLines = 4,
-        modifier = Modifier.fillMaxWidth(),
+        max = form.limits.description,
+        changed = SiteTextsDraft.clean(state.draft.description) != form.texts.description,
+        enabled = !state.busy,
+        minLines = 5,
+        onChange = { text -> viewModel.edit { it.copy(description = text) } },
       )
       if (form.adderTextHidden) {
         Text(
           "You blocked the diver who added this site, so How to dive it is hidden and can't be edited here.",
           style = MaterialTheme.typography.bodySmall,
-          color = colors.foam.copy(alpha = 0.8f),
+          color = colors.mist,
         )
       } else {
-        OutlinedTextField(
+        TextSection(
+          label = "How to dive it",
+          hint = "Where to drop in, which way to go on an incoming or outgoing current, hazards.",
           value = state.draft.howToDive,
-          onValueChange = { text -> viewModel.edit { it.copy(howToDive = text.take(form.limits.howToDive)) } },
-          enabled = !locked,
-          label = { Text("How to dive it") },
-          placeholder = { Text("Where to drop in, which way to go on an incoming or outgoing current, hazards.") },
-          supportingText = { Text("${state.draft.howToDive.length} of ${form.limits.howToDive}") },
-          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-          minLines = 4,
-          modifier = Modifier.fillMaxWidth(),
+          max = form.limits.howToDive,
+          changed = SiteTextsDraft.clean(state.draft.howToDive) != form.texts.howToDive,
+          enabled = !state.busy,
+          minLines = 5,
+          onChange = { text -> viewModel.edit { it.copy(howToDive = text) } },
         )
       }
       if (!form.moderator) {
-        OutlinedTextField(
+        TextSection(
+          label = "Note to the moderators",
+          hint = "Optional: why the change, or where it comes from. Only moderators see it.",
           value = state.draft.note,
-          onValueChange = { text -> viewModel.edit { it.copy(note = text.take(form.limits.note)) } },
-          enabled = !locked,
-          label = { Text("Note to the moderators · optional") },
-          placeholder = { Text("Why the change, or where it comes from.") },
-          supportingText = { Text("${state.draft.note.length} of ${form.limits.note}") },
-          keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-          modifier = Modifier.fillMaxWidth(),
+          max = form.limits.note,
+          changed = false,
+          enabled = !state.busy,
+          minLines = 2,
+          onChange = { text -> viewModel.edit { it.copy(note = text) } },
         )
       }
-      state.error?.let {
-        Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
+      if (state.dirty && !state.busy) {
+        TextButton(onClick = viewModel::undo, modifier = Modifier.heightIn(min = 48.dp)) { Text("Undo my changes") }
       }
-      state.done?.let {
-        Text(it, color = colors.incoming, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-      }
-      Button(
-        onClick = viewModel::send,
-        // Untouched, a waiting edit would only be sent again as it is (and go to the back of the queue).
-        enabled = !locked && state.dirty && state.body != null,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-      ) {
-        Text(
-          when {
-            state.busy -> "Sending…"
-            form.moderator -> "Save (goes live at once)"
-            form.mine?.status == "pending" -> "Change my waiting edit"
-            else -> "Send for review"
-          },
-        )
-      }
-      Spacer(Modifier.height(24.dp))
+      Spacer(Modifier.height(16.dp))
     }
   }
   if (confirmWithdraw) {
@@ -233,6 +276,75 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   }
 }
 
+/** One text: a heading with "Edited" once it differs from the site, the field, and a count that warns near the limit. */
+@Composable
+private fun TextSection(
+  label: String,
+  hint: String,
+  value: String,
+  max: Int,
+  changed: Boolean,
+  enabled: Boolean,
+  minLines: Int,
+  onChange: (String) -> Unit,
+) {
+  val colors = CurrentTheme.colors
+  Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+      Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+      if (changed) Pill("Edited", colors.tide)
+    }
+    OutlinedTextField(
+      value = value,
+      onValueChange = { onChange(it.take(max)) },
+      enabled = enabled,
+      placeholder = { Text(hint, color = colors.dim) },
+      supportingText = {
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
+          Text("${value.length} / $max", color = if (value.length > max * 0.9) colors.stop else colors.dim)
+        }
+      },
+      keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+      minLines = minLines,
+      shape = RoundedCornerShape(16.dp),
+      colors =
+        OutlinedTextFieldDefaults.colors(
+          focusedBorderColor = colors.incoming,
+          unfocusedBorderColor = colors.edge,
+          focusedContainerColor = colors.deep,
+          unfocusedContainerColor = colors.deep,
+          disabledContainerColor = colors.deep,
+          cursorColor = colors.incoming,
+        ),
+      modifier = Modifier.fillMaxWidth(),
+    )
+  }
+}
+
+/** A small rounded label. */
+@Composable
+private fun Pill(text: String, color: Color) {
+  Text(
+    text,
+    style = MaterialTheme.typography.labelSmall,
+    color = color,
+    modifier = Modifier.background(color.copy(alpha = 0.14f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 2.dp),
+  )
+}
+
+/** A coloured dot and a line, with an optional second line under it. */
+@Composable
+private fun StatusRow(color: Color, title: String, detail: String? = null, modifier: Modifier = Modifier) {
+  val colors = CurrentTheme.colors
+  Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Box(Modifier.padding(top = 6.dp).size(8.dp).background(color, CircleShape))
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      Text(title, style = MaterialTheme.typography.bodyMedium)
+      detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.mist) }
+    }
+  }
+}
+
 /** The diver's own edit: waiting (with Withdraw), or the last one a moderator looked at. */
 @Composable
 private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, onWithdraw: () -> Unit) {
@@ -241,18 +353,16 @@ private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, onWithdraw: () -> Unit
   SurfaceCard {
     when (mine.status) {
       "pending" -> {
-        Text("Your edit is waiting for a moderator", style = MaterialTheme.typography.titleSmall)
-        Text(
-          "The form below shows it. Sending again changes it; setting a text back to what the site says drops that part.",
-          style = MaterialTheme.typography.bodyMedium,
+        StatusRow(
+          colors.tide,
+          "Your edit is waiting for a moderator",
+          "It's in the form below. Change it and send again, or set a text back to what the site says to drop that part.",
         )
         OutlinedButton(onClick = onWithdraw, enabled = !busy, modifier = Modifier.heightIn(min = 48.dp)) { Text("Withdraw my edit") }
       }
-      "rejected" -> {
-        Text("A moderator did not take your last edit", style = MaterialTheme.typography.titleSmall)
-        mine.rejectReason?.let { Text("Reason: $it", style = MaterialTheme.typography.bodyMedium, color = colors.stop) }
-      }
-      else -> Text("Your last edit was approved. Thanks!", style = MaterialTheme.typography.titleSmall)
+      "rejected" ->
+        StatusRow(colors.stop, "A moderator didn't take your last edit", mine.rejectReason?.let { "Their reason: $it" })
+      else -> StatusRow(colors.incoming, "Your last edit was approved", "Thanks! Your name is in the site's credits.")
     }
   }
 }

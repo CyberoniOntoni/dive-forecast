@@ -82,6 +82,12 @@ class SiteTextsViewModel(
     _state.update { it.copy(draft = change(it.draft), error = null, done = null) }
   }
 
+  /** Puts the fields back to where the form started, dropping what was typed since. */
+  fun undo() {
+    val start = _state.value.start ?: return
+    edit { start }
+  }
+
   fun send() {
     val s = _state.value
     if (s.busy) return

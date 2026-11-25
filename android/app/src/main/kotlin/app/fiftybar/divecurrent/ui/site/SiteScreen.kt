@@ -549,7 +549,8 @@ private fun AboutCard(
     adder()
     // Divers write the site's texts together; a moderator approves each edit (SiteTextsScreen).
     OutlinedButton(onClick = onEditTexts, modifier = Modifier.heightIn(min = 44.dp)) {
-      Text(if (site.description == null && site.howToDive == null) "Write about this site" else "Suggest an edit")
+      Icon(Icons.Filled.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+      Text(if (site.description == null && site.howToDive == null) "  Write about this site" else "  Suggest an edit")
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
