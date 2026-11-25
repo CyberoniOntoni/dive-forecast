@@ -75,10 +75,12 @@ export const CHANNEL_FUNNEL_KM = 0.8;
  * (`corner`), so a wall that happens to be named "Corner" can still run along the reef.
  */
 export function flowsAlongReef(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef">,
   mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
 ): boolean {
   if (site.siteType !== "outer-reef") return false;
+  // The owner's word beats the funnel rule: some walls next to a pass sit outside an island ridge, off its draw.
+  if (site.alongReef === true) return true;
   return !mates.some(
     (mate) =>
       mate.id !== site.id &&
@@ -90,13 +92,16 @@ export function flowsAlongReef(
 
 /**
  * True for a site whose current runs into and out of the atoll across the rim: a pass, a channel thila, or an outer
- * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not.
+ * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not. A site that shows
+ * another's forecast (`flowFromSiteId`) is not either: its channel is already counted once, by that site, as a drift
+ * lender and a lagoon opening.
  */
 export function crossesRim(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef" | "flowFromSiteId">,
   mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
 ): boolean {
   if (!site.siteType || site.siteType === "lagoon" || site.siteType === "strait-wall") return false;
+  if (site.flowFromSiteId) return false;
   return !flowsAlongReef(site, mates);
 }
 
@@ -133,7 +138,7 @@ export const LAGOON_NOTE =
  * its flow, not its bearing, and a channel has none. With no bearing the route stands and the axis is null.
  */
 export function siteRoute(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef">,
   mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[],
   bearingDeg: number | null,
 ): { route: ForecastRoute; axisDeg: number | null } {
@@ -145,6 +150,11 @@ export function siteRoute(
     return { route: "along-reef", axisDeg: alongReefHeading(bearingDeg) };
   }
   return { route: "channel", axisDeg: null };
+}
+
+/** At a pin inside another site's channel (`flowFromSiteId`): whose forecast it shows. */
+export function followNote(channelName: string): string {
+  return `Sits in ${channelName}'s flow, so it shows that channel's forecast. Divers' reports here still nudge it.`;
 }
 
 /**

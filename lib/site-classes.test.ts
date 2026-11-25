@@ -83,6 +83,26 @@ describe("the owner's site classification", () => {
     }
   });
 
+  it("keeps the owner's Gaafu Alif corrections (25 Nov 2026)", () => {
+    // Mahadhoo runs along the island's inner reef; Dhandhoo Caves and Gemanafushi Canyon along the outer reef beside
+    // their channels; Coral Garden sits on Kondey Channel's wall and shows its forecast.
+    const mahadhoo = byId.get("mahadhoo")!;
+    expect([mahadhoo.siteType, mahadhoo.flowAxisDeg]).toEqual(["lagoon", 125]);
+    for (const id of ["dhandhoo-caves", "gemanafushi-canyon"]) {
+      expect(flowsAlongReef(byId.get(id)!, catalog.sites), id).toBe(true);
+    }
+    expect(byId.get("kondey-coral-garden")?.flowFromSiteId).toBe("kondey-kandu");
+  });
+
+  it("names only catalog sites in the same atoll that show their own forecast in flowFromSiteId", () => {
+    for (const site of catalog.sites.filter((item) => item.flowFromSiteId)) {
+      const target = byId.get(site.flowFromSiteId!);
+      expect(target?.atollId, site.id).toBe(site.atollId);
+      expect(target?.flowFromSiteId, site.id).toBeUndefined();
+      expect(crossesRim(target!, catalog.sites), site.id).toBe(true);
+    }
+  });
+
   it("spells Embudhoo Thila the owner's way, keeping its id", () => {
     expect(byId.get("embudhu-thila")?.name).toBe("Embudhoo Thila");
   });

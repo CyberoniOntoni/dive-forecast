@@ -100,6 +100,36 @@ describe("loadSite", () => {
     }
   });
 
+  it("shows the forecast of the site a pin names in flowFromSiteId, with the pin's own reports", async () => {
+    const channel: Site = { ...openSite, id: "kondey", name: "Kondey Channel", siteType: "pass", inwardBearingDeg: 246, siteTypeSource: "manual" };
+    const garden: Site = {
+      ...openSite,
+      id: "garden",
+      name: "Coral Garden",
+      lat: openSite.lat - 0.004,
+      lon: openSite.lon - 0.017,
+      siteType: "pass",
+      siteTypeSource: "manual",
+      flowFromSiteId: "kondey",
+    };
+    const mates = [channel, garden];
+    vi.mocked(Marine.siteMarineHours).mockResolvedValue({ ok: true, hours: syntheticHours, fetchedAt: 1, stale: false });
+    try {
+      const own = await loadSite(channel, mates, atoll, []);
+      const follower = await loadSite(garden, mates, atoll, []);
+      expect(follower.bearing).toBe(246);
+      expect(follower.siteType).toBe("pass");
+      expect(follower.hours).toEqual(own.hours);
+      // Fetched at the channel's pin, not the garden's.
+      for (const call of vi.mocked(Marine.siteMarineHours).mock.calls) expect([call[0], call[1]]).toEqual([channel.lat, channel.lon]);
+      // A target that is not in the catalog is not followed: the pin keeps its own place.
+      const stray = { ...garden, flowFromSiteId: "nowhere" };
+      expect((await loadSite(stray, [channel, stray], atoll, [])).bearing).not.toBe(246);
+    } finally {
+      vi.mocked(Marine.siteMarineHours).mockReset();
+    }
+  });
+
   it("reads a lagoon site's reports against the inward bearing when it falls back to the channel model", async () => {
     const lagoon: Site = { ...openSite, siteType: "lagoon" };
     const fresh = { ok: true as const, hours: syntheticHours, fetchedAt: 1, stale: false };

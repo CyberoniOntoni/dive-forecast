@@ -79,7 +79,9 @@ Every site has a type: rim pass, channel thila, channel corner, outer reef, lago
 - **A channel the outline puts inside the lagoon:** set its type by hand (`pass`, `channel-thila` or `corner`, `"siteTypeSource": "manual"`). It then takes the outline's direction from up to 3 km away instead of the centroid guess.
 - **A curved channel:** add `outgoingBearingDeg` when the water leaves in a different direction from the one it enters by, as at HP Reef.
 - **Outer reef:** a wall with land or solid reef behind it runs along the reef, shown as a compass direction. A wall within 0.8 km of a pass pin in the same atoll keeps the across-rim model instead, because the channel's draw takes over there. The name doesn't matter: a wall called "Corner" that really is a wall stays outer reef if set by hand.
-- **Lagoon:** a compass direction from the flow through the atoll's rim and channels. It never shows high confidence.
+- **A wall next to a pass that the owner says runs along the reef** (outside an island ridge, off the channel's draw): add `"alongReef": true` to the outer-reef site.
+- **Lagoon:** a compass direction from the flow through the atoll's rim and channels. It never shows high confidence. When the owner says which line the flow runs along, set `flowAxisDeg` (degrees in [0, 180), "incoming" runs toward it).
+- **A pin on a channel's wall that the outline puts in the lagoon, and should show that channel's forecast:** type it `pass` by hand and set `flowFromSiteId` to the channel's site id (Coral Garden → `kondey-kandu`).
 - **Strait wall:** a wall of an ocean strait between atolls (Vaadhoo Kandu), running east or west with the monsoon and tide. It is never derived; set it by hand (`"siteType": "strait-wall"`, `"siteTypeSource": "manual"`).
 
 A wrong type gives the wrong kind of answer, not just a weaker one. For example, a channel typed outer reef shows a direction along the reef instead of in or out.

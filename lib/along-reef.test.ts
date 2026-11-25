@@ -10,7 +10,7 @@ import {
 import { replayReports } from "./replay";
 import { compassWord, nowcastGlance } from "./nowcast-glance";
 import type { SiteNowcast } from "./nowcast";
-import { alongReefHeading, flowsAlongReef } from "./site-type";
+import { alongReefHeading, crossesRim, flowsAlongReef } from "./site-type";
 import type { MarineHour, Report, Site } from "./types";
 
 const M2 = 12.42;
@@ -137,6 +137,17 @@ describe("flowsAlongReef", () => {
     // 1.1 km away, or in another atoll, it is an open wall.
     expect(flowsAlongReef(wall, [pass(4.01)])).toBe(true);
     expect(flowsAlongReef(wall, [pass(4.0045, "b")])).toBe(true);
+  });
+
+  it("runs a wall the owner marks alongReef along the reef even in a channel's funnel, and nothing else", () => {
+    expect(flowsAlongReef({ ...wall, alongReef: true }, [pass(4.0045)])).toBe(true);
+    expect(crossesRim({ ...wall, alongReef: true }, [pass(4.0045)])).toBe(false);
+    expect(flowsAlongReef({ ...wall, siteType: "pass", alongReef: true }, [pass(4.0045)])).toBe(false);
+  });
+
+  it("never lets a site that shows another's forecast cross the rim itself", () => {
+    expect(crossesRim({ ...wall, siteType: "pass" })).toBe(true);
+    expect(crossesRim({ ...wall, siteType: "pass", flowFromSiteId: "kondey-kandu" })).toBe(false);
   });
 
   it("turns the inward bearing 90° clockwise for the reef heading", () => {

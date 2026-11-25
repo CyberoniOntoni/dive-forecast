@@ -198,7 +198,7 @@ async function lagoonLoad(
     const level = residual[index];
     return level == null ? [] : [{ time: hour.time, levelM: level }];
   });
-  const forecast = lagoonHours(site, sources, levels, sink);
+  const forecast = lagoonHours(site, sources, levels, sink, site.flowAxisDeg);
   return forecast.axisDeg == null || forecast.hours.length === 0 ? null : { hours: forecast.hours, axisDeg: forecast.axisDeg };
 }
 
@@ -272,9 +272,20 @@ export function routeFor(
   atoll: Atoll | undefined,
 ): { route: ForecastRoute; axisDeg: number | null } | null {
   if (!atoll) return null;
+  const flow = flowSite(site, mates);
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
-  const deg = resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg;
-  return siteRoute(site, mates, deg);
+  const deg = resolveBearing(flow, mates, outside, rimForAtoll(atoll)).deg;
+  return siteRoute(flow, mates, deg);
+}
+
+/**
+ * The site whose forecast a site shows: the catalog site it names in flowFromSiteId, when that one is in the same atoll
+ * and shows its own; otherwise the site itself.
+ */
+export function flowSite(site: Site, mates: readonly Site[]): Site {
+  if (!site.flowFromSiteId) return site;
+  const target = mates.find((mate) => mate.id === site.flowFromSiteId);
+  return target && target.atollId === site.atollId && !target.flowFromSiteId && target.sourceUrl !== "user" ? target : site;
 }
 
 /** The axis "incoming" means at a strait wall or a wall whose current runs along the reef; null elsewhere or with no atoll. */
@@ -290,8 +301,10 @@ export async function loadSite(
   reports: readonly Report[],
   options: FetchOptions = {},
 ): Promise<SiteLoad> {
-  const marine = await checkedMarine(site, mates, atoll, options);
-  const route = siteRoute(site, mates, marine.bearing);
+  // A pin inside another site's channel runs on that site's place, bearing and section; it keeps its own type and reports.
+  const flow = flowSite(site, mates);
+  const marine = await checkedMarine(flow, mates, atoll, options);
+  const route = siteRoute(flow, mates, marine.bearing);
   const siteType = site.siteType ?? null;
   if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, siteType, route);
   const loaded = (forecastRoute: ForecastRoute, alongHeadingDeg: number | null, hours: HourForecast[]): SiteLoad => ({
@@ -318,7 +331,7 @@ export async function loadSite(
     return loaded("along-reef", axis, onAxis(alongReefHours({ hours: marine.hours, alongHeadingDeg: axis }), axis, "wall"));
   }
   if (route.route === "lagoon" && atoll) {
-    const lagoon = await lagoonLoad(site, mates, atoll, marine.hours, options);
+    const lagoon = await lagoonLoad(flow, mates, atoll, marine.hours, options);
     if (lagoon) return loaded("lagoon", lagoon.axisDeg, onAxis(lagoon.hours, lagoon.axisDeg, "lagoon"));
   }
   // A channel, or a lagoon site whose atoll has no outline or ring yet. Inside the lagoon it is never that sure.
@@ -328,7 +341,7 @@ export async function loadSite(
     inwardBearingDeg: marine.bearing,
     reports: route.route === "lagoon" ? lagoonReportsOnBearing(reports, marine.bearing) : reports,
     ringLevel: await ringLevelFor(route.route, atoll, options),
-    ...sectionInput(site),
+    ...sectionInput(flow),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return loaded("channel", null, hours);
@@ -364,11 +377,12 @@ export async function reportTideForSite(
   time: string,
   options: FetchOptions = {},
 ): Promise<ReportTide | null> {
-  const marine = await checkedMarine(site, mates, atoll, options);
+  const flow = flowSite(site, mates);
+  const marine = await checkedMarine(flow, mates, atoll, options);
   if (!marine.ok) return null;
   const slopeWindowM = residualSlopeWindow(marine.hours, time);
   if (!slopeWindowM) return null;
-  const ring = await ringLevelFor(siteRoute(site, mates, marine.bearing).route, atoll, options);
+  const ring = await ringLevelFor(siteRoute(flow, mates, marine.bearing).route, atoll, options);
   return {
     headWindowM: headWindowAt(marine.hours, time, ring),
     slopeWindowM,

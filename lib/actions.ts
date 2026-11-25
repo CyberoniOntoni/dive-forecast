@@ -6,9 +6,9 @@ import { boatRoute } from "./boat-route-data";
 import { ROUTE_BAD_DESTINATION, ROUTE_BAD_POSITION, ROUTE_OUTSIDE } from "./boat-route-limits";
 import { readPointDestination } from "./point-destination";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
-import { siteNoteFor } from "./site-type";
+import { followNote, siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
-import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
+import { alongHeadingFor, flowSite, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
@@ -558,6 +558,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     loadOffshore(atoll).catch(() => undefined),
   ]);
   const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);
+  const followed = flowSite(site, catalog.sites);
   return {
     seaState: sea.hours,
     seaStale: sea.stale,
@@ -570,7 +571,7 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     siteType: loaded.siteType,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    siteNote: siteNoteFor(loaded.siteType, loaded.forecastRoute),
+    siteNote: followed === site ? siteNoteFor(loaded.siteType, loaded.forecastRoute) : followNote(followed.name),
     fetchedAt: loaded.fetchedAt,
   };
 }
