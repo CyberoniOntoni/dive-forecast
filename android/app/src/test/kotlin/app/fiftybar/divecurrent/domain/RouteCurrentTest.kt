@@ -123,7 +123,7 @@ class RouteCurrentTest {
     assertEquals(30.0, readout.etaMinutes!!, 0.5)
     assertEquals("08:30", readout.arrival)
     assertTrue(readout.note, readout.note.startsWith("Steer 349° N for track 000° N · current 2.0 kn toward E (Test Kandu)"))
-    assertTrue(readout.note, readout.note.contains("1 reef gap") && readout.note.endsWith("not a chart, keep a lookout"))
+    assertTrue(readout.note, readout.note.contains("1 reef gap") && readout.note.endsWith("GPS ±5 m"))
     assertTrue(readout.shallow)
     assertNull(readout.trouble)
     assertFalse(readout.currentBeatsBoat)

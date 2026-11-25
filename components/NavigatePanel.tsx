@@ -152,11 +152,11 @@ function DestinationPicker({
 
   return (
     <section aria-labelledby="destination-heading">
-      <div className="flex items-center justify-between gap-2">
-        <h2 id="destination-heading" className="text-base font-semibold">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="destination-heading" className="text-base leading-6 font-semibold">
           Where to?
         </h2>
-        <RouteLimitation />
+        <RouteLimitation align="right" />
       </div>
       <p className="text-xs leading-5 text-foam/70">
         {from ? "Nearest sites first, or tap the map to head for any point." : "Pick a dive site, or tap the map to head for any point."}

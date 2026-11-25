@@ -173,11 +173,14 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   return (
     <section aria-label={`Boat route to ${site.name}`} className="w-full text-foam">
       <div className="flex items-center gap-2">
-        <h2 className="min-w-0 flex-1 truncate text-base font-semibold">
-          <span className="sr-only">Heading to </span>
-          {site.name}
-        </h2>
-        <RouteLimitation className="shrink-0" />
+        {/* The name and its caption make one block as tall as the round buttons beside it. */}
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-base leading-6 font-semibold">
+            <span className="sr-only">Heading to </span>
+            {site.name}
+          </h2>
+          <RouteLimitation />
+        </div>
         {boat && route ? (
           <button type="button" onClick={() => setFrame((count) => count + 1)} aria-label="Show the whole route" title="Show route" className={ICON_BUTTON}>
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -243,19 +246,22 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
 }
 
 /**
- * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): one small amber
- * pill, so it costs the panel no room, that opens the full reason as a popover.
+ * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): one quiet amber
+ * line with a warning mark, set as the panel title's caption so it costs no room, that opens the full reason as a
+ * popover. `align` is the popover's edge: the side of the panel the caption sits on.
  */
-export function RouteLimitation({ className = "" }: { className?: string }) {
+export function RouteLimitation({ align = "left", className = "" }: { align?: "left" | "right"; className?: string }) {
   return (
     <details className={`group relative ${className}`}>
-      <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1.5 rounded-full bg-outgoing/12 px-2.5 text-xs font-semibold text-outgoing ring-1 ring-outgoing/35 hover:bg-outgoing/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
-        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <summary className="-my-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs leading-4 font-medium text-outgoing/90 hover:text-outgoing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
+        <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" className="shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3.5l9.5 16.5h-19zM12 10v4.5M12 17.5h.01" />
         </svg>
-        {ROUTE_LIMITATION_TITLE}
+        <span className="underline decoration-outgoing/40 decoration-dotted underline-offset-2">{ROUTE_LIMITATION_TITLE}</span>
       </summary>
-      <p className="absolute top-full right-0 z-10 mt-1.5 w-64 rounded-xl bg-ink px-3 py-2 text-xs leading-[1.1rem] text-foam/85 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.7)] ring-1 ring-outgoing/35">
+      <p
+        className={`absolute top-full ${align === "right" ? "right-0" : "left-0"} z-10 mt-2 w-64 rounded-xl bg-ink px-3 py-2 text-xs leading-[1.1rem] text-foam/85 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.7)] ring-1 ring-foam/15`}
+      >
         {ROUTE_LIMITATION}
       </p>
     </details>
@@ -319,8 +325,8 @@ function headingGapDeg(a: number, b: number): number {
 const CURRENT_NOTE_KNOTS = 0.2;
 
 /**
- * One small line under the readouts: steer, the current here, the route's gaps, GPS accuracy and the not-a-chart
- * warning. Route trouble, a shallow gap, very strong current ahead and a current the boat cannot beat get their own
+ * One small line under the readouts: steer, the current here, the route's gaps, GPS accuracy (the not-for-navigation
+ * notice is RouteLimitation, beside the title). Route trouble, a shallow gap, very strong current ahead and a current the boat cannot beat get their own
  * line in amber.
  */
 function RouteNote({
@@ -361,7 +367,6 @@ function RouteNote({
     route?.routed ? `${formatNm(route.lengthKm)} by route (${formatNm(route.directKm)} straight)` : null,
     gaps > 0 ? (gaps === 1 ? "1 reef gap" : `${gaps} reef gaps`) : null,
     `GPS ±${Math.round(accuracyM)} m`,
-    "not a chart, keep a lookout",
   ].filter((part): part is string => part != null);
   const trouble =
     routeError && route

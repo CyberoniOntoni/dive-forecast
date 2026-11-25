@@ -28,7 +28,7 @@ data class NavReadout(
   val currentBeatsBoat: Boolean,
   /** While stopped: "At 8 kn about 25 min, At 20 kn about 10 min". */
   val referenceLine: String?,
-  /** The small line under the readouts: steer, current, course, route, gaps, GPS, not a chart. */
+  /** The small line under the readouts: steer, current, course, route, gaps, GPS (the not-for-navigation notice is RouteLimitation). */
   val note: String,
   /** Route trouble, in amber. */
   val trouble: String?,
@@ -119,7 +119,6 @@ object NavReadouts {
           else -> null
         },
         "GPS ±${Math.round(boat.accuracyM)} m",
-        "not a chart, keep a lookout",
       )
     val note = (if (route == null && !routeFailed) "Planning the route… · " else "") + parts.joinToString(" · ")
     val trouble =

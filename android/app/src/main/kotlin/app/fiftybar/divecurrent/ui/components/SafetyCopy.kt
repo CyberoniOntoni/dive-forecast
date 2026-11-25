@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -114,24 +115,22 @@ private object SafetyIcons {
   }
 }
 
-/** The not-for-navigation notice: one small amber pill, so it costs the screen no room; a tap shows the full reason. */
+/** The not-for-navigation notice: one quiet amber line with a warning mark, so it costs no room; a tap shows the full reason. */
 @Composable
 fun RouteLimitation(modifier: Modifier = Modifier) {
   val colors = CurrentTheme.colors
   var open by remember { mutableStateOf(false) }
   Row(
-    modifier
-      .heightIn(min = 32.dp)
-      .clip(RoundedCornerShape(50))
-      .background(colors.outgoing.copy(alpha = 0.12f))
-      .border(1.dp, colors.outgoing.copy(alpha = 0.35f), RoundedCornerShape(50))
-      .clickable(onClickLabel = "Why") { open = true }
-      .padding(horizontal = 10.dp),
+    modifier.heightIn(min = 32.dp).clip(RoundedCornerShape(8.dp)).clickable(onClickLabel = "Why") { open = true }.padding(horizontal = 4.dp),
     verticalAlignment = Alignment.CenterVertically,
-    horizontalArrangement = Arrangement.spacedBy(6.dp),
+    horizontalArrangement = Arrangement.spacedBy(5.dp),
   ) {
     Icon(SafetyIcons.warning, contentDescription = null, tint = colors.outgoing, modifier = Modifier.size(14.dp))
-    Text(SafetyCopy.ROUTE_LIMITATION_TITLE, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.outgoing)
+    Text(
+      SafetyCopy.ROUTE_LIMITATION_TITLE,
+      style = MaterialTheme.typography.labelMedium.copy(textDecoration = TextDecoration.Underline),
+      color = colors.outgoing,
+    )
   }
   if (open) {
     AlertDialog(
