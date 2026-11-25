@@ -67,6 +67,7 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
       "howToDiveByAdder": false,
       "writtenBy": [],
       "writtenByLine": null,
+      "editedFields": [],
       "photoUrls": ["/site-photos/<site>/<photo>.jpg"],
       "adderNickname": null
     }
@@ -83,7 +84,8 @@ hides that site's `photoUrls`, and its `howToDive` while `howToDiveByAdder` is t
 (`lib/site-wiki.ts`; edits are proposed on the web page's "About this site" card for now); `howToDiveByAdder` is true
 while `howToDive` is still the adder's own text on a pin added in the app, and `writtenBy` the nicknames of the divers
 whose approved edits wrote them, in the order they first did; `writtenByLine` is that credit as the web says it
-("Written by Ann, Bob and Cy."), or null.
+("Written by Ann, Bob and Cy."), or null. `editedFields` lists the texts that show a diver's approved edit, each
+reportable with `POST /api/v1/flags` (`kind` `"text"`, `field`).
 An atoll's `bounds` is the box round its outline, for saving the atoll for offline use; null when no outline is stored
 (the app then pads the box round the atoll's sites).
 
@@ -249,8 +251,8 @@ Google Play's user-generated content policy, as on the web (`lib/moderation.ts`,
   **`POST /api/v1/me/terms`** (no body) → `{"apiVersion": 1, "acceptedTerms": true}`.
 - **`POST /api/v1/flags`**, signed in: `{"kind": "review" | "site" | "diver" | "text", "siteId"?, "nickname"?, "reason",
   "note"?}`. A review is `siteId` + its author's `nickname`, a site added in the app is `siteId`, a diver is
-  `nickname`, a site's texts written by divers (`description`, `howToDive` when `writtenBy` is not empty) are `siteId` and,
-  optionally, the `nickname` of the diver who wrote the reported part (without it, the newest revision's). `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
+  `nickname`, a site's texts written by divers are `siteId` and `field` (`description` or
+  `howToDive`, one listed in the site's `editedFields`); the report goes to whoever wrote what that field shows. `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
   500 characters. 201 `{"apiVersion": 1, "sent": true}`; 400 for one's own content, at 20 a day, or gone content.
   Moderators get an email and act at `/moderation` on the web.
 - **`POST /api/v1/divers/{nickname}/block`** and **`DELETE`** the same, signed in → `{"apiVersion": 1, "blocked":

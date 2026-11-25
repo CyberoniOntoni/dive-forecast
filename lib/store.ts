@@ -149,7 +149,19 @@ export function listMergedSites(): Site[] {
 
 /** A site's record as stored, before any diver's approved edit is laid over it: an added pin's, or the catalog's. */
 export function siteRecord(store: StoreData, siteId: string): Site | null {
-  return store.sites.find((site) => site.id === siteId) ?? readCatalog().sites.find((site) => site.id === siteId) ?? null;
+  // The catalog first, as listMergedSites: a published site wins over a store copy with the same id.
+  return catalogById().get(siteId) ?? store.sites.find((site) => site.id === siteId) ?? null;
+}
+
+let catalogIndex: { raw: string; byId: Map<string, Site> } | null = null;
+
+/** The catalog's sites by id, parsed once while data/sites.json is unchanged (siteRecord runs once per edited site). */
+function catalogById(): Map<string, Site> {
+  const raw = readDataFile("sites.json");
+  if (catalogIndex?.raw !== raw) {
+    catalogIndex = { raw, byId: new Map((JSON.parse(raw) as Catalog).sites.map((site) => [site.id, site])) };
+  }
+  return catalogIndex.byId;
 }
 
 /**

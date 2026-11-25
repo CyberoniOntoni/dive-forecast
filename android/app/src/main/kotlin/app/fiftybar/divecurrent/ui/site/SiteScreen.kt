@@ -285,7 +285,27 @@ fun SiteScreen(
           state.site?.let { s ->
             val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
             val photosState by photos.state.collectAsStateWithLifecycle()
-            AboutCard(s, photoUrl = viewModel::photoUrl, adderBlocked = photosState.adderBlocked(s)) {
+            var reportingField by remember { mutableStateOf<String?>(null) }
+            reportingField?.let { field ->
+              ReportDialog(
+                what = "text",
+                onDismiss = { reportingField = null },
+                onSend = { reason, note ->
+                  reportingField = null
+                  photos.reportText(field, reason, note)
+                },
+              )
+            }
+            AboutCard(
+              s,
+              photoUrl = viewModel::photoUrl,
+              adderBlocked = photosState.adderBlocked(s),
+              onReportText = { field -> if (session != null) reportingField = field else onSignIn() },
+            ) {
+              // The answer to a report of the texts; on a pin added in the app it shows under the site's own Report.
+              if (!(s.userAdded && !photosState.isAdder)) {
+                photosState.reportNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.85f)) }
+              }
               if (s.userAdded && photosState.isAdder && session != null) {
                 AdderPhotos(s, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
               }
@@ -458,10 +478,16 @@ private fun AboutCard(
   site: ApiSite,
   photoUrl: (String) -> String,
   adderBlocked: Boolean = false,
+  /** Report under a text a diver wrote ("description" or "howToDive"); null hides it. */
+  onReportText: ((String) -> Unit)? = null,
   adder: @Composable () -> Unit = {},
 ) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
+  // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
+  val reportText: @Composable (String) -> Unit = { field ->
+    if (onReportText != null && field in site.editedFields) ContentActions(onReport = { onReportText(field) }, onBlock = null)
+  }
   SurfaceCard {
     Text("About the site", style = MaterialTheme.typography.titleSmall)
     val facts = listOfNotNull(site.atollName, site.siteTypeLabel, depthLabel(site), if (site.userAdded) "added by a diver" else null)
@@ -482,10 +508,14 @@ private fun AboutCard(
         color = colors.foam.copy(alpha = 0.8f),
       )
     }
-    site.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+    site.description?.let {
+      Text(it, style = MaterialTheme.typography.bodyMedium)
+      reportText("description")
+    }
     site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }?.let {
       Text("How to dive it", style = MaterialTheme.typography.labelLarge)
       Text(it, style = MaterialTheme.typography.bodyMedium)
+      reportText("howToDive")
     }
     site.writtenByLine?.let { credit ->
       Text(

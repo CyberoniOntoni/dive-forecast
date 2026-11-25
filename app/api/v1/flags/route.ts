@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       if (!user) return apiError(404, "not_found", "No diver by that nickname.");
       userId = user.id;
     }
-    const result = await reportContent({ kind: body.kind, siteId: body.siteId, userId, reason: body.reason, note: body.note });
+    const result = await reportContent({ kind: body.kind, siteId: body.siteId, userId, field: body.field, reason: body.reason, note: body.note });
     if (!result.ok) {
       if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
       return apiError(400, "bad_request", result.error ?? "Could not send the report.");

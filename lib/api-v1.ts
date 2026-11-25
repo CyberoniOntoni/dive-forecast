@@ -76,7 +76,9 @@ import type {
   SiteType,
   StoreData,
   Strength,
+  WikiField,
 } from "./types";
+import { WIKI_FIELDS } from "./types";
 
 /**
  * The JSON API for the Android app (app/api/v1/*, contract in API.md). These functions only shape what the server
@@ -118,6 +120,8 @@ export type ApiSite = {
   writtenBy: string[];
   /** The credit as the web says it, "Written by Ann and Bob.", or null with nobody to credit. */
   writtenByLine: string | null;
+  /** The texts ("description", "howToDive") that show a diver's approved edit: each can be reported (POST flags, kind "text"). */
+  editedFields: WikiField[];
   /** Paths on this server, oldest first. */
   photoUrls: string[];
   /**
@@ -235,7 +239,7 @@ export type ApiErrorCode =
   | "needs_terms";
 
 /** Who wrote a site's texts, for apiSite: by default nobody, with how to dive it the adder's own. */
-export type ApiSiteWiki = { writtenBy: string[]; howToDiveEdited: boolean };
+export type ApiSiteWiki = { writtenBy: string[]; howToDiveEdited: boolean; editedFields: WikiField[] };
 
 export function apiSite(site: Site, atollName?: string | null, adderNickname?: string | null, wiki?: ApiSiteWiki): ApiSite {
   const userAdded = site.sourceUrl === "user";
@@ -259,6 +263,7 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     howToDiveByAdder: userAdded && Boolean(site.howToDive) && !wiki?.howToDiveEdited,
     writtenBy: wiki?.writtenBy ?? [],
     writtenByLine: writtenByLine(wiki?.writtenBy ?? []),
+    editedFields: wiki?.editedFields ?? [],
     photoUrls: (site.photos ?? []).map((photo) => photoUrl(site.id, photo.id)),
     adderNickname: userAdded ? (adderNickname ?? null) : null,
   };
@@ -271,9 +276,13 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
 export function wikiOf(store: Pick<StoreData, "users" | "siteEdits">, record: (siteId: string) => Site | null): (site: Site) => ApiSiteWiki {
   const edited = editedSiteIds(store.siteEdits);
   return (site) => {
-    if (!edited.has(site.id)) return { writtenBy: [], howToDiveEdited: false };
-    const { source } = liveTexts(originalTexts(record(site.id)), store.siteEdits, site.id);
-    return { writtenBy: siteContributors(store, site.id).map((diver) => diver.nickname), howToDiveEdited: source.howToDive != null };
+    if (!edited.has(site.id)) return { writtenBy: [], howToDiveEdited: false, editedFields: [] };
+    const { texts, source } = liveTexts(originalTexts(record(site.id)), store.siteEdits, site.id);
+    return {
+      writtenBy: siteContributors(store, site.id).map((diver) => diver.nickname),
+      howToDiveEdited: source.howToDive != null,
+      editedFields: WIKI_FIELDS.filter((field) => source[field] != null && texts[field] !== ""),
+    };
   };
 }
 
@@ -1085,8 +1094,8 @@ export function apiReviewResult(siteId: string, result: ReviewActionResult | Pho
 /** POST /api/v1/sites and its photos: the site as GET /api/v1/sites/{id} gives it. */
 export type ApiSiteSaved = { apiVersion: number; site: ApiSite };
 
-export function apiSiteSaved(site: Site, atollName: string | null, status: number, adderNickname: string | null = null): Response {
-  return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName, adderNickname) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
+export function apiSiteSaved(site: Site, atollName: string | null, status: number, adderNickname: string | null = null, wiki?: ApiSiteWiki): Response {
+  return apiJson({ apiVersion: API_VERSION, site: apiSite(site, atollName, adderNickname, wiki) } satisfies ApiSiteSaved, { status, cacheControl: API_NO_STORE });
 }
 
 /** One row of a scoreboard: the nickname (which opens their page), the words under it and the number at the end. */

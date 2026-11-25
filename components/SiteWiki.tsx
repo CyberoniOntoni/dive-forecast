@@ -72,12 +72,19 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
   }
 
   function send() {
+    // Only the fields the diver changed (and those of their own waiting edit, which this one replaces): sending an
+    // untouched field would undo an edit approved to it while the form was open.
+    const sent = fields.filter((field) => drafts[field] !== based[field] || pendingEdit?.changes[field] != null);
+    if (sent.length === 0) {
+      setError("Change something first.");
+      return;
+    }
     run(
       () =>
         proposeSiteEdit({
           siteId: wiki.siteId,
-          texts: Object.fromEntries(fields.map((field) => [field, drafts[field]])),
-          based: Object.fromEntries(fields.map((field) => [field, based[field]])),
+          texts: Object.fromEntries(sent.map((field) => [field, drafts[field]])),
+          based: Object.fromEntries(sent.map((field) => [field, based[field]])),
           note,
         }),
       (result) =>

@@ -52,6 +52,8 @@ data class ApiSite(
   val writtenBy: List<String> = emptyList(),
   /** The credit as the web says it ("Written by Ann and Bob."), or null with nobody to credit. */
   val writtenByLine: String? = null,
+  /** The texts ("description", "howToDive") that show a diver's approved edit: each can be reported (kind "text"). */
+  val editedFields: List<String> = emptyList(),
   /** Paths on the server, oldest first. */
   val photoUrls: List<String> = emptyList(),
   /** Who added the pin (null on a catalog site): their notes and photos are hidden from a diver who blocked them. */
@@ -652,7 +654,7 @@ data class ApiDiver(
 
 /** POST /api/v1/flags: a report of objectionable content (API.md § Content rules, reports and blocking). */
 @Serializable
-data class FlagBody(val kind: String, val siteId: String? = null, val nickname: String? = null, val reason: String, val note: String? = null)
+data class FlagBody(val kind: String, val siteId: String? = null, val nickname: String? = null, val field: String? = null, val reason: String, val note: String? = null)
 
 @Serializable data class ApiFlagSent(val apiVersion: Int = 1, val sent: Boolean = true)
 

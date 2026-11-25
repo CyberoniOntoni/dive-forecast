@@ -23,7 +23,7 @@ import {
   type FieldChange,
 } from "./site-wiki";
 import { WIKI_LABELS } from "./site-wiki-limits";
-import { findSite, mutateStore, readStore, siteRecord } from "./store";
+import { findSite, listMergedSites, mutateStore, readStore, siteRecord } from "./store";
 import { WIKI_FIELDS, type SiteEdit, type StoreData, type WikiField, type WikiTexts } from "./types";
 
 /**
@@ -207,6 +207,8 @@ export async function listPendingEdits(): Promise<PendingEditView[] | null> {
   await ready();
   if (!(await moderatorId())) return null;
   const store = readStore();
+  // One merge of all sites for the names, not one per edit.
+  const names = new Map(listMergedSites().map((site) => [site.id, site.name]));
   return store.siteEdits
     .filter((edit) => edit.status === "pending")
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
@@ -215,7 +217,7 @@ export async function listPendingEdits(): Promise<PendingEditView[] | null> {
       const user = store.users.find((item) => item.id === edit.userId);
       return {
         id: edit.id,
-        site: { id: edit.siteId, name: findSite(edit.siteId)?.name ?? edit.siteId },
+        site: { id: edit.siteId, name: names.get(edit.siteId) ?? edit.siteId },
         diver: user ? { userId: user.id, nickname: user.nickname, storeReview: Boolean(user.storeReview) } : null,
         note: edit.note ?? null,
         createdAt: edit.createdAt,

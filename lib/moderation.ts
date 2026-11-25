@@ -51,7 +51,8 @@ export function requireTermsAccepted(store: StoreData, userId: string): void {
   if (!hasAcceptedTerms(user)) throw new Error(TERMS_FIRST);
 }
 
-export type FlagInput = { kind: FlagKind; siteId?: string; userId?: string; reason: FlagReason; note?: string };
+/** `field`: on a report of a site's texts, the one reported (its writer is filled in from the store). */
+export type FlagInput = { kind: FlagKind; siteId?: string; userId?: string; field?: WikiField; reason: FlagReason; note?: string };
 
 /** Reads a report from a request: a known kind and reason, the ids it needs, a note of at most FLAG_NOTE_MAX. */
 export function readFlagInput(input: unknown): FlagInput {
@@ -68,7 +69,8 @@ export function readFlagInput(input: unknown): FlagInput {
   if (kind !== "diver" && !siteId) throw new Error("Say which site.");
   // A site's texts name no diver: the report goes to whoever wrote the newest revision still standing (addFlag).
   if (kind !== "site" && kind !== "text" && !userId) throw new Error("Say which diver.");
-  return { kind, reason, ...(siteId ? { siteId } : {}), ...(userId ? { userId } : {}), ...(note ? { note } : {}) };
+  const field = kind === "text" ? WIKI_FIELDS.find((item) => item === record.field) : undefined;
+  return { kind, reason, ...(siteId ? { siteId } : {}), ...(userId ? { userId } : {}), ...(field ? { field } : {}), ...(note ? { note } : {}) };
 }
 
 /**
@@ -91,10 +93,14 @@ export function addFlag(
     if (!site) return { result: "missing" };
     owner = site.addedBy;
   } else if (input.kind === "text") {
-    // Filed against the diver whose revision the reported field shows now (the card names them per field). With no
-    // diver given (an older app), the newest standing revision's.
-    const sources = [...liveSources(store, input.siteId!).values()];
-    const source = input.userId ? sources.find((edit) => edit.userId === input.userId) : standingEdits(store, (edit) => edit.siteId === input.siteId).at(-1);
+    // Filed against the diver whose revision the reported field shows now (the web card names them per field, the app
+    // sends the field). With neither, the newest standing revision's.
+    const live = liveSources(store, input.siteId!);
+    const source = input.field
+      ? live.get(input.field)
+      : input.userId
+        ? [...live.values()].find((edit) => edit.userId === input.userId)
+        : standingEdits(store, (edit) => edit.siteId === input.siteId).at(-1);
     if (!source) return { result: "missing" };
     owner = source.userId;
   } else {

@@ -205,8 +205,9 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
   store.users = store.users.filter((item) => item.id !== userId);
   store.logins = store.logins.filter((login) => login.email !== user.email);
   store.plans = store.plans.filter((plan) => plan.ownerId !== userId);
-  // Reports they filed, and reports on their content (which goes too).
-  store.flags = store.flags.filter((flag) => flag.reporterId !== userId && flag.userId !== userId);
+  // Reports they filed, and reports on their content (which goes too). Reports on their site texts stay: the approved
+  // text stays live under the anonymous id below, so a moderator can still act on them.
+  store.flags = store.flags.filter((flag) => flag.reporterId !== userId && (flag.userId !== userId || flag.kind === "text"));
   for (const other of store.users) {
     if (!other.blocked?.includes(userId)) continue;
     const kept = other.blocked.filter((id) => id !== userId);
@@ -234,6 +235,9 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
   store.siteEdits = store.siteEdits.filter((edit) => edit.userId !== userId || edit.status === "approved");
   // A moderator's own edit names them as its reviewer too, and every edit they reviewed names them: both take the
   // anonymous id, so nothing left points back to the account (and an own edit still reads as one).
+  for (const flag of store.flags) {
+    if (flag.kind === "text" && flag.userId === userId) flag.userId = anonymous;
+  }
   for (const edit of store.siteEdits) {
     if (edit.reviewerId === userId) edit.reviewerId = anonymous;
     if (edit.userId !== userId) continue;

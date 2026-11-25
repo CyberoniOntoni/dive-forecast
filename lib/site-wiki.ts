@@ -241,7 +241,7 @@ export type Contributor = { userId: string; nickname: string };
 
 /**
  * The divers credited for a site's texts: whoever wrote an approved edit still standing, in the order they first
- * did. A deleted account and the store-review account are left out.
+ * did. A deleted account, a banned one and the store-review account are left out.
  */
 export function siteContributors(store: Pick<StoreData, "users" | "siteEdits">, siteId: string): Contributor[] {
   const seen = new Set<string>();
@@ -250,7 +250,8 @@ export function siteContributors(store: Pick<StoreData, "users" | "siteEdits">, 
     if (seen.has(edit.userId)) continue;
     seen.add(edit.userId);
     const user = findUser(store, edit.userId);
-    if (user && !user.storeReview) credited.push({ userId: user.id, nickname: user.nickname });
+    // A banned diver's revisions that others wrote over stay standing (takeBackTexts), but they get no credit.
+    if (user && !user.storeReview && !user.bannedAt) credited.push({ userId: user.id, nickname: user.nickname });
   }
   return credited;
 }

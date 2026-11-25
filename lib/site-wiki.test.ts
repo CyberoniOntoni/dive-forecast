@@ -192,6 +192,37 @@ describe("edits and accounts", () => {
     expect(ann.revertedAt).toBeUndefined();
   });
 
+  it("a report can name the field, and survives the writer deleting their account", () => {
+    const data = store();
+    const bob = proposeEdit(data, "bob", input({ howToDive: "Vandal" }), ORIGINAL, T0).edit;
+    reviewEdit(data, bob.id, "approve", "mod", ORIGINAL, T0);
+    const ann = proposeEdit(data, "ann", input({ description: "Good" }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, ann.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    expect(addFlag(data, "mod", { kind: "text", siteId: "kandu", field: "howToDive", reason: "spam" }, T0 + 2000)).toMatchObject({
+      result: "saved",
+      flag: { userId: "bob" },
+    });
+    deleteAccountRecords(data, "bob");
+    expect(data.flags).toHaveLength(1);
+    expect(data.flags[0].userId).toBe(bob.userId);
+    expect(bob.userId).toMatch(/^deleted-/);
+    moderate(data, data.flags[0], "remove", "mod", T0 + 3000);
+    expect(liveTexts(ORIGINAL, data.siteEdits, "kandu").texts.howToDive).toBe("Catalog notes.");
+  });
+
+  it("a banned diver's revisions others wrote over earn no credit and no points", () => {
+    const data = store();
+    const bob = proposeEdit(data, "bob", input({ description: "Bob's" }), ORIGINAL, T0).edit;
+    reviewEdit(data, bob.id, "approve", "mod", ORIGINAL, T0);
+    const ann = proposeEdit(data, "ann", input({ description: "Ann's" }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, ann.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    banDiver(data, "bob", T0 + 2000);
+    expect(bob.revertedAt).toBeUndefined();
+    expect(siteContributors(data, "kandu").map((diver) => diver.userId)).toEqual(["ann"]);
+    const stats = diverStats([], data.users, [], T0 + 3000, [], data.siteEdits);
+    expect(stats.find((row) => row.userId === "bob")?.edits ?? 0).toBe(0);
+  });
+
   it("taking back a diver's text leaves a later revision by someone else, which holds the whole field", () => {
     const data = store();
     const spam = proposeEdit(data, "bob", input({ description: "Spam here" }), ORIGINAL, T0).edit;

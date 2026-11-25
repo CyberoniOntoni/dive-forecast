@@ -37,7 +37,9 @@ export function SiteAbout({
   const photos = site.photos ?? [];
   const room = MAX_PHOTOS_PER_SITE - photos.length;
   const canAdd = isAdder && room > 0;
-  if (photos.length === 0 && !adderNickname && !canAdd) return null;
+  // A pin added in the app keeps this card for its Report, which covers the pin and the adder's own notes (shown in
+  // the About card), even once the adder is gone and there are no photos.
+  if (photos.length === 0 && !adderNickname && !canAdd && site.sourceUrl !== "user") return null;
 
   return (
     <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="photos-heading">

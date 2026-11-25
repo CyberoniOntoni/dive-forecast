@@ -132,7 +132,12 @@ export function diverStats(
 ): DiverStats[] {
   const awards = reportAwards(reports);
   const rated = countedRatings(ratings);
-  const edited = countedEdits(siteEdits, EDITS_COUNTED_PER_DAY);
+  // A ban takes back a diver's live text; revisions of theirs others wrote over stay standing but earn nothing.
+  const banned = new Set(users.filter((user) => user.bannedAt).map((user) => user.id));
+  const edited = countedEdits(
+    siteEdits.filter((edit) => !banned.has(edit.userId)),
+    EDITS_COUNTED_PER_DAY,
+  );
   const atollOf = new Map(sites.map((site) => [site.id, site.atollId]));
   const month = toMaldivesWall(new Date(nowMs).toISOString()).slice(0, 7);
   const reportersBySite = new Map<string, Set<string>>();
