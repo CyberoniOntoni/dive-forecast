@@ -55,6 +55,10 @@ export type Site = {
   atollId: string;
   lat: number;
   lon: number;
+  /**
+   * The page the position came from. "user": a pin added in the app. "": a catalog site from the owner's own
+   * unpublished knowledge, with no page to link (the API sends null).
+   */
   sourceUrl: string;
   /** On a pin added in the app ("user" source): the diver who added it (User.id). */
   addedBy?: string;

@@ -97,7 +97,7 @@ export type ApiSite = {
   atollName: string | null;
   /** True for a pin a diver added in the app. */
   userAdded: boolean;
-  /** Where the site's catalog entry came from; null for a pin added in the app. */
+  /** The web page the site's catalog entry came from; null for a pin added in the app or a catalog site with no page. */
   sourceUrl: string | null;
   diveTopM: number | null;
   diveMaxM: number | null;
@@ -233,7 +233,7 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     siteTypeLabel: site.siteType ? SITE_TYPE_LABEL[site.siteType] : null,
     atollName: atollName ?? null,
     userAdded,
-    sourceUrl: userAdded ? null : site.sourceUrl,
+    sourceUrl: userAdded || !/^https?:\/\//i.test(site.sourceUrl) ? null : site.sourceUrl,
     diveTopM: site.diveTopM ?? null,
     diveMaxM: site.diveMaxM ?? null,
     approximatePin: site.pinPlacement === "imagery",

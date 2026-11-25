@@ -71,7 +71,7 @@ Every site on the map (the catalog and pins added in the app) and the atolls' na
 ```
 
 `siteType` is `pass | channel-thila | corner | outer-reef | lagoon | strait-wall`, or null when the site is not
-classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `photoUrls` are paths on this server.
+classified; `siteTypeLabel` is the same in the site page's words ("Rim pass"). `sourceUrl` is the web page a catalog site's position came from, or null for a pin added in the app and for a catalog site with no page to link. `photoUrls` are paths on this server.
 `adderNickname` is who added a pin in the app (null on a catalog site, or once they deleted their account); a client
 hides that site's `howToDive` and `photoUrls` from a diver whose `blocked` list (`GET /api/v1/me`) holds it, as the web
 does.

@@ -15,8 +15,8 @@ Append to `sites` in `data/sites.json`:
 | `atollId` | An existing atoll `id`. A new atoll is step 4. |
 | `lat`, `lon` | On the reef cut, thila, or wreck, not the nearest island. |
 | `pinPlacement`, `pinNote` | `"imagery"` when the source names the site but gives no usable coordinate and you put the pin on the named channel from imagery (step 3's image); `pinNote` says where, and any other gap it could be. The site page then says "position approximate". |
-| `sourceUrl` | The page the coordinate came from. Never `"user"`, which marks an app-added pin and excludes it from atoll mates. |
-| `diveTopM`, `diveMaxM`, `depthSourceUrl` | Only when a page printed them. |
+| `sourceUrl` | The page the coordinate came from. Never `"user"`, which marks an app-added pin and excludes it from atoll mates. `""` when the owner gave the site from their own knowledge and there is no page to link; record where it came from in `data/sources/` instead. |
+| `diveTopM`, `diveMaxM`, `depthSourceUrl` | Only when a page printed them, or the owner gave them from their own dives (then no `depthSourceUrl`; record it in `data/sources/`). |
 | `channelWidthM`, `channelDepthM`, `channelSourceUrl` | Only for a named channel with a printed measurement. They drive the constriction factor, so a guess changes strength. |
 
 Leave the bearing out for now.

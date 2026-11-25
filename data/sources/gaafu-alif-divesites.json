@@ -1,0 +1,354 @@
+{
+  "note": "Provenance for the Gaafu Alif / Gaafu Dhaalu / Raa sites added in model 28. 'owner-list': dropped pins from the 50Bar owner's own list of sites from guiding in Gaafu Alif high confidence on position and name; not published, so these sites have no sourceUrl. 'wannadive': user-contributed Wannadive spot position, checked on Esri imagery (medium). Site types: derived from the outline unless siteTypeSource is manual (set from imagery, noted here).",
+  "retrieved": "2026-11-23",
+  "sites": [
+    {
+      "siteId": "nilandhoo-kandu",
+      "name": "Nilandhoo Channel",
+      "lat": 0.650144,
+      "lon": 73.445488,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Nilandhoo Channel",
+      "aliases": [
+        "Kuredhdhoo Kandu (Wannadive)"
+      ],
+      "change": "moved 2.5 km north from the imagery pin between Nilandhoo and Dhaandhoo, which was the other candidate gap"
+    },
+    {
+      "siteId": "dhandhoo-channel",
+      "name": "Dhandhoo Channel",
+      "lat": 0.631756,
+      "lon": 73.45698,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Dhandhoo Channel",
+      "aliases": [
+        "Nilandhoo Kandu (Wannadive)"
+      ],
+      "depthFromOwner": "about 32 m in the middle of the channel"
+    },
+    {
+      "siteId": "dhandhoo-caves",
+      "name": "Dhandhoo Caves",
+      "lat": 0.629817,
+      "lon": 73.459047,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Dhandhoo Caves Start",
+      "driftEnd": [
+        0.627826,
+        73.462618
+      ],
+      "note": "Drift along the outer wall SE from the channel mouth; pin is the start. Within 0.8 km of Dhandhoo Channel, so it takes the across-rim model."
+    },
+    {
+      "siteId": "vodamula",
+      "name": "Vodamula",
+      "lat": 0.600553,
+      "lon": 73.497632,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Vodamula",
+      "typeNote": "manual pass: pin in the gap between the two islands on imagery"
+    },
+    {
+      "siteId": "mahadhoo",
+      "name": "Mahadhoo",
+      "lat": 0.590129,
+      "lon": 73.503437,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Mahadhoo",
+      "typeNote": "manual corner: lagoon-side mouth of the narrow gap NW of Mahadhoo"
+    },
+    {
+      "siteId": "mobula",
+      "name": "Mobula",
+      "lat": 0.572105,
+      "lon": 73.5188,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Mobula",
+      "typeNote": "manual corner: ocean-side mouth of the gap between Mahadhoo and the small island to the SE"
+    },
+    {
+      "siteId": "funadhoo-channel",
+      "name": "Funadhoo Channel",
+      "lat": 0.569356,
+      "lon": 73.525837,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Funadhoo Channel"
+    },
+    {
+      "siteId": "park-thila",
+      "name": "Park Thila",
+      "lat": 0.545196,
+      "lon": 73.483458,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "kondey-kandu",
+      "name": "Kondey Channel",
+      "lat": 0.488081,
+      "lon": 73.558522,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Kondey Channel",
+      "change": "re-pinned 70 m from the imagery pin; Wannadive agrees within 200 m",
+      "depthFromOwner": "goes to about 40 m"
+    },
+    {
+      "siteId": "kondey-coral-garden",
+      "name": "Coral Garden",
+      "lat": 0.484132,
+      "lon": 73.541705,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Coral Garden"
+    },
+    {
+      "siteId": "nemo-thila",
+      "name": "Nemo Thila",
+      "lat": 0.467493,
+      "lon": 73.549268,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "gemanafushi-channel",
+      "name": "Gemanafushi Channel",
+      "lat": 0.456098,
+      "lon": 73.569854,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Gemanafushi Channel",
+      "aliases": [
+        "Maarehaa Kandu (Wannadive)"
+      ],
+      "depthFromOwner": "12-30 m, sandy bottom strips, eagle rays"
+    },
+    {
+      "siteId": "gemanafushi-canyon",
+      "name": "Gemanafushi Canyon",
+      "lat": 0.443059,
+      "lon": 73.578593,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "hula-thila",
+      "name": "Hula Thila",
+      "lat": 0.450525,
+      "lon": 73.504805,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "kudafaru-thila",
+      "name": "Kudafaru Thila",
+      "lat": 0.446215,
+      "lon": 73.499973,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "hassanbe-thila",
+      "name": "Hassanbe Thila",
+      "lat": 0.44512,
+      "lon": 73.511182,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "coral-city",
+      "name": "Coral City (Dhuraghalla)",
+      "lat": 0.6142,
+      "lon": 73.441186,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Coral City (Dhuraghalla)",
+      "aliases": [
+        "Nilandhoo Giri (Wannadive, same reef, 0.6 km SW)"
+      ],
+      "depthFromOwner": "12-30 m, coral garden, mostly dived shallow; affected by channel flow but many areas sheltered by coral formations"
+    },
+    {
+      "siteId": "coral-garden-2-gaafu-alif",
+      "name": "Coral Garden 2",
+      "lat": 0.657396,
+      "lon": 73.41398,
+      "source": "owner-list",
+      "confidence": "high",
+      "sourceLabel": "Coral Garden 2"
+    },
+    {
+      "siteId": "boddu",
+      "name": "Boddu",
+      "lat": 0.705331,
+      "lon": 73.330384,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "dhiyadhoo",
+      "name": "Dhiyadhoo",
+      "lat": 0.477642,
+      "lon": 73.527374,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "hootu-kandu",
+      "name": "Hootu Kandu",
+      "lat": 0.581235,
+      "lon": 73.035393,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "meradhoo-kandu",
+      "name": "Meradhoo Kandu",
+      "lat": 0.606554,
+      "lon": 73.077106,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "meradhoo-thila",
+      "name": "Meradhoo Thila",
+      "lat": 0.590676,
+      "lon": 73.093586,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "short-cut-channel",
+      "name": "Short Cut Channel",
+      "lat": 0.622217,
+      "lon": 73.096075,
+      "source": "wannadive",
+      "confidence": "medium",
+      "typeNote": "manual pass: a narrow cut through the rim reef on imagery"
+    },
+    {
+      "siteId": "maafushi-beyru",
+      "name": "Maafushi Beyru",
+      "lat": 0.650883,
+      "lon": 73.105903,
+      "source": "wannadive",
+      "confidence": "medium",
+      "sourceLabel": "Maafushi Beru"
+    },
+    {
+      "siteId": "hafsa-thila",
+      "name": "Hafsa Thila",
+      "lat": 0.626208,
+      "lon": 73.130836,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "kaadedhdhoo-kandu",
+      "name": "Kaadedhdhoo Kandu",
+      "lat": 0.475497,
+      "lon": 72.995911,
+      "source": "wannadive",
+      "confidence": "medium",
+      "change": "re-pinned from the imagery pin to Wannadive's (same gap, 0.5 km)"
+    },
+    {
+      "siteId": "mofzaa-thila",
+      "name": "Mofzaa Thila",
+      "lat": 0.348814,
+      "lon": 73.414421,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "vaadhoo-thila",
+      "name": "Vaadhoo Thila",
+      "lat": 0.251826,
+      "lon": 73.272114,
+      "source": "wannadive",
+      "confidence": "medium"
+    },
+    {
+      "siteId": "fugiri-corner",
+      "name": "Fugiri Corner",
+      "lat": 5.746399,
+      "lon": 72.84838,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "fugiri-thila",
+      "name": "Fugiri Thila",
+      "lat": 5.735304,
+      "lon": 72.864916,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "lundhufushi-corner",
+      "name": "Lundhufushi Corner",
+      "lat": 5.641806,
+      "lon": 72.98782,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "arilandhoo-corner",
+      "name": "Arilandhoo Corner",
+      "lat": 5.658606,
+      "lon": 72.957636,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "hulhudhoo-corner",
+      "name": "Hulhudhoo Corner",
+      "lat": 5.739833,
+      "lon": 73.018228,
+      "source": "owner-list",
+      "confidence": "high"
+    },
+    {
+      "siteId": "ifuru-uthuru-thila",
+      "name": "Ifuru Uthuru Thila",
+      "lat": 5.729152,
+      "lon": 73.021574,
+      "source": "owner-list",
+      "confidence": "high"
+    }
+  ],
+  "notAdded": [
+    {
+      "label": "Viligili Channel",
+      "lat": 0.744136,
+      "lon": 73.439025,
+      "why": "same site as vilingili-kandu, 0.17 km away (Wannadive GPS pin kept); renamed Viligili Channel"
+    },
+    {
+      "label": "(unnamed pin)",
+      "lat": 0.720693,
+      "lon": 73.435591,
+      "why": "no name; lagoon end of the Kooddoo Kandu gap, 0.7 km from that site"
+    },
+    {
+      "label": "(unnamed pin, Raa)",
+      "lat": 5.509313,
+      "lon": 72.870457,
+      "why": "no name"
+    },
+    {
+      "label": "Kuredu Wall",
+      "lat": 5.553943,
+      "lon": 73.464367,
+      "why": "0.24 km from Kuredu Caves (Lhaviyani); likely the same wall"
+    }
+  ],
+  "depthNote": "depthFromOwner: depths and notes the owner gave in the project thread on 24 Nov 2026 (no published page, so no depthSourceUrl). Display only."
+}
