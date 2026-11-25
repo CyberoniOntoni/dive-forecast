@@ -684,6 +684,8 @@ data class ApiMyEdit(
   val changes: ApiTextChanges = ApiTextChanges(),
   val note: String? = null,
   val rejectReason: String? = null,
+  /** Approved and not taken back since: the diver is in the site's credits for it. */
+  val standing: Boolean = false,
   val at: String = "",
 )
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,28 +43,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import app.fiftybar.divecurrent.BuildConfig
 import app.fiftybar.divecurrent.data.api.ApiSiteTexts
+import app.fiftybar.divecurrent.domain.SiteTextsDraft
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.style.TextAlign
 
 /**
  * "Suggest an edit" for a site's About the site and How to dive it, as the web's card: a moderator approves each edit
@@ -130,8 +132,11 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           state.error?.let {
             Text(it, color = colors.stop, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Assertive })
           }
-          // Why Send is off on a waiting edit: there is nothing new in it yet.
-          if (!state.busy && !state.dirty && form?.mine?.status == "pending") {
+          // Why Send is off: a text past its limit, or a waiting edit with nothing new in it yet.
+          val tooLong = state.tooLong
+          if (tooLong != null && state.error == null) {
+            Text(tooLong, color = colors.stop, style = MaterialTheme.typography.bodyMedium)
+          } else if (!state.busy && !state.dirty && form?.mine?.status == "pending") {
             Text(
               "Change a text to update your edit.",
               style = MaterialTheme.typography.bodySmall,
@@ -143,7 +148,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           Button(
             onClick = viewModel::send,
             // Untouched, a waiting edit would only be sent again as it is (and go to the back of the queue).
-            enabled = !state.busy && state.dirty && state.body != null,
+            enabled = !state.busy && state.dirty && state.body != null && state.tooLong == null,
             shape = RoundedCornerShape(18.dp),
             colors =
               ButtonDefaults.buttonColors(
@@ -346,12 +351,15 @@ private fun TextSection(
         "${value.length} / $max",
         style = MaterialTheme.typography.bodySmall,
         color = if (value.length > max * 0.9) colors.stop else colors.dim,
+        fontWeight = if (value.length > max) FontWeight.Bold else null,
         modifier = Modifier.semantics { contentDescription = "${value.length} of $max characters" },
       )
     }
     OutlinedTextField(
       value = value,
-      onValueChange = { onChange(it.take(max)) },
+      // A paste past the limit is kept whole, so nothing is lost without a word: the count turns red and Send waits
+      // until it fits. Only a paste far past it is cut, and never inside an emoji.
+      onValueChange = { onChange(SiteTextsDraft.cutAt(it, max * 4)) },
       enabled = enabled,
       placeholder = { Text(hint, color = colors.dim) },
       keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -401,6 +409,8 @@ private fun StatusRow(color: Color, title: String, detail: String? = null, modif
 @Composable
 private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, thanks: String?, onWithdraw: () -> Unit) {
   val mine = form.mine ?: return
+  // A moderator's own edits go live at once; the line under Send already says so.
+  if (mine.status == "approved" && form.moderator) return
   val colors = CurrentTheme.colors
   SurfaceCard {
     when (mine.status) {
@@ -420,7 +430,9 @@ private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, thanks: String?, onWit
       }
       "rejected" ->
         StatusRow(colors.stop, "A moderator didn't take your last edit", mine.rejectReason?.let { "Their reason: $it" })
-      else -> StatusRow(colors.incoming, "Your last edit was approved", "Thanks! Your name is in the site's credits.")
+      else ->
+        if (mine.standing) StatusRow(colors.incoming, "Your last edit was approved", "Thanks! Your name is in the site's credits.")
+        else StatusRow(colors.mist, "Your last edit was taken back", "A moderator took it back after approving it.")
     }
   }
 }

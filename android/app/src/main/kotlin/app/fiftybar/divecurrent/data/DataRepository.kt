@@ -41,17 +41,24 @@ data class Loaded<T>(val value: T, val savedAt: Long, val offlineError: ApiExcep
  * a failure with no copy at all reaches the caller as an exception. A 404 is never hidden behind an old copy: the
  * site is gone or hidden.
  */
+/** The latest change to the sites made on this phone: [siteId] is the one site it touched, or null for the list. */
+data class SitesChange(val count: Int = 0, val siteId: String? = null)
+
 class DataRepository(
   private val api: DiveCurrentApi,
   private val cache: CachedBodyDao,
   private val now: () -> Long = System::currentTimeMillis,
 ) {
-  private val _sitesChanged = MutableStateFlow(0)
+  private val _sitesChanged = MutableStateFlow(SitesChange())
 
-  /** Counts sites added on this phone, so the map reads the list again. */
-  val sitesChanged: StateFlow<Int> = _sitesChanged.asStateFlow()
+  /**
+   * Counts changes made on this phone to the site list (a site added) or to one site (its texts went live), so the
+   * map reads the list again and that site's page reads the site again.
+   */
+  val sitesChanged: StateFlow<SitesChange> = _sitesChanged.asStateFlow()
 
-  fun markSitesChanged() = _sitesChanged.update { it + 1 }
+  /** [siteId]: the one site that changed; null for a change to the list, such as a new site. */
+  fun markSitesChanged(siteId: String? = null) = _sitesChanged.update { SitesChange(it.count + 1, siteId) }
 
   suspend fun sites(): Loaded<ApiSites> = load(Keys.SITES, ApiSites.serializer()) { api.sites().second }
 

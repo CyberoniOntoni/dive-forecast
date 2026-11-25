@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -54,12 +55,13 @@ fun ContentActions(onReport: () -> Unit, onBlock: (() -> Unit)?, enabled: Boolea
 
 /**
  * A word to tap that starts flush with the text around it: a TextButton's minimum width and inner padding pushed
- * "Report" and "Remove my rating" in from the card's left edge. Still a 48 dp tall target.
+ * "Report" and "Remove my rating" in from the card's left edge. Still a 48 dp target both ways: a short word
+ * ("Block") gets the width, its text still flush left.
  */
 @Composable
 fun InlineAction(text: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
   Box(
-    Modifier.heightIn(min = 48.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+    Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
     contentAlignment = Alignment.CenterStart,
   ) {
     Text(text, color = if (enabled) color else color.copy(alpha = 0.4f), style = MaterialTheme.typography.labelLarge)

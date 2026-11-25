@@ -548,7 +548,7 @@ edit that is not the diver's own waiting one on that site (another diver's, or o
   "moderator": false,
   "adderTextHidden": false,
   "mine": { "id": "…", "status": "pending", "changes": { "description": "…" }, "note": "Dived it last week.",
-            "rejectReason": null, "at": "2026-11-25T04:12:00.000Z" },
+            "rejectReason": null, "standing": false, "at": "2026-11-25T04:12:00.000Z" },
   "live": false,
   "limits": { "description": 2000, "howToDive": 1500, "note": 300 }
 }
@@ -557,6 +557,7 @@ edit that is not the diver's own waiting one on that site (another diver's, or o
 - `canEdit`: signed in, not banned, and agreed to the content rules; `needsTerms` when only the last is missing.
 - `mine` is the diver's edit waiting for review, else the last one approved or rejected in 30 days (with the
   moderator's `rejectReason`), else null. `changes` holds the full new text of only the fields it changes.
+  `standing` is true while an approved edit has not been taken back, so the diver is in the site's credits for it.
 - `adderTextHidden`: the diver blocked whoever added the site and how to dive it is still that diver's own text, so
   `texts.howToDive` is "" and the form offers About the site only.
 

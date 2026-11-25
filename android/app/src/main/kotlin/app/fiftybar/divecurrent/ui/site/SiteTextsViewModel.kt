@@ -33,6 +33,21 @@ data class SiteTextsUiState(
   val dirty: Boolean
     get() = start != null && draft != start
 
+  /** Why Send is held: a text past its limit ("About the site is 2040 characters…"), or null. */
+  val tooLong: String?
+    get() {
+      val f = form ?: return null
+      val over =
+        listOf(
+            Triple("About the site", draft.description, f.limits.description),
+            Triple("How to dive it", draft.howToDive, f.limits.howToDive),
+            Triple("The note", draft.note, f.limits.note),
+          )
+          .firstOrNull { (_, text, max) -> SiteTextsDraft.clean(text).length > max } ?: return null
+      val (label, text, max) = over
+      return "$label is ${SiteTextsDraft.clean(text).length} characters. Shorten it to $max to send."
+    }
+
   /** The body Send would post, or null with nothing changed. */
   val body
     get() = form?.let { SiteTextsDraft.body(it, draft) }
@@ -51,27 +66,42 @@ class SiteTextsViewModel(
   val state: StateFlow<SiteTextsUiState> = _state.asStateFlow()
   val session: StateFlow<Session?> = account.sessions.session
 
+  /** The nickname of the diver whose form (and typing) this is; null before the first sign-in. */
+  private var owner: String? = account.sessions.current()?.nickname
+
   init {
     load()
-    // Signed in, out or as someone else while the screen is open: the form (their own edit, whether they may send)
-    // was the last diver's, so start again for whoever is signed in now. A new nickname is the same diver.
+    // Signed out (an expired sign-in on Send, or signed out elsewhere): keep what was typed, so signing in again picks
+    // it up. Signed in as the same diver: read the form again under the typing. As someone else: their own edit and
+    // whether they may send differ, and the typing was the last diver's, so start again.
     viewModelScope.launch {
       session.distinctUntilChangedBy { it?.token }.drop(1).collect { now ->
-        _state.value = SiteTextsUiState()
-        if (now != null) load()
+        when {
+          now == null -> _state.update { it.copy(loading = false, busy = false) }
+          now.nickname == owner -> load(keepTyping = true)
+          else -> {
+            owner = now.nickname
+            _state.value = SiteTextsUiState()
+            load()
+          }
+        }
       }
     }
   }
 
-  fun load() {
-    if (account.sessions.current() == null || _state.value.loading) return
+  fun load() = load(keepTyping = false)
+
+  private fun load(keepTyping: Boolean) {
+    val session = account.sessions.current()
+    if (session == null || _state.value.loading) return
+    if (owner == null) owner = session.nickname
     _state.update { it.copy(loading = true, error = null) }
-    val token = account.sessions.current()?.token
+    val token = session.token
     viewModelScope.launch {
       try {
         val form = account.siteTexts(siteId)
         if (stale(token)) return@launch
-        show(form, done = null)
+        show(form, done = null, typing = _state.value.takeIf { keepTyping && it.dirty }?.draft)
       } catch (_: SignedOutException) {
         _state.update { it.copy(loading = false) }
       } catch (e: ApiException) {
@@ -99,10 +129,14 @@ class SiteTextsViewModel(
       _state.update { it.copy(error = "Change something first.") }
       return
     }
+    s.tooLong?.let { why ->
+      _state.update { it.copy(error = why) }
+      return
+    }
     act { token ->
       val saved = account.proposeSiteTexts(siteId, body)
       // A moderator's edit is live: the site page and map read the site again.
-      if (saved.live) repository.markSitesChanged()
+      if (saved.live) repository.markSitesChanged(siteId)
       if (stale(token)) return@act
       show(
         saved,
@@ -129,9 +163,12 @@ class SiteTextsViewModel(
       if (!stale(token)) show(form, done = null)
     }
 
-  private fun show(form: ApiSiteTexts, done: String?) {
+  /** Shows [form]; with [typing], the fields keep what the diver had typed rather than starting over. */
+  private fun show(form: ApiSiteTexts, done: String?, typing: SiteTextsDraft? = null) {
     val start = SiteTextsDraft.start(form)
-    _state.update { it.copy(loading = false, busy = false, form = form, start = start, draft = start, error = null, done = done) }
+    _state.update {
+      it.copy(loading = false, busy = false, form = form, start = start, draft = typing ?: start, error = null, done = done)
+    }
   }
 
   /** Another diver signed in (or out) while an answer was on its way: it is the last diver's form, so it is dropped. */
@@ -145,7 +182,8 @@ class SiteTextsViewModel(
       try {
         block(token)
       } catch (_: SignedOutException) {
-        _state.update { it.copy(busy = false, error = "Sign in again to edit this site.") }
+        // The sign-in expired: the typing stays, and signing in again as the same diver brings it back.
+        _state.update { it.copy(busy = false, error = "Sign in again to send your edit. What you typed is kept.") }
       } catch (e: ApiException) {
         if (stale(token)) return@launch
         _state.update { it.copy(busy = false, error = e.message) }
