@@ -287,13 +287,20 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
   if (!site) return null;
   const moderator = (await moderatorId()) != null;
   const store = readStore();
-  const original = originalTexts(siteRecord(store, siteId));
+  const record = siteRecord(store, siteId);
+  const original = originalTexts(record);
   const { source } = liveTexts(original, store.siteEdits, siteId);
+  // A viewer who blocked the adder never sees the adder's own How to dive it, here as on the site page: the diffs
+  // start from an empty one (replayed, since a stored `replaced` would hold it).
+  const viewerId = (await currentSession())?.userId;
+  const blockedAdder = Boolean(record?.addedBy && store.users.find((user) => user.id === viewerId)?.blocked?.includes(record.addedBy));
+  if (blockedAdder) original.howToDive = "";
+  const fromStored = moderator && !blockedAdder;
   // Divers see only the revisions still standing, each against the text it now follows; text a moderator took back
   // (vandalism, a removed report) stays visible to moderators alone.
   const before = standingBefore(original, store.siteEdits, siteId);
   const revisions = store.siteEdits
-    .filter((edit) => edit.siteId === siteId && edit.status === "approved" && (moderator || !edit.revertedAt))
+    .filter((edit) => edit.siteId === siteId && edit.status === "approved" && (fromStored || !edit.revertedAt))
     .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt) || b.id.localeCompare(a.id))
     .map((edit): RevisionView => {
       const user = store.users.find((item) => item.id === edit.userId);
@@ -302,7 +309,7 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
         id: edit.id,
         diver: user && !user.storeReview ? { userId: user.id, nickname: user.nickname } : null,
         at: edit.reviewedAt ?? edit.createdAt,
-        changes: fieldChanges(moderator ? (edit.replaced ?? edit.based) : (before.get(edit.id) ?? edit.based), edit.changes),
+        changes: fieldChanges(fromStored ? (edit.replaced ?? edit.based) : (before.get(edit.id) ?? original), edit.changes),
         reverted: Boolean(edit.revertedAt),
         canRevert: moderator && !edit.revertedAt && fields.every((field) => source[field]?.id === edit.id),
       };

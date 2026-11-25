@@ -155,6 +155,20 @@ describe("reviewing edits", () => {
   });
 });
 
+describe("changing a waiting edit", () => {
+  it("keeps the fields not sent and the text the diver first started from", () => {
+    const data = store();
+    const waiting = proposeEdit(data, "ann", input({ description: "Ann's", howToDive: "Ann's way" }, { description: "", howToDive: "Catalog notes." }), ORIGINAL, T0).edit;
+    const bob = proposeEdit(data, "bob", input({ description: "Bob's" }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, bob.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    // Ann fixes a typo in her description only, starting the form from Bob's live text.
+    proposeEdit(data, "ann", input({ description: "Ann's!" }, { description: "Bob's" }), ORIGINAL, T0 + 2000);
+    expect(waiting.changes).toEqual({ description: "Ann's!", howToDive: "Ann's way" });
+    expect(waiting.based).toEqual({ description: "", howToDive: "Catalog notes." });
+    expect(staleFields(waiting, liveTexts(ORIGINAL, data.siteEdits, "kandu").texts)).toEqual(["description"]);
+  });
+});
+
 describe("edits and accounts", () => {
   it("a ban rejects the diver's waiting edits and takes back their live ones", () => {
     const data = store();

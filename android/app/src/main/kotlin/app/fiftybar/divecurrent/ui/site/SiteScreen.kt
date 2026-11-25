@@ -301,6 +301,7 @@ fun SiteScreen(
               photoUrl = viewModel::photoUrl,
               adderBlocked = photosState.adderBlocked(s),
               onReportText = { field -> if (session != null) reportingField = field else onSignIn() },
+              myNickname = session?.nickname,
             ) {
               // The answer to a report of the texts; on a pin added in the app it shows under the site's own Report.
               if (!(s.userAdded && !photosState.isAdder)) {
@@ -480,13 +481,16 @@ private fun AboutCard(
   adderBlocked: Boolean = false,
   /** Report under a text a diver wrote ("description" or "howToDive"); null hides it. */
   onReportText: ((String) -> Unit)? = null,
+  /** The signed-in diver's nickname: no Report on their own text. */
+  myNickname: String? = null,
   adder: @Composable () -> Unit = {},
 ) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
   // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
   val reportText: @Composable (String) -> Unit = { field ->
-    if (onReportText != null && field in site.editedFields) ContentActions(onReport = { onReportText(field) }, onBlock = null)
+    val mine = myNickname != null && site.editedBy[field]?.equals(myNickname, ignoreCase = true) == true
+    if (onReportText != null && field in site.editedFields && !mine) ContentActions(onReport = { onReportText(field) }, onBlock = null)
   }
   SurfaceCard {
     Text("About the site", style = MaterialTheme.typography.titleSmall)

@@ -183,13 +183,13 @@ export default function PrivacyPage() {
         <p>
           <strong className="text-foam">Deleted:</strong> your email, nickname and About me, your pending sign-in
           codes, your dive plans, your ratings and reviews, every photo you uploaded, the reports you filed and those about
-          your content, your site edits waiting for review or not accepted, and the divers you blocked.
+          your content (except reports on your approved site edits, below), your site edits waiting for review or not accepted, and the divers you blocked.
         </p>
         <p>
           <strong className="text-foam">Kept without your name:</strong> your dive reports, which keep teaching the
           forecast, dive sites you added with their notes, so other divers&rsquo; reports and reviews there keep their place, and
           site edits a moderator approved, which are part of the site&rsquo;s text (no longer credited, your note to the moderators
-          gone). Nothing
+          gone), with any reports about them, so moderators can still act on them. Nothing
           left on them leads back to you, and they no longer count on the scoreboard. Cloudflare keeps a
           30-day restore history of the database, so deleted data can stay in that history until it is 30 days old.
         </p>

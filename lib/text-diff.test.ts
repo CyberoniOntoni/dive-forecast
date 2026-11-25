@@ -11,9 +11,9 @@ describe("diffWords", () => {
     const parts = diffWords(before, after);
     expect(parts).toEqual([
       { kind: "same", text: "Enter on the " },
-      { kind: "removed", text: "north " },
-      { kind: "added", text: "south " },
-      { kind: "same", text: "side at slack.\nDrift west." },
+      { kind: "removed", text: "north" },
+      { kind: "added", text: "south" },
+      { kind: "same", text: " side at slack.\nDrift west." },
     ]);
     expect(join(parts, "removed")).toBe(before);
     expect(join(parts, "added")).toBe(after);
@@ -32,5 +32,14 @@ describe("diffWords", () => {
     expect(diffWords("", "New text")).toEqual([{ kind: "added", text: "New text" }]);
     expect(diffWords("Old text", "")).toEqual([{ kind: "removed", text: "Old text" }]);
     expect(diffWords("", "")).toEqual([]);
+  });
+});
+
+describe("appending words", () => {
+  it("keeps the old last word the same", () => {
+    expect(diffWords("A reef", "A reef with sharks")).toEqual([
+      { kind: "same", text: "A reef" },
+      { kind: "added", text: " with sharks" },
+    ]);
   });
 });

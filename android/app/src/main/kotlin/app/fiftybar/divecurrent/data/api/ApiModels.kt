@@ -54,6 +54,8 @@ data class ApiSite(
   val writtenByLine: String? = null,
   /** The texts ("description", "howToDive") that show a diver's approved edit: each can be reported (kind "text"). */
   val editedFields: List<String> = emptyList(),
+  /** Who wrote what each of editedFields shows (null: a former diver): no Report on the signed-in diver's own. */
+  val editedBy: Map<String, String?> = emptyMap(),
   /** Paths on the server, oldest first. */
   val photoUrls: List<String> = emptyList(),
   /** Who added the pin (null on a catalog site): their notes and photos are hidden from a diver who blocked them. */

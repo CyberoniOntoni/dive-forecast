@@ -1,7 +1,7 @@
 /**
  * A word-level diff of two plain texts, for moderators reviewing a site edit and for the site's history page. Words and
- * the whitespace after them are the units, so a changed word shows as one word struck out and one added, and the
- * joined parts read back as either text.
+ * the whitespace between them are separate units, so a changed word shows as one word struck out and one added, a
+ * last word stays the same when words are added after it, and the joined parts read back as either text.
  */
 
 export type DiffPart = { kind: "same" | "added" | "removed"; text: string };
@@ -9,9 +9,9 @@ export type DiffPart = { kind: "same" | "added" | "removed"; text: string };
 /** Above this many units on each side the diff is not worth the work: the whole text shows as replaced. */
 const MAX_UNITS = 2000;
 
-/** Words with the whitespace that follows each, and any leading whitespace as its own unit. */
+/** Runs of whitespace and runs of anything else, in order. */
 function units(text: string): string[] {
-  return text.match(/\s+|\S+\s*/g) ?? [];
+  return text.match(/\s+|\S+/g) ?? [];
 }
 
 export function diffWords(before: string, after: string): DiffPart[] {

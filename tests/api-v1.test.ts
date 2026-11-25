@@ -66,6 +66,7 @@ describe("API v1 shapes", () => {
       writtenBy: [],
       writtenByLine: null,
       editedFields: [],
+      editedBy: {},
       photoUrls: ["/site-photos/my-reef-1a2b3c4d/p1.jpg"],
       adderNickname: "Reefer",
     });
@@ -92,11 +93,11 @@ describe("API v1 shapes", () => {
       siteEdits: [edit("e1", "ann-id", { howToDive: "Ann's way." }), edit("e22", "rev-id", { description: "Test" }), edit("e333", "bob-id", { description: "x" }, "pending")],
     };
     const wiki = wikiOf(store, () => userPin)(userPin);
-    expect(wiki).toEqual({ writtenBy: ["Ann"], howToDiveEdited: true, editedFields: ["description", "howToDive"] });
+    expect(wiki).toEqual({ writtenBy: ["Ann"], howToDiveEdited: true, editedFields: ["description", "howToDive"], editedBy: { description: null, howToDive: "Ann" } });
     const site = apiSite({ ...userPin, howToDive: "Ann's way." }, null, "Reefer", wiki);
     expect(site).toMatchObject({ howToDive: "Ann's way.", howToDiveByAdder: false, writtenBy: ["Ann"], writtenByLine: "Written by Ann." });
     expect(JSON.stringify(site)).not.toContain("ann-id");
-    expect(wikiOf(store, () => userPin)({ ...userPin, id: "other" })).toEqual({ writtenBy: [], howToDiveEdited: false, editedFields: [] });
+    expect(wikiOf(store, () => userPin)({ ...userPin, id: "other" })).toEqual({ writtenBy: [], howToDiveEdited: false, editedFields: [], editedBy: {} });
   });
 
   it("leaves hidden pins out of the list", () => {

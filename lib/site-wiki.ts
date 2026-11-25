@@ -131,17 +131,27 @@ export function proposeEdit(
   if (!user || user.bannedAt) throw new Error("This account cannot edit sites.");
   requireTermsAccepted(store, userId);
   const live = liveTexts(original, store.siteEdits, input.siteId).texts;
+  const mine = store.siteEdits.find((edit) => edit.siteId === input.siteId && edit.userId === userId && edit.status === "pending");
+  // Changing a waiting edit: a field not sent keeps its waiting change, and a field it already changed keeps the text
+  // the diver first started from, so the moderator still sees when a newer edit came in between.
   const changes: WikiTexts = {};
   const based: WikiTexts = {};
   for (const field of WIKI_FIELDS) {
     const text = input.texts[field];
-    if (text == null || text === live[field]) continue;
+    const waiting = mine?.changes[field];
+    if (text == null) {
+      if (waiting != null) {
+        changes[field] = waiting;
+        based[field] = mine!.based[field] ?? live[field];
+      }
+      continue;
+    }
+    if (text === live[field]) continue;
     changes[field] = text;
-    based[field] = input.based[field] ?? live[field];
+    based[field] = waiting != null ? (mine!.based[field] ?? live[field]) : (input.based[field] ?? live[field]);
   }
   if (Object.keys(changes).length === 0) throw new Error("That is what the site already says.");
   const nowIso = new Date(nowMs).toISOString();
-  const mine = store.siteEdits.find((edit) => edit.siteId === input.siteId && edit.userId === userId && edit.status === "pending");
   if (!mine && !moderator) {
     const waiting = store.siteEdits.filter((edit) => edit.userId === userId && edit.status === "pending").length;
     if (waiting >= PENDING_EDITS_MAX) throw new Error(`You have ${PENDING_EDITS_MAX} edits waiting for review. Try again once they are looked at.`);

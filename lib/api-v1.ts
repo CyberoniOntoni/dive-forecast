@@ -122,6 +122,8 @@ export type ApiSite = {
   writtenByLine: string | null;
   /** The texts ("description", "howToDive") that show a diver's approved edit: each can be reported (POST flags, kind "text"). */
   editedFields: WikiField[];
+  /** Who wrote what each of `editedFields` shows (null: a former diver), so the app hides Report on a diver's own. */
+  editedBy: Partial<Record<WikiField, string | null>>;
   /** Paths on this server, oldest first. */
   photoUrls: string[];
   /**
@@ -239,7 +241,7 @@ export type ApiErrorCode =
   | "needs_terms";
 
 /** Who wrote a site's texts, for apiSite: by default nobody, with how to dive it the adder's own. */
-export type ApiSiteWiki = { writtenBy: string[]; howToDiveEdited: boolean; editedFields: WikiField[] };
+export type ApiSiteWiki = { writtenBy: string[]; howToDiveEdited: boolean; editedFields: WikiField[]; editedBy: Partial<Record<WikiField, string | null>> };
 
 export function apiSite(site: Site, atollName?: string | null, adderNickname?: string | null, wiki?: ApiSiteWiki): ApiSite {
   const userAdded = site.sourceUrl === "user";
@@ -264,6 +266,7 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
     writtenBy: wiki?.writtenBy ?? [],
     writtenByLine: writtenByLine(wiki?.writtenBy ?? []),
     editedFields: wiki?.editedFields ?? [],
+    editedBy: wiki?.editedBy ?? {},
     photoUrls: (site.photos ?? []).map((photo) => photoUrl(site.id, photo.id)),
     adderNickname: userAdded ? (adderNickname ?? null) : null,
   };
@@ -276,12 +279,18 @@ export function apiSite(site: Site, atollName?: string | null, adderNickname?: s
 export function wikiOf(store: Pick<StoreData, "users" | "siteEdits">, record: (siteId: string) => Site | null): (site: Site) => ApiSiteWiki {
   const edited = editedSiteIds(store.siteEdits);
   return (site) => {
-    if (!edited.has(site.id)) return { writtenBy: [], howToDiveEdited: false, editedFields: [] };
+    if (!edited.has(site.id)) return { writtenBy: [], howToDiveEdited: false, editedFields: [], editedBy: {} };
     const { texts, source } = liveTexts(originalTexts(record(site.id)), store.siteEdits, site.id);
+    const editedFields = WIKI_FIELDS.filter((field) => source[field] != null && texts[field] !== "");
+    const nickname = (userId: string) => {
+      const user = store.users.find((item) => item.id === userId);
+      return user && !user.storeReview && !user.bannedAt ? user.nickname : null;
+    };
     return {
       writtenBy: siteContributors(store, site.id).map((diver) => diver.nickname),
       howToDiveEdited: source.howToDive != null,
-      editedFields: WIKI_FIELDS.filter((field) => source[field] != null && texts[field] !== ""),
+      editedFields,
+      editedBy: Object.fromEntries(editedFields.map((field) => [field, nickname(source[field]!.userId)])),
     };
   };
 }
