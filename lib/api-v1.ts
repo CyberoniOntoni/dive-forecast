@@ -343,8 +343,8 @@ export function apiNowcast(nowcasts: SiteNowcast[], maldivesWall: string): ApiNo
 export function apiForecast(site: Site, forecast: SiteForecast): ApiForecast {
   const bearings: GlanceBearings = {
     inwardBearingDeg: forecast.inwardBearingDeg,
-    // The site page's slider takes the curved outgoing heading from the site, not from the forecast.
-    outgoingBearingDeg: site.outgoingBearingDeg ?? null,
+    // The curved outgoing heading of the channel the forecast is for: the followed site's at a pin that follows one.
+    outgoingBearingDeg: forecast.outgoingBearingDeg ?? null,
     bearingSource: forecast.bearingSource,
     forecastRoute: forecast.forecastRoute,
     alongHeadingDeg: forecast.alongHeadingDeg,

@@ -26,7 +26,7 @@ import {
   type LagoonSource,
 } from "./lagoon-flow";
 import { readIslands } from "./islands";
-import { crossesRim, siteRoute } from "./site-type";
+import { crossesRim, followTarget, siteRoute } from "./site-type";
 import { fetchMarine, marineSeriesStale, seawardPoint, seriesWindowKey, siteMarineHours, type FetchOptions, type MarineFetch } from "./marine";
 import { SEAWARD_STEPS_KM } from "./floor-sample";
 import { DRIFT_SMOOTHING_MAX_KM, smoothedDriftHours, type DriftSample } from "./drift-smoothing";
@@ -58,6 +58,11 @@ export type SiteLoad = {
    * site's flow. The heading its "incoming" means. Null for a channel, where incoming follows the inward bearing.
    */
   alongHeadingDeg: number | null;
+  /**
+   * The curved outgoing heading of the channel whose forecast this is (Site.outgoingBearingDeg; the followed site's
+   * for a pin with flowFromSiteId). Null or absent when outgoing is opposite incoming.
+   */
+  outgoingBearingDeg?: number | null;
   hours: HourForecast[];
   unavailable: boolean;
   stale: boolean;
@@ -198,7 +203,7 @@ async function lagoonLoad(
     const level = residual[index];
     return level == null ? [] : [{ time: hour.time, levelM: level }];
   });
-  const forecast = lagoonHours(site, sources, levels, sink);
+  const forecast = lagoonHours(site, sources, levels, sink, site.flowAxisDeg);
   return forecast.axisDeg == null || forecast.hours.length === 0 ? null : { hours: forecast.hours, axisDeg: forecast.axisDeg };
 }
 
@@ -272,9 +277,18 @@ export function routeFor(
   atoll: Atoll | undefined,
 ): { route: ForecastRoute; axisDeg: number | null } | null {
   if (!atoll) return null;
+  const flow = flowSite(site, mates);
   const outside = { lat: atoll.oceanLat, lon: atoll.oceanLon };
-  const deg = resolveBearing(site, mates, outside, rimForAtoll(atoll)).deg;
-  return siteRoute(site, mates, deg);
+  const deg = resolveBearing(flow, mates, outside, rimForAtoll(atoll)).deg;
+  return siteRoute(flow, mates, deg);
+}
+
+/**
+ * The site whose forecast a site shows: the catalog site it names in flowFromSiteId, when that one is in the same atoll
+ * and shows its own; otherwise the site itself.
+ */
+export function flowSite(site: Site, mates: readonly Site[]): Site {
+  return followTarget(site, mates) ?? site;
 }
 
 /** The axis "incoming" means at a strait wall or a wall whose current runs along the reef; null elsewhere or with no atoll. */
@@ -290,16 +304,20 @@ export async function loadSite(
   reports: readonly Report[],
   options: FetchOptions = {},
 ): Promise<SiteLoad> {
-  const marine = await checkedMarine(site, mates, atoll, options);
-  const route = siteRoute(site, mates, marine.bearing);
+  // A pin inside another site's channel runs on that site's place, bearing and section; it keeps its own type and reports.
+  const flow = flowSite(site, mates);
+  const marine = await checkedMarine(flow, mates, atoll, options);
+  const route = siteRoute(flow, mates, marine.bearing);
   const siteType = site.siteType ?? null;
-  if (!marine.ok) return unavailableLoad(marine.bearing, marine.bearingSource, siteType, route);
+  const outgoingBearingDeg = flow.outgoingBearingDeg ?? null;
+  if (!marine.ok) return { ...unavailableLoad(marine.bearing, marine.bearingSource, siteType, route), outgoingBearingDeg };
   const loaded = (forecastRoute: ForecastRoute, alongHeadingDeg: number | null, hours: HourForecast[]): SiteLoad => ({
     bearing: marine.bearing,
     bearingSource: marine.bearingSource,
     siteType,
     forecastRoute,
     alongHeadingDeg,
+    outgoingBearingDeg,
     hours,
     unavailable: false,
     stale: marine.stale,
@@ -318,7 +336,7 @@ export async function loadSite(
     return loaded("along-reef", axis, onAxis(alongReefHours({ hours: marine.hours, alongHeadingDeg: axis }), axis, "wall"));
   }
   if (route.route === "lagoon" && atoll) {
-    const lagoon = await lagoonLoad(site, mates, atoll, marine.hours, options);
+    const lagoon = await lagoonLoad(flow, mates, atoll, marine.hours, options);
     if (lagoon) return loaded("lagoon", lagoon.axisDeg, onAxis(lagoon.hours, lagoon.axisDeg, "lagoon"));
   }
   // A channel, or a lagoon site whose atoll has no outline or ring yet. Inside the lagoon it is never that sure.
@@ -326,20 +344,21 @@ export async function loadSite(
   const hours = forecastHours({
     hours: marine.hours,
     inwardBearingDeg: marine.bearing,
-    reports: route.route === "lagoon" ? lagoonReportsOnBearing(reports, marine.bearing) : reports,
+    reports: axisReportsOnBearing(reports, marine.bearing),
     ringLevel: await ringLevelFor(route.route, atoll, options),
-    ...sectionInput(site),
+    ...sectionInput(flow),
     ...(allowHigh ? {} : { allowHighConfidence: false }),
   });
   return loaded("channel", null, hours);
 }
 
 /**
- * A lagoon site's reports for the channel model it falls back to. A report filed while the lagoon model ran says
- * "incoming" toward its saved lagoon axis, not along the inward bearing, so it is read against the bearing like a
- * wall report against a changed heading. A report with no saved axis was filed on the channel model.
+ * Reports for the channel model. One filed on an axis (a wall, the strait or the lagoon, before the site fell back to
+ * the channel model or was retyped as a channel) says "incoming" toward its saved heading, not along the inward
+ * bearing, so it is read against the bearing like a wall report against a changed heading. A report with no saved
+ * heading was filed on the channel model.
  */
-function lagoonReportsOnBearing(reports: readonly Report[], inwardBearingDeg: number): Report[] {
+function axisReportsOnBearing(reports: readonly Report[], inwardBearingDeg: number): Report[] {
   return reports.map((report) => {
     const direction = alongReportDirection(report, inwardBearingDeg, "lagoon");
     return direction ? { ...report, direction } : report;
@@ -364,11 +383,12 @@ export async function reportTideForSite(
   time: string,
   options: FetchOptions = {},
 ): Promise<ReportTide | null> {
-  const marine = await checkedMarine(site, mates, atoll, options);
+  const flow = flowSite(site, mates);
+  const marine = await checkedMarine(flow, mates, atoll, options);
   if (!marine.ok) return null;
   const slopeWindowM = residualSlopeWindow(marine.hours, time);
   if (!slopeWindowM) return null;
-  const ring = await ringLevelFor(siteRoute(site, mates, marine.bearing).route, atoll, options);
+  const ring = await ringLevelFor(siteRoute(flow, mates, marine.bearing).route, atoll, options);
   return {
     headWindowM: headWindowAt(marine.hours, time, ring),
     slopeWindowM,
@@ -397,8 +417,8 @@ const lineUpKeys = new WeakMap<readonly Site[], Map<string, string>>();
 
 /**
  * What decides a site's lenders: every same-atoll pin's place and kind, hashed. Whether a mate crosses the
- * rim depends on the passes near it, and a fallback bearing on the seeded mates, so any change among them must miss
- * the memo.
+ * rim depends on the passes near it and on its alongReef and flowFromSiteId, and a fallback bearing on the seeded
+ * mates, so any change among them must miss the memo.
  */
 function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   let byAtoll = lineUpKeys.get(mates);
@@ -413,7 +433,7 @@ function atollMatesKey(atoll: Atoll, mates: readonly Site[]): string {
   for (const mate of mates) {
     if (mate.atollId !== atoll.id) continue;
     count += 1;
-    const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}|`;
+    const text = `${mate.id}:${mate.lat}:${mate.lon}:${mate.siteType ?? ""}:${mate.siteTypeSource ?? ""}:${mate.sourceUrl}:${mate.inwardBearingDeg ?? ""}:${mate.alongReef ?? ""}:${mate.flowFromSiteId ?? ""}|`;
     for (let at = 0; at < text.length; at += 1) {
       const code = text.charCodeAt(at);
       first = Math.imul(first ^ code, 0x01000193);

@@ -6,9 +6,9 @@ import { boatRoute } from "./boat-route-data";
 import { ROUTE_BAD_DESTINATION, ROUTE_BAD_POSITION, ROUTE_OUTSIDE } from "./boat-route-limits";
 import { readPointDestination } from "./point-destination";
 import { FORECAST_NOTICE, parseWall, toMaldivesWall } from "./forecast";
-import { siteNoteFor } from "./site-type";
+import { followNote, siteNoteFor } from "./site-type";
 import { forecastAtReport } from "./forecast-log";
-import { alongHeadingFor, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
+import { alongHeadingFor, flowSite, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
@@ -47,6 +47,7 @@ import {
   removeReviewPhotoRecord,
   countedReports,
   visibleReportsForSite,
+  forecastReportsForFlow,
   forecastReportsForSite,
   saveRating,
   saveReviewText,
@@ -448,7 +449,7 @@ async function predictionAtReport(site: Site, time: string, past = false): Promi
     const catalog = readCatalog();
     const atoll = catalog.atolls.find((item) => item.id === site.atollId);
     const diveMs = parseWall(time);
-    const earlier = forecastReportsForSite(site.id).filter((report) => parseWall(report.time) < diveMs);
+    const earlier = forecastReportsForFlow(site, catalog.sites).filter((report) => parseWall(report.time) < diveMs);
     const options = past ? PAST_WINDOW : {};
     const shown = await loadSite(site, catalog.sites, atoll, earlier, options);
     const modelOnly = await loadSite(site, catalog.sites, atoll, [], options);
@@ -554,10 +555,11 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
   const atoll = catalog.atolls.find((item) => item.id === site.atollId);
   // The offshore waves do not depend on the current, so they load alongside it rather than after it.
   const [loaded, offshore] = await Promise.all([
-    loadSite(site, catalog.sites, atoll, forecastReportsForSite(site.id)),
+    loadSite(site, catalog.sites, atoll, forecastReportsForFlow(site, catalog.sites)),
     loadOffshore(atoll).catch(() => undefined),
   ]);
   const sea = seaStateFor(site, catalog.sites, atoll, loaded, offshore);
+  const followed = flowSite(site, catalog.sites);
   return {
     seaState: sea.hours,
     seaStale: sea.stale,
@@ -567,10 +569,11 @@ export async function forecastSite(siteId: string): Promise<SiteForecast> {
     notice: FORECAST_NOTICE,
     inwardBearingDeg: loaded.bearing,
     bearingSource: loaded.bearingSource,
+    outgoingBearingDeg: loaded.outgoingBearingDeg ?? null,
     siteType: loaded.siteType,
     forecastRoute: loaded.forecastRoute,
     alongHeadingDeg: loaded.alongHeadingDeg,
-    siteNote: siteNoteFor(loaded.siteType, loaded.forecastRoute),
+    siteNote: followed === site ? siteNoteFor(loaded.siteType, loaded.forecastRoute) : followNote(followed.name),
     fetchedAt: loaded.fetchedAt,
   };
 }

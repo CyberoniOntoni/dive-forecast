@@ -120,6 +120,24 @@ describe("lagoonHours", () => {
     expect(new Set(directions).size).toBe(2);
     expect(result.hours.every((hour) => hour.confidence === "low")).toBe(true);
   });
+
+  it("projects on a fixed axis when the site sets one", () => {
+    const times = Array.from({ length: 24 }, (_, index) => `2026-09-01T${String(index).padStart(2, "0")}:00`);
+    const sources = ringSamples(RIM).map((sample) => ({
+      lat: sample.on.lat,
+      lon: sample.on.lon,
+      weightKm: 7,
+      flow: new Map(times.map((time, index) => [time, 0.2 * Math.sin((2 * Math.PI * index) / 12.42)])),
+    }));
+    const levels = times.map((time) => ({ time, levelM: 0 }));
+    const free = lagoonHours(nearWest, sources, levels, lagoonSink(nearWest, RIM));
+    const fixed = lagoonHours(nearWest, sources, levels, lagoonSink(nearWest, RIM), 0);
+    expect(fixed.axisDeg).toBe(0);
+    // The flow here runs east-west, so across it, on a north-south axis, it is weaker every hour.
+    const rank = { slack: 0, mild: 1, strong: 2, too_strong: 3 } as const;
+    expect(fixed.hours.every((hour, index) => rank[hour.strength] <= rank[free.hours[index].strength])).toBe(true);
+    expect(fixed.hours.some((hour, index) => rank[hour.strength] < rank[free.hours[index].strength])).toBe(true);
+  });
 });
 
 describe("mainAxisDeg and lagoonStrength", () => {

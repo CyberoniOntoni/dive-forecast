@@ -110,6 +110,22 @@ export type Site = {
   /** Where the site sits: pass, channel thila, outer reef or lagoon. Absent until classified. */
   siteType?: SiteType;
   /**
+   * Set by someone who knows the site on an outer-reef wall: its current runs along the reef even within
+   * CHANNEL_FUNNEL_KM of a pass (Dhandhoo Caves, outside the island ridge next to Dhandhoo Channel).
+   */
+  alongReef?: true;
+  /**
+   * At a lagoon site, set by someone who knows it: the compass line its current runs along, degrees in [0, 180)
+   * ("incoming" runs toward it). Replaces the main axis of the modelled lagoon flow (Mahadhoo, along the island's
+   * inner reef).
+   */
+  flowAxisDeg?: number;
+  /**
+   * Another catalog site whose forecast this one shows: a pin inside that site's channel that the coarse outline puts
+   * in the lagoon (Coral Garden on Kondey Channel's wall). Reports at either pin teach both (forecastReportsForFlow).
+   */
+  flowFromSiteId?: string;
+  /**
    * "manual" when someone who knows the site set it; a derived type never overwrites it. "diver": an app-added pin
    * whose adder picked its kind (diverSiteType); "derived" there means the pin's position decided (lib/store.ts).
    */
@@ -397,6 +413,8 @@ export type SiteForecast = {
   inwardBearingDeg: number | null;
   /** Where that bearing came from. Null when there is no bearing. */
   bearingSource: BearingSource | null;
+  /** The curved outgoing heading of the channel this forecast is for (the followed site's at a follower); null when straight. */
+  outgoingBearingDeg?: number | null;
   /** Where the site sits, when classified. */
   siteType: SiteType | null;
   /** Which model made these hours, and so how their direction reads. */

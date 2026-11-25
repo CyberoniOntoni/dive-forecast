@@ -255,19 +255,21 @@ export type LagoonForecast = { hours: HourForecast[]; axisDeg: number | null };
 /**
  * Hour by hour lagoon flow at a site, along its main axis: "incoming" runs toward axisDeg, "outgoing" the other way,
  * as along a reef. `levels` are the site's own residual levels by hour, for the tide line under the slider.
- * Confidence is always low. Empty with no axis when no hour has enough openings.
+ * Confidence is always low. Empty with no axis when no hour has enough openings. `fixedAxisDeg` (a site's
+ * flowAxisDeg) replaces the main axis where someone who knows the site says which way its current runs.
  */
 export function lagoonHours(
   site: Point,
   sources: readonly LagoonSource[],
   levels: readonly { time: string; levelM: number }[],
   sink?: LagoonSink,
+  fixedAxisDeg?: number,
 ): LagoonForecast {
   const flows = levels
     .map((level) => ({ level, u: lagoonVelocity(site, sources, level.time, sink) }))
     .filter((item): item is { level: { time: string; levelM: number }; u: { east: number; north: number } } => item.u != null);
   if (flows.length === 0) return { hours: [], axisDeg: null };
-  const axisDeg = mainAxisDeg(flows.map((item) => item.u));
+  const axisDeg = fixedAxisDeg ?? mainAxisDeg(flows.map((item) => item.u));
   const radians = (axisDeg * Math.PI) / 180;
   const hours = flows.map(({ level, u }) => {
     const along = u.east * Math.sin(radians) + u.north * Math.cos(radians);

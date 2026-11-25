@@ -40,7 +40,8 @@
         0.627826,
         73.462618
       ],
-      "note": "Drift along the outer wall SE from the channel mouth; pin is the start. Within 0.8 km of Dhandhoo Channel, so it takes the across-rim model."
+      "note": "Drift along the outer wall SE from the channel mouth; pin is the start. Within 0.8 km of Dhandhoo Channel, but the owner says it runs along the outer reef (alongReef), off the channel's draw.",
+      "typeNote": "owner (25 Nov 2026): not in the channel; the flow runs along the outer side of the island ridge. Outer reef, alongReef"
     },
     {
       "siteId": "vodamula",
@@ -60,7 +61,7 @@
       "source": "owner-list",
       "confidence": "high",
       "sourceLabel": "Mahadhoo",
-      "typeNote": "manual corner: lagoon-side mouth of the narrow gap NW of Mahadhoo"
+      "typeNote": "owner (25 Nov 2026): not a channel; the flow runs along the inner side of the island. Manual lagoon, flowAxisDeg 125 (the inner reef edge on imagery)"
     },
     {
       "siteId": "mobula",
@@ -107,7 +108,8 @@
       "lon": 73.541705,
       "source": "owner-list",
       "confidence": "high",
-      "sourceLabel": "Coral Garden"
+      "sourceLabel": "Coral Garden",
+      "typeNote": "owner (25 Nov 2026): sits inside Kondey Channel (its south wall on imagery) and takes its flow. Manual pass, flowFromSiteId kondey-kandu"
     },
     {
       "siteId": "nemo-thila",
@@ -136,7 +138,8 @@
       "lat": 0.443059,
       "lon": 73.578593,
       "source": "owner-list",
-      "confidence": "high"
+      "confidence": "high",
+      "typeNote": "owner (25 Nov 2026): not in the channel; the flow runs along the outer side of the island ridge. Outer reef, alongReef"
     },
     {
       "siteId": "hula-thila",

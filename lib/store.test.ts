@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { addReport, addUserSite, listMergedSites, readStore, saveRating, setStorePath } from "./store";
+import { addReport, addUserSite, forecastReportsForFlow, listMergedSites, readStore, saveRating, setStorePath } from "./store";
 import { UNSEEDED_ATOLL_ID, type Report, type Site } from "./types";
 
 const DATA_DIR = path.join(process.cwd(), "data");
@@ -52,6 +52,23 @@ function sampleSite(id: string): Site {
 function tmpLeftovers() {
   return fs.readdirSync(DATA_DIR).filter((name) => /^\.store\..*\.tmp$/.test(name));
 }
+
+describe("forecastReportsForFlow", () => {
+  it("gives a channel and the pins that show its forecast every report at any of them, and others only their own", async () => {
+    const catalogPin = (id: string, extra: Partial<Site> = {}): Site => ({ ...sampleSite(id), sourceUrl: "https://example.com", siteType: "pass", ...extra });
+    const channel = catalogPin("channel");
+    const follower = catalogPin("garden", { flowFromSiteId: "channel" });
+    const other = catalogPin("other");
+    const sites = [channel, follower, other];
+    for (const [id, siteId] of [["a", "channel"], ["b", "garden"], ["c", "other"]]) {
+      await addReport({ ...sampleReport(id), siteId });
+    }
+    const ids = (site: Site) => forecastReportsForFlow(site, sites).map((report) => report.id).sort();
+    expect(ids(channel)).toEqual(["a", "b"]);
+    expect(ids(follower)).toEqual(["a", "b"]);
+    expect(ids(other)).toEqual(["c"]);
+  });
+});
 
 describe("readStore", () => {
   it("returns an empty store when the file is missing", () => {
