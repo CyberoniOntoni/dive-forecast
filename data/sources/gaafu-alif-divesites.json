@@ -1,5 +1,5 @@
 {
-  "note": "Provenance for the Gaafu Alif / Gaafu Dhaalu / Raa sites added in model 28. 'owner-list': dropped pins from the 50Bar owner's own list of sites from guiding in Gaafu Alif (not published, so these sites have no sourceUrl) (high confidence on position and name). 'wannadive': user-contributed Wannadive spot position, checked on Esri imagery (medium). Site types: derived from the outline unless siteTypeSource is manual (set from imagery, noted here).",
+  "note": "Provenance for the Gaafu Alif / Gaafu Dhaalu / Raa sites added in model 28. 'owner-list': dropped pins from the 50Bar owner's own list of sites from guiding in Gaafu Alif high confidence on position and name; not published, so these sites have no sourceUrl. 'wannadive': user-contributed Wannadive spot position, checked on Esri imagery (medium). Site types: derived from the outline unless siteTypeSource is manual (set from imagery, noted here).",
   "retrieved": "2026-11-23",
   "sites": [
     {
