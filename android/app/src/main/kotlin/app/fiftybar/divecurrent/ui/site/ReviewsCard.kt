@@ -130,8 +130,9 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
               Icons.Filled.Add,
               state.progress ?: if (mine.photos.isEmpty()) "Add your photos" else "Add more photos",
               detail = "Up to $room more",
+              enabled = !state.busy,
             ) {
-              if (!state.busy) pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+              pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }
           }
           InlineAction("Remove my rating", color = colors.stop, enabled = !state.busy) { confirmRemove = true }

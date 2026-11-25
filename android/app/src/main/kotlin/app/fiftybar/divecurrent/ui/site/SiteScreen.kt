@@ -453,7 +453,7 @@ private fun StatusLine(state: SiteUiState) {
       if (state.fromCache) state.savedAt?.let { add("offline copy saved ${ageLabel(it)}") }
     }
   if (parts.isNotEmpty()) {
-    Text(parts.joinToString(" Â· "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+    Text(parts.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
   }
   if (state.error != null && state.forecast != null) {
     Text(state.error, style = MaterialTheme.typography.bodySmall, color = colors.stop)
@@ -491,11 +491,18 @@ internal fun CardTitle(text: String, color: Color = CurrentTheme.colors.mist) {
  * [accent] marks the card's main action.
  */
 @Composable
-internal fun LinkRow(icon: ImageVector, label: String, detail: String? = null, accent: Boolean = false, onClick: () -> Unit) {
+internal fun LinkRow(
+  icon: ImageVector,
+  label: String,
+  detail: String? = null,
+  accent: Boolean = false,
+  enabled: Boolean = true,
+  onClick: () -> Unit,
+) {
   val colors = CurrentTheme.colors
-  val tint = if (accent) colors.incoming else colors.foam
+  val tint = (if (accent) colors.incoming else colors.foam).let { if (enabled) it else it.copy(alpha = 0.4f) }
   Row(
-    Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
+    Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(14.dp),
   ) {
@@ -519,7 +526,7 @@ private fun NoticeCard(forecast: ApiForecast) {
     if (forecast.notice.isNotBlank()) {
       Text(forecast.notice, style = MaterialTheme.typography.bodySmall, color = colors.mist)
     }
-    // The version alone: the model's parts ("tide+throughflow+â€¦") read as noise here; verify and reports keep them.
+    // The version alone: the model's parts ("tide+throughflow+…") read as noise here; verify and reports keep them.
     Text("Model version ${forecast.modelVersion.substringAfterLast('/')}", style = MaterialTheme.typography.bodySmall, color = colors.dim)
   }
 }
@@ -644,8 +651,9 @@ private fun AdderPhotos(site: ApiSite, state: SitePhotosUiState, onPick: (List<U
       Icons.Filled.Add,
       state.progress ?: if (site.photoUrls.isEmpty()) "Add photos" else "Add more photos",
       detail = "Up to $room more",
+      enabled = !state.busy,
     ) {
-      if (!state.busy) pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+      pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
   }
   state.error?.let {
