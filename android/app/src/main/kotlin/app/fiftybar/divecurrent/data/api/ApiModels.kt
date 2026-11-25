@@ -669,3 +669,39 @@ data class FlagBody(val kind: String, val siteId: String? = null, val nickname: 
 @Serializable data class ApiAboutSaved(val apiVersion: Int = 1, val about: String = "")
 
 @Serializable data class ApiNicknameSaved(val apiVersion: Int = 1, val nickname: String)
+
+/** A site's two texts divers write together (API.md § Site texts). */
+@Serializable data class ApiTexts(val description: String = "", val howToDive: String = "")
+
+/** Only the fields an edit changes; a null one is left out of the body. */
+@Serializable data class ApiTextChanges(val description: String? = null, val howToDive: String? = null)
+
+/** The diver's edit waiting for review, or the last one looked at. `status`: "pending", "approved" or "rejected". */
+@Serializable
+data class ApiMyEdit(
+  val id: String,
+  val status: String,
+  val changes: ApiTextChanges = ApiTextChanges(),
+  val note: String? = null,
+  val rejectReason: String? = null,
+  val at: String = "",
+)
+
+@Serializable data class ApiTextLimits(val description: Int = 2000, val howToDive: Int = 1500, val note: Int = 300)
+
+/** GET/POST /api/v1/sites/{id}/texts and DELETE …/texts/{editId}: the edit form for the site's texts. */
+@Serializable
+data class ApiSiteTexts(
+  val apiVersion: Int = 1,
+  val siteId: String,
+  val texts: ApiTexts = ApiTexts(),
+  val canEdit: Boolean = false,
+  val needsTerms: Boolean = false,
+  val moderator: Boolean = false,
+  val adderTextHidden: Boolean = false,
+  val mine: ApiMyEdit? = null,
+  val live: Boolean = false,
+  val limits: ApiTextLimits = ApiTextLimits(),
+)
+
+@Serializable data class SiteTextsBody(val texts: ApiTextChanges, val based: ApiTextChanges, val note: String? = null)

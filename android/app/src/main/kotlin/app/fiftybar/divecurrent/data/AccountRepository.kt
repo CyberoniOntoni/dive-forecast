@@ -12,6 +12,8 @@ import app.fiftybar.divecurrent.data.api.ApiReportSaved
 import app.fiftybar.divecurrent.data.api.ApiReviews
 import app.fiftybar.divecurrent.data.api.ApiScoreboard
 import app.fiftybar.divecurrent.data.api.ApiSite
+import app.fiftybar.divecurrent.data.api.ApiSiteTexts
+import app.fiftybar.divecurrent.data.api.SiteTextsBody
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.api.FlagBody
 import app.fiftybar.divecurrent.data.api.ReportRequest
@@ -116,6 +118,13 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun addReviewPhoto(siteId: String, jpeg: ByteArray): ApiReviews = signedIn { api.addReviewPhoto(it, siteId, jpeg) }
 
   suspend fun removeReviewPhoto(siteId: String, photoId: String): ApiReviews = signedIn { api.removeReviewPhoto(it, siteId, photoId) }
+
+  /** The edit form for a site's texts, with the diver's own edit (API.md § Site texts). */
+  suspend fun siteTexts(siteId: String): ApiSiteTexts = signedIn { api.siteTexts(it, siteId) }
+
+  suspend fun proposeSiteTexts(siteId: String, body: SiteTextsBody): ApiSiteTexts = signedIn { api.proposeSiteTexts(it, siteId, body) }
+
+  suspend fun withdrawSiteEdit(siteId: String, editId: String): ApiSiteTexts = signedIn { api.withdrawSiteEdit(it, siteId, editId) }
 
   /** Adds a site at a pin; the map and lists read it again. */
   suspend fun addSite(site: AddSiteBody): ApiSite = signedIn { api.addSite(it, site) }.site

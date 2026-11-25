@@ -35,7 +35,8 @@ import type { BoatTrip } from "./boat-route-data";
 import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
 import { REVIEW_MAX } from "./site-details";
 import { editedSiteIds, liveTexts, originalTexts, siteContributors } from "./site-wiki";
-import { writtenByLine } from "./site-wiki-limits";
+import { EDIT_NOTE_MAX, WIKI_MAX, writtenByLine } from "./site-wiki-limits";
+import type { SiteWiki, WikiResult } from "./wiki-actions";
 import { reviewDate, reviewSummaryLine } from "./review-words";
 import { ringBox, type RimRing } from "./rim";
 import type { ShelterAtoll, ShelterView } from "./shelter-grid";
@@ -1171,4 +1172,71 @@ export async function apiViewer(request: Request): Promise<Session | null | Resp
 /** A public read's cache line: a minute without a token; never kept when it holds the asker's own row. */
 export function viewerCache(viewer: Session | null): string {
   return viewer ? API_NO_STORE : "private, max-age=60";
+}
+
+/**
+ * GET/POST /api/v1/sites/{id}/texts and DELETE …/texts/{editId}: the app's edit form for a site's description and how
+ * to dive it (lib/wiki-actions.ts). Nicknames and diver ids stay out: the credits are on the site itself.
+ */
+export type ApiSiteTexts = {
+  apiVersion: number;
+  siteId: string;
+  /** The live texts, as the site shows them; how to dive it is "" while `adderTextHidden`. */
+  texts: { description: string; howToDive: string };
+  canEdit: boolean;
+  needsTerms: boolean;
+  /** A moderator's edit goes live at once. */
+  moderator: boolean;
+  adderTextHidden: boolean;
+  /** The diver's edit waiting for review, or the last one looked at in 30 days. */
+  mine: {
+    id: string;
+    status: "pending" | "approved" | "rejected";
+    changes: { description?: string; howToDive?: string };
+    note: string | null;
+    rejectReason: string | null;
+    at: string;
+  } | null;
+  /** True after a send that went live at once (a moderator's). */
+  live: boolean;
+  limits: { description: number; howToDive: number; note: number };
+};
+
+export function apiSiteTexts(wiki: SiteWiki, live = false): ApiSiteTexts {
+  const mine = wiki.mine;
+  return {
+    apiVersion: API_VERSION,
+    siteId: wiki.siteId,
+    texts: { description: wiki.texts.description, howToDive: wiki.texts.howToDive },
+    canEdit: wiki.canEdit,
+    needsTerms: wiki.needsTerms,
+    moderator: wiki.moderator,
+    adderTextHidden: wiki.adderTextHidden,
+    mine: mine
+      ? {
+          id: mine.id,
+          status: mine.status,
+          changes: {
+            ...(mine.changes.description != null ? { description: mine.changes.description } : {}),
+            ...(mine.changes.howToDive != null ? { howToDive: mine.changes.howToDive } : {}),
+          },
+          note: mine.note,
+          rejectReason: mine.rejectReason,
+          at: mine.at,
+        }
+      : null,
+    live,
+    limits: { description: WIKI_MAX.description, howToDive: WIKI_MAX.howToDive, note: EDIT_NOTE_MAX },
+  };
+}
+
+/** A wiki write's answer: the form again, 401 for a token that stopped working, 400 with the form's words otherwise. */
+export function apiSiteTextsResult(result: WikiResult, status = 200): Response {
+  if (!result.ok || !result.wiki) {
+    if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
+    if (result.error === "That site is gone.") return apiError(404, "not_found", "Unknown site.");
+    if (result.error === "Unknown edit.") return apiError(404, "not_found", "Unknown edit.");
+    return apiError(400, "bad_request", result.error ?? "Could not save your edit.");
+  }
+  return apiJson(apiSiteTexts(result.wiki, result.live), { status, cacheControl: API_NO_STORE });
 }

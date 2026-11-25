@@ -75,7 +75,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -103,7 +102,6 @@ import app.fiftybar.divecurrent.data.api.ApiHour
 import app.fiftybar.divecurrent.data.api.ApiSite
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ageLabel
-import app.fiftybar.divecurrent.domain.depthLabel
 import app.fiftybar.divecurrent.domain.glance
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
@@ -113,6 +111,19 @@ import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.Role
+import app.fiftybar.divecurrent.ui.theme.Eyebrow
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.material.icons.filled.Add
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -122,6 +133,8 @@ fun SiteScreen(
   onSignIn: () -> Unit,
   onNavigate: (ApiSite) -> Unit,
   onShowOnMap: (ApiSite) -> Unit,
+  /** "Suggest an edit" for the site's texts. */
+  onEditTexts: (ApiSite) -> Unit,
   onPeekMap: (ApiSite?) -> Unit,
   reportAt: String? = null,
 ) {
@@ -151,6 +164,14 @@ fun SiteScreen(
   }
   val colors = CurrentTheme.colors
   val context = LocalContext.current
+  // Opened from the map's search: its field, still there under this page, kept the keyboard up and took the page's
+  // swipes as typing. The page has nothing to type into, so it lets go of the focus and puts the keyboard away.
+  val focus = LocalFocusManager.current
+  val keyboard = LocalSoftwareKeyboardController.current
+  LaunchedEffect(Unit) {
+    focus.clearFocus(force = true)
+    keyboard?.hide()
+  }
   val reducedMotion = rememberReducedMotion()
   val scroll = rememberScrollState()
   val forecast = state.forecast
@@ -304,6 +325,7 @@ fun SiteScreen(
               adderBlocked = photosState.adderBlocked(s),
               onReportText = { field -> if (session != null) reportingField = field else onSignIn() },
               myNickname = session?.nickname,
+              onEditTexts = { onEditTexts(s) },
             ) {
               // The answer to a report of the texts; on a pin added in the app it shows under the site's own Report.
               if (!(s.userAdded && !photosState.isAdder)) {
@@ -398,7 +420,7 @@ fun SiteScreen(
 
 /** A 44 dp glass circle that reads over the satellite header and over the page alike. */
 @Composable
-private fun RoundButton(onClick: () -> Unit, content: @Composable () -> Unit) {
+internal fun RoundButton(onClick: () -> Unit, content: @Composable () -> Unit) {
   val colors = CurrentTheme.colors
   IconButton(
     onClick = onClick,
@@ -438,8 +460,12 @@ private fun StatusLine(state: SiteUiState) {
   }
 }
 
+/**
+ * The page's card: the same 20 dp inset as the hour card above it, and, with [title], the small-capitals heading the
+ * forecast tiles use (TIDE, FLOW NEXT), so every card on the page opens the same way.
+ */
 @Composable
-internal fun SurfaceCard(content: @Composable () -> Unit) {
+internal fun SurfaceCard(title: String? = null, content: @Composable ColumnScope.() -> Unit) {
   val colors = CurrentTheme.colors
   Card(
     shape = RoundedCornerShape(24.dp),
@@ -447,7 +473,47 @@ internal fun SurfaceCard(content: @Composable () -> Unit) {
     border = BorderStroke(1.dp, colors.line),
     modifier = Modifier.fillMaxWidth(),
   ) {
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+    Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+      title?.let { CardTitle(it) }
+      content()
+    }
+  }
+}
+
+/** A card's heading in small capitals; also the subheading inside one ("HOW TO DIVE IT"). */
+@Composable
+internal fun CardTitle(text: String, color: Color = CurrentTheme.colors.mist) {
+  Text(text.uppercase(), style = Eyebrow, color = color, modifier = Modifier.semantics { heading() })
+}
+
+/**
+ * A tappable row in a card's list: an icon in a small circle, a label with an optional line under it, and a chevron.
+ * [accent] marks the card's main action.
+ */
+@Composable
+internal fun LinkRow(
+  icon: ImageVector,
+  label: String,
+  detail: String? = null,
+  accent: Boolean = false,
+  enabled: Boolean = true,
+  onClick: () -> Unit,
+) {
+  val colors = CurrentTheme.colors
+  val tint = (if (accent) colors.incoming else colors.foam).let { if (enabled) it else it.copy(alpha = 0.4f) }
+  Row(
+    Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(vertical = 8.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(14.dp),
+  ) {
+    Box(Modifier.size(36.dp).background(tint.copy(alpha = if (accent) 0.16f else 0.07f), CircleShape), contentAlignment = Alignment.Center) {
+      Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
+    }
+    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+      Text(label, style = MaterialTheme.typography.titleSmall, color = tint)
+      detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.dim, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+    Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.dim)
   }
 }
 
@@ -455,12 +521,13 @@ internal fun SurfaceCard(content: @Composable () -> Unit) {
 private fun NoticeCard(forecast: ApiForecast) {
   val colors = CurrentTheme.colors
   if (forecast.notice.isBlank() && forecast.siteNote.isNullOrBlank()) return
-  SurfaceCard {
+  SurfaceCard(title = "How this forecast works") {
     forecast.siteNote?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     if (forecast.notice.isNotBlank()) {
-      Text(forecast.notice, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.8f))
+      Text(forecast.notice, style = MaterialTheme.typography.bodySmall, color = colors.mist)
     }
-    Text("Model ${forecast.modelVersion}", style = MaterialTheme.typography.labelSmall, color = colors.foam.copy(alpha = 0.6f))
+    // The version alone: the model's parts ("tide+throughflow+…") read as noise here; verify and reports keep them.
+    Text("Model version ${forecast.modelVersion.substringAfterLast('/')}", style = MaterialTheme.typography.bodySmall, color = colors.dim)
   }
 }
 
@@ -485,6 +552,7 @@ private fun AboutCard(
   onReportText: ((String) -> Unit)? = null,
   /** The signed-in diver's nickname: no Report on their own text. */
   myNickname: String? = null,
+  onEditTexts: () -> Unit = {},
   adder: @Composable () -> Unit = {},
 ) {
   val colors = CurrentTheme.colors
@@ -494,42 +562,45 @@ private fun AboutCard(
     val mine = myNickname != null && site.editedBy[field]?.equals(myNickname, ignoreCase = true) == true
     if (onReportText != null && field in site.editedFields && !mine) ContentActions(onReport = { onReportText(field) }, onBlock = null)
   }
-  SurfaceCard {
-    Text("About the site", style = MaterialTheme.typography.titleSmall)
-    val facts = listOfNotNull(site.atollName, site.siteTypeLabel, depthLabel(site), if (site.userAdded) "added by a diver" else null)
-    if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium)
+  // The header above already says the kind of site, its atoll and depths; this card is the divers' words about it.
+  SurfaceCard(title = "About the site") {
+    if (site.userAdded) Text("Added by a diver", style = MaterialTheme.typography.bodySmall, color = colors.mist)
     if (site.approximatePin) {
       Text(
         site.pinNote ?: "The pin was placed from imagery, so its position is approximate.",
         style = MaterialTheme.typography.bodySmall,
-        color = colors.foam.copy(alpha = 0.8f),
+        color = colors.mist,
       )
     } else {
-      site.pinNote?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+      site.pinNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.mist) }
     }
     if (adderBlocked) {
       Text(
         "You blocked the diver who added this site, so their notes and photos are hidden. Unblock them on your account screen.",
         style = MaterialTheme.typography.bodySmall,
-        color = colors.foam.copy(alpha = 0.8f),
+        color = colors.mist,
+      )
+    }
+    val howToDive = site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }
+    val written = site.description != null || howToDive != null
+    if (!written) {
+      Text(
+        "Nobody has written about this site yet. Dived it? Tell other divers what it's like and how to dive it.",
+        style = MaterialTheme.typography.bodyMedium,
+        color = colors.mist,
       )
     }
     site.description?.let {
-      Text(it, style = MaterialTheme.typography.bodyMedium)
+      Text(it, style = MaterialTheme.typography.bodyLarge)
       reportText("description")
     }
-    site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }?.let {
-      Text("How to dive it", style = MaterialTheme.typography.labelLarge)
-      Text(it, style = MaterialTheme.typography.bodyMedium)
+    howToDive?.let {
+      Spacer(Modifier.height(2.dp))
+      CardTitle("How to dive it")
+      Text(it, style = MaterialTheme.typography.bodyLarge)
       reportText("howToDive")
     }
-    site.writtenByLine?.let { credit ->
-      Text(
-        credit,
-        style = MaterialTheme.typography.bodySmall,
-        color = colors.foam.copy(alpha = 0.8f),
-      )
-    }
+    site.writtenByLine?.let { credit -> Text(credit, style = MaterialTheme.typography.bodySmall, color = colors.dim) }
     if (site.photoUrls.isNotEmpty() && !adderBlocked) {
       LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
         items(site.photoUrls) { path ->
@@ -543,16 +614,24 @@ private fun AboutCard(
       }
     }
     adder()
-    // Divers write the site's texts together on the web; a moderator approves each edit.
-    OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}#about") }, modifier = Modifier.heightIn(min = 44.dp)) {
-      Text(if (site.description == null && site.howToDive == null) "Write about this site on the web" else "Suggest an edit on the web")
-    }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
-        Text("Open on the web")
+    // One list of what to do from here, the main action first: rows line up where mismatched pills did not.
+    Column {
+      HorizontalDivider(color = colors.line)
+      // Divers write the site's texts together; a moderator approves each edit (SiteTextsScreen).
+      LinkRow(
+        Icons.Filled.Edit,
+        if (written) "Suggest an edit" else "Write about this site",
+        detail = "A moderator reads each edit before it shows",
+        accent = true,
+        onClick = onEditTexts,
+      )
+      HorizontalDivider(color = colors.line)
+      LinkRow(Icons.AutoMirrored.Filled.ExitToApp, "Open on the web", detail = BuildConfig.WEB_URL.substringAfter("://")) {
+        uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}")
       }
       site.sourceUrl?.let { source ->
-        OutlinedButton(onClick = { uri.openUri(source) }, modifier = Modifier.heightIn(min = 44.dp)) { Text("Source") }
+        HorizontalDivider(color = colors.line)
+        LinkRow(Icons.Filled.Info, "Source", detail = Uri.parse(source).host?.removePrefix("www.") ?: source) { uri.openUri(source) }
       }
     }
   }
@@ -568,12 +647,13 @@ private fun AdderPhotos(site: ApiSite, state: SitePhotosUiState, onPick: (List<U
       if (uris.isNotEmpty()) onPick(uris, room)
     }
   if (room > 0) {
-    OutlinedButton(
-      onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+    LinkRow(
+      Icons.Filled.Add,
+      state.progress ?: if (site.photoUrls.isEmpty()) "Add photos" else "Add more photos",
+      detail = "Up to $room more",
       enabled = !state.busy,
-      modifier = Modifier.heightIn(min = 48.dp),
     ) {
-      Text(state.progress ?: if (site.photoUrls.isEmpty()) "Add photos (up to $room)" else "Add more photos (up to $room)")
+      pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
     }
   }
   state.error?.let {

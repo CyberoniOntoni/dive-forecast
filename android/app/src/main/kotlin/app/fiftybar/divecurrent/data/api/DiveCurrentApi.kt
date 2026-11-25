@@ -171,6 +171,15 @@ class DiveCurrentApi(baseUrl: String, private val client: OkHttpClient = default
   suspend fun removeReviewPhoto(token: String, siteId: String, photoId: String): ApiReviews =
     send("DELETE", listOf("api", "v1", "sites", siteId, "review", "photos", photoId), null, token)
 
+  /** The edit form for the site's texts, with the diver's own edit (API.md § Site texts). */
+  suspend fun siteTexts(token: String, siteId: String): ApiSiteTexts = get<ApiSiteTexts>(listOf("api", "v1", "sites", siteId, "texts"), token).first
+
+  suspend fun proposeSiteTexts(token: String, siteId: String, body: SiteTextsBody): ApiSiteTexts =
+    post(listOf("api", "v1", "sites", siteId, "texts"), ApiJson.encodeToString(body), token)
+
+  suspend fun withdrawSiteEdit(token: String, siteId: String, editId: String): ApiSiteTexts =
+    send("DELETE", listOf("api", "v1", "sites", siteId, "texts", editId), null, token)
+
   suspend fun addSite(token: String, site: AddSiteBody): ApiSiteSaved =
     post(listOf("api", "v1", "sites"), ApiJson.encodeToString(site), token)
 

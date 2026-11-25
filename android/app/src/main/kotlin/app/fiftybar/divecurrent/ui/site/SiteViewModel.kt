@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -78,6 +79,8 @@ class SiteViewModel(
       repository.cachedForecast(siteId)?.let { cached -> _state.update { show(it, cached, keepSelection = false) } }
       refresh()
     }
+    // An edit to the site's texts went live (a moderator's, SiteTextsScreen): read the site again.
+    viewModelScope.launch { repository.sitesChanged.drop(1).collect { refresh() } }
   }
 
   fun photoUrl(path: String): String = repository.photoUrl(path)

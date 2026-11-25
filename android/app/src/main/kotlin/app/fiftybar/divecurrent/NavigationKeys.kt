@@ -36,6 +36,9 @@ import kotlinx.serialization.Serializable
 /** "Add a dive site" at a pin long-pressed on the map. */
 @Serializable data class AddSiteKey(val lat: Double, val lon: Double) : NavKey
 
+/** "Suggest an edit" for a site's About the site and How to dive it; the name comes along for the title. */
+@Serializable data class SiteTextsKey(val siteId: String, val siteName: String) : NavKey
+
 /** The scoreboard: reporters this month and all time, and divers who added sites. */
 @Serializable data object ScoreboardKey : NavKey
 
