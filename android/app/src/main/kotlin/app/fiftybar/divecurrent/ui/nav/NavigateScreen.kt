@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.nav
 
+import app.fiftybar.divecurrent.ui.components.RouteLimitation
 import app.fiftybar.divecurrent.ui.savedImageryBoxes
 
 import android.Manifest
@@ -166,7 +167,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
     topBar = {
       TopAppBar(
         title = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Stop navigating") } },
+        navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "End the boat route") } },
         actions = {
           if (state.fixes.isNotEmpty()) {
             IconButton(onClick = viewModel::frame) { Icon(Icons.Filled.LocationOn, "Show the whole route") }
@@ -205,11 +206,12 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
           Modifier.heightIn(max = panelMax).verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, top = 18.dp).navigationBarsPadding(),
           verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+          RouteLimitation()
           val gps = state.gps
           when {
             !granted ->
               Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Navigation needs the phone's location. Allow it to follow the boat.", color = colors.stop)
+                Text("The boat route needs the phone's location to follow the boat. Allow it to start.", color = colors.stop)
                 OutlinedButton(
                   onClick = {
                     if (blocked) {
@@ -243,7 +245,7 @@ fun NavigateScreen(destinationId: String, name: String, lat: Double, lon: Double
             colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.stop),
             modifier = Modifier.fillMaxWidth().height(52.dp),
           ) {
-            Text("End navigation", style = MaterialTheme.typography.titleMedium)
+            Text("End route", style = MaterialTheme.typography.titleMedium)
           }
           Spacer(Modifier.height(4.dp))
         }

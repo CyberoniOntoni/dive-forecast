@@ -1,6 +1,7 @@
 import type { Control, Layer, Map as LeafletMap } from "leaflet";
 import type { RimRing } from "./rim";
 import { seaDetail } from "./sea-text";
+import { SEA_SURFACE_NOTE } from "./safety-copy";
 import { FIELD_LAND, FIELD_NONE, FIELD_OTHER, FIELD_OUTSIDE, FIELD_STEP_M, FIELD_UNKNOWN } from "./shelter-field";
 import { SEA_BAND_LIMITS_M, type SeaStateHour } from "./types";
 
@@ -361,7 +362,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
     setNote(
       next.atolls.length === 0
         ? "Waves for this area are still loading. Move the map in a moment."
-        : [next.stale ? "From old wave data." : "", unknown ? "Clear patches: no wave or wind data for that hour." : "", "Tap the water for details."]
+        : [SEA_SURFACE_NOTE, next.stale ? "From old wave data." : "", unknown ? "Clear patches: no wave or wind data for that hour." : "", "Tap the water for details."]
             .filter(Boolean)
             .join(" "),
     );
@@ -414,7 +415,7 @@ export function shelterLayer(L: LeafletLib, map: LeafletMap, source: ShelterSour
       L.DomEvent.disableClickPropagation(box);
       L.DomEvent.disableScrollPropagation(box);
       const title = L.DomUtil.create("p", "dive-atlas-legend-title", box);
-      title.textContent = "Sea state";
+      title.textContent = "Surface waves";
       const row = L.DomUtil.create("div", "dive-shelter-time", box);
       const back = L.DomUtil.create("button", "", row) as HTMLButtonElement;
       back.type = "button";

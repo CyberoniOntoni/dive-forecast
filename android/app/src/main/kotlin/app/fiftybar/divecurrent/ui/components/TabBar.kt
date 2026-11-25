@@ -22,17 +22,17 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
 
-/** The four places the app opens on: the map now, dive plans, boat navigation, and the diver. */
+/** The four places the app opens on: the map now, dive plans, the boat route, and the diver. */
 enum class Tab(val label: String) {
   Now("Now"),
   Plans("Plans"),
-  Navigate("Navigate"),
+  Navigate("Route"),
   You("You"),
 }
 
 /**
  * The bottom bar on the four top screens. A thin line on top, the chosen tab in a soft teal pill; labels always shown,
- * since four words fit and an icon alone says less than "Navigate".
+ * since four words fit and an icon alone says less than "Route".
  */
 @Composable
 fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier) {

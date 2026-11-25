@@ -52,7 +52,7 @@ What it does:
   of a plan is kept for use out of signal. Signed in, "New plan" on the Plans screen and "Edit plan" on your own plan
   open the editor: title, trip notes, boat speed, then days with their dives (site from a searchable list, time,
   note, and at a channel the current you want), checked with the web editor's rules before saving. Delete is there too.
-- **Boat navigation**: "Navigate here by boat" on a site page, the Navigate tab (sites nearest first, with a
+- **Boat route** (a preview, not for navigation: both screens always say so, `ui/components/SafetyCopy.kt`): "Boat route" on a site page, the Route tab (sites nearest first, with a
   search), or a long press on the map for a point. The screen follows the phone's GPS while it is open (and keeps the
   screen on), asks the server for a route round the islands and reef (`GET /api/v1/boat-route`, the web's route and
   its forecast current), and shows a cockpit: the steer allowing for the current as one big bearing with its compass word and

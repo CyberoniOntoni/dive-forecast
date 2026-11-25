@@ -27,6 +27,7 @@ import {
   type CurrentHere,
   type VeryStrongSite,
 } from "@/lib/route-current";
+import { ROUTE_LIMITATION } from "@/lib/safety-copy";
 import { currentWallTime, MALDIVES_TIME } from "@/lib/site-time";
 
 /** What the map draws while navigating. */
@@ -170,7 +171,7 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
   const shallow = route?.gaps.some((gap) => gap.shallow) ?? false;
 
   return (
-    <section aria-label={`Boat navigation to ${site.name}`} className="w-full text-foam">
+    <section aria-label={`Boat route to ${site.name}`} className="w-full text-foam">
       <div className="flex items-center gap-2">
         <h2 className="min-w-0 flex-1 truncate text-base font-semibold">
           <span className="sr-only">Heading to </span>
@@ -191,6 +192,8 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
           </svg>
         </button>
       </div>
+
+      <RouteLimitation />
 
       {unsupported || gps.status === "error" ? (
         <p role="alert" className="mt-2 rounded-xl bg-stop/15 px-3 py-2 text-sm text-stop">
@@ -237,6 +240,18 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): an amber bar down
+ * the left so it reads as a caution without shouting over the readouts.
+ */
+export function RouteLimitation() {
+  return (
+    <p className="mt-1.5 border-l-2 border-outgoing bg-outgoing/10 py-1 pr-2 pl-2.5 text-xs leading-4 text-foam/90">
+      {ROUTE_LIMITATION}
+    </p>
   );
 }
 

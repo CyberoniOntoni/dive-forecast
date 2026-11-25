@@ -74,7 +74,7 @@ export default function AndroidBetaPage() {
           <li>Report the current after your dive</li>
           <li>Rate and review sites, with photos</li>
           <li>Daily and weekly dive plans you can share with your group or guests</li>
-          <li>Boat navigation to sites, with the current along the route</li>
+          <li>Boat route preview to sites, with the forecast current along the route</li>
           <li>Save whole atolls for offline use, for liveaboards and remote spots with no signal</li>
         </ul>
       </Section>

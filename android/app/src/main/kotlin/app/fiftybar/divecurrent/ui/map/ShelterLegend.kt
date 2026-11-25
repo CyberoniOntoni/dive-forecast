@@ -52,7 +52,7 @@ fun ShelterLegend(
   Surface(modifier, shape = RoundedCornerShape(12.dp), color = colors.glass, contentColor = colors.foam) {
     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Sea state", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text("Surface waves", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         TextButton(onClick = onNow, enabled = at > 0) { Text("Now") }
       }
       Row(verticalAlignment = Alignment.CenterVertically) {

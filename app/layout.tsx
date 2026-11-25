@@ -4,6 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import { AccountLink } from "@/components/AccountLink";
 import { AppTabs } from "@/components/AppTabs";
 import { BetaInviteStrip } from "@/components/BetaInviteStrip";
+import { ForecastIntro } from "@/components/ForecastIntro";
 import { BrandMark } from "@/components/BrandMark";
 import { MapPageLink } from "@/components/MapPageLink";
 import "./globals.css";
@@ -53,6 +54,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
           </div>
         </header>
         <BetaInviteStrip />
+        <Suspense fallback={null}>
+          <ForecastIntro />
+        </Suspense>
         <div className="flex min-h-0 w-full flex-1 flex-col">{children}</div>
       </body>
     </html>

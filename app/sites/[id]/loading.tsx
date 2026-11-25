@@ -10,7 +10,7 @@ export default function Loading() {
           Map
         </div>
         <div className="button-quiet px-4 text-foam/40">
-          Navigate here by boat
+          Boat route
         </div>
       </div>
       <header className="flex min-w-0 flex-col gap-2">
