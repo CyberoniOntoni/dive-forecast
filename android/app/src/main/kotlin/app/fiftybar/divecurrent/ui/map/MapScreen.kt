@@ -176,7 +176,7 @@ fun MapScreen(
   // Kept out here: the list leaves composition while the map shows, and should come back where it was.
   val listState = rememberLazyListState()
   val colors = CurrentTheme.colors
-  // A point long-pressed on the map, waiting for "Navigate here" or "Add a dive site here".
+  // A point long-pressed on the map, waiting for "Boat route here" or "Add a dive site here".
   var pressed by remember { mutableStateOf<LatLon?>(null) }
   // "Add a dive site" asked from the list: says where the pin goes.
   var addHint by remember { mutableStateOf(false) }

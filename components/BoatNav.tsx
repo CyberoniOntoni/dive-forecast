@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { getBoatRoute, type BoatTrip } from "@/lib/actions";
 import {
   alongRoute,
@@ -174,12 +174,14 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
     <section aria-label={`Boat route to ${site.name}`} className="w-full text-foam">
       <div className="flex items-center gap-2">
         {/* The name and its caption make one block as tall as the round buttons beside it. */}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 self-start">
           <h2 className="truncate text-base leading-6 font-semibold">
             <span className="sr-only">Heading to </span>
             {site.name}
           </h2>
-          <RouteLimitation />
+          <div className="flex flex-wrap">
+            <RouteLimitation />
+          </div>
         </div>
         {boat && route ? (
           <button type="button" onClick={() => setFrame((count) => count + 1)} aria-label="Show the whole route" title="Show route" className={ICON_BUTTON}>
@@ -247,24 +249,31 @@ export function BoatNav({ site, onDraw, onChange }: { site: NavSite; onDraw: (dr
 
 /**
  * The not-for-navigation notice, always on show inside the boat route feature (not only in /terms): one quiet amber
- * line with a warning mark, set as the panel title's caption so it costs no room, that opens the full reason as a
- * popover. `align` is the popover's edge: the side of the panel the caption sits on.
+ * caption with a warning mark, so it costs no room, that unfolds the full reason in place. In place, not as a popover:
+ * the panel scrolls, and a short panel (waiting for GPS) would clip one. It returns the caption and the reason as
+ * siblings, so in a wrapping flex row the reason (`basis-full`) drops to its own line under the row.
  */
-export function RouteLimitation({ align = "left", className = "" }: { align?: "left" | "right"; className?: string }) {
+export function RouteLimitation() {
+  const [open, setOpen] = useState(false);
+  const reasonId = useId();
   return (
-    <details className={`group relative ${className}`}>
-      <summary className="-my-1 inline-flex cursor-pointer list-none items-center gap-1 rounded-md py-1 text-xs leading-4 font-medium text-outgoing/90 hover:text-outgoing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen((shown) => !shown)}
+        aria-expanded={open}
+        aria-controls={reasonId}
+        className="-my-1 inline-flex items-center gap-1 rounded-md py-1 text-left text-xs leading-4 font-medium text-outgoing/90 hover:text-outgoing focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+      >
         <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" className="shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3.5l9.5 16.5h-19zM12 10v4.5M12 17.5h.01" />
         </svg>
         <span className="underline decoration-outgoing/40 decoration-dotted underline-offset-2">{ROUTE_LIMITATION_TITLE}</span>
-      </summary>
-      <p
-        className={`absolute top-full ${align === "right" ? "right-0" : "left-0"} z-10 mt-2 w-64 rounded-xl bg-ink px-3 py-2 text-xs leading-[1.1rem] text-foam/85 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.7)] ring-1 ring-foam/15`}
-      >
+      </button>
+      <p id={reasonId} hidden={!open} className="mt-1.5 basis-full rounded-xl bg-ink/60 px-3 py-2 text-xs leading-[1.1rem] text-foam/85 ring-1 ring-foam/10">
         {ROUTE_LIMITATION}
       </p>
-    </details>
+    </>
   );
 }
 

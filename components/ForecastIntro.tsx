@@ -74,6 +74,7 @@ export function ForecastIntro() {
   const open = useSyncExternalStore(subscribe, openInBrowser, closedOnServer);
   const shown = open && pathname === "/" && !readNavigate(params).navigating;
   const card = useRef<HTMLElement>(null);
+  const gotIt = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!shown) return;
@@ -81,6 +82,11 @@ export function ForecastIntro() {
     card.current?.focus({ preventScroll: true });
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") close();
+      // aria-modal: Tab stays on the card, whose one control is "Got it", rather than wandering into the map behind.
+      if (event.key === "Tab") {
+        event.preventDefault();
+        gotIt.current?.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -99,7 +105,7 @@ export function ForecastIntro() {
         aria-modal="true"
         aria-labelledby="forecast-intro-title"
         aria-describedby="forecast-intro-lead"
-        className="intro-card relative w-full outline-none max-w-lg overflow-hidden rounded-3xl text-foam ring-1 ring-foam/15 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.75)]"
+        className="intro-card relative w-full max-w-lg outline-none overflow-hidden rounded-3xl text-foam ring-1 ring-foam/15 shadow-[0_24px_64px_-16px_rgba(0,0,0,0.75)]"
       >
         {/* A tide line across the top: the brand's water, not a stock banner. */}
         <svg aria-hidden="true" viewBox="0 0 400 60" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-0 top-0 h-9 w-full text-incoming">
@@ -139,6 +145,7 @@ export function ForecastIntro() {
               Always check with your dive guide or a local operator before you dive.
             </p>
             <button
+              ref={gotIt}
               type="button"
               onClick={close}
               className="min-h-12 shrink-0 rounded-full bg-incoming px-7 text-sm font-semibold text-ink shadow-[0_8px_24px_-8px_var(--incoming)] transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
