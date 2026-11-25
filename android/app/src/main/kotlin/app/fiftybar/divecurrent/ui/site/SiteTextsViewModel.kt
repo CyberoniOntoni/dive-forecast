@@ -66,9 +66,12 @@ class SiteTextsViewModel(
   fun load() {
     if (account.sessions.current() == null || _state.value.loading) return
     _state.update { it.copy(loading = true, error = null) }
+    val token = account.sessions.current()?.token
     viewModelScope.launch {
       try {
-        show(account.siteTexts(siteId), done = null)
+        val form = account.siteTexts(siteId)
+        if (stale(token)) return@launch
+        show(form, done = null)
       } catch (_: SignedOutException) {
         _state.update { it.copy(loading = false) }
       } catch (e: ApiException) {
@@ -96,10 +99,11 @@ class SiteTextsViewModel(
       _state.update { it.copy(error = "Change something first.") }
       return
     }
-    act {
+    act { token ->
       val saved = account.proposeSiteTexts(siteId, body)
       // A moderator's edit is live: the site page and map read the site again.
       if (saved.live) repository.markSitesChanged()
+      if (stale(token)) return@act
       show(
         saved,
         done =
@@ -111,14 +115,18 @@ class SiteTextsViewModel(
 
   fun withdraw() {
     val id = _state.value.form?.mine?.takeIf { it.status == "pending" }?.id ?: return
-    act { show(account.withdrawSiteEdit(siteId, id), done = "Your edit is withdrawn.") }
+    act { token ->
+      val form = account.withdrawSiteEdit(siteId, id)
+      if (!stale(token)) show(form, done = "Your edit is withdrawn.")
+    }
   }
 
   /** Agrees to the content rules, for divers from before them, then loads the form again. */
   fun acceptTerms() =
-    act {
+    act { token ->
       account.acceptTerms()
-      show(account.siteTexts(siteId), done = null)
+      val form = account.siteTexts(siteId)
+      if (!stale(token)) show(form, done = null)
     }
 
   private fun show(form: ApiSiteTexts, done: String?) {
@@ -126,24 +134,29 @@ class SiteTextsViewModel(
     _state.update { it.copy(loading = false, busy = false, form = form, start = start, draft = start, error = null, done = done) }
   }
 
-  private fun act(block: suspend () -> Unit) {
+  /** Another diver signed in (or out) while an answer was on its way: it is the last diver's form, so it is dropped. */
+  private fun stale(token: String?): Boolean = account.sessions.current()?.token != token
+
+  private fun act(block: suspend (token: String?) -> Unit) {
     if (_state.value.busy) return
     _state.update { it.copy(busy = true, error = null, done = null) }
+    val token = account.sessions.current()?.token
     viewModelScope.launch {
       try {
-        block()
+        block(token)
       } catch (_: SignedOutException) {
         _state.update { it.copy(busy = false, error = "Sign in again to edit this site.") }
       } catch (e: ApiException) {
+        if (stale(token)) return@launch
         _state.update { it.copy(busy = false, error = e.message) }
         // Refused: often the edit changed under the form (a moderator looked at it, or it was withdrawn elsewhere).
         // Read the form again so the card and buttons are true, keeping what the diver typed.
-        if (e is ApiException.Server && (e.status == 400 || e.status == 404)) catchUp()
+        if (e is ApiException.Server && (e.status == 400 || e.status == 404)) catchUp(token)
       }
     }
   }
 
-  private suspend fun catchUp() {
+  private suspend fun catchUp(token: String?) {
     val form =
       try {
         account.siteTexts(siteId)
@@ -152,6 +165,6 @@ class SiteTextsViewModel(
       } catch (_: SignedOutException) {
         return
       }
-    _state.update { it.copy(form = form, start = SiteTextsDraft.start(form)) }
+    if (!stale(token)) _state.update { it.copy(form = form, start = SiteTextsDraft.start(form)) }
   }
 }
