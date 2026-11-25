@@ -1,6 +1,8 @@
 package app.fiftybar.divecurrent.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
@@ -43,15 +46,23 @@ val FLAG_REASONS: List<Pair<String, String>> =
 @Composable
 fun ContentActions(onReport: () -> Unit, onBlock: (() -> Unit)?, enabled: Boolean = true) {
   val colors = CurrentTheme.colors
-  Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-    TextButton(onClick = onReport, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
-      Text("Report", color = colors.foam.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
-    }
-    onBlock?.let { block ->
-      TextButton(onClick = block, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) {
-        Text("Block", color = colors.foam.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium)
-      }
-    }
+  Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+    InlineAction("Report", color = colors.mist, enabled = enabled, onClick = onReport)
+    onBlock?.let { block -> InlineAction("Block", color = colors.mist, enabled = enabled, onClick = block) }
+  }
+}
+
+/**
+ * A word to tap that starts flush with the text around it: a TextButton's minimum width and inner padding pushed
+ * "Report" and "Remove my rating" in from the card's left edge. Still a 48 dp tall target.
+ */
+@Composable
+fun InlineAction(text: String, color: Color, enabled: Boolean = true, onClick: () -> Unit) {
+  Box(
+    Modifier.heightIn(min = 48.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+    contentAlignment = Alignment.CenterStart,
+  ) {
+    Text(text, color = if (enabled) color else color.copy(alpha = 0.4f), style = MaterialTheme.typography.labelLarge)
   }
 }
 

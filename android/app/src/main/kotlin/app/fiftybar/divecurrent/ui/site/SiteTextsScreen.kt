@@ -26,9 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -36,8 +34,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,12 +57,17 @@ import app.fiftybar.divecurrent.data.api.ApiSiteTexts
 import app.fiftybar.divecurrent.ui.appAccount
 import app.fiftybar.divecurrent.ui.appRepository
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.text.style.TextAlign
 
 /**
  * "Suggest an edit" for a site's About the site and How to dive it, as the web's card: a moderator approves each edit
  * before it shows with the diver's name; a moderator's own goes live at once. Signed out, it offers sign-in.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSignIn: () -> Unit) {
   val repository = appRepository()
@@ -88,35 +89,42 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   Scaffold(
     containerColor = colors.ink,
     topBar = {
-      TopAppBar(
-        title = {
-          Column {
-            val empty = form != null && form.texts.description.isEmpty() && form.texts.howToDive.isEmpty()
-            Text(
-              when {
-                form?.moderator == true -> "Edit site texts"
-                empty -> "Write about this site"
-                else -> "Suggest an edit"
-              },
-              maxLines = 1,
-            )
-            Text(siteName, style = MaterialTheme.typography.bodySmall, color = colors.mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
-          }
-        },
-        navigationIcon = {
-          IconButton(onClick = leave, enabled = !state.busy) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the site") }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
-      )
+      // As the site page's header: the round back button, then the screen's name over the site's.
+      Row(
+        Modifier.fillMaxWidth().background(colors.ink).statusBarsPadding().padding(start = 12.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+      ) {
+        RoundButton(onClick = { if (!state.busy) leave() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the site") }
+        Column(Modifier.weight(1f)) {
+          val empty = form != null && form.texts.description.isEmpty() && form.texts.howToDive.isEmpty()
+          Text(
+            when {
+              form?.moderator == true -> "Edit site texts"
+              empty -> "Write about this site"
+              else -> "Suggest an edit"
+            },
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.semantics { heading() },
+          )
+          Text(siteName, style = MaterialTheme.typography.bodyMedium, color = colors.mist, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (editing && state.dirty && !state.busy) {
+          TextButton(onClick = viewModel::undo, modifier = Modifier.heightIn(min = 48.dp)) { Text("Undo", color = colors.incoming) }
+        }
+      }
     },
     bottomBar = {
       if (editing) {
         Column(
           Modifier.fillMaxWidth()
             .background(colors.ink)
+            .drawBehind { drawLine(colors.line, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx()) }
             .navigationBarsPadding()
             .imePadding()
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 12.dp),
           verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
           state.error?.let {
@@ -124,14 +132,27 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           }
           // Why Send is off on a waiting edit: there is nothing new in it yet.
           if (!state.busy && !state.dirty && form?.mine?.status == "pending") {
-            Text("Change a text to update your edit.", style = MaterialTheme.typography.bodySmall, color = colors.mist)
+            Text(
+              "Change a text to update your edit.",
+              style = MaterialTheme.typography.bodySmall,
+              color = colors.mist,
+              textAlign = TextAlign.Center,
+              modifier = Modifier.fillMaxWidth(),
+            )
           }
           Button(
             onClick = viewModel::send,
             // Untouched, a waiting edit would only be sent again as it is (and go to the back of the queue).
             enabled = !state.busy && state.dirty && state.body != null,
             shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = colors.incoming, contentColor = colors.ink),
+            colors =
+              ButtonDefaults.buttonColors(
+                containerColor = colors.incoming,
+                contentColor = colors.ink,
+                disabledContainerColor = colors.deep,
+                disabledContentColor = colors.dim,
+              ),
+            border = if (state.dirty || state.busy) null else BorderStroke(1.dp, colors.line),
             modifier = Modifier.fillMaxWidth().height(56.dp),
           ) {
             Text(
@@ -154,17 +175,20 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp)
         .then(if (editing) Modifier else Modifier.navigationBarsPadding()),
-      verticalArrangement = Arrangement.spacedBy(14.dp),
+      verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-      Text(
-        if (form?.moderator == true) {
-          "You're a moderator: what you save shows on the site at once."
-        } else {
-          "Divers write these texts together. A moderator reads each edit before it shows; once approved, your name is in the credits."
-        },
-        style = MaterialTheme.typography.bodyMedium,
-        color = colors.mist,
-      )
+      Row(Modifier.padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Icon(Icons.Filled.Info, contentDescription = null, tint = colors.dim, modifier = Modifier.padding(top = 1.dp).size(18.dp))
+        Text(
+          if (form?.moderator == true) {
+            "You're a moderator: what you save shows on the site at once."
+          } else {
+            "Divers write these texts together. A moderator reads each edit before it shows; once approved, your name is in the credits."
+          },
+          style = MaterialTheme.typography.bodyMedium,
+          color = colors.mist,
+        )
+      }
       if (session == null) {
         SurfaceCard {
           Text("Sign in to write about sites", style = MaterialTheme.typography.titleSmall)
@@ -226,11 +250,13 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
         onChange = { text -> viewModel.edit { it.copy(description = text) } },
       )
       if (form.adderTextHidden) {
-        Text(
-          "You blocked the diver who added this site, so How to dive it is hidden and can't be edited here.",
-          style = MaterialTheme.typography.bodySmall,
-          color = colors.mist,
-        )
+        SurfaceCard(title = "How to dive it") {
+          Text(
+            "You blocked the diver who added this site, so How to dive it is hidden and can't be edited here.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.mist,
+          )
+        }
       } else {
         TextSection(
           label = "How to dive it",
@@ -246,7 +272,8 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
       if (!form.moderator) {
         TextSection(
           label = "Note to the moderators",
-          hint = "Optional: why the change, or where it comes from. Only moderators see it.",
+          tag = "Optional",
+          hint = "Why the change, or where it comes from. Only moderators see it.",
           value = state.draft.note,
           max = form.limits.note,
           changed = false,
@@ -255,10 +282,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           onChange = { text -> viewModel.edit { it.copy(note = text) } },
         )
       }
-      if (state.dirty && !state.busy) {
-        TextButton(onClick = viewModel::undo, modifier = Modifier.heightIn(min = 48.dp)) { Text("Undo my changes") }
-      }
-      Spacer(Modifier.height(16.dp))
+      Spacer(Modifier.height(8.dp))
     }
   }
   if (confirmWithdraw) {
@@ -295,10 +319,14 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
   }
 }
 
-/** One text: a heading with "Not sent" while it holds typing not sent yet, the field, and a count that warns near the limit. */
+/**
+ * One text in its own card: the heading with "Not sent" while it holds typing not sent yet and the count on the right
+ * (warning near the limit), then the field.
+ */
 @Composable
 private fun TextSection(
   label: String,
+  tag: String? = null,
   hint: String,
   value: String,
   max: Int,
@@ -308,31 +336,35 @@ private fun TextSection(
   onChange: (String) -> Unit,
 ) {
   val colors = CurrentTheme.colors
-  Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+  SurfaceCard {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-      Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+      CardTitle(label)
+      tag?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.dim) }
       if (changed) Pill("Not sent")
+      Spacer(Modifier.weight(1f))
+      Text(
+        "${value.length} / $max",
+        style = MaterialTheme.typography.bodySmall,
+        color = if (value.length > max * 0.9) colors.stop else colors.dim,
+        modifier = Modifier.semantics { contentDescription = "${value.length} of $max characters" },
+      )
     }
     OutlinedTextField(
       value = value,
       onValueChange = { onChange(it.take(max)) },
       enabled = enabled,
       placeholder = { Text(hint, color = colors.dim) },
-      supportingText = {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-          Text("${value.length} / $max", color = if (value.length > max * 0.9) colors.stop else colors.dim)
-        }
-      },
       keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
       minLines = minLines,
-      shape = RoundedCornerShape(16.dp),
+      shape = RoundedCornerShape(14.dp),
+      // Set into the card a shade darker, so the field reads as the place to type.
       colors =
         OutlinedTextFieldDefaults.colors(
           focusedBorderColor = colors.incoming,
-          unfocusedBorderColor = colors.edge,
-          focusedContainerColor = colors.deep,
-          unfocusedContainerColor = colors.deep,
-          disabledContainerColor = colors.deep,
+          unfocusedBorderColor = colors.line,
+          focusedContainerColor = colors.ink,
+          unfocusedContainerColor = colors.ink,
+          disabledContainerColor = colors.ink,
           cursorColor = colors.incoming,
         ),
       modifier = Modifier.fillMaxWidth(),

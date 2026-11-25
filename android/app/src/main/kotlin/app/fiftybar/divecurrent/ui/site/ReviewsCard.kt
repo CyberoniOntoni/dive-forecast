@@ -21,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -53,7 +52,15 @@ import app.fiftybar.divecurrent.ui.components.BlockDialog
 import app.fiftybar.divecurrent.ui.components.ContentActions
 import app.fiftybar.divecurrent.ui.components.ReportDialog
 import app.fiftybar.divecurrent.ui.theme.CurrentTheme
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
+import app.fiftybar.divecurrent.ui.components.InlineAction
 import coil3.compose.AsyncImage
+import androidx.compose.material.icons.filled.Add
 
 /**
  * "Ratings and reviews", as the web site page's card: the average, the diver's own score (1 to 5), review and photos,
@@ -76,36 +83,26 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
       if (uris.isNotEmpty()) viewModel.addPhotos(context, uris)
     }
 
-  SurfaceCard {
-    Text("Ratings and reviews", style = MaterialTheme.typography.titleSmall)
+  SurfaceCard(title = "Ratings and reviews") {
     if (state.loading && card == null) LinearProgressIndicator(Modifier.fillMaxWidth())
     card?.let {
-      Text("${it.summaryLine}. Reviews do not change the current.", style = MaterialTheme.typography.bodyMedium, color = colors.foam.copy(alpha = 0.85f))
+      Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(it.summaryLine, style = MaterialTheme.typography.titleMedium)
+        Text("Reviews don't change the current.", style = MaterialTheme.typography.bodySmall, color = colors.dim)
+      }
     }
     if (card != null) {
       if (!signedIn) {
         OutlinedButton(onClick = onSignIn, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Sign in to rate and review") }
       } else {
         Text(
-          buildString {
-            append("Your rating ${mine?.score ?: "—"}")
-            if (mine == null) append(" · rate it for ${card.ratingPoints} points")
-          },
+          if (mine == null) "Tap a star to rate · +${card.ratingPoints} points" else "Your rating · ${mine.score} of 5",
           style = MaterialTheme.typography.bodyMedium,
+          color = colors.mist,
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-          for (score in 1..5) {
-            FilterChip(
-              selected = mine?.score == score,
-              onClick = { viewModel.rate(score) },
-              enabled = !state.busy,
-              label = { Text("$score") },
-              modifier = Modifier.heightIn(min = 48.dp).semantics { contentDescription = "Rate $score of 5" },
-            )
-          }
-        }
+        StarRow(score = mine?.score, enabled = !state.busy, onRate = viewModel::rate)
         if (mine == null) {
-          Text("Rate it, then you can write a review and add photos.", style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+          Text("Rate it, then you can write a review and add photos.", style = MaterialTheme.typography.bodySmall, color = colors.dim)
         } else {
           OutlinedTextField(
             value = state.draft,
@@ -113,7 +110,9 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
             enabled = !state.busy,
             label = { Text("Your review (optional)") },
             placeholder = { Text("What was the dive like? Marine life, visibility, best time, things to know.") },
-            supportingText = { Text("${state.draft.length} of ${card.reviewMaxChars}") },
+            supportingText = {
+              Text("${state.draft.length} / ${card.reviewMaxChars}", color = colors.dim, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+            },
             minLines = 3,
             modifier = Modifier.fillMaxWidth(),
           )
@@ -127,17 +126,15 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
             PhotoRow(mine.photos, viewModel::photoUrl, label = { "Your photo ${it + 1}" }, onRemove = if (state.busy) null else viewModel::removePhoto)
           }
           if (room > 0) {
-            OutlinedButton(
-              onClick = { pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-              enabled = !state.busy,
-              modifier = Modifier.heightIn(min = 48.dp),
+            LinkRow(
+              Icons.Filled.Add,
+              state.progress ?: if (mine.photos.isEmpty()) "Add your photos" else "Add more photos",
+              detail = "Up to $room more",
             ) {
-              Text(state.progress ?: if (mine.photos.isEmpty()) "Add your photos (up to $room)" else "Add more photos (up to $room)")
+              if (!state.busy) pick.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }
           }
-          TextButton(onClick = { confirmRemove = true }, enabled = !state.busy, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text("Remove my rating", color = colors.stop)
-          }
+          InlineAction("Remove my rating", color = colors.stop, enabled = !state.busy) { confirmRemove = true }
         }
       }
     }
@@ -215,13 +212,42 @@ internal fun ReviewsCard(state: ReviewsUiState, signedIn: Boolean, viewModel: Re
   }
 }
 
+/**
+ * Five stars across the card, each a 48 dp target: lit up to the diver's score. Tapping one rates the site with it
+ * (again to change it). TalkBack reads each as "Rate 3 of 5", selected on the current score.
+ */
+@Composable
+private fun StarRow(score: Int?, enabled: Boolean, onRate: (Int) -> Unit) {
+  val colors = CurrentTheme.colors
+  Row(Modifier.fillMaxWidth().selectableGroup()) {
+    for (n in 1..5) {
+      val lit = score != null && n <= score
+      Box(
+        Modifier.weight(1f)
+          .height(52.dp)
+          .clip(RoundedCornerShape(12.dp))
+          .selectable(selected = score == n, enabled = enabled, role = Role.RadioButton) { onRate(n) }
+          .semantics { contentDescription = "Rate $n of 5" },
+        contentAlignment = Alignment.Center,
+      ) {
+        Icon(
+          Icons.Filled.Star,
+          contentDescription = null,
+          tint = if (lit) colors.tide else colors.foam.copy(alpha = 0.24f),
+          modifier = Modifier.size(34.dp),
+        )
+      }
+    }
+  }
+}
+
 @Composable
 private fun OtherReview(review: ApiReview, photoUrl: (String) -> String, actions: @Composable () -> Unit) {
   val colors = CurrentTheme.colors
   Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Row(verticalAlignment = Alignment.CenterVertically) {
       Text(review.nickname, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-      Text("${review.score} of 5 · ${review.date}", style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.7f))
+      Text("${"★".repeat(review.score.coerceIn(0, 5))} · ${review.date}", style = MaterialTheme.typography.bodySmall, color = colors.mist, modifier = Modifier.semantics { contentDescription = "${review.score} of 5, ${review.date}" })
     }
     review.review?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
     if (review.photos.isNotEmpty()) PhotoRow(review.photos, photoUrl, label = { "Photo ${it + 1} by ${review.nickname}" }, onRemove = null)

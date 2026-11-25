@@ -64,8 +64,7 @@ internal fun ReportDateDialog(initial: LocalDate, onPicked: (LocalDate) -> Unit,
 internal fun RecentReportsCard(reports: List<ApiRecentReport>?, offlineSavedAt: Long?) {
   val colors = CurrentTheme.colors
   if (reports == null) return
-  SurfaceCard {
-    Text("Recent reports", style = MaterialTheme.typography.titleSmall)
+  SurfaceCard(title = "Recent reports") {
     offlineSavedAt?.let {
       Text(
         "Offline copy saved ${ageLabel(it)}; times ago are from then.",
@@ -74,7 +73,7 @@ internal fun RecentReportsCard(reports: List<ApiRecentReport>?, offlineSavedAt: 
       )
     }
     if (reports.isEmpty()) {
-      Text("No reports yet. Tap Report current after your dive.", style = MaterialTheme.typography.bodyMedium)
+      Text("No reports yet. Tap Report current after your dive.", style = MaterialTheme.typography.bodyMedium, color = colors.mist)
       return@SurfaceCard
     }
     reports.forEachIndexed { index, report ->
