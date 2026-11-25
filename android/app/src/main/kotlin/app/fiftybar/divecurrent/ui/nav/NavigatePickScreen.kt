@@ -132,6 +132,7 @@ fun NavigatePickScreen(onBack: (() -> Unit)?, onPick: (Destination) -> Unit) {
     topBar = {
       TopAppBar(
         title = { Text("Boat route") },
+        actions = { RouteLimitation(Modifier.padding(end = 12.dp)) },
         navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )
@@ -157,7 +158,6 @@ fun NavigatePickScreen(onBack: (() -> Unit)?, onPick: (Destination) -> Unit) {
         color = colors.foam.copy(alpha = 0.7f),
         modifier = Modifier.padding(horizontal = 16.dp),
       )
-      RouteLimitation(Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
       state.error?.let {
         Text(it, style = MaterialTheme.typography.bodySmall, color = colors.stop, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
       }

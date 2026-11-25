@@ -3,6 +3,7 @@ package app.fiftybar.divecurrent.ui.components
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,12 +11,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -23,7 +26,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,9 +61,9 @@ object SafetyCopy {
     "A forecast to plan with, not a guarantee. Check with your dive guide or a local operator, and look at the water before you drop in."
 
   /** Inside the boat route screens, always shown: a short title and the reason. */
-  const val ROUTE_LIMITATION_TITLE = "Preview, not for navigation"
+  const val ROUTE_LIMITATION_TITLE = "Not for navigation"
   const val ROUTE_LIMITATION =
-    "Drawn from satellite outlines, not a nautical chart, with forecast current. Keep a lookout and use proper charts."
+    "A route preview drawn from satellite outlines, not a nautical chart, with forecast current. Keep a lookout and use proper charts."
 
   /** Beside the sea state, so it is not read as the current. */
   const val SEA_SURFACE_NOTE = "Waves and wind at the surface, not the current underwater."
@@ -106,20 +114,35 @@ private object SafetyIcons {
   }
 }
 
-/** The not-for-navigation notice: a soft amber card with a warning mark, a caution that does not shout over the readouts. */
+/** The not-for-navigation notice: one small amber pill, so it costs the screen no room; a tap shows the full reason. */
 @Composable
 fun RouteLimitation(modifier: Modifier = Modifier) {
   val colors = CurrentTheme.colors
-  val shape = RoundedCornerShape(16.dp)
+  var open by remember { mutableStateOf(false) }
   Row(
-    modifier.fillMaxWidth().clip(shape).background(colors.outgoing.copy(alpha = 0.1f)).border(1.dp, colors.outgoing.copy(alpha = 0.3f), shape).padding(horizontal = 12.dp, vertical = 10.dp),
-    horizontalArrangement = Arrangement.spacedBy(10.dp),
+    modifier
+      .heightIn(min = 32.dp)
+      .clip(RoundedCornerShape(50))
+      .background(colors.outgoing.copy(alpha = 0.12f))
+      .border(1.dp, colors.outgoing.copy(alpha = 0.35f), RoundedCornerShape(50))
+      .clickable(onClickLabel = "Why") { open = true }
+      .padding(horizontal = 10.dp),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(6.dp),
   ) {
-    Icon(SafetyIcons.warning, contentDescription = null, tint = colors.outgoing, modifier = Modifier.size(18.dp).padding(top = 1.dp))
-    Column {
-      Text(SafetyCopy.ROUTE_LIMITATION_TITLE, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = colors.outgoing)
-      Text(SafetyCopy.ROUTE_LIMITATION, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.8f))
-    }
+    Icon(SafetyIcons.warning, contentDescription = null, tint = colors.outgoing, modifier = Modifier.size(14.dp))
+    Text(SafetyCopy.ROUTE_LIMITATION_TITLE, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = colors.outgoing)
+  }
+  if (open) {
+    AlertDialog(
+      onDismissRequest = { open = false },
+      containerColor = colors.deep,
+      titleContentColor = colors.foam,
+      textContentColor = colors.foam,
+      title = { Text(SafetyCopy.ROUTE_LIMITATION_TITLE) },
+      text = { Text(SafetyCopy.ROUTE_LIMITATION, style = MaterialTheme.typography.bodyMedium) },
+      confirmButton = { TextButton(onClick = { open = false }) { Text("OK") } },
+    )
   }
 }
 
