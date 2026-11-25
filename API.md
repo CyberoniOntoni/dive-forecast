@@ -526,6 +526,52 @@ The app shrinks it first as the web does (`lib/photo-shrink.ts`: long edge 1600 
 since the server strips camera data, rotation included). Answers 201. 413 for a larger body, 415 for another type, 400
 past 6 photos on the review or 24 review photos a day. DELETE takes one of the diver's own photos off and deletes it.
 
+## Site texts
+
+Any signed-in diver who agreed to the content rules proposes a change to a site's "About the site" (`description`) or
+"How to dive it" (`howToDive`), as on the web's site page (`components/SiteWiki.tsx`, `lib/wiki-actions.ts`).
+Moderators approve or reject it on the web; a moderator's own edit goes live at once. The live texts and credits are
+on the site itself (`GET /api/v1/sites/{id}`: `description`, `howToDive`, `writtenBy`). All three take the app's
+token and answer with the form below, `Cache-Control: private, no-store`. A refusal is 400 with the web form's words
+("Write something first."), 401 without a token or when it stopped working, 404 for a site not on the map or an
+edit that is not the diver's waiting one there.
+
+### `GET /api/v1/sites/{id}/texts`
+
+```json
+{
+  "apiVersion": 1,
+  "siteId": "banana-reef",
+  "texts": { "description": "…", "howToDive": "…" },
+  "canEdit": true,
+  "needsTerms": false,
+  "moderator": false,
+  "adderTextHidden": false,
+  "mine": { "id": "…", "status": "pending", "changes": { "description": "…" }, "note": "Dived it last week.",
+            "rejectReason": null, "at": "2026-11-25T04:12:00.000Z" },
+  "live": false,
+  "limits": { "description": 2000, "howToDive": 1500, "note": 300 }
+}
+```
+
+- `canEdit`: signed in, not banned, and agreed to the content rules; `needsTerms` when only the last is missing.
+- `mine` is the diver's edit waiting for review, else the last one approved or rejected in 30 days (with the
+  moderator's `rejectReason`), else null. `changes` holds the full new text of only the fields it changes.
+- `adderTextHidden`: the diver blocked whoever added the site and how to dive it is still that diver's own text, so
+  `texts.howToDive` is "" and the form offers About the site only.
+
+### `POST /api/v1/sites/{id}/texts`
+
+`{"texts": {"description": "…"}, "based": {"description": "…", "howToDive": "…"}, "note": "…"}`. Send in `texts`
+only the fields the diver changed, and in `based` the texts the form started from (a moderator sees when someone else
+changed them since). `note` is optional, for the moderators. One edit waits per diver per site: sending again while
+it waits changes it, keeping the fields not sent. At most 10 waiting and 10 new a day per diver. `live` is true when
+the edit went live at once.
+
+### `DELETE /api/v1/sites/{id}/texts/{editId}`
+
+Withdraws the diver's own edit while it waits (`mine.id`); it does not give that day's slot back.
+
 ## Adding sites
 
 A signed-in diver adds a dive site at a pin, as with the web map's "Add a site" form (`components/AddSiteForm.tsx`).

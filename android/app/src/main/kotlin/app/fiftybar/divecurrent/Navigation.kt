@@ -42,6 +42,7 @@ import app.fiftybar.divecurrent.ui.scoreboard.DiverScreen
 import app.fiftybar.divecurrent.ui.scoreboard.ScoreboardScreen
 import app.fiftybar.divecurrent.ui.site.AddSiteScreen
 import app.fiftybar.divecurrent.ui.site.SiteScreen
+import app.fiftybar.divecurrent.ui.site.SiteTextsScreen
 
 @Composable
 fun MainNavigation(startPlanId: String? = null) {
@@ -132,6 +133,7 @@ fun MainNavigation(startPlanId: String? = null) {
               onBack = leave,
               onSignIn = { backStack.add(SignInKey) },
               onNavigate = { site -> backStack.add(NavigateKey(site.id, site.name, site.lat, site.lon)) },
+              onEditTexts = { site -> backStack.add(SiteTextsKey(site.id, site.name)) },
               // Pulled down: the map under the page previews the site while the pull goes on (null: let go short).
               onPeekMap = { site -> peekOnMap = site?.onMap() },
               // Wherever the page was opened from (map, list, plan, Navigate), the map is the stack's root.
@@ -141,6 +143,9 @@ fun MainNavigation(startPlanId: String? = null) {
                 while (backStack.size > 1) backStack.removeLastOrNull()
               },
             )
+          }
+          entry<SiteTextsKey> { key ->
+            SiteTextsScreen(key.siteId, key.siteName, onBack = leave, onSignIn = { backStack.add(SignInKey) })
           }
           entry<NavigatePickKey> { key ->
             NavigatePickScreen(

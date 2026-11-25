@@ -12,6 +12,8 @@ import app.fiftybar.divecurrent.data.api.ApiReportSaved
 import app.fiftybar.divecurrent.data.api.ApiReviews
 import app.fiftybar.divecurrent.data.api.ApiScoreboard
 import app.fiftybar.divecurrent.data.api.ApiSite
+import app.fiftybar.divecurrent.data.api.ApiSiteTexts
+import app.fiftybar.divecurrent.data.api.SiteTextsBody
 import app.fiftybar.divecurrent.data.api.DiveCurrentApi
 import app.fiftybar.divecurrent.data.api.FlagBody
 import app.fiftybar.divecurrent.data.api.ReportRequest
@@ -118,6 +120,12 @@ class AccountRepository(private val api: DiveCurrentApi, val sessions: SessionSt
   suspend fun removeReviewPhoto(siteId: String, photoId: String): ApiReviews = signedIn { api.removeReviewPhoto(it, siteId, photoId) }
 
   /** Adds a site at a pin; the map and lists read it again. */
+  suspend fun siteTexts(siteId: String): ApiSiteTexts = signedIn { api.siteTexts(it, siteId) }
+
+  suspend fun proposeSiteTexts(siteId: String, body: SiteTextsBody): ApiSiteTexts = signedIn { api.proposeSiteTexts(it, siteId, body) }
+
+  suspend fun withdrawSiteEdit(siteId: String, editId: String): ApiSiteTexts = signedIn { api.withdrawSiteEdit(it, siteId, editId) }
+
   suspend fun addSite(site: AddSiteBody): ApiSite = signedIn { api.addSite(it, site) }.site
 
   /** One photo for a site the diver added; answers with the site as it is now. */

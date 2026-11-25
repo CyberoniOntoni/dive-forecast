@@ -121,6 +121,8 @@ fun SiteScreen(
   onSignIn: () -> Unit,
   onNavigate: (ApiSite) -> Unit,
   onShowOnMap: (ApiSite) -> Unit,
+  /** "Suggest an edit" for the site's texts. */
+  onEditTexts: (ApiSite) -> Unit,
   onPeekMap: (ApiSite?) -> Unit,
   reportAt: String? = null,
 ) {
@@ -302,6 +304,7 @@ fun SiteScreen(
               adderBlocked = photosState.adderBlocked(s),
               onReportText = { field -> if (session != null) reportingField = field else onSignIn() },
               myNickname = session?.nickname,
+              onEditTexts = { onEditTexts(s) },
             ) {
               // The answer to a report of the texts; on a pin added in the app it shows under the site's own Report.
               if (!(s.userAdded && !photosState.isAdder)) {
@@ -483,6 +486,7 @@ private fun AboutCard(
   onReportText: ((String) -> Unit)? = null,
   /** The signed-in diver's nickname: no Report on their own text. */
   myNickname: String? = null,
+  onEditTexts: () -> Unit = {},
   adder: @Composable () -> Unit = {},
 ) {
   val colors = CurrentTheme.colors
@@ -541,9 +545,9 @@ private fun AboutCard(
       }
     }
     adder()
-    // Divers write the site's texts together on the web; a moderator approves each edit.
-    OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}#about") }, modifier = Modifier.heightIn(min = 44.dp)) {
-      Text(if (site.description == null && site.howToDive == null) "Write about this site on the web" else "Suggest an edit on the web")
+    // Divers write the site's texts together; a moderator approves each edit (SiteTextsScreen).
+    OutlinedButton(onClick = onEditTexts, modifier = Modifier.heightIn(min = 44.dp)) {
+      Text(if (site.description == null && site.howToDive == null) "Write about this site" else "Suggest an edit")
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
