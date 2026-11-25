@@ -3,7 +3,7 @@ import path from "path";
 import { atollForPin } from "./bearing";
 import { readOpenings } from "./openings";
 import { rimForAtoll, rimWayId } from "./rim";
-import { deriveSiteType, onRimBand } from "./site-type";
+import { deriveSiteType, followTarget, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
 import { countedReports, storeReviewIds } from "./accounts";
@@ -186,7 +186,10 @@ export function withCurrentPlace(site: Site, catalog: Pick<Catalog, "atolls" | "
     placed.siteTypeSource = "diver";
     return placed;
   }
-  const passes = catalog.sites.filter((mate) => mate.atollId === atollId && mate.siteType === "pass");
+  // A pin that shows another pass's forecast (flowFromSiteId) is in that pass: it does not count as one more.
+  const passes = catalog.sites.filter(
+    (mate) => mate.atollId === atollId && mate.siteType === "pass" && !followTarget(mate, catalog.sites),
+  );
   const wayId = rimWayId(atoll);
   // A gap a reef flat bridges is a shallow sill, not a channel divers drop into.
   const channels = readOpenings().filter((gap) => gap.wayId === wayId && !gap.reefFlatBridges);
@@ -213,6 +216,18 @@ export function reportsForSite(siteId: string): Report[] {
  */
 export function forecastReportsForSite(siteId: string): Report[] {
   return countedReports(readStore()).filter((report) => report.siteId === siteId);
+}
+
+/**
+ * The reports that teach a site's forecast: its own, and where one channel's forecast is shown at more than one pin
+ * (a pin with flowFromSiteId and the channel it follows), every report at any of them, so all show the same forecast.
+ */
+export function forecastReportsForFlow(site: Site, sites: readonly Site[]): Report[] {
+  const lead = followTarget(site, sites) ?? site;
+  const ids = new Set([lead.id, site.id]);
+  for (const mate of sites) if (followTarget(mate, sites)?.id === lead.id) ids.add(mate.id);
+  if (ids.size === 1) return forecastReportsForSite(site.id);
+  return countedReports(readStore()).filter((report) => ids.has(report.siteId));
 }
 
 

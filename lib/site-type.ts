@@ -75,28 +75,58 @@ export const CHANNEL_FUNNEL_KM = 0.8;
  * (`corner`), so a wall that happens to be named "Corner" can still run along the reef.
  */
 export function flowsAlongReef(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
-  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef">,
+  mates: readonly (Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl">>)[] = [],
 ): boolean {
   if (site.siteType !== "outer-reef") return false;
+  // The owner's word beats the funnel rule: some walls next to a pass sit outside an island ridge, off its draw.
+  if (site.alongReef === true) return true;
+  // A pin that shows another pass's forecast is in that pass; it adds no funnel of its own.
   return !mates.some(
     (mate) =>
       mate.id !== site.id &&
       mate.siteType === "pass" &&
+      !followTarget(mate, mates) &&
       mate.atollId === site.atollId &&
       distanceKm(site, mate) <= CHANNEL_FUNNEL_KM,
   );
 }
 
+type FollowMate = Pick<Site, "id" | "atollId"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl" | "siteType">>;
+
+/** The types a pin can follow: channels, whose forecast runs in and out of the atoll. */
+const FOLLOWABLE = new Set<SiteType>(["pass", "channel-thila", "corner"]);
+
+/**
+ * The catalog channel whose forecast a site shows (`flowFromSiteId`): named, in the same atoll, a catalog pass,
+ * channel thila or corner, and showing its own. Null when the site follows none, or the id does not resolve to such a
+ * site (then it keeps its own forecast and role).
+ */
+export function followTarget<T extends FollowMate>(site: FollowMate, mates: readonly T[]): T | null {
+  if (!site.flowFromSiteId) return null;
+  const target = mates.find((mate) => mate.id === site.flowFromSiteId);
+  const ok =
+    target &&
+    target.atollId === site.atollId &&
+    !target.flowFromSiteId &&
+    target.sourceUrl !== "user" &&
+    target.siteType != null &&
+    FOLLOWABLE.has(target.siteType);
+  return ok ? target : null;
+}
+
 /**
  * True for a site whose current runs into and out of the atoll across the rim: a pass, a channel thila, or an outer
- * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not.
+ * reef corner or funnel wall. Walls running along the reef, strait walls and lagoon sites are not. A site that shows
+ * another's forecast (`followTarget`) is not either: its channel is already counted once, by that site, as a drift
+ * lender and a lagoon opening.
  */
 export function crossesRim(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
-  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[] = [],
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef" | "flowFromSiteId">,
+  mates: readonly (Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl">>)[] = [],
 ): boolean {
   if (!site.siteType || site.siteType === "lagoon" || site.siteType === "strait-wall") return false;
+  if (followTarget(site, mates)) return false;
   return !flowsAlongReef(site, mates);
 }
 
@@ -133,8 +163,8 @@ export const LAGOON_NOTE =
  * its flow, not its bearing, and a channel has none. With no bearing the route stands and the axis is null.
  */
 export function siteRoute(
-  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon">,
-  mates: readonly Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon">[],
+  site: Pick<Site, "id" | "name" | "siteType" | "atollId" | "lat" | "lon" | "alongReef">,
+  mates: readonly (Pick<Site, "id" | "siteType" | "atollId" | "lat" | "lon"> & Partial<Pick<Site, "flowFromSiteId" | "sourceUrl">>)[],
   bearingDeg: number | null,
 ): { route: ForecastRoute; axisDeg: number | null } {
   if (site.siteType === "strait-wall") {
@@ -145,6 +175,11 @@ export function siteRoute(
     return { route: "along-reef", axisDeg: alongReefHeading(bearingDeg) };
   }
   return { route: "channel", axisDeg: null };
+}
+
+/** At a pin inside another site's channel (`flowFromSiteId`): whose forecast it shows. */
+export function followNote(channelName: string): string {
+  return `Sits in ${channelName}'s flow, so it shows that channel's forecast. Divers' reports at either site nudge both.`;
 }
 
 /**

@@ -4456,7 +4456,8 @@
       "lon": 73.459047,
       "sourceUrl": "",
       "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual",
+      "alongReef": true
     },
     {
       "id": "vodamula",
@@ -4475,8 +4476,9 @@
       "lat": 0.590129,
       "lon": 73.503437,
       "sourceUrl": "",
-      "siteType": "corner",
-      "siteTypeSource": "manual"
+      "siteType": "lagoon",
+      "siteTypeSource": "manual",
+      "flowAxisDeg": 125
     },
     {
       "id": "mobula",
@@ -4515,8 +4517,9 @@
       "lat": 0.484132,
       "lon": 73.541705,
       "sourceUrl": "",
-      "siteType": "lagoon",
-      "siteTypeSource": "derived"
+      "siteType": "pass",
+      "siteTypeSource": "manual",
+      "flowFromSiteId": "kondey-kandu"
     },
     {
       "id": "nemo-thila",
@@ -4549,7 +4552,8 @@
       "lon": 73.578593,
       "sourceUrl": "",
       "siteType": "outer-reef",
-      "siteTypeSource": "derived"
+      "siteTypeSource": "manual",
+      "alongReef": true
     },
     {
       "id": "hula-thila",

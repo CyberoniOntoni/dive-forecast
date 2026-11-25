@@ -35,7 +35,7 @@ const DRIFT_HALF_HOURS = 12;
  * Identifies the forecast logic. Saved with every report's prediction so results can be grouped by model.
  * Change it whenever a change alters what the forecast says for the same inputs.
  */
-export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/28";
+export const FORECAST_MODEL_VERSION = "tide+throughflow+head+alongreef+lagoon+strait/29";
 
 /**
  * What feeds the through-flow. The API current is a total current (ocean model, Stokes drift, and FES2014 tide),
@@ -403,12 +403,19 @@ export function straitStrength(speed: number): Strength {
 
 /** The first model version that read wall reports along the reef. Before it, "incoming" meant into the atoll. */
 const FIRST_ALONG_REEF_VERSION = 8;
+/**
+ * From this model on (3 Nov 2026) a wall report saves the heading it meant (Report.alongHeadingDeg). A later report
+ * with none was filed on another route, into or out of the atoll (a site since retyped as a wall), so its bearing says
+ * nothing along the reef.
+ */
+const FIRST_SAVED_HEADING_VERSION = 21;
 
 /**
  * A wall report's direction against today's reef heading, or null when it cannot be read along the reef.
  * The heading saved with the report decides; failing that, the bearing in its saved prediction, if that prediction
- * came from a model that already read walls along the reef. A report from before that meant into or out of the
- * atoll and has no along-reef reading. A saved heading more than 90° from today's flips the direction.
+ * came from a model that already read walls along the reef but did not yet save the heading. A report from before
+ * that, or one from a later model with no heading saved (filed while the site was a channel), meant into or out of
+ * the atoll and has no along-reef reading. A saved heading more than 90° from today's flips the direction.
  */
 export function alongReportDirection(
   report: Report,
@@ -423,7 +430,8 @@ export function alongReportDirection(
     saved == null &&
     fromBearing &&
     report.predicted &&
-    modelVersionNumber(report.predicted.modelVersion) >= FIRST_ALONG_REEF_VERSION
+    modelVersionNumber(report.predicted.modelVersion) >= FIRST_ALONG_REEF_VERSION &&
+    modelVersionNumber(report.predicted.modelVersion) < FIRST_SAVED_HEADING_VERSION
   ) {
     saved = (((report.predicted.bearingDeg + 90) % 360) + 360) % 360;
   }

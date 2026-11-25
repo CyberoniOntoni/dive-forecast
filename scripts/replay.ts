@@ -7,7 +7,7 @@ import { rimForAtoll } from "../lib/rim";
 import { marineCacheDir, marineCacheName, marineFixtureName, parseMarineCache, seawardPoint } from "../lib/marine";
 import { seawardKmFor } from "../lib/seaward-floor";
 import { replayReports, type BenchmarkMetrics, type ReplayResult } from "../lib/replay";
-import { alongReefHeading, flowsAlongReef } from "../lib/site-type";
+import { alongReefHeading, flowsAlongReef, followTarget } from "../lib/site-type";
 import { countedReports, listMergedSites, readCatalog, readStore } from "../lib/store";
 import type { MarineHour, Report } from "../lib/types";
 
@@ -158,8 +158,10 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
   for (const [siteId, siteReports] of grouped.entries()) {
     if (options.siteId && siteId !== options.siteId) continue;
 
-    const site = siteById.get(siteId);
-    if (!site) continue;
+    const own = siteById.get(siteId);
+    if (!own) continue;
+    // A pin that shows a channel's forecast (flowFromSiteId) is replayed on that channel, as the live page shows it.
+    const site = followTarget(own, catalog.sites) ?? own;
     const atoll = atollById.get(site.atollId);
     if (!atoll) continue;
     // A lagoon site is forecast from the flow through its atoll's rim and channels, which replay has no data for.
@@ -194,8 +196,8 @@ export function runBenchmarkSuite(options: ReplayCliOptions): BenchmarkRunResult
     const m = res.metrics;
     replays.push(res);
     siteResults.push({
-      siteId: site.id,
-      siteName: site.name,
+      siteId: own.id,
+      siteName: own.name,
       atollName: atoll.name,
       evaluatedReports: m.totalReports,
       slackReports: m.slackReports,
