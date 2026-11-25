@@ -143,7 +143,15 @@ export type Site = {
    * the store is read (lib/store.ts), so it picks the forecast model; catalog sites never read it.
    */
   diverSiteType?: SiteType;
-  /** On a pin added in the app: the adder's plain-text notes on how to dive it (entry, route, hazards). */
+  /**
+   * What the site is: the reef, the life, what it is known for. Plain text. Only written by divers through edits a
+   * moderator approved (lib/site-wiki.ts); listMergedSites lays the approved text over the record.
+   */
+  description?: string;
+  /**
+   * How to dive it (entry, route, hazards), plain text: the adder's notes on a pin added in the app, the catalog's own
+   * on a few sites, and over either the latest approved diver edit (lib/site-wiki.ts).
+   */
   howToDive?: string;
   /** Photos of the site, oldest first (lib/site-photos.ts). */
   photos?: SitePhoto[];
@@ -296,6 +304,11 @@ export type User = {
    * from the photos, so deleting a photo or a rating does not give the upload back.
    */
   reviewPhotoUploads?: string[];
+  /**
+   * When the diver proposed each new site edit in the last 24 hours, ISO UTC, for the daily limit (lib/site-wiki.ts).
+   * Kept apart from the edits, so withdrawing one does not give the slot back.
+   */
+  siteEditProposals?: string[];
   /** When the diver agreed to the content rules (/terms), ISO UTC. Needed before they post anything others see. */
   acceptedTermsAt?: string;
   /** Divers this one blocked (User.id): their reviews, photos and pages are hidden from this diver. */
@@ -311,7 +324,7 @@ export type User = {
 
 export const FLAG_REASONS = ["sexual", "violence", "hate", "spam", "privacy", "illegal", "other"] as const;
 export type FlagReason = (typeof FLAG_REASONS)[number];
-export const FLAG_KINDS = ["review", "site", "diver"] as const;
+export const FLAG_KINDS = ["review", "site", "diver", "text"] as const;
 export type FlagKind = (typeof FLAG_KINDS)[number];
 
 /**
@@ -335,6 +348,40 @@ export type ContentFlag = {
   /** When a moderator closed it, ISO UTC, and what they did. */
   resolvedAt?: string;
   resolution?: "removed" | "banned" | "dismissed";
+};
+
+/** The site texts divers can edit, wiki style (lib/site-wiki.ts). */
+export const WIKI_FIELDS = ["description", "howToDive"] as const;
+export type WikiField = (typeof WIKI_FIELDS)[number];
+export type WikiTexts = Partial<Record<WikiField, string>>;
+
+/**
+ * A diver's proposed change to a site's description or how to dive it. A moderator approves or rejects it at
+ * /moderation; an approved edit is a revision of the site's text, and its diver is credited on the site page.
+ */
+export type SiteEdit = {
+  id: string;
+  siteId: string;
+  /** Who proposed it (User.id; a deleted account's `deleted-…` id on an approved edit kept for the history). */
+  userId: string;
+  /** When it was proposed, or last changed while it waited (the queue lists it from then), ISO UTC. */
+  createdAt: string;
+  status: "pending" | "approved" | "rejected";
+  /** The new full text of each field it changes; "" clears the field. Fields it leaves alone are absent. */
+  changes: WikiTexts;
+  /** The text each changed field had when the diver wrote the edit ("" for none), to tell a moderator it went stale. */
+  based: WikiTexts;
+  /** The diver's word on what changed and how they know, plain text. */
+  note?: string;
+  /** When a moderator approved or rejected it, ISO UTC, and who (User.id). */
+  reviewedAt?: string;
+  reviewerId?: string;
+  /** The moderator's reason, shown to the diver who proposed it. */
+  rejectReason?: string;
+  /** On an approved edit: the text each field had just before it went live ("" for none), for the history's diff. */
+  replaced?: WikiTexts;
+  /** An approved edit a moderator took back, ISO UTC: its fields fall back to the revision before. */
+  revertedAt?: string;
 };
 
 /** A sign-in code sent by email and not yet used. Only a hash of the code is kept. */
@@ -505,4 +552,5 @@ export type StoreData = {
   logins: PendingLogin[];
   plans: DivePlan[];
   flags: ContentFlag[];
+  siteEdits: SiteEdit[];
 };

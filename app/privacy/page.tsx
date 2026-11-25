@@ -90,6 +90,12 @@ export default function PrivacyPage() {
             public on the map.
           </li>
           <li>
+            <strong className="text-foam">Edits to site texts</strong>: what you write about a site and how to dive it, with
+            your note to the moderators. Moderators see it with your nickname; once one approves it, the text is public on the
+            site, your nickname is credited there and on its history page, and it stays as a revision of that text. Edits
+            waiting for review, or not accepted, are shown only to you and the moderators.
+          </li>
+          <li>
             <strong className="text-foam">Reports of content and blocks</strong>: when you report a review, site or diver, we keep
             what you reported, the reason and your note for our moderators, who see your nickname. Divers you block are kept on your
             account. Neither is shown to anyone else.
@@ -151,10 +157,10 @@ export default function PrivacyPage() {
 
       <Section id="moderation" title="Moderation">
         <p>
-          Reviews, photos, sites and profiles must follow our <Link href="/terms">content rules</Link>. Moderators read reported
+          Reviews, photos, sites, site texts and profiles must follow our <Link href="/terms">content rules</Link>. Moderators read reported
           content and may remove it. If a diver is banned for breaking the rules, we keep their account&rsquo;s email and the
-          reports about them, so they cannot sign up again. Their reviews, photos, sites and About me are removed and their
-          nickname is replaced; their dive reports stay, and so do their dive plans until the account is deleted.
+          reports about them, so they cannot sign up again. Their reviews, photos, sites and About me are removed, their site
+          edits waiting for review are rejected, their approved site text still showing is taken back, and their nickname is replaced; their dive reports stay, and so do their dive plans until the account is deleted.
         </p>
       </Section>
 
@@ -177,11 +183,13 @@ export default function PrivacyPage() {
         <p>
           <strong className="text-foam">Deleted:</strong> your email, nickname and About me, your pending sign-in
           codes, your dive plans, your ratings and reviews, every photo you uploaded, the reports you filed and those about
-          your content, and the divers you blocked.
+          your content (except reports on your approved site edits, below), your site edits waiting for review or not accepted, and the divers you blocked.
         </p>
         <p>
           <strong className="text-foam">Kept without your name:</strong> your dive reports, which keep teaching the
-          forecast, and dive sites you added with their notes, so other divers&rsquo; reports and reviews there keep their place. Nothing
+          forecast, dive sites you added with their notes, so other divers&rsquo; reports and reviews there keep their place, and
+          site edits a moderator approved, which are part of the site&rsquo;s text (no longer credited, your note to the moderators
+          gone), with any reports about them, so moderators can still act on them. Nothing
           left on them leads back to you, and they no longer count on the scoreboard. Cloudflare keeps a
           30-day restore history of the database, so deleted data can stay in that history until it is 30 days old.
         </p>

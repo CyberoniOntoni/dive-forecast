@@ -13,6 +13,7 @@ const KIND_LABELS: Record<ActivityKind, string> = {
   site: "New site",
   plan: "Dive plan",
   signup: "Sign-up",
+  edit: "Site edit",
   flag: "Content report",
 };
 

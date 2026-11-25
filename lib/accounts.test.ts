@@ -6,7 +6,7 @@ const NOW = Date.parse("2026-10-30T10:00:00Z");
 const same = (a: string, b: string) => a === b;
 
 function emptyStore(): StoreData {
-  return { reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [] };
+  return { reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [], siteEdits: [] };
 }
 
 describe("normalizeEmail", () => {

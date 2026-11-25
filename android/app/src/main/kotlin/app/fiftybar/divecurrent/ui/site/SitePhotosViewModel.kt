@@ -76,11 +76,17 @@ class SitePhotosViewModel(private val siteId: String, private val account: Accou
   }
 
   /** Reports this site (added in the app: its notes and photos) to the moderators. */
-  fun report(reason: String, note: String) {
+  fun report(reason: String, note: String) = send(FlagBody("site", siteId = siteId, reason = reason, note = note.ifBlank { null }))
+
+  /** Reports one of the site's texts divers wrote ("description" or "howToDive"); the server finds who wrote it. */
+  fun reportText(field: String, reason: String, note: String) =
+    send(FlagBody("text", siteId = siteId, field = field, reason = reason, note = note.ifBlank { null }))
+
+  private fun send(body: FlagBody) {
     viewModelScope.launch {
       val line =
         try {
-          account.report(FlagBody("site", siteId = siteId, reason = reason, note = note.ifBlank { null }))
+          account.report(body)
           "Thanks. A moderator will look at it."
         } catch (_: SignedOutException) {
           "Sign in again first."

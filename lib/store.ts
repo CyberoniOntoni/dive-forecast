@@ -7,6 +7,7 @@ import { deriveSiteType, followTarget, onRimBand } from "./site-type";
 import { perRequest, workerEnv, type WorkerEnv } from "./cloudflare";
 import { readDataFile } from "./data-files";
 import { countedReports, storeReviewIds } from "./accounts";
+import { editedSiteIds, withWikiTexts } from "./site-wiki";
 
 export { countedReports };
 import {
@@ -38,6 +39,17 @@ export function setStorePath(filePath: string) {
     throw new Error("Store file must be a name under data/");
   }
   storeFile = base;
+}
+
+let storeDir: string | null = null;
+
+/** Tests only: keep the store file in this folder (a temp dir) instead of data/. Null goes back to data/. */
+export function setStoreDir(dir: string | null) {
+  storeDir = dir;
+}
+
+function storeFilePath(): string {
+  return path.join(storeDir ?? path.join(process.cwd(), "data"), storeFile);
 }
 
 export function readCatalog(): Catalog {
@@ -85,7 +97,7 @@ export function readStore(): StoreData {
     if (!store) throw new Error("readStore() before refreshStore()");
     return store;
   }
-  const file = path.join(process.cwd(), "data", storeFile);
+  const file = storeFilePath();
   try {
     const raw = fs.readFileSync(file, "utf8");
     return normalizeStore(JSON.parse(raw));
@@ -118,15 +130,38 @@ function isMissingFile(error: unknown): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
+/**
+ * The catalog's sites and the pins added in the app (not hidden), each with the texts divers wrote and a moderator
+ * approved (lib/site-wiki.ts) in place of its own.
+ */
 export function listMergedSites(): Site[] {
   const catalog = readCatalog();
   const published = catalog.sites;
-  const added = readStore().sites;
+  const store = readStore();
   const publishedIds = new Set(published.map((site) => site.id));
-  const onlyAdded = added
+  const onlyAdded = store.sites
     .filter((site) => !publishedIds.has(site.id) && !site.hidden)
     .map((site) => withCurrentPlace(site, catalog));
-  return [...published, ...onlyAdded];
+  const edited = editedSiteIds(store.siteEdits);
+  const all = [...published, ...onlyAdded];
+  return edited.size === 0 ? all : all.map((site) => (edited.has(site.id) ? withWikiTexts(site, store.siteEdits) : site));
+}
+
+/** A site's record as stored, before any diver's approved edit is laid over it: an added pin's, or the catalog's. */
+export function siteRecord(store: StoreData, siteId: string): Site | null {
+  // The catalog first, as listMergedSites: a published site wins over a store copy with the same id.
+  return catalogById().get(siteId) ?? store.sites.find((site) => site.id === siteId) ?? null;
+}
+
+let catalogIndex: { raw: string; byId: Map<string, Site> } | null = null;
+
+/** The catalog's sites by id, parsed once while data/sites.json is unchanged (siteRecord runs once per edited site). */
+function catalogById(): Map<string, Site> {
+  const raw = readDataFile("sites.json");
+  if (catalogIndex?.raw !== raw) {
+    catalogIndex = { raw, byId: new Map((JSON.parse(raw) as Catalog).sites.map((site) => [site.id, site])) };
+  }
+  return catalogIndex.byId;
 }
 
 /**
@@ -481,7 +516,7 @@ function serializeStore(store: StoreData): string {
 }
 
 function writeStore(store: StoreData) {
-  const file = path.join(process.cwd(), "data", storeFile);
+  const file = storeFilePath();
   const dir = path.dirname(file);
   fs.mkdirSync(dir, { recursive: true });
   const tmpPath = path.join(dir, `.store.${process.pid}.${crypto.randomUUID()}.tmp`);

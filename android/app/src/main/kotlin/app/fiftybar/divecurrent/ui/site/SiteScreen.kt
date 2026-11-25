@@ -285,7 +285,28 @@ fun SiteScreen(
           state.site?.let { s ->
             val photos: SitePhotosViewModel = viewModel(key = "site-photos/$siteId") { SitePhotosViewModel(siteId, account) }
             val photosState by photos.state.collectAsStateWithLifecycle()
-            AboutCard(s, photoUrl = viewModel::photoUrl, adderBlocked = photosState.adderBlocked(s)) {
+            var reportingField by remember { mutableStateOf<String?>(null) }
+            reportingField?.let { field ->
+              ReportDialog(
+                what = "text",
+                onDismiss = { reportingField = null },
+                onSend = { reason, note ->
+                  reportingField = null
+                  photos.reportText(field, reason, note)
+                },
+              )
+            }
+            AboutCard(
+              s,
+              photoUrl = viewModel::photoUrl,
+              adderBlocked = photosState.adderBlocked(s),
+              onReportText = { field -> if (session != null) reportingField = field else onSignIn() },
+              myNickname = session?.nickname,
+            ) {
+              // The answer to a report of the texts; on a pin added in the app it shows under the site's own Report.
+              if (!(s.userAdded && !photosState.isAdder)) {
+                photosState.reportNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.85f)) }
+              }
               if (s.userAdded && photosState.isAdder && session != null) {
                 AdderPhotos(s, photosState, onPick = { uris, room -> photos.add(context, uris, room, viewModel::showSite) })
               }
@@ -458,10 +479,19 @@ private fun AboutCard(
   site: ApiSite,
   photoUrl: (String) -> String,
   adderBlocked: Boolean = false,
+  /** Report under a text a diver wrote ("description" or "howToDive"); null hides it. */
+  onReportText: ((String) -> Unit)? = null,
+  /** The signed-in diver's nickname: no Report on their own text. */
+  myNickname: String? = null,
   adder: @Composable () -> Unit = {},
 ) {
   val colors = CurrentTheme.colors
   val uri = LocalUriHandler.current
+  // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
+  val reportText: @Composable (String) -> Unit = { field ->
+    val mine = myNickname != null && site.editedBy[field]?.equals(myNickname, ignoreCase = true) == true
+    if (onReportText != null && field in site.editedFields && !mine) ContentActions(onReport = { onReportText(field) }, onBlock = null)
+  }
   SurfaceCard {
     Text("About the site", style = MaterialTheme.typography.titleSmall)
     val facts = listOfNotNull(site.atollName, site.siteTypeLabel, depthLabel(site), if (site.userAdded) "added by a diver" else null)
@@ -482,9 +512,21 @@ private fun AboutCard(
         color = colors.foam.copy(alpha = 0.8f),
       )
     }
-    site.howToDive?.takeUnless { adderBlocked }?.let {
+    site.description?.let {
+      Text(it, style = MaterialTheme.typography.bodyMedium)
+      reportText("description")
+    }
+    site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }?.let {
       Text("How to dive it", style = MaterialTheme.typography.labelLarge)
       Text(it, style = MaterialTheme.typography.bodyMedium)
+      reportText("howToDive")
+    }
+    site.writtenByLine?.let { credit ->
+      Text(
+        credit,
+        style = MaterialTheme.typography.bodySmall,
+        color = colors.foam.copy(alpha = 0.8f),
+      )
     }
     if (site.photoUrls.isNotEmpty() && !adderBlocked) {
       LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
@@ -499,6 +541,10 @@ private fun AboutCard(
       }
     }
     adder()
+    // Divers write the site's texts together on the web; a moderator approves each edit.
+    OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}#about") }, modifier = Modifier.heightIn(min = 44.dp)) {
+      Text(if (site.description == null && site.howToDive == null) "Write about this site on the web" else "Suggest an edit on the web")
+    }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
       OutlinedButton(onClick = { uri.openUri("${BuildConfig.WEB_URL}/sites/${site.id}") }, modifier = Modifier.heightIn(min = 44.dp)) {
         Text("Open on the web")

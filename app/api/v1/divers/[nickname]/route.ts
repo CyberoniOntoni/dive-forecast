@@ -34,6 +34,7 @@ export async function GET(request: Request, context: { params: Promise<{ nicknam
       reports: diver.stats.reports,
       reportSites: diver.stats.sites,
       ratings: diver.stats.ratings,
+      siteEdits: diver.stats.edits,
       sitesAdded: diver.sitesAdded,
       allRank: diver.allRank,
       badges: diver.badges.map((badge) => ({ id: badge.id, label: badge.label, detail: badge.detail })),

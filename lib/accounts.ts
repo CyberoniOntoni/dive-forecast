@@ -192,6 +192,7 @@ export type AccountPhoto = { siteId: string; photo: SitePhoto };
  * - Dive reports, which train the forecast: their userId becomes one new random id that no account has, so the
  *   reports drop off the scoreboard but still count as one diver where the forecast asks how many divers agree.
  * - Sites the diver added, so other divers' reports and reviews there keep their place: `addedBy` goes.
+ * - Site edits a moderator approved, which are the site's text now: under the same random id, uncredited, note gone.
  *
  * Returns the photos whose JPEGs the caller deletes, or null when there is no such user. Safe to run again on a fresh
  * store (mutateStore may retry it).
@@ -204,8 +205,9 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
   store.users = store.users.filter((item) => item.id !== userId);
   store.logins = store.logins.filter((login) => login.email !== user.email);
   store.plans = store.plans.filter((plan) => plan.ownerId !== userId);
-  // Reports they filed, and reports on their content (which goes too).
-  store.flags = store.flags.filter((flag) => flag.reporterId !== userId && flag.userId !== userId);
+  // Reports they filed, and reports on their content (which goes too). Reports on their site texts stay: the approved
+  // text stays live under the anonymous id below, so a moderator can still act on them.
+  store.flags = store.flags.filter((flag) => flag.reporterId !== userId && (flag.userId !== userId || flag.kind === "text"));
   for (const other of store.users) {
     if (!other.blocked?.includes(userId)) continue;
     const kept = other.blocked.filter((id) => id !== userId);
@@ -220,13 +222,27 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
 
   // Dive reports stay, anonymised, to keep teaching the forecast. The store-review account's are reviewers trying the
   // form, and with the user gone nothing would mark them any more (storeReviewIds), so they go with it.
+  const anonymous = `deleted-${crypto.randomUUID()}`;
   if (user.storeReview) {
     store.reports = store.reports.filter((report) => report.userId !== userId);
   } else {
-    const anonymous = `deleted-${crypto.randomUUID()}`;
     for (const report of store.reports) {
       if (report.userId === userId) report.userId = anonymous;
     }
+  }
+  // Site edits waiting or rejected go. Approved ones are the site's text now: they stay in its history under the
+  // anonymous id, with no credit (siteContributors finds no diver) and without the diver's note to the moderators.
+  store.siteEdits = store.siteEdits.filter((edit) => edit.userId !== userId || edit.status === "approved");
+  // A moderator's own edit names them as its reviewer too, and every edit they reviewed names them: both take the
+  // anonymous id, so nothing left points back to the account (and an own edit still reads as one).
+  for (const flag of store.flags) {
+    if (flag.kind === "text" && flag.userId === userId) flag.userId = anonymous;
+  }
+  for (const edit of store.siteEdits) {
+    if (edit.reviewerId === userId) edit.reviewerId = anonymous;
+    if (edit.userId !== userId) continue;
+    edit.userId = anonymous;
+    delete edit.note;
   }
   for (const site of store.sites) {
     const own = (site.photos ?? []).filter((photo) => photo.addedBy === userId);

@@ -21,6 +21,7 @@ function store(): StoreData {
     logins: [],
     plans: [],
     flags: [],
+    siteEdits: [],
   };
 }
 

@@ -1,4 +1,5 @@
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
@@ -13,7 +14,7 @@ vi.mock("next/headers", () => ({
 
 const { appUrl, bearerToken, currentSession, ipGroup, SESSION_COOKIE } = await import("./auth");
 const { sealSession, signSession } = await import("./session-token");
-const { setStorePath } = await import("./store");
+const { setStoreDir, setStorePath } = await import("./store");
 
 afterEach(() => {
   cookiesBehaviour = () => ({ get: () => undefined });
@@ -100,11 +101,14 @@ describe("the app's bearer token", () => {
     // Both divers exist: a session whose diver is gone (a deleted account) no longer counts.
     const file = `.store-test-${crypto.randomUUID()}.json`;
     const users = ["u1", "u2"].map((id) => ({ id, email: `${id}@example.com`, nickname: id, createdAt: "2026-11-01T00:00:00Z" }));
-    fs.writeFileSync(path.join(process.cwd(), "data", file), JSON.stringify({ reports: [], ratings: [], sites: [], users, logins: [], plans: [], flags: [] }));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "auth-test-"));
+    fs.writeFileSync(path.join(dir, file), JSON.stringify({ reports: [], ratings: [], sites: [], users, logins: [], plans: [], flags: [], siteEdits: [] }));
+    setStoreDir(dir);
     setStorePath(file);
     onTestFinished(() => {
       setStorePath("store.json");
-      fs.rmSync(path.join(process.cwd(), "data", file), { force: true });
+      setStoreDir(null);
+      fs.rmSync(dir, { recursive: true, force: true });
     });
     const token = await sealSession({ userId: "u1", nickname: "Ann", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");
     const cookie = await signSession({ userId: "u2", nickname: "Bob", issuedAt: Date.now() }, "dev-only-auth-secret-not-for-production");

@@ -1,9 +1,9 @@
 import { addSitePhoto, getSite } from "@/lib/actions";
-import { adderNicknames, apiError, apiHandler, apiJpegBody, apiNeedsToken, apiSiteSaved, atollNameOf, photoForm } from "@/lib/api-v1";
+import { adderNicknames, apiError, apiHandler, apiJpegBody, apiNeedsToken, apiSiteSaved, atollNameOf, photoForm, wikiOf } from "@/lib/api-v1";
 import { ready } from "@/lib/ready";
 import { SIGN_IN_FIRST } from "@/lib/sign-in";
 import { MAX_PHOTO_BYTES } from "@/lib/site-photos-limits";
-import { readCatalog, readStore } from "@/lib/store";
+import { readCatalog, readStore, siteRecord } from "@/lib/store";
 
 /**
  * Adds one photo to a site the diver added in the app: the body is the JPEG itself (`Content-Type: image/jpeg`, at
@@ -31,6 +31,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
     const saved = await getSite(site.id);
     if (!saved) return apiError(404, "not_found", "Unknown site.");
-    return apiSiteSaved(saved, atollNameOf(readCatalog().atolls, saved.atollId), 201, adderNicknames(readStore())(saved));
+    const store = readStore();
+    // The same site texts and credits as GET /api/v1/sites/{id}, so the app's cached copy keeps them.
+    const wiki = wikiOf(store, (siteId) => siteRecord(store, siteId))(saved);
+    return apiSiteSaved(saved, atollNameOf(readCatalog().atolls, saved.atollId), 201, adderNicknames(store)(saved), wiki);
   });
 }

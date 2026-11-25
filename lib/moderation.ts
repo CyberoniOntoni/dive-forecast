@@ -1,4 +1,4 @@
-import { FLAG_KINDS, FLAG_REASONS, type ContentFlag, type FlagKind, type FlagReason, type SitePhoto, type StoreData, type User } from "./types";
+import { FLAG_KINDS, FLAG_REASONS, WIKI_FIELDS, type ContentFlag, type FlagKind, type FlagReason, type SiteEdit, type SitePhoto, type StoreData, type User, type WikiField } from "./types";
 
 /**
  * Google Play's rules for user-generated content (and our own, at /terms): divers agree to the content rules before
@@ -10,6 +10,12 @@ import { FLAG_KINDS, FLAG_REASONS, type ContentFlag, type FlagKind, type FlagRea
 export const TERMS_FIRST = "Agree to the content rules first (your account page).";
 /** A banned diver's sign-in. */
 export const BANNED = "This account is suspended for breaking the content rules.";
+
+/** What taking a site down says on the edits waiting on it. */
+export const SITE_REMOVED_EDIT_REASON = "The site was taken down.";
+
+/** What a ban says on the site edits its diver had waiting. */
+export const BANNED_EDIT_REASON = "Account suspended.";
 
 export const FLAG_NOTE_MAX = 500;
 /** Reports one diver can file in 24 hours. */
@@ -31,7 +37,12 @@ export const FLAG_REASON_LABELS: Record<FlagReason, string> = {
  * What Remove does to each kind of content (removeFlagged), as the feed's button on /moderation says it. Here, not in
  * lib/activity.ts, because a client component reads it and lib/activity.ts pulls in the forecast code.
  */
-export const REMOVE_LABELS: Record<FlagKind, string> = { review: "Remove review", site: "Hide site", diver: "Reset profile" };
+export const REMOVE_LABELS: Record<FlagKind, string> = {
+  review: "Remove review",
+  site: "Hide site",
+  diver: "Reset profile",
+  text: "Take back their text",
+};
 
 export function hasAcceptedTerms(user: Pick<User, "acceptedTermsAt"> | null | undefined): boolean {
   return Boolean(user?.acceptedTermsAt);
@@ -43,7 +54,8 @@ export function requireTermsAccepted(store: StoreData, userId: string): void {
   if (!hasAcceptedTerms(user)) throw new Error(TERMS_FIRST);
 }
 
-export type FlagInput = { kind: FlagKind; siteId?: string; userId?: string; reason: FlagReason; note?: string };
+/** `field`: on a report of a site's texts, the one reported (its writer is filled in from the store). */
+export type FlagInput = { kind: FlagKind; siteId?: string; userId?: string; field?: WikiField; reason: FlagReason; note?: string };
 
 /** Reads a report from a request: a known kind and reason, the ids it needs, a note of at most FLAG_NOTE_MAX. */
 export function readFlagInput(input: unknown): FlagInput {
@@ -58,8 +70,12 @@ export function readFlagInput(input: unknown): FlagInput {
   const siteId = text(record.siteId);
   const userId = text(record.userId);
   if (kind !== "diver" && !siteId) throw new Error("Say which site.");
-  if (kind !== "site" && !userId) throw new Error("Say which diver.");
-  return { kind, reason, ...(siteId ? { siteId } : {}), ...(userId ? { userId } : {}), ...(note ? { note } : {}) };
+  // A site's texts name no diver: the report goes to whoever wrote the newest revision still standing (addFlag).
+  if (kind !== "site" && kind !== "text" && !userId) throw new Error("Say which diver.");
+  const field = kind === "text" ? WIKI_FIELDS.find((item) => item === record.field) : undefined;
+  // A field that is not one of ours must not fall back to the newest revision's diver: that may be someone else.
+  if (kind === "text" && record.field != null && !field) throw new Error("Say which text.");
+  return { kind, reason, ...(siteId ? { siteId } : {}), ...(userId ? { userId } : {}), ...(field ? { field } : {}), ...(note ? { note } : {}) };
 }
 
 /**
@@ -81,6 +97,17 @@ export function addFlag(
     const site = store.sites.find((item) => item.id === input.siteId && !item.hidden);
     if (!site) return { result: "missing" };
     owner = site.addedBy;
+  } else if (input.kind === "text") {
+    // Filed against the diver whose revision the reported field shows now (the web card names them per field, the app
+    // sends the field). With neither, the newest standing revision's.
+    const live = liveSources(store, input.siteId!);
+    const source = input.field
+      ? live.get(input.field)
+      : input.userId
+        ? [...live.values()].find((edit) => edit.userId === input.userId)
+        : standingEdits(store, (edit) => edit.siteId === input.siteId).at(-1);
+    if (!source) return { result: "missing" };
+    owner = source.userId;
   } else {
     if (!store.users.some((user) => user.id === input.userId && !user.bannedAt)) return { result: "missing" };
     owner = input.userId;
@@ -150,6 +177,13 @@ function removeSite(store: StoreData, siteId: string): StoredPhoto[] {
   site.hidden = true;
   delete site.photos;
   delete site.howToDive;
+  // Edits waiting on it close: there is no page left for them to go on.
+  for (const edit of store.siteEdits) {
+    if (edit.siteId !== siteId || edit.status !== "pending") continue;
+    edit.status = "rejected";
+    edit.reviewedAt = new Date().toISOString();
+    edit.rejectReason = SITE_REMOVED_EDIT_REASON;
+  }
   return photos;
 }
 
@@ -164,17 +198,64 @@ function resetProfile(store: StoreData, userId: string): void {
   user.nickname = name;
 }
 
+/** Approved site edits not taken back that match, oldest live first (lib/site-wiki.ts orders them the same way). */
+function standingEdits(store: StoreData, match: (edit: SiteEdit) => boolean): SiteEdit[] {
+  return store.siteEdits
+    .filter((edit) => edit.status === "approved" && !edit.revertedAt && match(edit))
+    .sort((a, b) => (a.reviewedAt ?? a.createdAt).localeCompare(b.reviewedAt ?? b.createdAt) || a.id.localeCompare(b.id));
+}
+
+/** The revision each field of a site's texts shows now (lib/site-wiki.ts liveTexts' `source`), by field. */
+export function liveSources(store: StoreData, siteId: string): Map<WikiField, SiteEdit> {
+  const sources = new Map<WikiField, SiteEdit>();
+  for (const edit of standingEdits(store, (item) => item.siteId === siteId)) {
+    for (const field of WIKI_FIELDS) if (edit.changes[field] != null) sources.set(field, edit);
+  }
+  return sources;
+}
+
+/**
+ * Takes the diver's text off a site, or (no siteId) off every site: while a field shows a revision of theirs, that
+ * revision is taken back, so the field falls back to the one before (again, if that is theirs too). A revision of
+ * theirs that someone else already wrote over stays, like a moderator's own Take back (revertEdit): the later text
+ * holds the whole field, perhaps still with their words, so /moderation points the moderator at the history.
+ */
+function takeBackTexts(store: StoreData, userId: string, siteId: string | undefined, nowIso: string): void {
+  const sites = siteId != null ? [siteId] : [...new Set(standingEdits(store, (item) => item.userId === userId).map((item) => item.siteId))];
+  for (const site of sites) {
+    for (;;) {
+      const theirs = [...new Set(liveSources(store, site).values())].filter((edit) => edit.userId === userId);
+      if (theirs.length === 0) break;
+      for (const edit of theirs) edit.revertedAt = nowIso;
+    }
+  }
+}
+
+/** Revisions by other divers that wrote over this diver's still standing ones on a site (see takeBackTexts). */
+export function laterOverTheirs(store: StoreData, userId: string, siteId: string): number {
+  const edits = standingEdits(store, (item) => item.siteId === siteId);
+  const later = new Set<string>();
+  edits.forEach((edit, index) => {
+    if (edit.userId !== userId) return;
+    for (const next of edits.slice(index + 1)) {
+      if (next.userId !== userId && WIKI_FIELDS.some((field) => edit.changes[field] != null && next.changes[field] != null)) later.add(next.id);
+    }
+  });
+  return later.size;
+}
+
 /** Takes down what a report is about. Returns the photos to delete. */
 export function removeFlagged(store: StoreData, flag: Pick<ContentFlag, "kind" | "siteId" | "userId">, nowIso: string): StoredPhoto[] {
   if (flag.kind === "review" && flag.siteId && flag.userId) return removeReview(store, flag.siteId, flag.userId, nowIso);
   if (flag.kind === "site" && flag.siteId) return removeSite(store, flag.siteId);
   if (flag.kind === "diver" && flag.userId) resetProfile(store, flag.userId);
+  if (flag.kind === "text" && flag.siteId && flag.userId) takeBackTexts(store, flag.userId, flag.siteId, nowIso);
   return [];
 }
 
 /**
  * Bans a diver: signs them out everywhere, refuses their sign-in from now on, and removes every review, photo and site
- * they posted and their profile text. Their dive reports stay. Returns the photos to delete.
+ * they posted and their profile text, takes back their live site texts and rejects the site edits they had waiting. Their dive reports stay. Returns the photos to delete.
  */
 export function banDiver(store: StoreData, userId: string, nowMs: number): StoredPhoto[] | null {
   const user = store.users.find((item) => item.id === userId);
@@ -188,6 +269,15 @@ export function banDiver(store: StoreData, userId: string, nowMs: number): Store
   }
   for (const site of store.sites.filter((item) => item.addedBy === userId && !item.hidden)) {
     photos.push(...removeSite(store, site.id));
+  }
+  // Edits they had waiting for review close, and their live revisions are taken back (moderators still see them in
+  // the site's history).
+  takeBackTexts(store, userId, undefined, nowIso);
+  for (const edit of store.siteEdits) {
+    if (edit.userId !== userId || edit.status !== "pending") continue;
+    edit.status = "rejected";
+    edit.reviewedAt = nowIso;
+    edit.rejectReason = BANNED_EDIT_REASON;
   }
   resetProfile(store, userId);
   return photos;

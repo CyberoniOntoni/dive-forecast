@@ -1,5 +1,5 @@
 import type { D1Database, D1PreparedStatement, R2Bucket } from "./cloudflare";
-import type { ContentFlag, DivePlan, PendingLogin, Rating, Report, Site, StoreData, User } from "./types";
+import type { ContentFlag, DivePlan, PendingLogin, Rating, Report, Site, SiteEdit, StoreData, User } from "./types";
 
 /**
  * The store in Cloudflare D1, on a worker. One table per StoreData list: each row holds the record as JSON (`data`)
@@ -95,7 +95,19 @@ const flags: Table<ContentFlag> = {
   watchMembership: true,
 };
 
-const TABLES = [reports, ratings, sites, users, logins, plans, flags] as Table<unknown>[];
+/**
+ * Divers' proposed and approved edits to site texts (lib/site-wiki.ts). Membership watched, for the limits on pending
+ * edits per diver: two proposals racing cannot both pass them.
+ */
+const siteEdits: Table<SiteEdit> = {
+  name: "siteEdits",
+  key: (edit) => edit.id,
+  columns: (edit) => ({ site_id: edit.siteId, user_id: edit.userId, status: edit.status }),
+  schema: { columns: ["site_id TEXT NOT NULL", "user_id TEXT NOT NULL", "status TEXT NOT NULL"], indexes: ["site_id", "user_id", "status"] },
+  watchMembership: true,
+};
+
+const TABLES = [reports, ratings, sites, users, logins, plans, flags, siteEdits] as Table<unknown>[];
 
 /** The table names, which are also the StoreData list names. */
 export const STORE_TABLES = TABLES.map((table) => table.name);
@@ -165,7 +177,7 @@ function parseR2Store(raw: string): StoreData {
 }
 
 export function emptyStore(): StoreData {
-  return { reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [] };
+  return { reports: [], ratings: [], sites: [], users: [], logins: [], plans: [], flags: [], siteEdits: [] };
 }
 
 export function normalizeStore(parsed: unknown): StoreData {
@@ -178,6 +190,7 @@ export function normalizeStore(parsed: unknown): StoreData {
     logins: Array.isArray(record.logins) ? record.logins : [],
     plans: Array.isArray(record.plans) ? record.plans : [],
     flags: Array.isArray(record.flags) ? record.flags : [],
+    siteEdits: Array.isArray(record.siteEdits) ? record.siteEdits : [],
   };
 }
 

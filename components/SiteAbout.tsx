@@ -5,8 +5,8 @@ import { ContentActions } from "./ContentActions";
 import { SitePhotoAdder } from "./SitePhotoAdder";
 
 /**
- * What divers wrote about a site added in the app: how to dive it, photos, and who added it. The diver who added it
- * can add photos here. Nothing on a catalog site with none of these.
+ * A site added in the app: its photos and who added it. The diver who added it can add photos here. Nothing on a
+ * catalog site with no photos. The site's texts are in SiteWiki, which any diver can edit.
  */
 export function SiteAbout({
   site,
@@ -23,9 +23,10 @@ export function SiteAbout({
   blockedAdder: boolean;
 }) {
   if (blockedAdder) {
+    if (!site.photos?.length) return null;
     return (
-      <section className="surface p-4 text-sm text-foam/75 sm:p-5" aria-label="How to dive it">
-        You blocked the diver who added this site, so their notes and photos are hidden. Unblock them on your{" "}
+      <section className="surface p-4 text-sm text-foam/75 sm:p-5" aria-label="Photos">
+        You blocked the diver who added this site, so their photos are hidden. Unblock them on your{" "}
         <Link href="/account#blocked" className="underline decoration-incoming underline-offset-4">
           account page
         </Link>
@@ -36,18 +37,16 @@ export function SiteAbout({
   const photos = site.photos ?? [];
   const room = MAX_PHOTOS_PER_SITE - photos.length;
   const canAdd = isAdder && room > 0;
-  if (!site.howToDive && photos.length === 0 && !adderNickname && !canAdd) return null;
+  // A pin added in the app keeps this card for its Report, which covers the pin and the adder's own notes (shown in
+  // the About card), even once the adder is gone and there are no photos.
+  if (photos.length === 0 && !adderNickname && !canAdd && site.sourceUrl !== "user") return null;
 
   return (
-    <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="about-heading">
-      <h2 id="about-heading" className="text-base font-semibold text-foam">
-        How to dive it
+    <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="photos-heading">
+      <h2 id="photos-heading" className="text-base font-semibold text-foam">
+        Photos
       </h2>
-      {site.howToDive ? (
-        <p className="text-sm leading-6 break-words whitespace-pre-line text-foam/90">{site.howToDive}</p>
-      ) : (
-        <p className="text-sm text-foam/70">No notes yet.</p>
-      )}
+      {photos.length === 0 ? <p className="text-sm text-foam/70">No photos yet.</p> : null}
       {photos.length > 0 ? (
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Photos">
           {photos.map((photo, index) => {
@@ -84,7 +83,7 @@ export function SiteAbout({
           >
             {adderNickname}
           </Link>
-          . Notes and photos are the diver&apos;s own; the forecast does not read them.
+          . Photos are the diver&apos;s own; the forecast does not read them.
         </p>
       ) : null}
       {site.sourceUrl === "user" && !isAdder ? (

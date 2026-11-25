@@ -75,7 +75,7 @@ function optionalDepth(value: unknown, label: string): number | null {
 }
 
 /** Plain text: control characters dropped (newlines kept), runs of blank lines squeezed, ends trimmed. */
-function cleanText(text: string): string {
+export function cleanText(text: string): string {
   return text
     .replace(/\r\n?/g, "\n")
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "")
