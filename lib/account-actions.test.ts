@@ -89,7 +89,7 @@ describe("sign in by email code", () => {
 
     await addReport({ siteId: "banana-reef", time: "2026-09-27T08:00", direction: "outgoing", strength: "mild" });
     const board = await getLeaderboard("all");
-    expect(board).toEqual([{ userId: expect.any(String), rank: 1, nickname: "Manta", points: 20, reports: 1, ratings: 0, sites: 1, badges: 2, isMe: true }]);
+    expect(board).toEqual([{ userId: expect.any(String), rank: 1, nickname: "Manta", points: 20, reports: 1, ratings: 0, sites: 1, edits: 0, badges: 2, isMe: true }]);
     expect(JSON.stringify(board)).not.toContain("example.com");
     await rateSite("banana-reef", 5);
     expect((await getLeaderboard("all"))[0]).toMatchObject({ points: 23, ratings: 1 });

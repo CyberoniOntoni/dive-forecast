@@ -87,6 +87,24 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
     );
   }
 
+  /** Report under a field divers wrote, to whoever wrote what it shows now. */
+  function report(field: WikiField) {
+    const author = wiki.reportTo[field];
+    if (!author) return null;
+    // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
+    return (
+      <ContentActions
+        kind="text"
+        siteId={wiki.siteId}
+        userId={author.userId}
+        nickname={author.nickname}
+        signedIn={wiki.signedIn}
+        returnTo={here}
+        canBlock={false}
+      />
+    );
+  }
+
   return (
     <section id="about" className="flex min-w-0 scroll-mt-4 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="wiki-heading">
       <h2 id="wiki-heading" className="text-base font-semibold text-foam">
@@ -146,12 +164,14 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
           {wiki.texts.description ? (
             <p className="text-sm leading-6 break-words whitespace-pre-line text-foam/90">{wiki.texts.description}</p>
           ) : null}
+          {report("description")}
           {wiki.texts.howToDive ? (
             <div className="flex min-w-0 flex-col gap-1">
               <h3 className="text-sm font-semibold text-foam">How to dive it</h3>
               <p className="text-sm leading-6 break-words whitespace-pre-line text-foam/90">{wiki.texts.howToDive}</p>
             </div>
           ) : null}
+          {report("howToDive")}
           {wiki.adderTextHidden ? (
             <p className="text-sm text-foam/75">
               You blocked the diver who added this site, so their notes on how to dive it are hidden.
@@ -174,18 +194,6 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
               ))}
               .
             </p>
-          ) : null}
-          {wiki.reportTo ? (
-            // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
-            <ContentActions
-              kind="text"
-              siteId={wiki.siteId}
-              userId={wiki.reportTo.userId}
-              nickname={wiki.reportTo.nickname}
-              signedIn={wiki.signedIn}
-              returnTo={here}
-              canBlock={false}
-            />
           ) : null}
           {wiki.revisions > 0 ? (
             <p className="text-xs text-foam/70">

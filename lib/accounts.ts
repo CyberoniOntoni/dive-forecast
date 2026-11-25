@@ -232,7 +232,10 @@ export function deleteAccountRecords(store: StoreData, userId: string): AccountP
   // Site edits waiting or rejected go. Approved ones are the site's text now: they stay in its history under the
   // anonymous id, with no credit (siteContributors finds no diver) and without the diver's note to the moderators.
   store.siteEdits = store.siteEdits.filter((edit) => edit.userId !== userId || edit.status === "approved");
+  // A moderator's own edit names them as its reviewer too, and every edit they reviewed names them: both take the
+  // anonymous id, so nothing left points back to the account (and an own edit still reads as one).
   for (const edit of store.siteEdits) {
+    if (edit.reviewerId === userId) edit.reviewerId = anonymous;
     if (edit.userId !== userId) continue;
     edit.userId = anonymous;
     delete edit.note;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addFlag, banDiver, moderate } from "./moderation";
+import { addFlag, banDiver, laterOverTheirs, moderate } from "./moderation";
 import { deleteAccountRecords } from "./accounts";
 import { diverStats } from "./points";
 import {
@@ -176,13 +176,51 @@ describe("edits and accounts", () => {
     const bob = proposeEdit(data, "bob", input({ howToDive: "Vandal" }), ORIGINAL, T0 + 1000).edit;
     reviewEdit(data, bob.id, "approve", "mod", ORIGINAL, T0 + 1000);
     expect(addFlag(data, "bob", { kind: "text", siteId: "kandu", reason: "spam" }, T0 + 2000)).toEqual({ result: "own" });
+    // Bob can report Ann's field, though his revision is the newest.
+    expect(addFlag(data, "bob", { kind: "text", siteId: "kandu", userId: "ann", reason: "spam" }, T0 + 2000)).toMatchObject({
+      result: "saved",
+      flag: { userId: "ann" },
+    });
+    // A diver whose text no field shows has nothing to report.
+    expect(addFlag(data, "ann", { kind: "text", siteId: "kandu", userId: "mod", reason: "spam" }, T0 + 2000)).toEqual({ result: "missing" });
     const outcome = addFlag(data, "ann", { kind: "text", siteId: "kandu", reason: "spam" }, T0 + 2000);
     expect(outcome).toMatchObject({ result: "saved", flag: { kind: "text", siteId: "kandu", userId: "bob" } });
     expect(addFlag(data, "ann", { kind: "text", siteId: "elsewhere", reason: "spam" }, T0 + 2000)).toEqual({ result: "missing" });
     moderate(data, { kind: "text", siteId: "kandu", userId: "bob" }, "remove", "mod", T0 + 3000);
     expect(liveTexts(ORIGINAL, data.siteEdits, "kandu").texts).toEqual({ description: "Good", howToDive: "Catalog notes." });
-    expect(data.flags[0].resolvedAt).toBeDefined();
+    expect(data.flags.find((flag) => flag.userId === "bob")?.resolvedAt).toBeDefined();
     expect(ann.revertedAt).toBeUndefined();
+  });
+
+  it("taking back a diver's text leaves a later revision by someone else, which holds the whole field", () => {
+    const data = store();
+    const spam = proposeEdit(data, "bob", input({ description: "Spam here" }), ORIGINAL, T0).edit;
+    reviewEdit(data, spam.id, "approve", "mod", ORIGINAL, T0);
+    const typo = proposeEdit(data, "ann", input({ description: "Spam here." }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, typo.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    const own = proposeEdit(data, "bob", input({ howToDive: "Bob 1" }), ORIGINAL, T0 + 2000).edit;
+    reviewEdit(data, own.id, "approve", "mod", ORIGINAL, T0 + 2000);
+    const again = proposeEdit(data, "bob", input({ howToDive: "Bob 2" }), ORIGINAL, T0 + 3000).edit;
+    reviewEdit(data, again.id, "approve", "mod", ORIGINAL, T0 + 3000);
+    expect(laterOverTheirs(data, "bob", "kandu")).toBe(1);
+    moderate(data, { kind: "text", siteId: "kandu", userId: "bob" }, "remove", "mod", T0 + 4000);
+    // Both of Bob's How to dive it revisions go, one after the other; Ann's description stays, and so does the Bob
+    // revision under it (the card pointed the moderator at the history).
+    expect(liveTexts(ORIGINAL, data.siteEdits, "kandu").texts).toEqual({ description: "Spam here.", howToDive: "Catalog notes." });
+    expect([own.revertedAt, again.revertedAt].every(Boolean)).toBe(true);
+    expect(spam.revertedAt).toBeUndefined();
+  });
+
+  it("deleting a moderator's account leaves no id of theirs on the edits they wrote or reviewed", () => {
+    const data = store();
+    const mine = proposeEdit(data, "mod", input({ description: "Mine" }), ORIGINAL, T0, { moderator: true }).edit;
+    const theirs = proposeEdit(data, "ann", input({ howToDive: "Ann's" }), ORIGINAL, T0).edit;
+    reviewEdit(data, theirs.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    deleteAccountRecords(data, "mod");
+    expect(JSON.stringify(data.siteEdits)).not.toContain('"mod"');
+    expect(mine.reviewerId).toBe(mine.userId);
+    expect(theirs.reviewerId).toBe(mine.userId);
+    expect(countedEdits(data.siteEdits, 3).has(mine.userId)).toBe(false);
   });
 
   it("the public history replays only standing revisions, so taken-back text never shows as what an edit replaced", () => {
@@ -194,7 +232,8 @@ describe("edits and accounts", () => {
     const fix = proposeEdit(data, "ann", input({ description: "Better" }), ORIGINAL, T0 + 2000).edit;
     reviewEdit(data, fix.id, "approve", "mod", ORIGINAL, T0 + 2000);
     expect(fix.replaced?.description).toBe("Vandal");
-    banDiver(data, "bob", T0 + 3000);
+    // However it came to be taken back with a revision over it, the public history must not show it.
+    bad.revertedAt = new Date(T0 + 3000).toISOString();
     const before = standingBefore(ORIGINAL, data.siteEdits, "kandu");
     expect([...before.keys()]).toEqual([good.id, fix.id]);
     expect(before.get(fix.id)?.description).toBe("Good");

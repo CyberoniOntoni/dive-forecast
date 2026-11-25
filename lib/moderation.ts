@@ -1,4 +1,4 @@
-import { FLAG_KINDS, FLAG_REASONS, type ContentFlag, type FlagKind, type FlagReason, type SiteEdit, type SitePhoto, type StoreData, type User } from "./types";
+import { FLAG_KINDS, FLAG_REASONS, WIKI_FIELDS, type ContentFlag, type FlagKind, type FlagReason, type SiteEdit, type SitePhoto, type StoreData, type User, type WikiField } from "./types";
 
 /**
  * Google Play's rules for user-generated content (and our own, at /terms): divers agree to the content rules before
@@ -91,9 +91,12 @@ export function addFlag(
     if (!site) return { result: "missing" };
     owner = site.addedBy;
   } else if (input.kind === "text") {
-    const newest = standingEdits(store, (edit) => edit.siteId === input.siteId).at(-1);
-    if (!newest) return { result: "missing" };
-    owner = newest.userId;
+    // Filed against the diver whose revision the reported field shows now (the card names them per field). With no
+    // diver given (an older app), the newest standing revision's.
+    const sources = [...liveSources(store, input.siteId!).values()];
+    const source = input.userId ? sources.find((edit) => edit.userId === input.userId) : standingEdits(store, (edit) => edit.siteId === input.siteId).at(-1);
+    if (!source) return { result: "missing" };
+    owner = source.userId;
   } else {
     if (!store.users.some((user) => user.id === input.userId && !user.bannedAt)) return { result: "missing" };
     owner = input.userId;
@@ -184,14 +187,43 @@ function standingEdits(store: StoreData, match: (edit: SiteEdit) => boolean): Si
     .sort((a, b) => (a.reviewedAt ?? a.createdAt).localeCompare(b.reviewedAt ?? b.createdAt) || a.id.localeCompare(b.id));
 }
 
+/** The revision each field of a site's texts shows now (lib/site-wiki.ts liveTexts' `source`), by field. */
+export function liveSources(store: StoreData, siteId: string): Map<WikiField, SiteEdit> {
+  const sources = new Map<WikiField, SiteEdit>();
+  for (const edit of standingEdits(store, (item) => item.siteId === siteId)) {
+    for (const field of WIKI_FIELDS) if (edit.changes[field] != null) sources.set(field, edit);
+  }
+  return sources;
+}
+
 /**
- * Takes back every revision of a diver's still standing, on one site or (no siteId) everywhere: each field falls back
- * to the revision before it, and the diver is no longer credited or paid for them. Later revisions by others stay.
+ * Takes the diver's text off a site, or (no siteId) off every site: while a field shows a revision of theirs, that
+ * revision is taken back, so the field falls back to the one before (again, if that is theirs too). A revision of
+ * theirs that someone else already wrote over stays, like a moderator's own Take back (revertEdit): the later text
+ * holds the whole field, perhaps still with their words, so /moderation points the moderator at the history.
  */
 function takeBackTexts(store: StoreData, userId: string, siteId: string | undefined, nowIso: string): void {
-  for (const edit of standingEdits(store, (item) => item.userId === userId && (siteId == null || item.siteId === siteId))) {
-    edit.revertedAt = nowIso;
+  const sites = siteId != null ? [siteId] : [...new Set(standingEdits(store, (item) => item.userId === userId).map((item) => item.siteId))];
+  for (const site of sites) {
+    for (;;) {
+      const theirs = [...new Set(liveSources(store, site).values())].filter((edit) => edit.userId === userId);
+      if (theirs.length === 0) break;
+      for (const edit of theirs) edit.revertedAt = nowIso;
+    }
   }
+}
+
+/** Revisions by other divers that wrote over this diver's still standing ones on a site (see takeBackTexts). */
+export function laterOverTheirs(store: StoreData, userId: string, siteId: string): number {
+  const edits = standingEdits(store, (item) => item.siteId === siteId);
+  const later = new Set<string>();
+  edits.forEach((edit, index) => {
+    if (edit.userId !== userId) return;
+    for (const next of edits.slice(index + 1)) {
+      if (next.userId !== userId && WIKI_FIELDS.some((field) => edit.changes[field] != null && next.changes[field] != null)) later.add(next.id);
+    }
+  });
+  return later.size;
 }
 
 /** Takes down what a report is about. Returns the photos to delete. */

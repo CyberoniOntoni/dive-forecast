@@ -24,7 +24,7 @@ import {
 } from "./site-wiki";
 import { WIKI_LABELS } from "./site-wiki-limits";
 import { findSite, mutateStore, readStore, siteRecord } from "./store";
-import type { SiteEdit, StoreData, WikiField, WikiTexts } from "./types";
+import { WIKI_FIELDS, type SiteEdit, type StoreData, type WikiField, type WikiTexts } from "./types";
 
 /**
  * Divers' edits to a site's description and how to dive it (lib/site-wiki.ts): the site page's card and edit form,
@@ -63,10 +63,10 @@ export type SiteWiki = {
   /** The viewer blocked the diver who added the site, and how to dive it is still that diver's own text: hidden. */
   adderTextHidden: boolean;
   /**
-   * Who a Report on the texts goes to: the diver of the newest revision still standing. Null when the texts are the
-   * site's own, or that diver is the viewer.
+   * Who a Report on each field goes to: the diver whose revision it shows now. Absent when the field is the site's
+   * own text or that diver's is the viewer.
    */
-  reportTo: Contributor | null;
+  reportTo: Partial<Record<WikiField, Contributor>>;
 };
 
 const MY_EDIT_SHOWN_DAYS = 30;
@@ -89,10 +89,11 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
         .filter((edit) => edit.status === "pending" || Date.parse(edit.reviewedAt ?? edit.createdAt) > since)
         .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt))
     : [];
-  const newest = [source.description, source.howToDive]
-    .filter((edit): edit is SiteEdit => edit != null)
-    .sort((a, b) => (a.reviewedAt ?? a.createdAt).localeCompare(b.reviewedAt ?? b.createdAt) || a.id.localeCompare(b.id))
-    .at(-1);
+  const reportTo: Partial<Record<WikiField, Contributor>> = {};
+  for (const field of WIKI_FIELDS) {
+    const edit = source[field];
+    if (edit && edit.userId !== viewerId && texts[field]) reportTo[field] = { userId: edit.userId, nickname: findNickname(store, edit.userId) };
+  }
   const latest = own.find((edit) => edit.status === "pending") ?? own[0] ?? null;
   return {
     siteId,
@@ -114,7 +115,7 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
         }
       : null,
     adderTextHidden,
-    reportTo: newest && newest.userId !== viewerId ? { userId: newest.userId, nickname: findNickname(store, newest.userId) } : null,
+    reportTo,
   };
 }
 

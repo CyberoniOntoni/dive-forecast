@@ -160,7 +160,7 @@ export default function PrivacyPage() {
           Reviews, photos, sites, site texts and profiles must follow our <Link href="/terms">content rules</Link>. Moderators read reported
           content and may remove it. If a diver is banned for breaking the rules, we keep their account&rsquo;s email and the
           reports about them, so they cannot sign up again. Their reviews, photos, sites and About me are removed, their site
-          edits waiting for review are rejected, their approved site edits are taken back from the site&rsquo;s text, and their nickname is replaced; their dive reports stay, and so do their dive plans until the account is deleted.
+          edits waiting for review are rejected, their approved site text still showing is taken back, and their nickname is replaced; their dive reports stay, and so do their dive plans until the account is deleted.
         </p>
       </Section>
 

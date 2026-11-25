@@ -23,6 +23,7 @@ export function SiteAbout({
   blockedAdder: boolean;
 }) {
   if (blockedAdder) {
+    if (!site.photos?.length) return null;
     return (
       <section className="surface p-4 text-sm text-foam/75 sm:p-5" aria-label="Photos">
         You blocked the diver who added this site, so their photos are hidden. Unblock them on your{" "}

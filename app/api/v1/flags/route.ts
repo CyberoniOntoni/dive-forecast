@@ -23,6 +23,11 @@ export async function POST(request: Request) {
       const user = typeof body.nickname === "string" ? userByNickname(readStore(), body.nickname) : null;
       if (!user) return apiError(404, "not_found", "No diver by that nickname.");
       userId = user.id;
+    } else if (body.kind === "text" && typeof body.nickname === "string") {
+      // Optional: whose text (its field's writer, `writtenBy`); without it, the newest standing revision's diver.
+      const user = userByNickname(readStore(), body.nickname);
+      if (!user) return apiError(404, "not_found", "No diver by that nickname.");
+      userId = user.id;
     }
     const result = await reportContent({ kind: body.kind, siteId: body.siteId, userId, reason: body.reason, note: body.note });
     if (!result.ok) {

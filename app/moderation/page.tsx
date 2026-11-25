@@ -93,6 +93,16 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
           {flag.kind === "text" && flag.texts.length === 0 ? (
             <p className="text-sm text-foam/70">None of this diver&apos;s text is live on the site any more.</p>
           ) : null}
+          {flag.laterEdits > 0 && flag.site ? (
+            <p className="text-sm text-foam/80">
+              {flag.laterEdits === 1 ? "One later edit" : `${flag.laterEdits} later edits`} by other divers wrote over this
+              diver&apos;s text and stay after Remove; they may still carry their words. Check the{" "}
+              <Link href={`/sites/${flag.site.id}/history`} className="underline decoration-incoming underline-offset-4">
+                history
+              </Link>
+              .
+            </p>
+          ) : null}
           <ModerationPhotos urls={flag.photos} alt="Reported photo" />
           <ModerationActions flagId={flag.id} canBan={flag.canBan} />
         </article>

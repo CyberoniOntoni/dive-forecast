@@ -9,6 +9,7 @@ import {
   banRefusal,
   FLAG_REASON_LABELS,
   hideReportsBy,
+  laterOverTheirs,
   moderate,
   readFlagInput,
   resolveFlags,
@@ -137,6 +138,8 @@ export type FlagView = {
   review: { score: number; text: string | null } | null;
   /** On a report of a site's texts: the live fields that diver wrote. */
   texts: { label: string; text: string }[];
+  /** On a report of a site's texts: later revisions by other divers over theirs, which Remove leaves standing. */
+  laterEdits: number;
   photos: string[];
   /** Other open reports on the same content. */
   alsoReported: number;
@@ -191,6 +194,7 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
       site: site ? { id: site.id, name: site.name, howToDive: site.howToDive ?? null, hidden: Boolean(site.hidden) } : null,
       review: rating ? { score: rating.score, text: rating.review ?? null } : null,
       texts: flag.kind === "text" && flag.siteId ? authoredTexts(store, flag.siteId, flag.userId) : [],
+      laterEdits: flag.kind === "text" && flag.siteId && flag.userId ? laterOverTheirs(store, flag.userId, flag.siteId) : 0,
       photos,
       alsoReported: open.filter((item) => `${item.kind}|${item.siteId ?? ""}|${item.userId ?? ""}` === key).length - 1,
       canBan: banRefusal(store, flag.userId, moderator) == null,

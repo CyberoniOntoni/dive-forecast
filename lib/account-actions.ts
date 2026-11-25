@@ -261,6 +261,8 @@ export type LeaderboardRow = {
   reports: number;
   ratings: number;
   sites: number;
+  /** Approved site edits that earned points. */
+  edits: number;
   badges: number;
   isMe: boolean;
 };
@@ -285,6 +287,7 @@ export async function getLeaderboard(periodInput: unknown): Promise<LeaderboardR
       reports: row.reports,
       ratings: row.ratings,
       sites: row.sites,
+      edits: row.edits,
       badges: row.badges.length,
       isMe: row.userId === session?.userId,
     }));
