@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { banDiver } from "./moderation";
+import { addFlag, banDiver, moderate } from "./moderation";
 import { deleteAccountRecords } from "./accounts";
 import { diverStats } from "./points";
 import {
@@ -12,6 +12,7 @@ import {
   revertEdit,
   siteContributors,
   staleFields,
+  standingBefore,
   withdrawEdit,
   withWikiTexts,
 } from "./site-wiki";
@@ -155,14 +156,48 @@ describe("reviewing edits", () => {
 });
 
 describe("edits and accounts", () => {
-  it("a ban rejects the diver's waiting edits and keeps their approved ones", () => {
+  it("a ban rejects the diver's waiting edits and takes back their live ones", () => {
     const data = store();
     const live = proposeEdit(data, "bob", input({ description: "Good" }), ORIGINAL, T0).edit;
     reviewEdit(data, live.id, "approve", "mod", ORIGINAL, T0);
     const waiting = proposeEdit(data, "bob", input({ description: "Bad" }), ORIGINAL, T0 + 1000).edit;
     banDiver(data, "bob", T0 + 2000);
     expect(waiting).toMatchObject({ status: "rejected", rejectReason: "Account suspended." });
-    expect(live.status).toBe("approved");
+    // Their live text is taken back: the site falls back to the revision before, and they are no longer credited.
+    expect(live).toMatchObject({ status: "approved", revertedAt: new Date(T0 + 2000).toISOString() });
+    expect(liveTexts(ORIGINAL, data.siteEdits, "kandu").texts.description).toBe("");
+    expect(siteContributors(data, "kandu")).toEqual([]);
+  });
+
+  it("a report on a site's texts goes to the newest standing revision's diver, and Remove takes back theirs only", () => {
+    const data = store();
+    const ann = proposeEdit(data, "ann", input({ description: "Good" }), ORIGINAL, T0).edit;
+    reviewEdit(data, ann.id, "approve", "mod", ORIGINAL, T0);
+    const bob = proposeEdit(data, "bob", input({ howToDive: "Vandal" }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, bob.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    expect(addFlag(data, "bob", { kind: "text", siteId: "kandu", reason: "spam" }, T0 + 2000)).toEqual({ result: "own" });
+    const outcome = addFlag(data, "ann", { kind: "text", siteId: "kandu", reason: "spam" }, T0 + 2000);
+    expect(outcome).toMatchObject({ result: "saved", flag: { kind: "text", siteId: "kandu", userId: "bob" } });
+    expect(addFlag(data, "ann", { kind: "text", siteId: "elsewhere", reason: "spam" }, T0 + 2000)).toEqual({ result: "missing" });
+    moderate(data, { kind: "text", siteId: "kandu", userId: "bob" }, "remove", "mod", T0 + 3000);
+    expect(liveTexts(ORIGINAL, data.siteEdits, "kandu").texts).toEqual({ description: "Good", howToDive: "Catalog notes." });
+    expect(data.flags[0].resolvedAt).toBeDefined();
+    expect(ann.revertedAt).toBeUndefined();
+  });
+
+  it("the public history replays only standing revisions, so taken-back text never shows as what an edit replaced", () => {
+    const data = store();
+    const good = proposeEdit(data, "ann", input({ description: "Good" }), ORIGINAL, T0).edit;
+    reviewEdit(data, good.id, "approve", "mod", ORIGINAL, T0);
+    const bad = proposeEdit(data, "bob", input({ description: "Vandal" }), ORIGINAL, T0 + 1000).edit;
+    reviewEdit(data, bad.id, "approve", "mod", ORIGINAL, T0 + 1000);
+    const fix = proposeEdit(data, "ann", input({ description: "Better" }), ORIGINAL, T0 + 2000).edit;
+    reviewEdit(data, fix.id, "approve", "mod", ORIGINAL, T0 + 2000);
+    expect(fix.replaced?.description).toBe("Vandal");
+    banDiver(data, "bob", T0 + 3000);
+    const before = standingBefore(ORIGINAL, data.siteEdits, "kandu");
+    expect([...before.keys()]).toEqual([good.id, fix.id]);
+    expect(before.get(fix.id)?.description).toBe("Good");
   });
 
   it("deleting an account keeps approved text uncredited and drops the rest", () => {

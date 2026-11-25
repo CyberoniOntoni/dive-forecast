@@ -49,7 +49,7 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
       {flags.map((flag) => (
         <article key={flag.id} className="flex min-w-0 flex-col gap-2 surface p-4 sm:p-5">
           <p className="text-sm text-foam">
-            <strong>{flag.reasonLabel}</strong> · {flag.kind === "review" ? "Review" : flag.kind === "site" ? "Added site" : "Diver profile"}
+            <strong>{flag.reasonLabel}</strong> · {flag.kind === "review" ? "Review" : flag.kind === "site" ? "Added site" : flag.kind === "text" ? "Site text" : "Diver profile"}
             {flag.alsoReported ? ` · ${flag.alsoReported + 1} reports` : ""} · {flag.createdAt.slice(0, 16).replace("T", " ")} UTC
             {flag.reporter ? ` · by ${flag.reporter}` : ""}
           </p>
@@ -84,6 +84,14 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
             <p className="text-sm whitespace-pre-line text-foam/85">
               {flag.review.score}/5{flag.review.text ? `: ${flag.review.text}` : ""}
             </p>
+          ) : null}
+          {flag.texts.map((item) => (
+            <p key={item.label} className="text-sm whitespace-pre-line text-foam/85">
+              <span className="font-medium">{item.label}:</span> {item.text}
+            </p>
+          ))}
+          {flag.kind === "text" && flag.texts.length === 0 ? (
+            <p className="text-sm text-foam/70">None of this diver&apos;s text is live on the site any more.</p>
           ) : null}
           <ModerationPhotos urls={flag.photos} alt="Reported photo" />
           <ModerationActions flagId={flag.id} canBan={flag.canBan} />

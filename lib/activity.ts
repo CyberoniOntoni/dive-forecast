@@ -239,8 +239,9 @@ export function recentActivity(
         text: [edit.note ? `Note: ${edit.note}` : null, ...texts].filter(Boolean).join("\n") || null,
         photos: [],
         href: edit.status === "approved" ? `/sites/${edit.siteId}/history` : edit.status === "pending" ? "/moderation#site-edits" : null,
-        removable: null,
-      }, edit.userId);
+        // Take back their text: every revision of theirs still standing on the site (removeFlagged, kind "text").
+        removable: edit.status === "approved" && !edit.revertedAt ? { kind: "text", siteId: edit.siteId, userId: edit.userId } : null,
+      }, edit.userId, { kind: "text", siteId: edit.siteId, userId: edit.userId });
     }
   }
 
@@ -286,7 +287,7 @@ export function recentActivity(
   }
 
   if (wanted.has("flag")) {
-    const what: Record<FlagKind, string> = { review: "a review", site: "an added site", diver: "a diver's profile" };
+    const what: Record<FlagKind, string> = { review: "a review", site: "an added site", diver: "a diver's profile", text: "a site's text" };
     for (const flag of store.flags as ContentFlag[]) {
       if (!recent(flag.createdAt)) continue;
       const owner = diver(flag.userId);

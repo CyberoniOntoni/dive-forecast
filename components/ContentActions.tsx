@@ -41,7 +41,7 @@ export function ContentActions({
   const [confirmBlock, setConfirmBlock] = useState(false);
   const [message, setMessage] = useState<{ text: string; error: boolean } | null>(null);
   const [pending, startTransition] = useTransition();
-  const what = kind === "review" ? "review" : kind === "site" ? "site" : "diver";
+  const what = kind === "review" ? "review" : kind === "site" ? "site" : kind === "text" ? "text" : "diver";
 
   if (!signedIn) {
     return (

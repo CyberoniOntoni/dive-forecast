@@ -74,6 +74,23 @@ export function liveTexts(original: Record<WikiField, string>, edits: readonly S
   return { texts, source };
 }
 
+/**
+ * The texts each standing revision went live over, replayed from the site's own texts through the revisions still
+ * standing, so the public history never shows text a moderator took back.
+ */
+export function standingBefore(original: Record<WikiField, string>, edits: readonly SiteEdit[], siteId: string): Map<string, WikiTexts> {
+  const texts = { ...original };
+  const before = new Map<string, WikiTexts>();
+  for (const edit of liveRevisions(edits, siteId)) {
+    before.set(edit.id, { ...texts });
+    for (const field of WIKI_FIELDS) {
+      const text = edit.changes[field];
+      if (text != null) texts[field] = text;
+    }
+  }
+  return before;
+}
+
 /** The sites with approved edits, for laying the texts over many sites at once (listMergedSites). */
 export function editedSiteIds(edits: readonly SiteEdit[]): Set<string> {
   return new Set(edits.filter((edit) => edit.status === "approved" && !edit.revertedAt).map((edit) => edit.siteId));

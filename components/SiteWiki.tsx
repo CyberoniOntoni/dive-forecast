@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { POINTS } from "@/lib/points-rules";
+import { ContentActions } from "./ContentActions";
 import { signInHref } from "@/lib/sign-in";
 import { creditJoiner, EDIT_NOTE_MAX, WIKI_LABELS, WIKI_MAX } from "@/lib/site-wiki-limits";
 import type { WikiField } from "@/lib/types";
@@ -173,6 +174,18 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
               ))}
               .
             </p>
+          ) : null}
+          {wiki.reportTo ? (
+            // Block is left out: a blocked diver's site texts still show (they are the site's, written together).
+            <ContentActions
+              kind="text"
+              siteId={wiki.siteId}
+              userId={wiki.reportTo.userId}
+              nickname={wiki.reportTo.nickname}
+              signedIn={wiki.signedIn}
+              returnTo={here}
+              canBlock={false}
+            />
           ) : null}
           {wiki.revisions > 0 ? (
             <p className="text-xs text-foam/70">

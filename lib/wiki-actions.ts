@@ -17,6 +17,7 @@ import {
   revertEdit,
   siteContributors,
   staleFields,
+  standingBefore,
   withdrawEdit,
   type Contributor,
   type FieldChange,
@@ -61,9 +62,19 @@ export type SiteWiki = {
   mine: MyEdit | null;
   /** The viewer blocked the diver who added the site, and how to dive it is still that diver's own text: hidden. */
   adderTextHidden: boolean;
+  /**
+   * Who a Report on the texts goes to: the diver of the newest revision still standing. Null when the texts are the
+   * site's own, or that diver is the viewer.
+   */
+  reportTo: Contributor | null;
 };
 
 const MY_EDIT_SHOWN_DAYS = 30;
+
+function findNickname(store: StoreData, userId: string): string {
+  const user = store.users.find((item) => item.id === userId);
+  return user && !user.storeReview ? user.nickname : "a former diver";
+}
 
 function siteWiki(store: StoreData, siteId: string, viewerId: string | null, moderator: boolean): SiteWiki {
   const record = siteRecord(store, siteId);
@@ -78,12 +89,16 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
         .filter((edit) => edit.status === "pending" || Date.parse(edit.reviewedAt ?? edit.createdAt) > since)
         .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt))
     : [];
+  const newest = [source.description, source.howToDive]
+    .filter((edit): edit is SiteEdit => edit != null)
+    .sort((a, b) => (a.reviewedAt ?? a.createdAt).localeCompare(b.reviewedAt ?? b.createdAt) || a.id.localeCompare(b.id))
+    .at(-1);
   const latest = own.find((edit) => edit.status === "pending") ?? own[0] ?? null;
   return {
     siteId,
     texts: adderTextHidden ? { ...texts, howToDive: "" } : texts,
     contributors: siteContributors(store, siteId),
-    revisions: store.siteEdits.filter((edit) => edit.siteId === siteId && edit.status === "approved").length,
+    revisions: store.siteEdits.filter((edit) => edit.siteId === siteId && edit.status === "approved" && (moderator || !edit.revertedAt)).length,
     signedIn: viewer != null,
     canEdit: Boolean(viewer && !viewer.bannedAt && hasAcceptedTerms(viewer)),
     needsTerms: Boolean(viewer && !hasAcceptedTerms(viewer)),
@@ -99,6 +114,7 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
         }
       : null,
     adderTextHidden,
+    reportTo: newest && newest.userId !== viewerId ? { userId: newest.userId, nickname: findNickname(store, newest.userId) } : null,
   };
 }
 
@@ -270,8 +286,11 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
   const store = readStore();
   const original = originalTexts(siteRecord(store, siteId));
   const { source } = liveTexts(original, store.siteEdits, siteId);
+  // Divers see only the revisions still standing, each against the text it now follows; text a moderator took back
+  // (vandalism, a removed report) stays visible to moderators alone.
+  const before = standingBefore(original, store.siteEdits, siteId);
   const revisions = store.siteEdits
-    .filter((edit) => edit.siteId === siteId && edit.status === "approved")
+    .filter((edit) => edit.siteId === siteId && edit.status === "approved" && (moderator || !edit.revertedAt))
     .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt) || b.id.localeCompare(a.id))
     .map((edit): RevisionView => {
       const user = store.users.find((item) => item.id === edit.userId);
@@ -280,7 +299,7 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
         id: edit.id,
         diver: user && !user.storeReview ? { userId: user.id, nickname: user.nickname } : null,
         at: edit.reviewedAt ?? edit.createdAt,
-        changes: fieldChanges(edit.replaced ?? edit.based, edit.changes),
+        changes: fieldChanges(moderator ? (edit.replaced ?? edit.based) : (before.get(edit.id) ?? edit.based), edit.changes),
         reverted: Boolean(edit.revertedAt),
         canRevert: moderator && !edit.revertedAt && fields.every((field) => source[field]?.id === edit.id),
       };

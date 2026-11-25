@@ -19,8 +19,10 @@ import {
 import { moderatorId } from "./moderator";
 import { ready } from "./ready";
 import { deletePhotoBytes, photoUrl } from "./site-photos";
-import { findSite, mutateStore, readCatalog, readStore } from "./store";
-import { FLAG_KINDS, type ContentFlag, type FlagKind, type FlagReason } from "./types";
+import { liveTexts, originalTexts } from "./site-wiki";
+import { WIKI_LABELS } from "./site-wiki-limits";
+import { findSite, mutateStore, readCatalog, readStore, siteRecord } from "./store";
+import { FLAG_KINDS, WIKI_FIELDS, type ContentFlag, type FlagKind, type FlagReason, type StoreData } from "./types";
 
 /**
  * The signed-in diver's side of Google Play's user-generated content rules (lib/moderation.ts): agree to the content
@@ -77,7 +79,7 @@ async function notifyModerators(flag: ContentFlag): Promise<void> {
     .filter(Boolean);
   if (to.length === 0) return;
   const base = (await appUrl()) ?? "https://50bar.app";
-  const what = { review: "a review", site: "a site added in the app", diver: "a diver's profile" }[flag.kind];
+  const what = { review: "a review", site: "a site added in the app", diver: "a diver's profile", text: "a site's text" }[flag.kind];
   const text = [
     `A diver reported ${what}: ${FLAG_REASON_LABELS[flag.reason]}.`,
     flag.note ? `Their note: ${flag.note}` : null,
@@ -133,12 +135,23 @@ export type FlagView = {
   diver: { userId: string; nickname: string; about: string | null; banned: boolean; storeReview: boolean } | null;
   site: { id: string; name: string; howToDive: string | null; hidden: boolean } | null;
   review: { score: number; text: string | null } | null;
+  /** On a report of a site's texts: the live fields that diver wrote. */
+  texts: { label: string; text: string }[];
   photos: string[];
   /** Other open reports on the same content. */
   alsoReported: number;
   /** Whether Ban diver is offered (banRefusal). */
   canBan: boolean;
 };
+
+/** The live fields of a site's texts that came from this diver's revisions, for a report on them. */
+function authoredTexts(store: StoreData, siteId: string, userId: string | undefined): { label: string; text: string }[] {
+  const { texts, source } = liveTexts(originalTexts(siteRecord(store, siteId)), store.siteEdits, siteId);
+  return WIKI_FIELDS.filter((field) => source[field] && source[field]!.userId === userId).map((field) => ({
+    label: WIKI_LABELS[field],
+    text: texts[field] || "(cleared)",
+  }));
+}
 
 /** Open reports, oldest first, with what they are about, for /moderation. Null for anyone but a moderator. */
 export async function listOpenFlags(): Promise<FlagView[] | null> {
@@ -177,6 +190,7 @@ export async function listOpenFlags(): Promise<FlagView[] | null> {
         : null,
       site: site ? { id: site.id, name: site.name, howToDive: site.howToDive ?? null, hidden: Boolean(site.hidden) } : null,
       review: rating ? { score: rating.score, text: rating.review ?? null } : null,
+      texts: flag.kind === "text" && flag.siteId ? authoredTexts(store, flag.siteId, flag.userId) : [],
       photos,
       alsoReported: open.filter((item) => `${item.kind}|${item.siteId ?? ""}|${item.userId ?? ""}` === key).length - 1,
       canBan: banRefusal(store, flag.userId, moderator) == null,

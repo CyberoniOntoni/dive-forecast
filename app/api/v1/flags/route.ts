@@ -6,8 +6,9 @@ import { SIGN_IN_FIRST } from "@/lib/sign-in";
 import { readStore } from "@/lib/store";
 
 /**
- * Reports objectionable content to the moderators: `{"kind": "review" | "site" | "diver", "siteId"?, "nickname"?,
- * "reason", "note"?}`. A review is its site and its author's nickname, a site is its id, a diver their nickname.
+ * Reports objectionable content to the moderators: `{"kind": "review" | "site" | "diver" | "text", "siteId"?,
+ * "nickname"?, "reason", "note"?}`. A review is its site and its author's nickname, a site (or its texts written by
+ * divers) is its id, a diver their nickname.
  * Answers 201 (a repeat of an open report also counts as sent). API.md § POST /api/v1/flags.
  */
 export async function POST(request: Request) {

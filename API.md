@@ -247,9 +247,9 @@ Google Play's user-generated content policy, as on the web (`lib/moderation.ts`,
 - `GET /api/v1/me` adds `acceptedTerms` (boolean) and `blocked` (nicknames). A diver with `acceptedTerms: false` who
   posts a review, photo, site or About me gets 400 "Agree to the content rules first…": the app asks, then calls
   **`POST /api/v1/me/terms`** (no body) → `{"apiVersion": 1, "acceptedTerms": true}`.
-- **`POST /api/v1/flags`**, signed in: `{"kind": "review" | "site" | "diver", "siteId"?, "nickname"?, "reason",
+- **`POST /api/v1/flags`**, signed in: `{"kind": "review" | "site" | "diver" | "text", "siteId"?, "nickname"?, "reason",
   "note"?}`. A review is `siteId` + its author's `nickname`, a site added in the app is `siteId`, a diver is
-  `nickname`. `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
+  `nickname`, a site's texts written by divers (`description`, `howToDive` when `writtenBy` is not empty) are `siteId`. `reason` is one of `sexual`, `violence`, `hate`, `spam`, `privacy`, `illegal`, `other`; `note` at most
   500 characters. 201 `{"apiVersion": 1, "sent": true}`; 400 for one's own content, at 20 a day, or gone content.
   Moderators get an email and act at `/moderation` on the web.
 - **`POST /api/v1/divers/{nickname}/block`** and **`DELETE`** the same, signed in → `{"apiVersion": 1, "blocked":

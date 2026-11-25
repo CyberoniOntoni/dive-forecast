@@ -308,7 +308,7 @@ export type User = {
 
 export const FLAG_REASONS = ["sexual", "violence", "hate", "spam", "privacy", "illegal", "other"] as const;
 export type FlagReason = (typeof FLAG_REASONS)[number];
-export const FLAG_KINDS = ["review", "site", "diver"] as const;
+export const FLAG_KINDS = ["review", "site", "diver", "text"] as const;
 export type FlagKind = (typeof FLAG_KINDS)[number];
 
 /**
