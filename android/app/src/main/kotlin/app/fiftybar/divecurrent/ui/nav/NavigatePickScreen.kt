@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.nav
 
+import app.fiftybar.divecurrent.ui.components.RouteLimitation
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.LocationManager
@@ -130,7 +131,8 @@ fun NavigatePickScreen(onBack: (() -> Unit)?, onPick: (Destination) -> Unit) {
     containerColor = colors.ink,
     topBar = {
       TopAppBar(
-        title = { Text("Navigate by boat") },
+        title = { Text("Boat route") },
+        actions = { RouteLimitation(Modifier.padding(end = 12.dp)) },
         navigationIcon = { onBack?.let { back -> IconButton(onClick = back) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the map") } } },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.ink, titleContentColor = colors.foam),
       )

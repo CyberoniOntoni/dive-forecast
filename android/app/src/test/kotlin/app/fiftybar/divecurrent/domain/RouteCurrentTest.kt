@@ -123,7 +123,7 @@ class RouteCurrentTest {
     assertEquals(30.0, readout.etaMinutes!!, 0.5)
     assertEquals("08:30", readout.arrival)
     assertTrue(readout.note, readout.note.startsWith("Steer 349° N for track 000° N · current 2.0 kn toward E (Test Kandu)"))
-    assertTrue(readout.note, readout.note.contains("1 reef gap") && readout.note.endsWith("not a chart, keep a lookout"))
+    assertTrue(readout.note, readout.note.contains("1 reef gap") && readout.note.endsWith("GPS ±5 m"))
     assertTrue(readout.shallow)
     assertNull(readout.trouble)
     assertFalse(readout.currentBeatsBoat)
@@ -136,7 +136,7 @@ class RouteCurrentTest {
     val readout = NavReadouts.of(target, stopped, route(null), routeFailed = false, nowMs = t0)!!
     assertTrue(readout.stopped)
     assertNull(readout.etaMinutes)
-    assertEquals("At 8 kn about 38 min, At 20 kn about 15 min", readout.referenceLine)
+    assertEquals("At 8 kn about 38 min · At 20 kn about 15 min", readout.referenceLine)
     val waiting = NavReadouts.of(target, stopped, null, routeFailed = false, nowMs = t0)!!
     assertTrue(waiting.note.startsWith("Planning the route… · "))
     val failed = NavReadouts.of(target, stopped, null, routeFailed = true, nowMs = t0)!!

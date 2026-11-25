@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.site
 
+import app.fiftybar.divecurrent.ui.components.SafetyCopy
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -522,9 +523,9 @@ internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
   val band = SeaBand.of(hour.band)
   Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
     SeaTile(
-      "SEA",
+      "SURFACE",
       heightLabel(hour.feltM),
-      "${band?.let(::seaBandLabel)?.replaceFirstChar { it.uppercase() } ?: hour.band}, chop ${heightLabel(hour.windWaveM)}",
+      "${band?.let(::seaBandLabel)?.replaceFirstChar { it.uppercase() } ?: hour.band}, chop\u00A0${heightLabel(hour.windWaveM).replace(' ', '\u00A0')}",
       valueColor = if (band == SeaBand.Rough) colors.stop else colors.foam,
       modifier = Modifier.weight(1f),
     )
@@ -541,6 +542,8 @@ internal fun SeaTiles(week: WeekView, forecast: ApiForecast, selected: Int) {
       modifier = Modifier.weight(1f),
     )
   }
+  // Right under the current, so choppy water up top is not read as the current at depth, nor calm water as slack.
+  Text(SafetyCopy.SEA_SURFACE_NOTE, style = MaterialTheme.typography.bodySmall, color = colors.mist)
   if (hour.againstCurrent) {
     Text(
       "Swell runs into a strong outgoing current here: expect steep, breaking water at the channel mouth.",

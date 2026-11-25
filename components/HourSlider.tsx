@@ -3,6 +3,7 @@
 import { useMemo, useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { seaDetail } from "@/lib/sea-text";
+import { FORECAST_GUIDANCE, SEA_SURFACE_NOTE } from "@/lib/safety-copy";
 import { compassWord, confidenceOpacity, onCompass, routeArrowBearing, routeWay } from "@/lib/nowcast-glance";
 import type { BearingSource, Confidence, Direction, ForecastRoute, HourForecast, SeaBand, SeaStateHour, Strength } from "@/lib/types";
 
@@ -201,6 +202,13 @@ export function HourSlider({
           </button>
         )}
       </div>
+      <p className="mt-4 flex items-start gap-2 border-t border-foam/10 pt-3 text-xs leading-5 text-foam/75">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="mt-0.5 shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+        <span>{FORECAST_GUIDANCE}</span>
+      </p>
       {/* Folded so a phone shows the week without scrolling past the method; the confidence above still says how sure. */}
       {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
       <details className="group mt-3 text-sm leading-6 text-foam/80">
@@ -232,21 +240,23 @@ export const SEA_COLOR: Record<SeaBand, { fill: string; opacity: number }> = {
   rough: { fill: "var(--stop)", opacity: 1 },
 };
 
-/** "Sea: choppy · 1.2 m swell from SW, 11 s · 0.4 m wind chop", and the swell-against-current warning. */
+/** "Sea surface: choppy · 1.2 m swell from SW, 11 s · 0.4 m wind chop", and the swell-against-current warning. */
 function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
   if (sea == null) {
-    return <p className="mt-3 text-sm leading-6 text-foam/80">Sea state is unavailable for this hour.</p>;
+    return <p className="mt-3 text-sm leading-6 text-foam/80">The sea surface forecast is unavailable for this hour.</p>;
   }
   return (
     <div className="mt-3 text-sm leading-6">
       <p className="text-foam/90">
-        <span className="font-medium text-foam">Sea: </span>
+        <span className="font-medium text-foam">Sea surface: </span>
         <span className={sea.band === "rough" ? "font-semibold text-stop" : sea.band === "choppy" ? "font-semibold text-outgoing" : "text-foam"}>
           {SEA_LABEL[sea.band].toLowerCase()}
         </span>
         <span className="text-foam/80"> · {seaDetail(sea)}</span>
         {stale ? <span className="text-foam/80"> (old wave or wind data)</span> : null}
       </p>
+      {/* Right under the current, so choppy water up top is not read as the current at depth, nor calm water as slack. */}
+      <p className="text-xs leading-5 text-foam/70">{SEA_SURFACE_NOTE}</p>
       {sea.againstCurrent ? (
         <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
       ) : null}
@@ -282,7 +292,7 @@ function SeaStrip({
       </svg>
       <p className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-foam/80 min-[400px]:gap-x-2.5 min-[400px]:text-xs">
         {/* The band names say it is the sea; on a narrow phone the word would push "rough" to a second line. */}
-        <span className="hidden min-[400px]:inline">Sea:</span>
+        <span className="hidden min-[400px]:inline">Surface:</span>
         {(Object.keys(SEA_LABEL) as SeaBand[]).map((band) => (
           <span key={band} className="inline-flex items-center gap-1">
             <span

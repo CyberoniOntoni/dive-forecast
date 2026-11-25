@@ -85,7 +85,7 @@ export default async function SitePage({
           className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           <NavigateIcon size={18} />
-          Navigate here by boat
+          Boat route
         </Link>
       </nav>
       <header className="flex min-w-0 flex-col">

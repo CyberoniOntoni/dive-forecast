@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BoatNav, type NavDraw, type NavSite } from "@/components/BoatNav";
+import { BoatNav, RouteLimitation, type NavDraw, type NavSite } from "@/components/BoatNav";
 import { DOCKED_PANEL_CLASS, GRAB_HANDLE_CLASS } from "@/components/map-panel";
 import { SEARCH_FIELD_CLASS, SiteName } from "@/components/site-ui";
 import { formatNm } from "@/lib/boat-nav";
@@ -102,7 +102,7 @@ export function NavigatePanel({
   }, []);
 
   return (
-    <aside ref={panelRef} aria-label="Boat navigation" hidden={hidden} className={PANEL_CLASS}>
+    <aside ref={panelRef} aria-label="Boat route" hidden={hidden} className={PANEL_CLASS}>
       <span aria-hidden="true" className={`mx-auto mb-1 block lg:hidden ${GRAB_HANDLE_CLASS}`} />
       {site ? (
         <BoatNav key={site.id} site={site} onDraw={onDraw} onChange={onChange} />
@@ -152,9 +152,12 @@ function DestinationPicker({
 
   return (
     <section aria-labelledby="destination-heading">
-      <h2 id="destination-heading" className="text-base font-semibold">
-        Where to?
-      </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+        <h2 id="destination-heading" className="text-base leading-6 font-semibold">
+          Where to?
+        </h2>
+        <RouteLimitation />
+      </div>
       <p className="text-xs leading-5 text-foam/70">
         {from ? "Nearest sites first, or tap the map to head for any point." : "Pick a dive site, or tap the map to head for any point."}
       </p>

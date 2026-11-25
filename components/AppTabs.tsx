@@ -22,7 +22,7 @@ const ON = "bg-foam text-ink shadow-sm";
 const OFF = "text-foam/80 hover:text-foam";
 
 /**
- * Map, Navigate, Plans and Scoreboard, in the header. Navigate is the boat view on the same map; it comes back to the site
+ * Map, Route, Plans and Scoreboard, in the header. Route is the boat route view on the same map; it comes back to the site
  * it last headed for in this tab, else it opens the destination list. Plans are dive plans to share with a group.
  * Scoreboard ranks the divers who report and add sites.
  */
@@ -53,7 +53,7 @@ export function AppTabs() {
       >
         <NavigateIcon size={16} />
         {/* Below 400 px four tabs and the account button need the room: the pointer alone stands for it. */}
-        <span className="max-[399px]:sr-only">Navigate</span>
+        <span className="max-[399px]:sr-only">Route</span>
       </MapPageLink>
       <Link
         data-tab

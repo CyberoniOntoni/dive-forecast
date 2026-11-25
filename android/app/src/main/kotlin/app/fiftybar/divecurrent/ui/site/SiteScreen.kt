@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.site
 
+import app.fiftybar.divecurrent.ui.components.SafetyCopy
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.onSizeChanged
@@ -216,7 +217,7 @@ fun SiteScreen(
             modifier = Modifier.weight(1f).height(56.dp),
           ) {
             Icon(TabIcons.heading, contentDescription = null, modifier = Modifier.size(20.dp))
-            Text("  Go by boat", style = MaterialTheme.typography.titleMedium)
+            Text("  Boat route", style = MaterialTheme.typography.titleMedium)
           }
         }
       }
@@ -279,6 +280,7 @@ fun SiteScreen(
               StatusLine(state)
               DayChart(week, selected, onSelect = viewModel::select, onNow = viewModel::selectNow, reducedMotion = reducedMotion)
               SeaTiles(week, forecast, selected)
+              Text(SafetyCopy.FORECAST_GUIDANCE, style = MaterialTheme.typography.bodySmall, color = colors.mist)
               NoticeCard(forecast)
             }
           }

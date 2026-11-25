@@ -1,5 +1,6 @@
 package app.fiftybar.divecurrent.ui.map
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.fiftybar.divecurrent.data.api.ApiShelterScale
 import app.fiftybar.divecurrent.domain.MaldivesTime
@@ -49,10 +51,11 @@ fun ShelterLegend(
 ) {
   val colors = CurrentTheme.colors
   val at = state.hours.indexOf(state.time)
-  Surface(modifier, shape = RoundedCornerShape(12.dp), color = colors.glass, contentColor = colors.foam) {
+  // Solid, not glass: markers and grid lines behind the scale and note made them hard to read in sun.
+  Surface(modifier, shape = RoundedCornerShape(12.dp), color = colors.deep, contentColor = colors.foam, border = BorderStroke(1.dp, colors.line)) {
     Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
       Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("Sea state", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text("Surface waves", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         TextButton(onClick = onNow, enabled = at > 0) { Text("Now") }
       }
       Row(verticalAlignment = Alignment.CenterVertically) {
@@ -122,6 +125,8 @@ private fun ScaleBar(scale: ApiShelterScale) {
           label,
           style = MaterialTheme.typography.labelSmall,
           color = colors.foam.copy(alpha = 0.85f),
+          // Right-aligned when it sits left of its mark, so the words end at the height they name.
+          textAlign = if (share > 0.7f) TextAlign.End else TextAlign.Start,
           modifier = Modifier.width(64.dp).offset(x = (width * share - if (share > 0.7f) 64.dp else 0.dp).coerceAtLeast(0.dp)),
         )
       }

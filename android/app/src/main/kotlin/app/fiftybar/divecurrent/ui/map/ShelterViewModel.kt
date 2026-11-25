@@ -8,6 +8,7 @@ import app.fiftybar.divecurrent.data.api.ApiShelter
 import app.fiftybar.divecurrent.data.api.ApiShelterScale
 import app.fiftybar.divecurrent.data.api.ApiShelterShapes
 import app.fiftybar.divecurrent.domain.ShelterField
+import app.fiftybar.divecurrent.ui.components.SafetyCopy
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -192,6 +193,7 @@ class ShelterViewModel(private val repository: DataRepository) : ViewModel() {
     if (body.atolls.isEmpty()) "Waves for this area are still loading. Move the map in a moment."
     else
       listOfNotNull(
+          SafetyCopy.SEA_SURFACE_NOTE,
           "From old wave data.".takeIf { body.stale },
           "Clear patches: no wave or wind data for that hour.".takeIf { unknown },
           "Tap the water for details.",
