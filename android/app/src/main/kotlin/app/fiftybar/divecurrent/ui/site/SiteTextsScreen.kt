@@ -181,7 +181,8 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
       }
       Button(
         onClick = viewModel::send,
-        enabled = !locked && state.body != null,
+        // Untouched, a waiting edit would only be sent again as it is (and go to the back of the queue).
+        enabled = !locked && state.dirty && state.body != null,
         modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
       ) {
         Text(

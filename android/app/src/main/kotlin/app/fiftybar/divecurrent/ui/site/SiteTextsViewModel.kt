@@ -12,6 +12,7 @@ import app.fiftybar.divecurrent.domain.SiteTextsDraft
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -52,8 +53,14 @@ class SiteTextsViewModel(
 
   init {
     load()
-    // Signed in from this screen: load the form for the diver.
-    viewModelScope.launch { session.drop(1).collect { if (it != null && _state.value.form == null) load() } }
+    // Signed in, out or as someone else while the screen is open: the form (their own edit, whether they may send)
+    // was the last diver's, so start again for whoever is signed in now. A new nickname is the same diver.
+    viewModelScope.launch {
+      session.distinctUntilChangedBy { it?.token }.drop(1).collect { now ->
+        _state.value = SiteTextsUiState()
+        if (now != null) load()
+      }
+    }
   }
 
   fun load() {
