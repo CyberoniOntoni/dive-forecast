@@ -185,43 +185,43 @@ fun ForecastIntroDialog(onClose: () -> Unit) {
         Modifier
           .background(Brush.radialGradient(listOf(colors.incoming.copy(alpha = 0.14f), Color.Transparent), center = Offset(900f, 0f), radius = 900f))
           .verticalScroll(rememberScrollState())
-          .padding(horizontal = 22.dp, vertical = 24.dp)
+          .padding(horizontal = 20.dp, vertical = 20.dp)
       ) {
-        Text("WELCOME TO 50BAR", style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp, fontWeight = FontWeight.SemiBold, color = colors.incoming)
-        Text("Understand the forecast", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+        Text("WELCOME TO 50BAR", style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, letterSpacing = 1.6.sp, fontWeight = FontWeight.SemiBold, color = colors.incoming)
+        Text("Understand the forecast", style = MaterialTheme.typography.titleLarge, fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 2.dp))
         Text(
-          "Current forecasts for Maldives dive sites, from tide and ocean models and divers' reports, to help you plan safer entries and better timing.",
-          style = MaterialTheme.typography.bodyMedium,
+          "Current forecasts for Maldives dive sites, from tide and ocean models and divers' reports.",
+          style = MaterialTheme.typography.bodySmall,
           color = colors.foam.copy(alpha = 0.8f),
-          modifier = Modifier.padding(top = 6.dp),
+          modifier = Modifier.padding(top = 4.dp),
         )
-        HorizontalDivider(color = colors.line, modifier = Modifier.padding(top = 16.dp))
+        HorizontalDivider(color = colors.line, modifier = Modifier.padding(top = 12.dp))
         for ((icon, title, body) in INTRO_POINTS) {
-          Row(Modifier.padding(vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+          Row(Modifier.padding(vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
-              Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(colors.incoming.copy(alpha = 0.12f)).border(1.dp, colors.incoming.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+              Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(colors.incoming.copy(alpha = 0.12f)).border(1.dp, colors.incoming.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
               contentAlignment = Alignment.Center,
             ) {
-              Icon(icon, contentDescription = null, tint = colors.incoming, modifier = Modifier.size(20.dp))
+              Icon(icon, contentDescription = null, tint = colors.incoming, modifier = Modifier.size(17.dp))
             }
             Column {
-              Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-              Text(body, style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.75f))
+              Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+              Text(body, style = MaterialTheme.typography.bodySmall, fontSize = 12.sp, lineHeight = 16.sp, color = colors.foam.copy(alpha = 0.75f), modifier = Modifier.padding(top = 1.dp))
             }
           }
           HorizontalDivider(color = colors.line)
         }
-        Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Icon(SafetyIcons.shield, contentDescription = null, tint = colors.outgoing, modifier = Modifier.size(16.dp).padding(top = 2.dp))
-          Text("Always check with your dive guide or a local operator before you dive.", style = MaterialTheme.typography.bodySmall, color = colors.foam.copy(alpha = 0.8f))
+        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+          Icon(SafetyIcons.shield, contentDescription = null, tint = colors.outgoing, modifier = Modifier.size(15.dp).padding(top = 2.dp))
+          Text("Always check with your dive guide or a local operator before you dive.", style = MaterialTheme.typography.bodySmall, fontSize = 12.sp, lineHeight = 16.sp, color = colors.foam.copy(alpha = 0.8f))
         }
         Button(
           onClick = onClose,
           shape = RoundedCornerShape(50),
           colors = ButtonDefaults.buttonColors(containerColor = colors.incoming, contentColor = colors.ink),
-          modifier = Modifier.padding(top = 16.dp).fillMaxWidth().height(52.dp),
+          modifier = Modifier.padding(top = 14.dp).fillMaxWidth().height(46.dp),
         ) {
-          Text("Got it", style = MaterialTheme.typography.titleMedium)
+          Text("Got it", style = MaterialTheme.typography.labelLarge, fontSize = 15.sp)
         }
       }
     }

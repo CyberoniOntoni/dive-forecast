@@ -112,33 +112,32 @@ export function ForecastIntro() {
           <path d="M0 38c40-14 80-14 120 0s80 14 120 0 80-14 120 0 40 7 40 7" fill="none" stroke="currentColor" strokeOpacity="0.35" strokeWidth="1.5" />
           <path d="M0 48c40-12 80-12 120 0s80 12 120 0 80-12 120 0 40 6 40 6" fill="none" stroke="currentColor" strokeOpacity="0.18" strokeWidth="1.5" />
         </svg>
-        <div className="relative px-5 pt-10 pb-5 sm:px-7 sm:pt-11 sm:pb-6">
-          <p className="text-[11px] font-semibold tracking-[0.18em] text-incoming uppercase">Welcome to 50Bar</p>
-          <h2 id="forecast-intro-title" className="mt-1 text-2xl font-semibold tracking-tight sm:text-[1.7rem]">
+        <div className="relative px-5 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-5">
+          <p className="text-[10px] font-semibold tracking-[0.16em] text-incoming uppercase">Welcome to 50Bar</p>
+          <h2 id="forecast-intro-title" className="mt-0.5 text-xl font-semibold tracking-tight sm:text-[1.4rem]">
             Understand the forecast
           </h2>
-          <p id="forecast-intro-lead" className="mt-1.5 text-sm leading-5 text-foam/80">
-            Current forecasts for Maldives dive sites, from tide and ocean models and divers&rsquo; reports, to help you plan
-            safer entries and better timing.
+          <p id="forecast-intro-lead" className="mt-1 text-[13px] leading-5 text-foam/80">
+            Current forecasts for Maldives dive sites, from tide and ocean models and divers&rsquo; reports.
           </p>
-          <ul className="mt-4 divide-y divide-foam/10 border-y border-foam/10">
+          <ul className="mt-3 divide-y divide-foam/10 border-y border-foam/10">
             {POINTS.map((point) => (
-              <li key={point.title} className="flex gap-3.5 py-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-incoming/12 text-incoming ring-1 ring-incoming/25">
-                  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <li key={point.title} className="flex gap-3 py-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-incoming/12 text-incoming ring-1 ring-incoming/25">
+                  <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     {point.icon}
                   </svg>
                 </span>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold">{point.title}</h3>
-                  <p className="text-[13px] leading-5 text-foam/75">{point.body}</p>
+                  <h3 className="text-[13px] leading-5 font-semibold">{point.title}</h3>
+                  <p className="text-xs leading-4 text-foam/75">{point.body}</p>
                 </div>
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <p className="flex min-w-0 flex-1 items-start gap-2 text-[13px] leading-5 text-foam/80">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="mt-0.5 shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <p className="flex min-w-0 flex-1 items-start gap-2 text-xs leading-4 text-foam/80">
+              <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" className="shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
                 <path d="M9 12l2 2 4-4" />
               </svg>
@@ -148,7 +147,7 @@ export function ForecastIntro() {
               ref={gotIt}
               type="button"
               onClick={close}
-              className="min-h-12 shrink-0 rounded-full bg-incoming px-7 text-sm font-semibold text-ink shadow-[0_8px_24px_-8px_var(--incoming)] transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
+              className="min-h-11 shrink-0 rounded-full bg-incoming px-6 text-sm font-semibold text-ink shadow-[0_8px_24px_-8px_var(--incoming)] transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
             >
               Got it
             </button>
