@@ -103,8 +103,9 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
       <ContentActions
         kind="text"
         siteId={wiki.siteId}
-        userId={author.userId}
+        userId={author.userId ?? undefined}
         nickname={author.nickname}
+        field={field}
         signedIn={wiki.signedIn}
         returnTo={here}
         canBlock={false}

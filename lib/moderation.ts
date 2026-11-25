@@ -11,6 +11,9 @@ export const TERMS_FIRST = "Agree to the content rules first (your account page)
 /** A banned diver's sign-in. */
 export const BANNED = "This account is suspended for breaking the content rules.";
 
+/** What taking a site down says on the edits waiting on it. */
+export const SITE_REMOVED_EDIT_REASON = "The site was taken down.";
+
 /** What a ban says on the site edits its diver had waiting. */
 export const BANNED_EDIT_REASON = "Account suspended.";
 
@@ -70,6 +73,8 @@ export function readFlagInput(input: unknown): FlagInput {
   // A site's texts name no diver: the report goes to whoever wrote the newest revision still standing (addFlag).
   if (kind !== "site" && kind !== "text" && !userId) throw new Error("Say which diver.");
   const field = kind === "text" ? WIKI_FIELDS.find((item) => item === record.field) : undefined;
+  // A field that is not one of ours must not fall back to the newest revision's diver: that may be someone else.
+  if (kind === "text" && record.field != null && !field) throw new Error("Say which text.");
   return { kind, reason, ...(siteId ? { siteId } : {}), ...(userId ? { userId } : {}), ...(field ? { field } : {}), ...(note ? { note } : {}) };
 }
 
@@ -172,6 +177,13 @@ function removeSite(store: StoreData, siteId: string): StoredPhoto[] {
   site.hidden = true;
   delete site.photos;
   delete site.howToDive;
+  // Edits waiting on it close: there is no page left for them to go on.
+  for (const edit of store.siteEdits) {
+    if (edit.siteId !== siteId || edit.status !== "pending") continue;
+    edit.status = "rejected";
+    edit.reviewedAt = new Date().toISOString();
+    edit.rejectReason = SITE_REMOVED_EDIT_REASON;
+  }
   return photos;
 }
 

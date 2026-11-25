@@ -6,8 +6,8 @@
 
 export type DiffPart = { kind: "same" | "added" | "removed"; text: string };
 
-/** Above this many units on each side the diff is not worth the work: the whole text shows as replaced. */
-const MAX_UNITS = 2000;
+/** Above this many cells (units of one side times the other) the diff is not worth the work: the middle shows as replaced. */
+const MAX_CELLS = 250_000;
 
 /** Runs of whitespace and runs of anything else, in order. */
 function units(text: string): string[] {
@@ -29,7 +29,7 @@ export function diffWords(before: string, after: string): DiffPart[] {
   const midB = b.slice(start, b.length - end);
 
   const middle: DiffPart[] =
-    midA.length > MAX_UNITS || midB.length > MAX_UNITS
+    midA.length * midB.length > MAX_CELLS
       ? [
           { kind: "removed", text: midA.join("") },
           { kind: "added", text: midB.join("") },

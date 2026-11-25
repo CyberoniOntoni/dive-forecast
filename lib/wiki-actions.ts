@@ -66,7 +66,7 @@ export type SiteWiki = {
    * Who a Report on each field goes to: the diver whose revision it shows now. Absent when the field is the site's
    * own text or that diver's is the viewer.
    */
-  reportTo: Partial<Record<WikiField, Contributor>>;
+  reportTo: Partial<Record<WikiField, { userId: string | null; nickname: string }>>;
 };
 
 const MY_EDIT_SHOWN_DAYS = 30;
@@ -89,10 +89,14 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
         .filter((edit) => edit.status === "pending" || Date.parse(edit.reviewedAt ?? edit.createdAt) > since)
         .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt))
     : [];
-  const reportTo: Partial<Record<WikiField, Contributor>> = {};
+  const reportTo: SiteWiki["reportTo"] = {};
   for (const field of WIKI_FIELDS) {
     const edit = source[field];
-    if (edit && edit.userId !== viewerId && texts[field]) reportTo[field] = { userId: edit.userId, nickname: findNickname(store, edit.userId) };
+    if (!edit || edit.userId === viewerId || !texts[field]) continue;
+    // A deleted account's anonymous id never leaves the server (it is also on their dive reports): the report names
+    // the field and the server finds the writer.
+    const known = store.users.some((user) => user.id === edit.userId);
+    reportTo[field] = { userId: known ? edit.userId : null, nickname: findNickname(store, edit.userId) };
   }
   const latest = own.find((edit) => edit.status === "pending") ?? own[0] ?? null;
   return {
@@ -149,7 +153,9 @@ export async function proposeSiteEdit(input: unknown): Promise<WikiResult> {
     const outcome = await mutateStore((store) =>
       proposeEdit(store, session.userId, edit, originalTexts(siteRecord(store, edit.siteId)), Date.now(), { moderator }),
     );
-    if (outcome.created && !moderator) {
+    // The store-review account's edits can never be approved (approveRefusal), so nobody is emailed about them.
+    const reviewer = readStore().users.find((user) => user.id === session.userId)?.storeReview;
+    if (outcome.created && !moderator && !reviewer) {
       runInBackground(notifyModerators(site.name, outcome.edit).catch((error) => console.error("Moderator email failed", error)));
     }
     return { ok: true, error: null, wiki: siteWiki(readStore(), edit.siteId, session.userId, moderator), live: outcome.edit.status === "approved" };
@@ -300,7 +306,7 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
   // (vandalism, a removed report) stays visible to moderators alone.
   const before = standingBefore(original, store.siteEdits, siteId);
   const revisions = store.siteEdits
-    .filter((edit) => edit.siteId === siteId && edit.status === "approved" && (fromStored || !edit.revertedAt))
+    .filter((edit) => edit.siteId === siteId && edit.status === "approved" && (moderator || !edit.revertedAt))
     .sort((a, b) => (b.reviewedAt ?? b.createdAt).localeCompare(a.reviewedAt ?? a.createdAt) || b.id.localeCompare(a.id))
     .map((edit): RevisionView => {
       const user = store.users.find((item) => item.id === edit.userId);
@@ -309,7 +315,10 @@ export async function getSiteHistory(siteId: string): Promise<SiteHistory | null
         id: edit.id,
         diver: user && !user.storeReview ? { userId: user.id, nickname: user.nickname } : null,
         at: edit.reviewedAt ?? edit.createdAt,
-        changes: fieldChanges(fromStored ? (edit.replaced ?? edit.based) : (before.get(edit.id) ?? original), edit.changes),
+        changes: fieldChanges(
+          fromStored || !before.has(edit.id) ? { ...(edit.replaced ?? edit.based), ...(blockedAdder ? { howToDive: before.get(edit.id)?.howToDive ?? "" } : {}) } : before.get(edit.id)!,
+          edit.changes,
+        ),
         reverted: Boolean(edit.revertedAt),
         canRevert: moderator && !edit.revertedAt && fields.every((field) => source[field]?.id === edit.id),
       };

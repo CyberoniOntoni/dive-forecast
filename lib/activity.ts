@@ -215,7 +215,9 @@ export function recentActivity(
 
   if (wanted.has("edit")) {
     for (const edit of store.siteEdits) {
-      if (!recent(edit.createdAt)) continue;
+      // Dated by its last step (proposed, reviewed, taken back), so a late approval still shows in the feed.
+      const last = [edit.createdAt, edit.reviewedAt, edit.revertedAt].filter((at): at is string => Boolean(at)).sort().at(-1)!;
+      if (!recent(last)) continue;
       const fields = (Object.keys(edit.changes) as WikiField[]).map((field) => WIKI_LABELS[field]).join(" and ");
       const reviewer = edit.reviewerId && edit.reviewerId !== edit.userId ? diver(edit.reviewerId)?.nickname : null;
       const status =
@@ -232,7 +234,7 @@ export function recentActivity(
       push({
         key: `edit:${edit.id}`,
         kind: "edit",
-        at: edit.createdAt,
+        at: last,
         diver: diver(edit.userId),
         site: site(edit.siteId),
         summary: `Edit to ${fields} (${status})`,

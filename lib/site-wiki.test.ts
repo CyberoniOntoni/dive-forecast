@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addFlag, banDiver, laterOverTheirs, moderate } from "./moderation";
+import { addFlag, banDiver, laterOverTheirs, moderate, readFlagInput } from "./moderation";
 import { deleteAccountRecords } from "./accounts";
 import { diverStats } from "./points";
 import {
@@ -152,6 +152,18 @@ describe("reviewing edits", () => {
     expect(withdrawEdit(data, "bob", a.id)).toBe(false);
     expect(withdrawEdit(data, "ann", a.id)).toBe(true);
     expect(data.siteEdits).toEqual([]);
+  });
+});
+
+describe("site texts and moderation odds and ends", () => {
+  it("refuses a report naming an unknown text, and edits on a site taken down", () => {
+    expect(() => readFlagInput({ kind: "text", siteId: "kandu", field: "how_to_dive", reason: "spam" })).toThrow(/which text/);
+    const data = store();
+    data.sites.push({ ...site, id: "pin", sourceUrl: "user", addedBy: "bob" });
+    const waiting = proposeEdit(data, "ann", readEditInput({ siteId: "pin", texts: { description: "Hi" } }), ORIGINAL, T0).edit;
+    moderate(data, { kind: "site", siteId: "pin", userId: "bob" }, "remove", "mod", T0 + 1000);
+    expect(waiting).toMatchObject({ status: "rejected", rejectReason: "The site was taken down." });
+    expect(approveRefusal(data, waiting)).toMatch(/taken down/);
   });
 });
 

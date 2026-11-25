@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { FLAG_REASON_LABELS, FLAG_NOTE_MAX } from "@/lib/moderation";
 import { blockDiver, reportContent } from "@/lib/moderation-actions";
 import { signInHref } from "@/lib/sign-in";
-import { FLAG_REASONS, type FlagKind, type FlagReason } from "@/lib/types";
+import { FLAG_REASONS, type FlagKind, type FlagReason, type WikiField } from "@/lib/types";
 
 const LINK =
   "min-h-11 text-xs text-foam/65 underline decoration-foam/30 underline-offset-4 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50";
@@ -23,8 +23,11 @@ export function ContentActions({
   signedIn,
   returnTo,
   canBlock = true,
+  field,
 }: {
   kind: FlagKind;
+  /** On a site's texts: which one (the server finds who wrote it). */
+  field?: WikiField;
   siteId?: string;
   /** Whose content it is. */
   userId?: string;
@@ -55,7 +58,7 @@ export function ContentActions({
     event.preventDefault();
     if (!reason) return;
     startTransition(async () => {
-      const result = await reportContent({ kind, siteId, userId, reason, note });
+      const result = await reportContent({ kind, siteId, userId, field, reason, note });
       if (!result.ok) {
         setMessage({ text: result.error ?? "Could not send the report.", error: true });
         return;

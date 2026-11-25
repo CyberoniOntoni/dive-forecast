@@ -150,7 +150,9 @@ export function proposeEdit(
     changes[field] = text;
     based[field] = waiting != null ? (mine!.based[field] ?? live[field]) : (input.based[field] ?? live[field]);
   }
-  if (Object.keys(changes).length === 0) throw new Error("That is what the site already says.");
+  if (Object.keys(changes).length === 0) {
+    throw new Error(mine ? "That is what the site already says. To drop your edit, withdraw it." : "That is what the site already says.");
+  }
   const nowIso = new Date(nowMs).toISOString();
   if (!mine && !moderator) {
     const waiting = store.siteEdits.filter((edit) => edit.userId === userId && edit.status === "pending").length;
@@ -182,7 +184,8 @@ function goLive(edit: SiteEdit, live: Record<WikiField, string>, reviewerId: str
 }
 
 /** Why a moderator may not approve this edit, or null when they may. */
-export function approveRefusal(store: Pick<StoreData, "users">, edit: SiteEdit): string | null {
+export function approveRefusal(store: Pick<StoreData, "users" | "sites">, edit: SiteEdit): string | null {
+  if (store.sites.some((site) => site.id === edit.siteId && site.hidden)) return "That site was taken down.";
   const author = findUser(store, edit.userId);
   if (!author) return "That diver is gone.";
   if (author.storeReview) return "The store-review account's edits are only for trying the form.";
