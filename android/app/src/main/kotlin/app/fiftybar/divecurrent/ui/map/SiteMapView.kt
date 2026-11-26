@@ -44,6 +44,7 @@ import org.maplibre.android.style.expressions.Expression.eq
 import org.maplibre.android.style.expressions.Expression.geometryType
 import org.maplibre.android.style.expressions.Expression.get
 import org.maplibre.android.style.expressions.Expression.has
+import org.maplibre.android.style.expressions.Expression.switchCase
 import org.maplibre.android.style.expressions.Expression.not
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.toColor
@@ -113,6 +114,7 @@ private const val ARROWS = "site-arrows"
 private const val BADGES = "site-badges"
 private const val PULSE = "site-pulse"
 private const val HIGHLIGHT = "site-highlight"
+private const val HIGHLIGHT_SOURCE = "site-highlight-source"
 private const val NAMES = "site-names"
 private const val CLUSTERS = "site-clusters"
 private const val CLUSTER_COUNTS = "site-cluster-counts"
@@ -139,7 +141,8 @@ private val START = CameraPosition.Builder().target(LatLng(3.6, 73.3)).zoom(6.4)
 
 /**
  * The site map: a raster base (Esri imagery or OpenStreetMap, the same sources as the web map) and an arrow per site
- * pointing the way the water runs this hour, coloured and faded like the web pins. Tapping an arrow opens the site;
+ * pointing the way the water runs this hour, coloured and faded like the web pins; zoomed out, nearby sites merge into
+ * numbered bubbles. Tapping an arrow opens the site;
  * a long press offers boat navigation to that point.
  */
 @Composable
@@ -273,9 +276,12 @@ fun SiteMapView(
     s.getSourceAs<GeoJsonSource>(SOURCE)?.setGeoJson(features(rows))
   }
 
-  LaunchedEffect(style, highlight) {
+  // The ring has its own source, outside the clustering, so it still marks the site when the site is inside a bubble.
+  LaunchedEffect(style, highlight, rows) {
     val s = style ?: return@LaunchedEffect
-    s.getLayerAs<CircleLayer>(HIGHLIGHT)?.setFilter(eq(get("id"), literal(highlight ?: "")))
+    val row = highlight?.let { id -> rows.firstOrNull { it.site.id == id } }
+    val ring = listOfNotNull(row?.let { Feature.fromGeometry(Point.fromLngLat(it.site.lon, it.site.lat)) })
+    s.getSourceAs<GeoJsonSource>(HIGHLIGHT_SOURCE)?.setGeoJson(FeatureCollection.fromFeatures(ring))
   }
 
   LaunchedEffect(style, online, imagery, view) {
@@ -505,7 +511,12 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
     GeoJsonSource(
       SOURCE,
       FeatureCollection.fromFeatures(emptyList()),
-      GeoJsonOptions().withCluster(true).withClusterMaxZoom(CLUSTER_UNTIL_ZOOM - 1).withClusterRadius(CLUSTER_RADIUS),
+      GeoJsonOptions()
+        .withCluster(true)
+        .withClusterMaxZoom(CLUSTER_UNTIL_ZOOM - 1)
+        .withClusterRadius(CLUSTER_RADIUS)
+        // A bubble holding a very strong site says so: its ring turns red (the web's bubbles show only the count).
+        .withClusterProperty("pulse", literal("any"), get("pulse")),
     )
   )
   // A bubble carries point_count; a lone site does not.
@@ -522,18 +533,6 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
       )
       .withFilter(Expression.all(lone, eq(get("pulse"), literal(true))))
-  )
-  // The site the page sent the diver to see: a foam ring round its badge. No site matches "" until one is set.
-  style.addLayer(
-    CircleLayer(HIGHLIGHT, SOURCE)
-      .withProperties(
-        circleRadius(badgeRadius(1.5f)),
-        circleColor(Color.TRANSPARENT),
-        circleStrokeColor(colors.foam.toArgb()),
-        circleStrokeWidth(3f),
-        circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
-      )
-      .withFilter(eq(get("id"), literal("")))
   )
   // Each site a dark disc ringed in its colour, 26 dp inside one atoll, with the arrow on it.
   val tones = GlanceTone.entries.map { stop(it.name.lowercase(), literal(colorHex(colors.tone(it).toArgb()))) }.toTypedArray()
@@ -587,7 +586,9 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circleRadius(22f),
         circleColor(colorHex(colors.glass.toArgb())),
         circleOpacity(colors.glass.alpha),
-        circleStrokeColor(colors.incoming.toArgb()),
+        circleStrokeColor(
+          toColor(switchCase(eq(get("pulse"), literal(true)), literal(colorHex(colors.stop.toArgb())), literal(colorHex(colors.incoming.toArgb()))))
+        ),
         circleStrokeWidth(2f),
         circleStrokeOpacity(0.7f),
       )
@@ -604,6 +605,19 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         textIgnorePlacement(true),
       )
       .withFilter(has("point_count"))
+  )
+  // The site the page sent the diver to see: a foam ring round its badge, over the bubbles, so it still shows where the
+  // site is when it has merged into one.
+  style.addSource(GeoJsonSource(HIGHLIGHT_SOURCE, FeatureCollection.fromFeatures(emptyList())))
+  style.addLayer(
+    CircleLayer(HIGHLIGHT, HIGHLIGHT_SOURCE)
+      .withProperties(
+        circleRadius(badgeRadius(1.5f)),
+        circleColor(Color.TRANSPARENT),
+        circleStrokeColor(colors.foam.toArgb()),
+        circleStrokeWidth(3f),
+        circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
+      )
   )
 }
 
