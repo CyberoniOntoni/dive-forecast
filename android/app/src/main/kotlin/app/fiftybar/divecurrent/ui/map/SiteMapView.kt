@@ -120,19 +120,18 @@ private const val CLUSTERS = "site-clusters"
 private const val CLUSTER_COUNTS = "site-cluster-counts"
 
 /**
- * Below this zoom pins that would overlap merge into a numbered bubble, as the web map's do below its CLUSTER_UNTIL_ZOOM (11); from
- * it every pin shows with its arrow. MapLibre's zoom 10 is Leaflet's 11 (its tiles are 512 dp to Leaflet's 256 px), so
- * the pins part at the same scale on the phone as on the web. Without it, pins over a whole atoll sit on top of each
- * other and flicker as the arrows move.
+ * Pins that would sit on top of each other merge into a small numbered bubble up to this zoom (the web map groups more
+ * widely, 48 px up to its zoom 11; the owner asked on 26 Nov for most arrows to show once an atoll fills the screen).
+ * Only close in, past what a site page flies to (13.5), does every pin show alone. Without it, close pins overlap and
+ * flicker as the arrows move.
  */
-internal const val CLUSTER_UNTIL_ZOOM = 10
+internal const val CLUSTER_UNTIL_ZOOM = 14
 
-/**
- * How near pins merge, in dp: about a badge's width at atoll zoom (8.5 to 11.5 dp radius), so only pins that would sit on
- * top of each other merge and an atoll on screen still shows most sites' arrows. Tighter than the web's 48 px on
- * purpose (owner's call, 26 Nov).
- */
-internal const val CLUSTER_RADIUS = 22
+/** How near pins merge, in dp: about a badge's width (8.5 to 13 dp radius), so only pins that would overlap merge. */
+internal const val CLUSTER_RADIUS = 24
+
+/** A bubble's radius in dp: little bigger than a badge, so two bubbles [CLUSTER_RADIUS] apart barely touch. */
+private const val BUBBLE_RADIUS = 14f
 
 /**
  * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
@@ -587,7 +586,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
   style.addLayer(
     CircleLayer(CLUSTERS, SOURCE)
       .withProperties(
-        circleRadius(22f),
+        circleRadius(BUBBLE_RADIUS),
         circleColor(colorHex(colors.glass.toArgb())),
         circleOpacity(colors.glass.alpha),
         circleStrokeColor(
@@ -603,7 +602,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
       .withProperties(
         textField(get("point_count_abbreviated")),
         textFont(arrayOf(LABEL_FONT)),
-        textSize(15f),
+        textSize(13f),
         textColor(colors.foam.toArgb()),
         textAllowOverlap(true),
         textIgnorePlacement(true),
