@@ -55,4 +55,12 @@ class SiteTextsDraftTest {
     val body = SiteTextsDraft.body(form(), SiteTextsDraft("  A slope.\r\n\n\n\nSharks.  ", "Drop north.", ""))!!
     assertEquals("A slope.\n\nSharks.", body.texts.description)
   }
+
+  @Test
+  fun `a cut never splits an emoji, and a text within the limit is kept whole`() {
+    assertEquals("Turtles", SiteTextsDraft.cutAt("Turtles", 10))
+    // "🐢" is two UTF-16 characters: a cut between them would keep half of it.
+    assertEquals("ab", SiteTextsDraft.cutAt("ab\uD83D\uDC22c", 3))
+    assertEquals("ab\uD83D\uDC22", SiteTextsDraft.cutAt("ab\uD83D\uDC22c", 4))
+  }
 }

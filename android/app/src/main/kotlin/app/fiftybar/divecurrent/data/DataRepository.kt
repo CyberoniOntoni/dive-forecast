@@ -47,11 +47,22 @@ class DataRepository(
   private val now: () -> Long = System::currentTimeMillis,
 ) {
   private val _sitesChanged = MutableStateFlow(0)
+  private val _siteVersions = MutableStateFlow<Map<String, Int>>(emptyMap())
 
-  /** Counts sites added on this phone, so the map reads the list again. */
+  /** Counts every change to the sites made on this phone (a site added, a site's texts live), so the map reads the list again. */
   val sitesChanged: StateFlow<Int> = _sitesChanged.asStateFlow()
 
-  fun markSitesChanged() = _sitesChanged.update { it + 1 }
+  /**
+   * Counts changes made on this phone per site (its texts went live), so that site's page reads it again. A count per
+   * site, not the latest id alone: two changes close together must not hide the first.
+   */
+  val siteVersions: StateFlow<Map<String, Int>> = _siteVersions.asStateFlow()
+
+  /** [siteId]: the one site that changed; null for a change to the list only, such as a new site. */
+  fun markSitesChanged(siteId: String? = null) {
+    if (siteId != null) _siteVersions.update { it + (siteId to (it[siteId] ?: 0) + 1) }
+    _sitesChanged.update { it + 1 }
+  }
 
   suspend fun sites(): Loaded<ApiSites> = load(Keys.SITES, ApiSites.serializer()) { api.sites().second }
 

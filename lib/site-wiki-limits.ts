@@ -12,6 +12,8 @@ export const EDIT_NOTE_MAX = 300;
 export const PENDING_EDITS_MAX = 10;
 /** New edits one diver can propose in 24 hours (changing one still waiting is not a new one). */
 export const EDITS_PER_DAY = 10;
+/** A withdraw that came too late: a moderator looked at the edit (or it was withdrawn) in the meantime. */
+export const EDIT_ALREADY_LOOKED_AT = "That edit was already looked at.";
 
 /** What goes before the name at `index` of `count` in a credit: "", ", " or " and " ("Ann, Bob and Cy"). */
 export function creditJoiner(index: number, count: number): string {

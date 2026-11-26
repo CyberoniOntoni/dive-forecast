@@ -35,7 +35,7 @@ import type { BoatTrip } from "./boat-route-data";
 import type { PhotoActionResult, ReviewActionResult, SiteReview, SiteReviews } from "./actions";
 import { REVIEW_MAX } from "./site-details";
 import { editedSiteIds, liveTexts, originalTexts, siteContributors } from "./site-wiki";
-import { EDIT_NOTE_MAX, WIKI_MAX, writtenByLine } from "./site-wiki-limits";
+import { EDIT_ALREADY_LOOKED_AT, EDIT_NOTE_MAX, WIKI_MAX, writtenByLine } from "./site-wiki-limits";
 import type { SiteWiki, WikiResult } from "./wiki-actions";
 import { reviewDate, reviewSummaryLine } from "./review-words";
 import { ringBox, type RimRing } from "./rim";
@@ -1195,6 +1195,8 @@ export type ApiSiteTexts = {
     changes: { description?: string; howToDive?: string };
     note: string | null;
     rejectReason: string | null;
+    /** Approved and not taken back since: the diver is in the site's credits for it. */
+    standing: boolean;
     at: string;
   } | null;
   /** True after a send that went live at once (a moderator's). */
@@ -1222,6 +1224,7 @@ export function apiSiteTexts(wiki: SiteWiki, live = false): ApiSiteTexts {
           },
           note: mine.note,
           rejectReason: mine.rejectReason,
+          standing: mine.standing,
           at: mine.at,
         }
       : null,
@@ -1236,6 +1239,8 @@ export function apiSiteTextsResult(result: WikiResult, status = 200): Response {
     if (result.error === SIGN_IN_FIRST) return apiError(401, "unauthorized", "Sign in again.");
     if (result.error === "That site is gone.") return apiError(404, "not_found", "Unknown site.");
     if (result.error === "Unknown edit.") return apiError(404, "not_found", "Unknown edit.");
+    // The route saw the edit waiting, but a moderator approved or rejected it before the withdraw landed.
+    if (result.error === EDIT_ALREADY_LOOKED_AT) return apiError(404, "not_found", "That edit is not waiting for review.");
     return apiError(400, "bad_request", result.error ?? "Could not save your edit.");
   }
   return apiJson(apiSiteTexts(result.wiki, result.live), { status, cacheControl: API_NO_STORE });

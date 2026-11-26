@@ -6,7 +6,10 @@ import { POST as requestCode } from "@/app/api/v1/sign-in/code/route";
 import { POST as getToken } from "@/app/api/v1/sign-in/token/route";
 import { GET as getTexts, POST as proposeTexts } from "@/app/api/v1/sites/[id]/texts/route";
 import { DELETE as withdraw } from "@/app/api/v1/sites/[id]/texts/[editId]/route";
-import { readStore, setStoreDir } from "@/lib/store";
+import { apiSiteTextsResult } from "@/lib/api-v1";
+import { reviewEdit, revertEdit } from "@/lib/site-wiki";
+import { EDIT_ALREADY_LOOKED_AT } from "@/lib/site-wiki-limits";
+import { mutateStore, readStore, setStoreDir } from "@/lib/store";
 
 /** A throwaway store folder: tests never write into data/. */
 let storeDir = "";
@@ -165,5 +168,30 @@ describe("API v1 site texts", () => {
     const long = await proposeTexts(call(`/api/v1/sites/${SITE}/texts`, { token, body: { texts: { description: "x".repeat(2001) } } }), site(SITE));
     expect(long.status).toBe(400);
     expect(await long.json()).toMatchObject({ error: { message: "About the site must be at most 2000 characters." } });
+  });
+
+  it("says whether an approved edit still stands, so the app promises credits only while it does", async () => {
+    const token = await signInApp("d@example.com", "Dee");
+    const first = await (await getTexts(call(`/api/v1/sites/${SITE}/texts`, { token }), site(SITE))).json();
+    const sent = await proposeTexts(
+      call(`/api/v1/sites/${SITE}/texts`, { token, body: { texts: { description: "Bright soft corals on the east side." }, based: first.texts } }),
+      site(SITE),
+    );
+    const id = (await sent.json()).mine.id;
+    expect((await (await getTexts(call(`/api/v1/sites/${SITE}/texts`, { token }), site(SITE))).json()).mine.standing).toBe(false);
+
+    const original = { description: first.texts.description, howToDive: first.texts.howToDive };
+    await mutateStore((store) => reviewEdit(store, id, "approve", "moderator-id", original, Date.now()));
+    const approved = await (await getTexts(call(`/api/v1/sites/${SITE}/texts`, { token }), site(SITE))).json();
+    expect(approved.mine).toMatchObject({ status: "approved", standing: true });
+
+    await mutateStore((store) => revertEdit(store, id, original, new Date().toISOString()));
+    const takenBack = await (await getTexts(call(`/api/v1/sites/${SITE}/texts`, { token }), site(SITE))).json();
+    expect(takenBack.mine).toMatchObject({ status: "approved", standing: false });
+  });
+
+  it("answers 404, not 400, when a moderator looked at the edit just before the withdraw landed", async () => {
+    const raced = apiSiteTextsResult({ ok: false, error: EDIT_ALREADY_LOOKED_AT, wiki: null, live: false });
+    expect(raced.status).toBe(404);
   });
 });

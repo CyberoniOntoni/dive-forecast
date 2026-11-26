@@ -165,10 +165,14 @@ fun SiteScreen(
   val colors = CurrentTheme.colors
   val context = LocalContext.current
   // Opened from the map's search: its field, still there under this page, kept the keyboard up and took the page's
-  // swipes as typing. The page has nothing to type into, so it lets go of the focus and puts the keyboard away.
+  // swipes as typing. The page has nothing to type into, so it lets go of the focus and puts the keyboard away, once
+  // when it opens: not again after a rotation, when the diver may be typing a review or report on this page.
   val focus = LocalFocusManager.current
   val keyboard = LocalSoftwareKeyboardController.current
+  var keyboardLetGo by rememberSaveable { mutableStateOf(false) }
   LaunchedEffect(Unit) {
+    if (keyboardLetGo) return@LaunchedEffect
+    keyboardLetGo = true
     focus.clearFocus(force = true)
     keyboard?.hide()
   }
@@ -581,16 +585,20 @@ private fun AboutCard(
         color = colors.mist,
       )
     }
-    val howToDive = site.howToDive?.takeUnless { adderBlocked && site.howToDiveByAdder }
-    val written = site.description != null || howToDive != null
-    if (!written) {
+    // An approved edit can empty a text: an empty one is not written. The blocked adder's own how to dive it is
+    // hidden, but it is there, so the card does not also say nobody wrote anything.
+    val description = site.description?.takeIf { it.isNotBlank() }
+    val hiddenHowToDive = adderBlocked && site.howToDiveByAdder && !site.howToDive.isNullOrBlank()
+    val howToDive = site.howToDive?.takeIf { it.isNotBlank() && !hiddenHowToDive }
+    val written = description != null || howToDive != null
+    if (!written && !hiddenHowToDive) {
       Text(
         "Nobody has written about this site yet. Dived it? Tell other divers what it's like and how to dive it.",
         style = MaterialTheme.typography.bodyMedium,
         color = colors.mist,
       )
     }
-    site.description?.let {
+    description?.let {
       Text(it, style = MaterialTheme.typography.bodyLarge)
       reportText("description")
     }

@@ -22,7 +22,7 @@ import {
   type Contributor,
   type FieldChange,
 } from "./site-wiki";
-import { WIKI_LABELS } from "./site-wiki-limits";
+import { EDIT_ALREADY_LOOKED_AT, WIKI_LABELS } from "./site-wiki-limits";
 import { findSite, listMergedSites, mutateStore, readStore, siteRecord } from "./store";
 import { WIKI_FIELDS, type SiteEdit, type StoreData, type WikiField, type WikiTexts } from "./types";
 
@@ -38,6 +38,8 @@ export type MyEdit = {
   changes: WikiTexts;
   note: string | null;
   rejectReason: string | null;
+  /** Approved and not taken back since: the diver is in the site's credits for it. */
+  standing: boolean;
   /** ISO UTC: when it was proposed, or looked at. */
   at: string;
 };
@@ -115,6 +117,7 @@ function siteWiki(store: StoreData, siteId: string, viewerId: string | null, mod
           changes: latest.changes,
           note: latest.note ?? null,
           rejectReason: latest.rejectReason ?? null,
+          standing: latest.status === "approved" && !latest.revertedAt,
           at: latest.reviewedAt ?? latest.createdAt,
         }
       : null,
@@ -186,7 +189,7 @@ export async function withdrawSiteEdit(editId: unknown): Promise<WikiResult> {
     if (typeof editId !== "string" || !editId) return failed(null, "Unknown edit.");
     const siteId = readStore().siteEdits.find((edit) => edit.id === editId)?.siteId;
     const done = await mutateStore((store) => withdrawEdit(store, session.userId, editId));
-    if (!done || !siteId) return failed(null, "That edit was already looked at.");
+    if (!done || !siteId) return failed(null, EDIT_ALREADY_LOOKED_AT);
     const moderator = (await moderatorId()) != null;
     return { ok: true, error: null, wiki: siteWiki(readStore(), siteId, session.userId, moderator), live: false };
   } catch (caught) {

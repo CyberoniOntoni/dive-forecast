@@ -43,6 +43,13 @@ data class SiteTextsDraft(val description: String, val howToDive: String, val no
       )
     }
 
+    /** [text] cut to at most [max] characters, a character shorter where the cut would split an emoji in two. */
+    fun cutAt(text: String, max: Int): String {
+      if (text.length <= max) return text
+      val end = if (max > 0 && text[max - 1].isHighSurrogate()) max - 1 else max
+      return text.substring(0, end)
+    }
+
     /** As cleanText in lib/site-details.ts: control characters dropped (newlines kept), blank-line runs squeezed, ends trimmed. */
     fun clean(text: String): String =
       text
