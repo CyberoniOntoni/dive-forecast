@@ -166,5 +166,6 @@ export async function flowField(time: string, options: FetchOptions = { wait: fa
   const atolls = await Promise.all(
     [...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null)),
   );
-  return { time, atolls: atolls.filter((item) => item != null) };
+  const found = atolls.filter((item) => item != null);
+  return { time, atolls: found, missing: atolls.length - found.length };
 }

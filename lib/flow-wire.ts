@@ -38,7 +38,11 @@ export type FlowAtoll = {
   walls: string[];
 };
 
-export type FlowFieldView = { time: string; atolls: FlowAtoll[] };
+/**
+ * One hour's flow. `missing` counts the outlines left out (series not cached yet, or a failure), so a partial field
+ * is kept only briefly and asked for again; absent in fields saved before it was added.
+ */
+export type FlowFieldView = { time: string; atolls: FlowAtoll[]; missing?: number };
 
 /** The map's speed for each forecast band, knots: the boat route's (lib/route-current.ts), with slack barely moving. */
 export const FLOW_KNOTS: Record<Strength, number> = { slack: 0.1, mild: 0.8, strong: 1.6, too_strong: 2.5 };

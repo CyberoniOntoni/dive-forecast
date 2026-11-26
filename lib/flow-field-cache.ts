@@ -9,6 +9,8 @@ import type { FetchOptions } from "./marine";
 /** A saved field younger than this is served as it is; an older one from the same hour is served while a new one is made. */
 const FRESH_MS = 5 * 60 * 1000;
 const KEY_PREFIX = "flowfield/";
+/** A field with outlines left out is served as it is only this long. */
+const PARTIAL_MS = 15 * 1000;
 const EDGE_SECONDS = 65 * 60;
 const HOUR_MS = 60 * 60 * 1000;
 const MALDIVES_OFFSET_MS = 5 * HOUR_MS;
@@ -43,11 +45,14 @@ export async function mapFlowField(hour: string): Promise<FlowFieldView> {
   const env = workerEnv();
   if (!env) {
     const kept = nodeFields.get(hour);
-    if (kept && Date.now() - kept.at <= FRESH_MS) return kept.field;
-    const field = await flowField(hour);
-    nodeFields.set(hour, { at: Date.now(), field });
-    while (nodeFields.size > NODE_HOURS_KEPT) nodeFields.delete(nodeFields.keys().next().value as string);
-    return field;
+    if (kept && Date.now() - kept.at <= keepFor(kept.field)) return kept.field;
+    // One build per hour at a time: on Node the in-flight map is the process's.
+    return rebuild(hour).then((field) => {
+      nodeFields.delete(hour);
+      nodeFields.set(hour, { at: Date.now(), field });
+      while (nodeFields.size > NODE_HOURS_KEPT) nodeFields.delete(nodeFields.keys().next().value as string);
+      return field;
+    });
   }
   const key = hourKey(hour);
   const claimCheck = () => {
@@ -120,7 +125,16 @@ function hourKey(hour: string): string {
   return `${KEY_PREFIX}${hour.slice(0, 13)}.json`;
 }
 
+/** How long a field is served as it is: FRESH_MS, or PARTIAL_MS when outlines were left out, so they join soon. */
+const keepFor = (field: FlowFieldView) => ((field.missing ?? 0) > 0 ? PARTIAL_MS : FRESH_MS);
+
+/**
+ * A complete field is fresh for FRESH_MS from when it was made or its hour started, whichever is later (the warm-up
+ * builds the coming hour's before it starts). A partial one only for PARTIAL_MS from when it was made, even for a
+ * coming hour.
+ */
 function isFresh(saved: SavedField, hour: string): boolean {
+  if ((saved.field.missing ?? 0) > 0) return Date.now() - saved.computedAt <= PARTIAL_MS;
   const hourStart = parseWall(`${hour.slice(0, 13)}:00`) - MALDIVES_OFFSET_MS;
   return Date.now() - Math.max(saved.computedAt, hourStart) <= FRESH_MS;
 }

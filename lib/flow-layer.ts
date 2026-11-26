@@ -33,7 +33,7 @@ const MIN_PARTICLES = 150;
 const MAX_PARTICLES = 1400;
 /** Phones and small windows: fewer particles, so the map stays smooth and the battery lasts. */
 const MAX_PARTICLES_SMALL = 500;
-/** A failed or empty field is asked for again on a move this long after; any field is reloaded after RELOAD_MS. */
+/** A failed, empty or partial field is asked for again on a move this long after; any field is reloaded after RELOAD_MS. */
 const RETRY_MS = 15 * 1000;
 const RELOAD_MS = 5 * 60 * 1000;
 /** Longest step a frame may take; a slow frame or a tab coming back does not throw the particles. */
@@ -166,11 +166,14 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     const pad = 0.06;
     return field.atolls
       .filter((atoll) => {
-        const box = atoll.box;
+        const box = atoll.box ?? shapeBoxes.get(atoll.wayId);
         return !box || (box.north + pad >= view.south && box.south - pad <= view.north && box.east + pad >= view.west && box.west - pad <= view.east);
       })
       .map((atoll) => atoll.wayId);
   };
+
+  /** Outline boxes from the shapes, for fields saved before the server sent `box`. */
+  const shapeBoxes = new Map<string, { south: number; north: number; west: number; east: number }>();
 
   const refreshActive = () => {
     const wanted = new Set(inView());
@@ -203,6 +206,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         (acc, [lat, lon]) => ({ south: Math.min(acc.south, lat), north: Math.max(acc.north, lat), west: Math.min(acc.west, lon), east: Math.max(acc.east, lon) }),
         { south: Infinity, north: -Infinity, west: Infinity, east: -Infinity },
       );
+      shapeBoxes.set(wayId, box);
       const view = viewBox();
       const near = box.north + 0.06 >= view.south && box.south - 0.06 <= view.north && box.east + 0.06 >= view.west && box.west - 0.06 <= view.east;
       if (!near) {
@@ -244,7 +248,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
       if (time !== asked) return;
       askedAt = Date.now();
       // A reload that brings the same field keeps the rasters built for it.
-      if (!field || JSON.stringify(field) !== JSON.stringify(next)) {
+      if (!field || !sameField(field, next)) {
         field = next;
         rasters = new Map();
         active = [];
@@ -262,7 +266,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   };
 
   /**
-   * Loads the field when there is none, and again when the last load failed or came back with no atolls (a while
+   * Loads the field when there is none, and again when the last load failed or came back with atolls left out (a while
    * later, RETRY_MS) or is older than RELOAD_MS: atolls whose series were not cached yet join on a later load.
    * When a load ends, refresh runs again, so an hour that changed meanwhile gets its own field.
    */
@@ -270,7 +274,8 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     // No hour yet (the arrows come after the layer is added): nothing to load until setArrows.
     if (loading || !time) return false;
     const since = Date.now() - askedAt;
-    const retry = (failed || field?.atolls.length === 0) && since >= RETRY_MS;
+    const partial = field != null && (field.atolls.length === 0 || (field.missing ?? 0) > 0);
+    const retry = (failed || partial) && since >= RETRY_MS;
     if (field && !retry && since < RELOAD_MS) return true;
     if (failed && !retry) return false;
     failed = false;
@@ -611,4 +616,18 @@ function sameArrows(a: FlowArrows, b: FlowArrows): boolean {
     if (!other || other.headingDeg !== value.headingDeg || other.knots !== value.knots || other.lat !== value.lat || other.lon !== value.lon) return false;
   }
   return true;
+}
+
+/** Whether two loads of a field carry the same flow, compared without serialising the lagoon grids. */
+function sameField(a: FlowFieldView, b: FlowFieldView): boolean {
+  if (a.time !== b.time || a.atolls.length !== b.atolls.length) return false;
+  return a.atolls.every((atoll, index) => {
+    const other = b.atolls[index];
+    return (
+      atoll.wayId === other.wayId &&
+      atoll.lagoon?.vectors === other.lagoon?.vectors &&
+      JSON.stringify([atoll.lagoon && { ...atoll.lagoon, vectors: "" }, atoll.ocean, atoll.channels, atoll.walls]) ===
+        JSON.stringify([other.lagoon && { ...other.lagoon, vectors: "" }, other.ocean, other.channels, other.walls])
+    );
+  });
 }

@@ -112,6 +112,28 @@ describe("mapFlowField", () => {
     expect(flowField).toHaveBeenCalledTimes(1);
   });
 
+  it("rebuilds a coming hour's field soon when outlines were left out of it", async () => {
+    // 16:40 in the Maldives: a partial 17:00 field saved before the hour.
+    vi.useFakeTimers({ now: Date.parse("2026-11-26T11:40:00Z") });
+    objects.set("flowfield/2026-11-26T17.json", JSON.stringify({ computedAt: Date.now(), field: { time: "2026-11-26T17:00", atolls: [], missing: 3 } }));
+    vi.setSystemTime(Date.parse("2026-11-26T11:41:00Z"));
+    await mapFlowField("2026-11-26T17:00");
+    await Promise.all(background);
+    expect(flowField).toHaveBeenCalledTimes(1);
+  });
+
+  it("on Node, builds an hour once for loads at the same time, and keeps a partial field only briefly", async () => {
+    onWorker = false;
+    vi.useFakeTimers({ now: Date.parse("2026-11-26T11:00:00Z") });
+    await Promise.all([1, 2, 3].map(() => mapFlowField("2026-11-26T18:00")));
+    expect(flowField).toHaveBeenCalledTimes(1);
+    flowField.mockImplementationOnce(async (time: string) => ({ time, atolls: [], missing: 2 }));
+    await mapFlowField("2026-11-26T19:00");
+    vi.setSystemTime(Date.parse("2026-11-26T11:00:20Z"));
+    await mapFlowField("2026-11-26T19:00");
+    expect(flowField).toHaveBeenCalledTimes(3);
+  });
+
   it("on Node, keeps an hour's field for a few minutes", async () => {
     onWorker = false;
     vi.useFakeTimers({ now: Date.parse("2026-11-26T11:00:00Z") });
