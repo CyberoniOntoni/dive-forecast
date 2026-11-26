@@ -26,8 +26,11 @@ export type FlowAtoll = {
   } | null;
   /** The ocean model's surface current at the ring sample points, 3 km off the outline. */
   ocean: { lat: number; lon: number; east: number; north: number }[];
-  /** Catalog sites whose water crosses the rim (passes, channel thilas, corners): the only gates in the reef. */
-  channels: string[];
+  /**
+   * Catalog sites whose water crosses the rim (passes, channel thilas, corners): the only gates in the reef. Each with
+   * its width in metres (the published section's, else the Allen Coral Atlas measure), or null when neither is known.
+   */
+  channels: { id: string; widthM: number | null }[];
   /** Catalog sites whose current runs along the reef (outer walls, strait walls). */
   walls: string[];
 };

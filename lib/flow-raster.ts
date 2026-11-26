@@ -3,13 +3,18 @@
  * through it. Pure code (no DOM, no Leaflet), so tests can drive it.
  *
  * The field is a raster of about 200 m cells over the atoll and a few km of sea round it. Each cell holds a velocity in
- * knots and what is there: open sea, lagoon or land. It is made of, in order:
- *  - inside the outline, the lagoon model's flow (FlowAtoll.lagoon), bilinear between its ~1 km cells;
- *  - outside, the ocean model's surface current, blended from the ring points, and within WALL_BAND_KM of the reef
- *    turned to run along it (the reef stops the part that runs at it), as the along-reef model reads it;
+ * knots and what is there: open sea, lagoon or land. It keeps to three physical rules: water does not cross the reef
+ * except through a channel; what a channel carries is drawn in from a wide fan on its upstream side and leaves as a jet
+ * that widens and slows downstream (momentum kept, as in a plane jet); and the lagoon's own currents are as slow as the
+ * channels' flow spread over the lagoon makes them (continuity). Made of, in order:
+ *  - inside the outline, the lagoon model's flow pattern (FlowAtoll.lagoon), scaled so that just inside each running
+ *    channel it matches the speed that channel's water has once spread over a half circle (lagoonScale);
+ *  - outside, the ocean model's surface current, blended from the ring points;
+ *  - on both sides of the reef, the part running at the reef taken away close to it, so the water slides along it;
+ *    outside, within WALL_BAND_KM, the along-reef part sped up as the along-reef model does;
  *  - at each wall site, that site's forecast heading and band speed, fading out over a couple of km;
- *  - at each channel site, a jet along its forecast heading at its band speed: narrow and fast through the pass and
- *    widening, so slowing, as it spreads downstream. Only the jets are gates: a particle crosses the reef nowhere else.
+ *  - at each channel site, a sink fan upstream (speed falling as 1/r) and a jet downstream along its forecast heading.
+ *    Only the channels are gates: a particle crosses the reef nowhere else.
  */
 import { decodeVectors, type FlowAtoll } from "./flow-wire";
 import type { RimRing } from "./rim";
@@ -27,28 +32,44 @@ const CELL_KM = 0.2;
 const MAX_CELLS = 160_000;
 /** Within this of the reef, outside, the ocean current is turned to run along it. */
 export const WALL_BAND_KM = 2.5;
+/** Inside, the flow at the reef is turned along it over this distance: the rim is closed except at the channels. */
+const LAGOON_EDGE_KM = 0.8;
 /** The along-reef model's tidal gain is about 3; the drift part has none. A middle value for the map. */
-const WALL_GAIN = 1.6;
+const WALL_GAIN = 1.4;
 /** A wall site's own forecast holds over this distance (Gaussian sigma). */
 const WALL_SIGMA_KM = 1.4;
-/** A channel jet: upstream reach, downstream reach, and its half-width in the gap. */
-const JET_UP_KM = 1.2;
-const JET_DOWN_KM = 2.6;
-const JET_HALF_KM = 0.22;
-/** How fast the jet widens downstream, km of half-width per km. */
-const JET_SPREAD = 0.45;
-/** A cell is a gate in the reef where a jet's weight is at least this. */
-const GATE_WEIGHT = 0.3;
+/** A channel's width when the catalog has none, and the range a width is held to, km. */
+export const DEFAULT_CHANNEL_KM = 0.4;
+const CHANNEL_KM_RANGE: readonly [number, number] = [0.1, 1];
+/** The upstream fan reaches this far, km. */
+const FAN_KM = 2;
+/** The downstream jet: how far it is drawn (km), and its half-width's growth per km (a plane jet's is about 0.1). */
+const JET_DOWN_KM = 4;
+const JET_SPREAD = 0.11;
+/** Lagoon speeds are sampled this far inside each channel to scale the lagoon flow (km). */
+const SCALE_AT_KM = 2;
+/** The lagoon scale when no channel is running to set it, and the range it is held to. */
+const DEFAULT_LAGOON_SCALE = 0.3;
+const LAGOON_SCALE_RANGE: readonly [number, number] = [0.05, 1];
 /** Channels slower than this feed no particles of their own: slack water has no stream to show. */
 const FEED_MIN_KNOTS = 0.4;
 /** The share of new particles fed into a channel's stream when one is in view. */
-export const FEED_SHARE = 0.3;
-/** A fed particle starts this far upstream of the pin (km, from-to) and this far to either side (sigma, km). */
-const FEED_UP_KM: readonly [number, number] = [-1.1, 0.2];
-const FEED_SIDE_KM = 0.12;
+export const FEED_SHARE = 0.25;
+/** A fed particle starts at most this far out in the channel's upstream fan, km. */
+const FEED_KM = 0.6;
+/**
+ * Particles move on screen at knots^SCREEN_EXPONENT: the lagoon's few hundredths of a knot would otherwise stand still
+ * beside a channel's two knots. Faster water still moves faster; the legend's colours give the band.
+ */
+export const SCREEN_EXPONENT = 0.6;
+/** A particle fades in over this long after it appears, and out over FADE_OUT_S before it goes, seconds. */
+const FADE_IN_S = 0.5;
+const FADE_OUT_S = 0.7;
 
 /** A site's forecast arrow on the map: where it is, where the water heads, and how fast (knots). */
 export type FlowVector = { lat: number; lon: number; headingDeg: number; knots: number };
+/** A channel's arrow and its width (km), from the catalog's measured width or DEFAULT_CHANNEL_KM. */
+export type FlowChannel = FlowVector & { widthKm: number };
 export type FlowShapes = { outline: RimRing; islands: readonly RimRing[] };
 
 export type FlowRaster = {
@@ -67,7 +88,7 @@ export type FlowRaster = {
   kind: Uint8Array;
   gate: Uint8Array;
   /** The channels running at least mild this hour: where particles are fed in, so each channel shows its stream. */
-  jets: { lat: number; lon: number; east: number; north: number }[];
+  jets: { lat: number; lon: number; east: number; north: number; widthKm: number }[];
 };
 
 type Frame = { refLat: number; kmLon: number };
@@ -200,11 +221,14 @@ function forCellsNear(
   }
 }
 
+const widthOf = (channel: FlowChannel) =>
+  Math.max(CHANNEL_KM_RANGE[0], Math.min(CHANNEL_KM_RANGE[1], channel.widthKm > 0 ? channel.widthKm : DEFAULT_CHANNEL_KM));
+
 /** Builds one atoll's raster for one hour. `channels` and `walls` are the sites' forecast arrows this hour. */
 export function buildFlowRaster(
   atoll: FlowAtoll,
   shapes: FlowShapes,
-  channels: readonly FlowVector[],
+  channels: readonly FlowChannel[],
   walls: readonly FlowVector[],
 ): FlowRaster {
   const outline = shapes.outline;
@@ -252,12 +276,14 @@ export function buildFlowRaster(
         lon: site.lon,
         east: Math.sin((site.headingDeg * Math.PI) / 180),
         north: Math.cos((site.headingDeg * Math.PI) / 180),
+        widthKm: widthOf(site),
       })),
   };
   fillRing(raster, outline, KIND_LAGOON);
   for (const island of shapes.islands) fillRing(raster, island, KIND_LAND);
   const band = reefBand(raster, outline, WALL_BAND_KM, frame);
   const lagoon = atoll.lagoon ? { grid: atoll.lagoon, ...decodeVectors(atoll.lagoon.vectors) } : null;
+  const scale = lagoon ? lagoonScale(lagoon, channels, frame) : DEFAULT_LAGOON_SCALE;
 
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
@@ -266,20 +292,24 @@ export function buildFlowRaster(
       const lon = west + (column + 0.5) * stepLon;
       const kind = raster.kind[cell];
       if (kind === KIND_LAND) continue;
+      let ve = 0;
+      let vn = 0;
       if (kind === KIND_LAGOON) {
-        if (!lagoon) continue;
-        raster.vEast[cell] = bilinear(lagoon.grid, lagoon.east, lat, lon);
-        raster.vNorth[cell] = bilinear(lagoon.grid, lagoon.north, lat, lon);
-        continue;
+        if (lagoon) {
+          ve = bilinear(lagoon.grid, lagoon.east, lat, lon) * scale;
+          vn = bilinear(lagoon.grid, lagoon.north, lat, lon) * scale;
+        }
+      } else {
+        [ve, vn] = oceanAt(atoll.ocean, lat, lon, frame);
       }
-      let [ve, vn] = oceanAt(atoll.ocean, lat, lon, frame);
       const d = band.distance[cell];
-      if (d <= WALL_BAND_KM) {
-        // Near the reef the water cannot run at it, so the current turns to run along it, faster for the wall.
+      const reach = kind === KIND_LAGOON ? LAGOON_EDGE_KM : WALL_BAND_KM;
+      if (d <= reach) {
+        // The reef stops the part running at it: close to it the water slides along it (outside, faster: the wall).
         const te = band.tangentEast[cell];
         const tn = band.tangentNorth[cell];
-        const along = (ve * te + vn * tn) * WALL_GAIN;
-        const share = 1 - smooth(d / WALL_BAND_KM);
+        const along = (ve * te + vn * tn) * (kind === KIND_LAGOON ? 1 : WALL_GAIN);
+        const share = 1 - smooth(d / reach);
         ve = ve * (1 - share) + along * te * share;
         vn = vn * (1 - share) + along * tn * share;
       }
@@ -289,74 +319,144 @@ export function buildFlowRaster(
   }
 
   // Wall sites: their own forecast along the reef, outside only.
-  const wallSum = blendSites(raster, walls, frame, 3 * WALL_SIGMA_KM, (dx, dy) => Math.exp(-(dx * dx + dy * dy) / (2 * WALL_SIGMA_KM ** 2)), true);
-  applyBlend(raster, wallSum, false);
-
-  // Channel jets, on both sides of the reef: they are what joins the lagoon to the sea.
-  const jetSum = blendSites(raster, channels, frame, JET_DOWN_KM, jetWeight, false);
-  applyBlend(raster, jetSum, true);
+  applyBlend(raster, wallBlend(raster, walls, frame));
+  // Channels: the fan that feeds them, added to whatever runs past, then the jet they make.
+  addFans(raster, channels, frame);
+  applyBlend(raster, jetBlend(raster, channels, frame));
   return raster;
 }
 
 /**
- * A jet's weight at a cell, from its offset along (downstream positive) and across the heading, and how much the
- * jet's own speed is cut there: the same water through a wider section runs slower.
+ * How much to scale the lagoon model's flow, which has no physical unit, so it agrees with the channels: just inside
+ * each running channel, the water it carries (speed × width) spread over a half circle runs at speed × width / (π r).
+ * The median over the channels, held to LAGOON_SCALE_RANGE; DEFAULT_LAGOON_SCALE when none runs.
  */
-function jetWeight(along: number, across: number): number {
-  if (along < -JET_UP_KM || along > JET_DOWN_KM) return 0;
-  const half = JET_HALF_KM + Math.max(0, along) * JET_SPREAD + Math.max(0, -along) * JET_SPREAD * 0.6;
-  const ends = along < 0 ? 1 - smooth(-along / JET_UP_KM) : 1 - smooth(along / JET_DOWN_KM);
-  return Math.exp(-((across / half) ** 2)) * ends;
-}
-
-function jetSlowdown(along: number): number {
-  const half = JET_HALF_KM + Math.abs(along) * JET_SPREAD * (along < 0 ? 0.6 : 1);
-  return Math.sqrt(JET_HALF_KM / half);
+function lagoonScale(
+  lagoon: { grid: LagoonGrid; east: Float32Array; north: Float32Array },
+  channels: readonly FlowChannel[],
+  frame: Frame,
+): number {
+  const ratios: number[] = [];
+  for (const channel of channels) {
+    if (channel.knots < FEED_MIN_KNOTS) continue;
+    const radians = (channel.headingDeg * Math.PI) / 180;
+    // Inside is downstream on the flood and upstream on the ebb; the lagoon flow is sampled on the inside either way,
+    // so take the side the lagoon grid says is faster toward or away from the channel.
+    const samples = [1, -1].map((sign) => {
+      const lat = channel.lat + (sign * SCALE_AT_KM * Math.cos(radians)) / KM_PER_DEG_LAT;
+      const lon = channel.lon + (sign * SCALE_AT_KM * Math.sin(radians)) / frame.kmLon;
+      return Math.hypot(bilinear(lagoon.grid, lagoon.east, lat, lon), bilinear(lagoon.grid, lagoon.north, lat, lon));
+    });
+    const model = Math.max(...samples);
+    if (!(model > 0.02)) continue;
+    ratios.push((channel.knots * widthOf(channel)) / (Math.PI * SCALE_AT_KM) / model);
+  }
+  if (ratios.length === 0) return DEFAULT_LAGOON_SCALE;
+  ratios.sort((a, b) => a - b);
+  const median = ratios[Math.floor(ratios.length / 2)];
+  return Math.max(LAGOON_SCALE_RANGE[0], Math.min(LAGOON_SCALE_RANGE[1], median));
 }
 
 type Blend = { weight: Float32Array; east: Float32Array; north: Float32Array };
 
-function blendSites(
-  raster: FlowRaster,
-  sites: readonly FlowVector[],
-  frame: Frame,
-  reachKm: number,
-  weightAt: (along: number, across: number) => number,
-  seaOnly: boolean,
-): Blend {
+function newBlend(raster: FlowRaster): Blend {
   const size = raster.rows * raster.columns;
-  const blend: Blend = { weight: new Float32Array(size), east: new Float32Array(size), north: new Float32Array(size) };
-  for (const site of sites) {
-    if (site.lat < raster.south || site.lat > raster.north || site.lon < raster.west || site.lon > raster.east) continue;
+  return { weight: new Float32Array(size), east: new Float32Array(size), north: new Float32Array(size), };
+}
+
+const inRaster = (raster: FlowRaster, site: { lat: number; lon: number }) =>
+  site.lat >= raster.south && site.lat <= raster.north && site.lon >= raster.west && site.lon <= raster.east;
+
+function wallBlend(raster: FlowRaster, walls: readonly FlowVector[], frame: Frame): Blend {
+  const blend = newBlend(raster);
+  for (const site of walls) {
+    if (!inRaster(raster, site)) continue;
     const radians = (site.headingDeg * Math.PI) / 180;
     const he = Math.sin(radians);
     const hn = Math.cos(radians);
-    const isJet = !seaOnly;
-    forCellsNear(raster, site.lat, site.lon, reachKm, frame, (cell, dx, dy) => {
-      if (raster.kind[cell] === KIND_LAND) return;
-      if (seaOnly && raster.kind[cell] !== KIND_SEA) return;
-      // A wall's weight is round; a jet's runs along its heading.
-      const along = isJet ? dx * he + dy * hn : dx;
-      const across = isJet ? -dx * hn + dy * he : dy;
-      const weight = weightAt(along, across);
+    forCellsNear(raster, site.lat, site.lon, 3 * WALL_SIGMA_KM, frame, (cell, dx, dy) => {
+      if (raster.kind[cell] !== KIND_SEA) return;
+      const weight = Math.exp(-(dx * dx + dy * dy) / (2 * WALL_SIGMA_KM ** 2));
       if (weight < 0.01) return;
-      const knots = site.knots * (isJet ? jetSlowdown(along) : 1);
       blend.weight[cell] += weight;
-      blend.east[cell] += weight * knots * he;
-      blend.north[cell] += weight * knots * hn;
+      blend.east[cell] += weight * site.knots * he;
+      blend.north[cell] += weight * site.knots * hn;
     });
   }
   return blend;
 }
 
-function applyBlend(raster: FlowRaster, blend: Blend, gates: boolean): void {
+/**
+ * The upstream fan: the water a channel carries comes from all round its mouth on the upstream side, so toward the
+ * mouth at speed × (width / 2) / r, the channel's own speed at its edge and less with distance, fading out at FAN_KM.
+ * Added to the flow already there: a current running past the mouth is bent toward it, more the closer it passes.
+ * Cells within the channel's width of the mouth are gates.
+ */
+function addFans(raster: FlowRaster, channels: readonly FlowChannel[], frame: Frame): void {
+  for (const site of channels) {
+    if (!inRaster(raster, site)) continue;
+    const half = widthOf(site) / 2;
+    const radians = (site.headingDeg * Math.PI) / 180;
+    const he = Math.sin(radians);
+    const hn = Math.cos(radians);
+    forCellsNear(raster, site.lat, site.lon, FAN_KM, frame, (cell, dx, dy) => {
+      if (raster.kind[cell] === KIND_LAND) return;
+      const r = Math.hypot(dx, dy);
+      if (r <= Math.max(half, 0.15)) raster.gate[cell] = 1;
+      const along = dx * he + dy * hn;
+      if (along > 0 || r > FAN_KM) return;
+      const speed = (site.knots * half) / Math.max(r, half);
+      // Toward the mouth, turning to the channel's own heading as it gets there.
+      const toward = r > 0 ? [-dx / r, -dy / r] : [he, hn];
+      const settle = smooth(1 - r / (2 * half));
+      const fade = 1 - smooth(r / FAN_KM);
+      const de = toward[0] * (1 - settle) + he * settle;
+      const dn = toward[1] * (1 - settle) + hn * settle;
+      raster.vEast[cell] += speed * de * fade;
+      raster.vNorth[cell] += speed * dn * fade;
+    });
+  }
+}
+
+/**
+ * The downstream jet: a plane jet from the mouth along the heading, its half-width growing by JET_SPREAD per km and its
+ * speed falling so momentum (speed² × width) is kept. Blended over what is there, so it hands over to the lagoon or the
+ * sea as it slows. Cells close behind the mouth, where the jet is still the channel's own width, are gates.
+ */
+function jetBlend(raster: FlowRaster, channels: readonly FlowChannel[], frame: Frame): Blend {
+  const blend = newBlend(raster);
+  for (const site of channels) {
+    if (!inRaster(raster, site)) continue;
+    const half0 = widthOf(site) / 2;
+    const radians = (site.headingDeg * Math.PI) / 180;
+    const he = Math.sin(radians);
+    const hn = Math.cos(radians);
+    forCellsNear(raster, site.lat, site.lon, JET_DOWN_KM, frame, (cell, dx, dy) => {
+      if (raster.kind[cell] === KIND_LAND) return;
+      const along = dx * he + dy * hn;
+      if (along < -half0 || along > JET_DOWN_KM) return;
+      const across = -dx * hn + dy * he;
+      const s = Math.max(0, along);
+      const half = half0 + JET_SPREAD * s;
+      const weight = Math.exp(-((across / half) ** 2)) * (1 - smooth(s / JET_DOWN_KM));
+      if (weight < 0.01) return;
+      const speed = site.knots * Math.sqrt(half0 / half);
+      if (s < half0 && Math.abs(across) < half0) raster.gate[cell] = 1;
+      blend.weight[cell] += weight;
+      blend.east[cell] += weight * speed * he;
+      blend.north[cell] += weight * speed * hn;
+    });
+  }
+  return blend;
+}
+
+function applyBlend(raster: FlowRaster, blend: Blend): void {
   for (let cell = 0; cell < blend.weight.length; cell += 1) {
     const total = blend.weight[cell];
     if (total <= 0) continue;
     const share = Math.min(1, total);
     raster.vEast[cell] = raster.vEast[cell] * (1 - share) + (blend.east[cell] / total) * share;
     raster.vNorth[cell] = raster.vNorth[cell] * (1 - share) + (blend.north[cell] / total) * share;
-    if (gates && share >= GATE_WEIGHT) raster.gate[cell] = 1;
   }
 }
 
@@ -460,9 +560,11 @@ export class FlowParticles {
     for (let at = 0; at < rasters.length; at += 1) {
       for (const jet of rasters[at].jets) {
         if (!inView(jet) || pick-- > 0) continue;
-        const along = FEED_UP_KM[0] + this.random() * (FEED_UP_KM[1] - FEED_UP_KM[0]);
-        // Roughly normal across the stream: the mean of three uniforms.
-        const across = ((this.random() + this.random() + this.random()) / 1.5 - 1) * FEED_SIDE_KM * 1.7;
+        // In the upstream fan: within 60° either side of straight upstream, from the mouth's edge out to FEED_KM.
+        const angle = Math.PI + (this.random() - 0.5) * ((2 * Math.PI) / 3);
+        const distance = jet.widthKm / 2 + this.random() * FEED_KM;
+        const along = distance * Math.cos(angle);
+        const across = distance * Math.sin(angle);
         const kmLon = KM_PER_DEG_LON * Math.cos((jet.lat * Math.PI) / 180);
         const lat = jet.lat + (along * jet.north + across * jet.east) / KM_PER_DEG_LAT;
         const lon = jet.lon + (along * jet.east - across * jet.north) / kmLon;
@@ -484,6 +586,12 @@ export class FlowParticles {
     this.trailLat[index * this.trail + head] = this.lat[index];
     this.trailLon[index * this.trail + head] = this.lon[index];
     if (this.filled[index] < this.trail) this.filled[index] += 1;
+  }
+
+  /** How visible particle `index` is now, 0 to 1: fading in after it appears and out before it goes. */
+  opacity(index: number): number {
+    const age = this.age[index];
+    return Math.max(0, Math.min(1, age / FADE_IN_S, (this.life[index] - age) / FADE_OUT_S));
   }
 
   /** Forgets every trail (after the map jumps), keeping the particles where they are. */
@@ -527,20 +635,25 @@ export class FlowParticles {
         this.spawn(index, rasters, view);
         continue;
       }
-      const ve = this.velocity[0];
-      const vn = this.velocity[1];
-      this.speed[index] = Math.hypot(ve, vn);
+      const speed = Math.hypot(this.velocity[0], this.velocity[1]);
+      this.speed[index] = speed;
+      // On screen speed goes as knots^SCREEN_EXPONENT: the slow lagoon still creeps visibly, the order is kept.
+      const screen = speed > 1e-6 ? speed ** (SCREEN_EXPONENT - 1) : 0;
+      const ve = this.velocity[0] * screen;
+      const vn = this.velocity[1] * screen;
       const nextLat = lat + vn * degPerKnotSecond * seconds;
       const nextLon = lon + ve * degPerKnotSecond * lonScale * seconds;
       const from = cellAt(raster, lat, lon);
       const to = cellAt(raster, nextLat, nextLon);
-      if (to < 0 || raster.kind[to] === KIND_LAND) {
-        this.spawn(index, rasters, view);
-        continue;
-      }
-      // The reef: only a channel's gate lets water between the lagoon and the sea.
-      if (from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to]) {
-        this.spawn(index, rasters, view);
+      // An island, or the reef away from a channel's gate: the water cannot go on, so the particle stops and fades
+      // out where it is rather than vanishing (the field turns along the reef, so few get here).
+      const blocked =
+        to < 0 ||
+        raster.kind[to] === KIND_LAND ||
+        (from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to]);
+      if (blocked) {
+        this.life[index] = Math.min(this.life[index], this.age[index] + FADE_OUT_S);
+        this.speed[index] = 0;
         continue;
       }
       if (nextLat < view.south || nextLat > view.north || nextLon < view.west || nextLon > view.east) {

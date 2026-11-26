@@ -7,6 +7,7 @@ import {
   KIND_LAND,
   KIND_SEA,
   velocityAt,
+  type FlowChannel,
   type FlowRaster,
   type FlowVector,
 } from "./flow-raster";
@@ -52,7 +53,7 @@ function atoll(lagoon: FlowAtoll["lagoon"], ocean: FlowAtoll["ocean"] = []): Flo
 const view = { south: 3.8, west: 73.3, north: 4.2, east: 73.7 };
 
 /** A channel in the middle of the east rim, the flood running west into the lagoon. */
-const EAST_PASS: FlowVector = { lat: 4.0, lon: 73.6, headingDeg: 270, knots: 1.6 };
+const EAST_PASS: FlowChannel = { lat: 4.0, lon: 73.6, headingDeg: 270, knots: 1.6, widthKm: 0.4 };
 
 function speedAt(raster: FlowRaster, lat: number, lon: number): { east: number; north: number } {
   const out = [0, 0];
@@ -98,14 +99,50 @@ describe("flow wire", () => {
 });
 
 describe("buildFlowRaster", () => {
-  it("marks the lagoon, the island and the sea, and takes the lagoon model's flow inside", () => {
+  it("marks the lagoon, the island and the sea, and keeps the lagoon model's heading inside", () => {
     const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [ISLAND] }, [], []);
     expect(raster.kind[cellAt(raster, 4.05, 73.5)]).toBe(KIND_LAGOON);
     expect(raster.kind[cellAt(raster, 3.95, 73.5)]).toBe(KIND_LAND);
     expect(raster.kind[cellAt(raster, 4.0, 73.65)]).toBe(KIND_SEA);
-    expect(speedAt(raster, 4.05, 73.5).east).toBeCloseTo(0.5, 1);
+    const inside = speedAt(raster, 4.05, 73.5);
+    expect(inside.east).toBeGreaterThan(0);
+    // With no channel running to set it, the model's unitless flow is turned down, not shown at face value.
+    expect(inside.east).toBeLessThan(0.5);
+    expect(Math.abs(inside.north)).toBeLessThan(1e-6);
     // No ocean points and no sites: the sea is still.
     expect(Math.hypot(...Object.values(speedAt(raster, 4.0, 73.64)))).toBeLessThan(1e-6);
+  });
+
+  it("slows the lagoon to what the channels carry: speed × width spread over a half circle", () => {
+    // The model says 1 knot everywhere; the one channel carries 1.6 knots through 400 m.
+    const raster = buildFlowRaster(atoll(uniformLagoon(-1, 0)), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const expected = (1.6 * 0.4) / (Math.PI * 2);
+    // Well away from the channel's jet and from the reef.
+    const far = speedAt(raster, 3.96, 73.5);
+    expect(-far.east).toBeCloseTo(expected, 1);
+    expect(-far.east).toBeLessThan(0.2);
+  });
+
+  it("does not run the lagoon flow into the reef away from a channel", () => {
+    // The model runs east, straight at the east rim, which has no channel.
+    const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [] }, [], []);
+    expect(Math.abs(speedAt(raster, 4.05, 73.599).east)).toBeLessThan(0.01);
+  });
+
+  it("draws a current running past an incoming channel's mouth in toward it", () => {
+    // 0.5 knots north along the east rim, past a channel flooding west.
+    const ocean = [
+      { lat: 4.0, lon: 73.7, east: 0, north: 0.5 },
+      { lat: 3.8, lon: 73.7, east: 0, north: 0.5 },
+    ];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0), ocean), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    // 0.5 km south of the mouth, just outside: still running north, and now also west, into the pass.
+    const below = speedAt(raster, 4.0 - 0.5 / 110.57, 73.603);
+    expect(below.north).toBeGreaterThan(0);
+    expect(below.east).toBeLessThan(-0.1);
+    // Out where the fan has faded, the current runs straight past.
+    const away = speedAt(raster, 4.0 - 3 / 110.57, 73.603);
+    expect(Math.abs(away.east)).toBeLessThan(0.02);
   });
 
   it("turns the ocean current to run along the reef next to it, and leaves it as it is far out", () => {

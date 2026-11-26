@@ -1,5 +1,5 @@
 import type { Control, Layer, Map as LeafletMap } from "leaflet";
-import { buildFlowRaster, FlowParticles, velocityAt, cellAt, KIND_LAND, type FlowRaster, type FlowShapes, type FlowVector } from "./flow-raster";
+import { buildFlowRaster, DEFAULT_CHANNEL_KM, FlowParticles, SCREEN_EXPONENT, velocityAt, cellAt, KIND_LAND, type FlowRaster, type FlowShapes, type FlowVector } from "./flow-raster";
 import type { FlowFieldView } from "./flow-wire";
 
 type LeafletLib = typeof import("leaflet");
@@ -22,16 +22,16 @@ export type FlowLayer = {
 /** Below this zoom an atoll is a few pixels wide and the trails would be noise. */
 export const FLOW_MIN_ZOOM = 8;
 /** On-screen speed: pixels per second for one knot, at every zoom, so the flow reads the same zoomed in or out. */
-const PX_PER_KNOT = 26;
-/** Trail points kept per particle, one every TRAIL_EVERY_S: about 1.2 s of path. */
-const TRAIL = 18;
+const PX_PER_KNOT = 22;
+/** Trail points kept per particle, one every TRAIL_EVERY_S: about 1 s of path. */
+const TRAIL = 16;
 const TRAIL_EVERY_S = 0.065;
 /** Screen area per particle, px². */
-const AREA_PER_PARTICLE = 800;
-const MIN_PARTICLES = 200;
-const MAX_PARTICLES = 2400;
+const AREA_PER_PARTICLE = 1100;
+const MIN_PARTICLES = 150;
+const MAX_PARTICLES = 1400;
 /** Phones and small windows: fewer particles, so the map stays smooth and the battery lasts. */
-const MAX_PARTICLES_SMALL = 900;
+const MAX_PARTICLES_SMALL = 500;
 /** Longest step a frame may take; a slow frame or a tab coming back does not throw the particles. */
 const MAX_STEP_S = 0.05;
 
@@ -41,10 +41,10 @@ const MAX_STEP_S = 0.05;
  * map's stop colour, as the pins do.
  */
 export const FLOW_CLASSES: readonly { from: number; label: string; rgb: string; width: number; alpha: number }[] = [
-  { from: 0, label: "Slack", rgb: "190, 214, 224", width: 1, alpha: 0.4 },
-  { from: 0.4, label: "Mild", rgb: "245, 251, 252", width: 1.3, alpha: 0.8 },
-  { from: 1.2, label: "Strong", rgb: "110, 212, 255", width: 1.9, alpha: 1 },
-  { from: 2, label: "Very strong", rgb: "255, 122, 138", width: 2.4, alpha: 1 },
+  { from: 0, label: "Slack", rgb: "214, 232, 238", width: 1, alpha: 0.38 },
+  { from: 0.4, label: "Mild", rgb: "238, 247, 249", width: 1.1, alpha: 0.55 },
+  { from: 1.2, label: "Strong", rgb: "168, 222, 240", width: 1.4, alpha: 0.7 },
+  { from: 2, label: "Very strong", rgb: "255, 160, 168", width: 1.7, alpha: 0.8 },
 ];
 
 export function flowClass(knots: number): number {
@@ -59,9 +59,7 @@ export const FLOW_NOTE =
 
 /** Trail segments are drawn in this many fading steps from tail to head. */
 const FADE_STEPS = 5;
-/** Strong and very strong trails get a soft wide stroke under their newest steps, so the fast water glows. */
-const GLOW_FROM_CLASS = 2;
-const GLOW_STEPS = 2;
+
 
 function prefersReducedMotion(): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -205,8 +203,12 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         scheduleBuild();
         return;
       }
-      const pick = (ids: readonly string[]) => ids.flatMap((id) => (arrows.get(id) ? [arrows.get(id) as FlowVector] : []));
-      rasters.set(wayId, buildFlowRaster(atoll, shape, pick(atoll.channels), pick(atoll.walls)));
+      const channels = atoll.channels.flatMap(({ id, widthM }) => {
+        const arrow = arrows.get(id);
+        return arrow ? [{ ...arrow, widthKm: widthM != null ? widthM / 1000 : DEFAULT_CHANNEL_KM }] : [];
+      });
+      const walls = atoll.walls.flatMap((id) => (arrows.get(id) ? [arrows.get(id) as FlowVector] : []));
+      rasters.set(wayId, buildFlowRaster(atoll, shape, channels, walls));
       refreshActive();
       start();
       scheduleBuild();
@@ -297,7 +299,8 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     const trail = flock.trail;
     for (let index = 0; index < flock.count; index += 1) {
       const filled = flock.filled[index];
-      if (filled < 1) continue;
+      const shown = flock.opacity(index);
+      if (filled < 1 || shown <= 0) continue;
       const group = paths[flowClass(flock.speed[index])];
       const head = flock.head[index];
       // Oldest first, ending at the particle itself.
@@ -317,7 +320,8 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         const nx = projectX(lon, scale) - ox;
         const ny = projectY(lat, scale) - oy;
         if (step < filled - 1) {
-          const fade = Math.min(FADE_STEPS - 1, Math.floor(((filled - 1 - step) / filled) * FADE_STEPS));
+          // The tail fades, and the whole trail with the particle's own fade in and out.
+          const fade = Math.min(FADE_STEPS - 1, Math.floor(((filled - 1 - step) / filled) * shown * FADE_STEPS));
           const path = group[fade];
           path.moveTo(x, y);
           path.lineTo(nx, ny);
@@ -328,14 +332,6 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     }
     context.lineCap = "round";
     context.lineJoin = "round";
-    FLOW_CLASSES.forEach((style, classIndex) => {
-      if (classIndex < GLOW_FROM_CLASS) return;
-      context.lineWidth = style.width * 3.5;
-      for (let fade = FADE_STEPS - GLOW_STEPS; fade < FADE_STEPS; fade += 1) {
-        context.strokeStyle = `rgba(${style.rgb}, 0.12)`;
-        context.stroke(paths[classIndex][fade]);
-      }
-    });
     FLOW_CLASSES.forEach((style, classIndex) => {
       context.lineWidth = style.width;
       paths[classIndex].forEach((path, fade) => {
@@ -375,9 +371,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
-    context.globalCompositeOperation = "lighter";
     drawParticles(context, particles);
-    context.globalCompositeOperation = "source-over";
     frame = requestAnimationFrame(tick);
   };
 
@@ -419,8 +413,9 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         for (let step = 0; step < 20; step += 1) {
           if (!velocityAt(raster, lat, lon, velocity)) break;
           speed = Math.hypot(velocity[0], velocity[1]);
-          const nextLat = lat + velocity[1] * degPerKnotSecond * 0.05;
-          const nextLon = lon + velocity[0] * degPerKnotSecond * lonScale * 0.05;
+          const screen = speed > 1e-6 ? speed ** (SCREEN_EXPONENT - 1) : 0;
+          const nextLat = lat + velocity[1] * screen * degPerKnotSecond * 0.05;
+          const nextLon = lon + velocity[0] * screen * degPerKnotSecond * lonScale * 0.05;
           const from = cellAt(raster, lat, lon);
           const to = cellAt(raster, nextLat, nextLon);
           if (to < 0 || raster.kind[to] === KIND_LAND) break;

@@ -103,10 +103,12 @@ export function oceanPoints(
 }
 
 /** The atoll's catalog channels (water crosses the rim) and walls (it runs along the reef). */
-export function atollRoles(atoll: Atoll, sites: readonly Site[]): { channels: string[]; walls: string[] } {
+export function atollRoles(atoll: Atoll, sites: readonly Site[]): Pick<FlowAtoll, "channels" | "walls"> {
   const own = sites.filter((site) => site.atollId === atoll.id);
   return {
-    channels: own.filter((site) => crossesRim(site, sites)).map((site) => site.id),
+    channels: own
+      .filter((site) => crossesRim(site, sites))
+      .map((site) => ({ id: site.id, widthM: site.channelWidthM ?? site.atlasWidthM ?? null })),
     walls: own.filter((site) => site.siteType === "strait-wall" || flowsAlongReef(site, sites)).map((site) => site.id),
   };
 }
@@ -129,7 +131,7 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
   const sources = [
     ...own,
     ...rest.flatMap((list, index) => {
-      const channels = new Set(roles[index + 1].channels);
+      const channels = new Set(roles[index + 1].channels.map((channel) => channel.id));
       const at = new Set(sites.filter((site) => channels.has(site.id)).map((site) => `${site.lat},${site.lon}`));
       return list.filter((source) => at.has(`${source.lat},${source.lon}`));
     }),

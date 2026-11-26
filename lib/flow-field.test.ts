@@ -78,13 +78,21 @@ describe("atollRoles", () => {
 
   it("gates the reef at channels only, and runs walls along it", () => {
     const sites = [
-      site("pass", "pass"),
-      site("thila", "channel-thila", { lat: 4.002 }),
+      site("pass", "pass", { channelWidthM: 250, atlasWidthM: 300 }),
+      site("thila", "channel-thila", { lat: 4.002, atlasWidthM: 400 }),
+      site("corner", "corner", { lat: 4.004 }),
       site("wall", "outer-reef", { lat: 4.05 }),
       site("strait", "strait-wall", { lat: 3.95 }),
       site("inside", "lagoon", { lon: 73.5 }),
       site("other-atoll", "pass", { atollId: "elsewhere" }),
     ];
-    expect(atollRoles(atoll, sites)).toEqual({ channels: ["pass", "thila"], walls: ["wall", "strait"] });
+    expect(atollRoles(atoll, sites)).toEqual({
+      channels: [
+        { id: "pass", widthM: 250 },
+        { id: "thila", widthM: 400 },
+        { id: "corner", widthM: null },
+      ],
+      walls: ["wall", "strait"],
+    });
   });
 });
