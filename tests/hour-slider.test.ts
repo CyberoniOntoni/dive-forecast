@@ -70,8 +70,13 @@ describe("flowNextText", () => {
   });
 
   it("adds the way when it turns, by weekday on a later day", () => {
-    expect(flowNextText(2, hours, 1, "2026-10-06", channelWord)).toEqual({ title: "Slack, incoming", when: "Wed 7 at 02:00 · in 1 h" });
+    expect(flowNextText(2, hours, 1, "2026-10-06", channelWord)).toEqual({ title: "Slack, incoming", when: "Wed 7 at 02:00 · in 5 h" });
     expect(flowNextText(2, hours, 1, "2026-10-06", compassWord).title).toBe("Slack, running NE");
+  });
+
+  it("counts clock hours, not series steps, across a gap in the hours", () => {
+    // 21:00 to 02:00 next day is one step in the series but five hours.
+    expect(flowNextText(2, hours, 1, "2026-10-06", channelWord).when).toBe("Wed 7 at 02:00 · in 5 h");
   });
 
   it("says the flow holds when nothing changes", () => {

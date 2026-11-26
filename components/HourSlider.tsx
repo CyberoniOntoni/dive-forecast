@@ -526,26 +526,41 @@ export function flowNextText(
   const turns = hours[from] != null && at.direction !== hours[from].direction;
   const word = wordFor(at.direction);
   const title = STRENGTH_LABEL[at.strength] + (turns ? `, ${word.charAt(0).toLowerCase()}${word.slice(1)}` : "");
-  return { title, when: `${turnWhen(at.time, today)} · in ${change - from} h` };
+  const ahead = hoursBetween(hours[from]?.time ?? at.time, at.time) ?? change - from;
+  return { title, when: `${turnWhen(at.time, today)} · in ${ahead} h` };
+}
+
+/** Whole hours from one wall-clock hour to another; the series can skip hours, so its index gap is not the time. */
+function hoursBetween(from: string, to: string): number | null {
+  const ms = (time: string) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(time);
+    return match ? Date.UTC(+match[1], +match[2] - 1, +match[3], +match[4], +match[5]) : null;
+  };
+  const [a, b] = [ms(from), ms(to)];
+  return a == null || b == null ? null : Math.round((b - a) / 3_600_000);
 }
 
 /** Up-to-strength share of the strip's half height. Slack still shows a sliver so its hour reads. */
 export const STRIP_HEIGHT: Record<Strength, number> = { slack: 0.1, mild: 0.38, strong: 0.68, too_strong: 1 };
 
 function WeekLegend({ up, down, compass }: { up: string; down: string; compass: boolean }) {
-  const swatch = "inline-block h-2.5 w-1.5 rounded-full";
+  // Up and down say the way: at a wall or in a lagoon both ways are foam, so the triangles are all that tell them apart.
   return (
     <p className="mb-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foam/80">
-      <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden="true" className={`${swatch} ${compass ? "bg-foam" : "bg-incoming"}`} />
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true" className={compass ? "text-foam" : "text-incoming"}>
+          ▲
+        </span>
         {up}
       </span>
-      <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden="true" className={`${swatch} ${compass ? "bg-foam/70" : "bg-outgoing"}`} />
+      <span className="inline-flex items-center gap-1">
+        <span aria-hidden="true" className={compass ? "text-foam" : "text-outgoing"}>
+          ▼
+        </span>
         {down}
       </span>
       <span className="inline-flex items-center gap-1.5">
-        <span aria-hidden="true" className={`${swatch} bg-stop`} />
+        <span aria-hidden="true" className="inline-block size-2 rounded-full bg-stop" />
         Very strong
       </span>
       <span className="inline-flex items-center gap-1.5">
