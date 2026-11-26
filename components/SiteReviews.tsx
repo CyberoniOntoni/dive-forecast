@@ -128,7 +128,10 @@ export function SiteReviews({
         <h2 id="reviews-heading" className="card-title">
           Ratings and reviews
         </h2>
-        <p className="copy">{reviewSummaryLine(shown.summary)}. Reviews do not change the current.</p>
+        <div>
+          <p className="copy">{reviewSummaryLine(shown.summary)}.</p>
+          <p className="meta">Ratings and reviews do not change the current forecast.</p>
+        </div>
       </div>
 
       {signedIn ? (
@@ -227,7 +230,7 @@ export function SiteReviews({
                   type="button"
                   onClick={() => setConfirmRemove(true)}
                   disabled={pending}
-                  className={`${quietButton} sm:self-start`}
+                  className="inline-flex min-h-11 items-center self-start text-sm font-medium text-foam/75 underline decoration-outgoing/60 underline-offset-4 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
                 >
                   Remove my rating
                 </button>
