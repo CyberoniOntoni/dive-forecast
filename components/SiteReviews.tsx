@@ -23,7 +23,7 @@ import { PhotoPicker, uploadPhotos, type PickedPhoto } from "./PhotoPicker";
 import { ScoreButtons } from "./ScoreButtons";
 
 const textareaClass =
-  "min-h-28 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+  "field min-h-28 w-full resize-y py-2 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const primaryButton =
   "button-primary";
 const quietButton =
@@ -123,19 +123,22 @@ export function SiteReviews({
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-4 surface p-4 sm:p-5" aria-labelledby="reviews-heading">
-      <div className="flex flex-col gap-1">
-        <h2 id="reviews-heading" className="text-base font-semibold text-foam">
+    <section className="flex min-w-0 flex-col gap-4 surface p-5 sm:p-6" aria-labelledby="reviews-heading">
+      <div className="flex flex-col gap-3">
+        <h2 id="reviews-heading" className="card-title">
           Ratings and reviews
         </h2>
-        <p className="text-sm text-foam/80">{reviewSummaryLine(shown.summary)}. Reviews do not change the current.</p>
+        <div>
+          <p className="copy">{reviewSummaryLine(shown.summary)}.</p>
+          <p className="meta">Ratings and reviews do not change the current forecast.</p>
+        </div>
       </div>
 
       {signedIn ? (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-foam" id="my-rating-label">
-            Your rating {mine?.score ?? "—"}
-            {mine == null ? <span className="text-foam/70"> · rate it for {POINTS.rating} points</span> : null}
+          <p className="text-sm font-medium text-foam" id="my-rating-label">
+            {mine ? `Your rating ${mine.score}` : "Your rating"}
+            {mine == null ? <span className="font-normal text-foam/70"> · rate it for {POINTS.rating} points</span> : null}
           </p>
           <ScoreButtons
             selected={mine?.score ?? null}
@@ -213,7 +216,7 @@ export function SiteReviews({
                       type="button"
                       onClick={removeAll}
                       disabled={pending}
-                      className="min-h-11 rounded-xl bg-outgoing px-4 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-50"
+                      className="min-h-11 rounded-full bg-outgoing px-5 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-50"
                     >
                       Remove
                     </button>
@@ -227,14 +230,14 @@ export function SiteReviews({
                   type="button"
                   onClick={() => setConfirmRemove(true)}
                   disabled={pending}
-                  className={`${quietButton} sm:self-start`}
+                  className="inline-flex min-h-11 items-center self-start text-sm font-medium text-foam/75 underline decoration-outgoing/60 underline-offset-4 hover:text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
                 >
                   Remove my rating
                 </button>
               )}
             </>
           ) : (
-            <p className="text-sm text-foam/70">Rate it, then you can write a review and add photos.</p>
+            <p className="copy">Rate it, then you can write a review and add photos.</p>
           )}
         </div>
       ) : (
@@ -249,7 +252,7 @@ export function SiteReviews({
         </p>
       ) : null}
       {note && !error ? (
-        <p role="status" className="text-sm text-foam/80">
+        <p role="status" className="copy">
           {note}
         </p>
       ) : null}
@@ -271,12 +274,12 @@ function ReviewItem({ review, siteId, siteName, signedIn }: { review: SiteReview
       <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-foam">
         <Link
           href={`/divers/${review.userId}`}
-          className="font-medium underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="inline-link focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           {review.nickname}
         </Link>
         <span aria-label={`rated ${review.score} of 5`}>{review.score}/5</span>
-        <span className="text-xs text-foam/60">{reviewDate(review.updatedAt)}</span>
+        <span className="meta">{reviewDate(review.updatedAt)}</span>
       </p>
       {review.review ? (
         <p className="text-sm leading-6 break-words whitespace-pre-line text-foam/90">{review.review}</p>

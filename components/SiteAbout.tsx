@@ -25,9 +25,9 @@ export function SiteAbout({
   if (blockedAdder) {
     if (!site.photos?.length) return null;
     return (
-      <section className="surface p-4 text-sm text-foam/75 sm:p-5" aria-label="Photos">
+      <section className="surface p-5 copy sm:p-6" aria-label="Photos">
         You blocked the diver who added this site, so their photos are hidden. Unblock them on your{" "}
-        <Link href="/account#blocked" className="underline decoration-incoming underline-offset-4">
+        <Link href="/account#blocked" className="inline-link">
           account page
         </Link>
         .
@@ -42,11 +42,11 @@ export function SiteAbout({
   if (photos.length === 0 && !adderNickname && !canAdd && site.sourceUrl !== "user") return null;
 
   return (
-    <section className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="photos-heading">
-      <h2 id="photos-heading" className="text-base font-semibold text-foam">
+    <section className="flex min-w-0 flex-col gap-3 surface p-5 sm:p-6" aria-labelledby="photos-heading">
+      <h2 id="photos-heading" className="card-title">
         Photos
       </h2>
-      {photos.length === 0 ? <p className="text-sm text-foam/70">No photos yet.</p> : null}
+      {photos.length === 0 ? <p className="copy">No photos yet.</p> : null}
       {photos.length > 0 ? (
         <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3" aria-label="Photos">
           {photos.map((photo, index) => {
@@ -75,11 +75,11 @@ export function SiteAbout({
       ) : null}
       {canAdd ? <SitePhotoAdder siteId={site.id} room={room} /> : null}
       {adderNickname && site.addedBy ? (
-        <p className="text-xs leading-5 text-foam/70">
+        <p className="meta">
           Added by{" "}
           <Link
             href={`/divers/${site.addedBy}`}
-            className="font-medium text-foam underline decoration-incoming underline-offset-4"
+            className="inline-link"
           >
             {adderNickname}
           </Link>

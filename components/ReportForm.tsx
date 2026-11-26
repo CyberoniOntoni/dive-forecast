@@ -12,7 +12,7 @@ import { MALDIVES_TIME, viewerClock, wallHoursBefore, zoneLabel, type SiteTimeZo
 import type { Direction, ForecastRoute, Strength } from "@/lib/types";
 
 const CHOICE =
-  "flex min-h-11 items-center gap-2 rounded-xl border border-foam/20 px-3 text-base text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
+  "flex min-h-11 items-center gap-2 rounded-xl border border-foam/20 px-3 text-sm font-medium text-foam has-[:checked]:bg-foam/10 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-incoming";
 
 const INITIAL: ReportActionState = { success: false, error: null };
 
@@ -120,11 +120,11 @@ export function ReportForm({
       <TideLine />
       <div className="flex min-w-0 flex-col gap-0.5">
         <p className="eyebrow">After your dive</p>
-        <h2 id="report-heading" className="text-lg font-semibold tracking-tight text-foam">
+        <h2 id="report-heading" className="card-title">
           Report the current
         </h2>
       </div>
-      <Link href="/scoreboard" className="text-sm text-foam/80 underline decoration-incoming underline-offset-4">
+      <Link href="/scoreboard" className="inline-link text-sm">
         Scoreboard
       </Link>
     </div>
@@ -132,9 +132,9 @@ export function ReportForm({
 
   if (!nickname) {
     return (
-      <section id="report" className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-4 pt-9 pb-4 sm:px-5 sm:pt-10 sm:pb-5" aria-labelledby="report-heading">
+      <section id="report" className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-5 pt-10 pb-5 sm:px-6 sm:pb-6" aria-labelledby="report-heading">
         {heading}
-        <p className="text-sm leading-6 text-foam/80">
+        <p className="copy">
           Sign in with your email to report what the current did on your dive. Reports sharpen the forecast for
           everyone, and earn points on the scoreboard.
         </p>
@@ -152,11 +152,11 @@ export function ReportForm({
   return (
     <section
       id="report"
-      className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-4 pt-9 pb-4 sm:px-5 sm:pt-10 sm:pb-5"
+      className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-5 pt-10 pb-5 sm:px-6 sm:pb-6"
       aria-labelledby="report-heading"
     >
       {heading}
-      <p className="text-sm leading-6 text-foam/80">
+      <p className="copy">
         Pick when, then one tap if it ran as forecast, or which way and how strong. Times are {zoneLabel(zone)}.
         Reporting as {nickname}.
       </p>
@@ -210,7 +210,7 @@ export function ReportForm({
           ) : null}
         </fieldset>
         {choice === "other" && theirs ? (
-          <p className="-mt-2 text-xs leading-5 text-foam/75">
+          <p className="-mt-2 meta">
             {time.slice(11, 16)} in the {zone.place} is {theirs.clock}
             {theirs.dayShift > 0 ? " the next day" : theirs.dayShift < 0 ? " the day before" : ""} where you are (
             {theirs.offset}).
@@ -221,16 +221,20 @@ export function ReportForm({
             type="button"
             onClick={reportAsForecast}
             disabled={pending || saved}
-            className="min-h-11 w-full rounded-xl border border-foam/40 px-4 text-left text-base text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+            className="min-h-11 w-full rounded-xl border border-incoming/60 bg-incoming/10 px-4 text-center text-sm font-semibold text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
           >
             As forecast: {directionWord(shown.direction)}, {strengthLabel(shown.strength)}
           </button>
         ) : null}
+        {shown ? (
+          <p className="flex items-center gap-3 meta" aria-hidden="true">
+            <span className="h-px flex-1 bg-foam/15" />
+            or say how it was
+            <span className="h-px flex-1 bg-foam/15" />
+          </p>
+        ) : null}
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-          <legend className="text-sm font-medium text-foam">
-            {shown ? "Or say how it was: " : ""}
-            {routeDirectionLegend(forecastRoute, alongHeadingDeg)}
-          </legend>
+          <legend className="text-sm font-medium text-foam">{routeDirectionLegend(forecastRoute, alongHeadingDeg)}</legend>
           <div className="grid grid-cols-2 gap-2">
             <label className={`${CHOICE} has-[:checked]:border-incoming has-[:checked]:text-incoming`}>
               <input type="radio" name="direction" value="incoming" required className="size-5 accent-incoming" />
@@ -243,7 +247,7 @@ export function ReportForm({
           </div>
         </fieldset>
         <fieldset className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
-          <legend className="text-sm font-medium text-foam">Slack, mild, strong, or very strong</legend>
+          <legend className="text-sm font-medium text-foam">How strong</legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <label className={`${CHOICE} has-[:checked]:border-foam`}>
               <input type="radio" name="strength" value="slack" required className="size-5" />
@@ -271,7 +275,7 @@ export function ReportForm({
         {state.success && saved ? (
           <p role="status" className="text-sm text-foam">
             Report added. {state.award ? awardLine(state.award) : null}{" "}
-            <Link href="/account" className="underline decoration-incoming underline-offset-4">
+            <Link href="/account" className="inline-link">
               Your points
             </Link>
           </p>

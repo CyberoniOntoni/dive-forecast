@@ -15,7 +15,7 @@ const HINTS: Record<WikiField, string> = {
   howToDive: "Entry and exit, the route, depths, which tide to dive it on, hazards.",
 };
 const textareaClass =
-  "min-h-32 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+  "field min-h-32 w-full resize-y py-2 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const primaryButton =
   "button-primary";
 const quietButton =
@@ -114,8 +114,8 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
   }
 
   return (
-    <section id="about" className="flex min-w-0 scroll-mt-4 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="wiki-heading">
-      <h2 id="wiki-heading" className="text-base font-semibold text-foam">
+    <section id="about" className="flex min-w-0 scroll-mt-4 flex-col gap-3 surface p-5 sm:p-6" aria-labelledby="wiki-heading">
+      <h2 id="wiki-heading" className="card-title">
         About this site
       </h2>
 
@@ -130,29 +130,29 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
           {fields.map((field) => (
             <label key={field} className="flex min-w-0 flex-col gap-1.5 text-sm text-foam">
               <span className="font-medium">{WIKI_LABELS[field]}</span>
-              <span className="text-xs text-foam/70">{HINTS[field]}</span>
+              <span className="meta">{HINTS[field]}</span>
               <textarea
                 value={drafts[field]}
                 maxLength={WIKI_MAX[field]}
                 onChange={(event) => setDrafts((current) => ({ ...current, [field]: event.target.value }))}
                 className={textareaClass}
               />
-              <span className="text-xs text-foam/60">
+              <span className="meta">
                 {drafts[field].length} of {WIKI_MAX[field]}
               </span>
             </label>
           ))}
           <label className="flex min-w-0 flex-col gap-1.5 text-sm text-foam">
             <span className="font-medium">Note to the moderators (optional)</span>
-            <span className="text-xs text-foam/70">What you changed and how you know: dived it last week, guide there for years.</span>
+            <span className="meta">What you changed and how you know: dived it last week, guide there for years.</span>
             <input
               value={note}
               maxLength={EDIT_NOTE_MAX}
               onChange={(event) => setNote(event.target.value)}
-              className="min-h-11 w-full rounded-xl border border-foam/20 bg-ink px-3 text-sm text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
             />
           </label>
-          <p className="text-xs leading-5 text-foam/70">
+          <p className="meta">
             {wiki.moderator
               ? "You are a moderator, so your edit goes live at once."
               : "A moderator reads every edit before it shows. Write what you know first-hand, in your own words, and leave out anything copied from a guide book or website."}{" "}
@@ -181,16 +181,16 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
           ) : null}
           {report("howToDive")}
           {wiki.adderTextHidden ? (
-            <p className="text-sm text-foam/75">
+            <p className="copy">
               You blocked the diver who added this site, so their notes on how to dive it are hidden.
             </p>
           ) : empty ? (
-            <p className="text-sm text-foam/75">
+            <p className="copy">
               Nobody has written about {siteName} yet. Dived it? Say what it is like and how to dive it.
             </p>
           ) : null}
           {wiki.contributors.length > 0 ? (
-            <p className="text-xs leading-5 text-foam/70">
+            <p className="meta">
               Written by{" "}
               {wiki.contributors.map((diver, index) => (
                 <span key={diver.userId}>
@@ -204,7 +204,7 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
             </p>
           ) : null}
           {wiki.revisions > 0 ? (
-            <p className="text-xs text-foam/70">
+            <p className="meta">
               <Link href={`/sites/${wiki.siteId}/history`} className={link}>
                 History of this text
               </Link>
@@ -229,7 +229,7 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
         </div>
       ) : null}
       {!editing && wiki.mine?.status === "rejected" ? (
-        <p className="text-sm text-foam/80" role="status">
+        <p className="copy" role="status">
           A moderator did not accept your last edit{wiki.mine.rejectReason ? `: ${wiki.mine.rejectReason}` : "."}
         </p>
       ) : null}
@@ -252,14 +252,14 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
           </button>
         </div>
       ) : !wiki.signedIn ? (
-        <p className="text-sm text-foam/75">
+        <p className="copy">
           <Link href={signInHref(here)} className={link}>
             Sign in
           </Link>{" "}
           to write about this site or suggest an edit.
         </p>
       ) : wiki.needsTerms ? (
-        <p className="text-sm text-foam/75">
+        <p className="copy">
           Agree to the content rules on your{" "}
           <Link href="/account" className={link}>
             account page

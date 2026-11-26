@@ -73,7 +73,7 @@ export function HourSlider({
 
   if (unavailable || hours.length === 0) {
     return (
-      <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
+      <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-5 pt-10 pb-5 sm:px-6 sm:pb-6">
         <TideLine />
         <h2 id="forecast-heading" className="text-sm font-medium text-foam/80">
           Forecast
@@ -82,12 +82,12 @@ export function HourSlider({
           The forecast is unavailable.
         </p>
         {unseeded ? (
-          <p className="mt-3 text-sm leading-6 text-foam/80">
+          <p className="mt-3 copy">
             This spot is not in a seeded atoll yet, so there is no forecast. Reports and ratings still work.
           </p>
         ) : null}
-        {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
-        <p className="mt-3 text-sm leading-6 text-foam/80">{notice}</p>
+        {siteNote ? <p className="mt-3 copy">{siteNote}</p> : null}
+        <p className="mt-3 copy">{notice}</p>
       </section>
     );
   }
@@ -110,7 +110,7 @@ export function HourSlider({
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
-    <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
+    <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-5 pt-10 pb-5 sm:px-6 sm:pb-6">
       <TideLine />
       <h2 id="forecast-heading" className="sr-only">
         Forecast hour
@@ -120,12 +120,12 @@ export function HourSlider({
           <Dial bearing={bearing} strength={hour.strength} tone={tone} quiet={quiet} estimate={bearingSource === "fallback"} label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`} />
         )}
         <div className="min-w-0">
-          <p className="font-mono text-sm tabular-nums text-foam/80">{hourWhen(hour.time, today)}</p>
+          <p className="text-sm font-medium tabular-nums text-foam/75">{hourWhen(hour.time, today)}</p>
           <p className={`text-3xl font-semibold tracking-tight break-words min-[400px]:text-4xl sm:text-6xl ${tone}`}>
             {way}
           </p>
           {bearing != null && !compass ? (
-            <p className="text-sm leading-6 text-foam/80">
+            <p className="copy">
               {hour.direction === "incoming" ? "Into the atoll" : "Out of the atoll"}, toward {compassWord(bearing)}
             </p>
           ) : null}
@@ -140,12 +140,12 @@ export function HourSlider({
           <p className={`mt-0.5 text-sm leading-5 font-semibold ${change == null ? "text-foam" : flowTone(hours[change], compass)}`}>
             {flowNext.title}
           </p>
-          <p className="text-xs leading-5 text-foam/70">{flowNext.when}</p>
+          <p className="meta">{flowNext.when}</p>
         </div>
       </div>
       {seaState == null ? null : <SeaLine sea={sea} stale={seaStale} />}
       {bearing != null && bearingSource === "fallback" ? (
-        <p className="mt-3 text-xs leading-5 text-foam/80">
+        <p className="mt-3 meta">
           The arrow heading is an estimate. This pin has no measured channel bearing.
         </p>
       ) : null}
@@ -174,7 +174,7 @@ export function HourSlider({
         </label>
       </div>
       <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="text-xs leading-5 text-foam/80">
+        <p className="meta">
           {stale ? "This series is old." : null}
           {stale && fetchedAt ? " " : null}
           {fetchedAt ? (
@@ -193,7 +193,7 @@ export function HourSlider({
           </button>
         )}
       </div>
-      <p className="mt-4 flex items-start gap-2 border-t border-foam/10 pt-3 text-xs leading-5 text-foam/75">
+      <p className="mt-4 flex items-start gap-2 border-t border-foam/10 pt-3 meta">
         <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" className="mt-0.5 shrink-0 text-outgoing" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z" />
           <path d="M9 12l2 2 4-4" />
@@ -201,8 +201,8 @@ export function HourSlider({
         <span>{FORECAST_GUIDANCE}</span>
       </p>
       {/* Folded so a phone shows the week without scrolling past the method; the confidence above still says how sure. */}
-      {siteNote ? <p className="mt-3 text-sm leading-6 text-foam/80">{siteNote}</p> : null}
-      <details className="group mt-3 text-sm leading-6 text-foam/80">
+      {siteNote ? <p className="mt-3 copy">{siteNote}</p> : null}
+      <details className="group mt-3 copy">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 font-medium text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming [&::-webkit-details-marker]:hidden">
           <span
             aria-hidden="true"
@@ -234,7 +234,7 @@ export const SEA_COLOR: Record<SeaBand, { fill: string; opacity: number }> = {
 /** "Sea surface: choppy · 1.2 m swell from SW, 11 s · 0.4 m wind chop", and the swell-against-current warning. */
 function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
   if (sea == null) {
-    return <p className="mt-3 text-sm leading-6 text-foam/80">The sea surface forecast is unavailable for this hour.</p>;
+    return <p className="mt-3 copy">The sea surface forecast is unavailable for this hour.</p>;
   }
   return (
     <div className="mt-3 text-sm leading-6">
@@ -247,7 +247,7 @@ function SeaLine({ sea, stale }: { sea: SeaStateHour | null; stale: boolean }) {
         {stale ? <span className="text-foam/80"> (old wave or wind data)</span> : null}
       </p>
       {/* Right under the current, so choppy water up top is not read as the current at depth, nor calm water as slack. */}
-      <p className="text-xs leading-5 text-foam/70">{SEA_SURFACE_NOTE}</p>
+      <p className="meta">{SEA_SURFACE_NOTE}</p>
       {sea.againstCurrent ? (
         <p className="font-medium text-stop">Swell runs into the outgoing current here: expect steep, breaking waves at the channel mouth.</p>
       ) : null}
@@ -375,7 +375,7 @@ function TideCell({
           </svg>
         )}
       </p>
-      <p className="text-xs leading-5 text-foam/70">
+      <p className="meta">
         {next ? `${next.high ? "High" : "Low"} ${turnWhen(hours[next.index].time, today)}` : "No high or low left this week"}
       </p>
     </div>
@@ -386,7 +386,7 @@ function TideCell({
 function ConfidenceMeter({ confidence }: { confidence: Confidence }) {
   const lit = confidence === "low" ? 1 : confidence === "medium" ? 2 : 3;
   return (
-    <p className="mt-1.5 flex items-center gap-1 text-xs text-foam/75 sm:text-sm">
+    <p className="meta mt-1.5 flex items-center gap-1">
       {[0, 1, 2].map((bar) => (
         <span key={bar} aria-hidden="true" className={`h-1.5 w-4 rounded-full ${bar < lit ? "bg-foam" : "bg-foam/20"}`} />
       ))}
