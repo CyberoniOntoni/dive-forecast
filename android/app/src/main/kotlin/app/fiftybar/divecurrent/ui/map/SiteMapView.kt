@@ -120,10 +120,10 @@ private const val CLUSTERS = "site-clusters"
 private const val CLUSTER_COUNTS = "site-cluster-counts"
 
 /**
- * Pins that would sit on top of each other merge into a small numbered bubble up to this zoom (the web map groups more
- * widely, 48 px up to its zoom 11; the owner asked on 26 Nov for most arrows to show once an atoll fills the screen).
- * Only close in, past what a site page flies to (13.5), does every pin show alone. Without it, close pins overlap and
- * flicker as the arrows move.
+ * Pins that would sit on top of each other merge into a small numbered bubble at every zoom below this one (13.99
+ * included); from it every pin shows alone, and a site page flies here (MapScreen's SITE_ZOOM). The web map groups more
+ * widely, 48 px below its zoom 11; the owner asked on 26 Nov for most arrows to show once an atoll fills the screen.
+ * Without it, close pins overlap and flicker as the arrows move.
  */
 internal const val CLUSTER_UNTIL_ZOOM = 14
 
@@ -447,7 +447,7 @@ private fun zoomIntoCluster(map: MapLibreMap, screen: PointF, density: Float): B
   val cluster = map.queryRenderedFeatures(box, CLUSTERS).firstOrNull() ?: return false
   val point = cluster.geometry() as? Point ?: return false
   val source = map.style?.getSourceAs<GeoJsonSource>(SOURCE) ?: return false
-  // At least to where clustering stops, so one tap is enough even for pins the source would part only further in.
+  // To where this bubble first splits (it may split into smaller bubbles), at least one zoom step in.
   val zoom = source.getClusterExpansionZoom(cluster).toDouble().coerceAtLeast(map.cameraPosition.zoom + 1).coerceAtMost(CLUSTER_UNTIL_ZOOM.toDouble())
   map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude(), point.longitude()), zoom))
   return true
