@@ -28,7 +28,8 @@ export default async function DiverPage({ params }: { params: Promise<{ id: stri
       <Link href="/scoreboard" className="self-start text-sm text-foam/80 underline decoration-incoming underline-offset-4">
         Scoreboard
       </Link>
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
+        <p className="eyebrow">Diver</p>
         <h1 className="break-words text-2xl font-semibold tracking-tight text-foam">{diver.nickname}</h1>
         <p className="text-sm text-foam/75">
           {sinceLine(diver.since, diver.allRank)}

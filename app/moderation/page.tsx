@@ -28,7 +28,8 @@ export default async function ModerationPage({ searchParams }: { searchParams: P
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
+        <p className="eyebrow">Moderators</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">Moderation</h1>
         <p className="text-sm text-foam/75">
           {flags.length ? `${flags.length} open report${flags.length === 1 ? "" : "s"}, oldest first.` : "No open reports."}{" "}

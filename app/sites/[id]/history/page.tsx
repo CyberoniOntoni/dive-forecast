@@ -35,7 +35,8 @@ export default async function SiteHistoryPage({ params }: { params: Promise<{ id
           Back to {history.siteName}
         </Link>
       </nav>
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
+        <p className="eyebrow">Site texts</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">History of {history.siteName}</h1>
         <p className="text-sm text-foam/75">
           Divers write these texts together; a moderator reads every edit before it shows.{" "}

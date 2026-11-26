@@ -30,7 +30,7 @@ export function EditReviewActions({ editId, cannotApprove, stale }: { editId: st
             disabled={pending}
             // Over a newer edit, approving writes over it: a second tap.
             onClick={() => run("approve", stale, () => reviewSiteEdit(editId, "approve"))}
-            className="min-h-11 rounded-xl bg-incoming px-4 text-sm font-semibold text-ink disabled:opacity-50"
+            className="button-primary"
           >
             {confirm === "approve" ? "Tap again to write over the newer text" : "Approve"}
           </button>

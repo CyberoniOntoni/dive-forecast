@@ -102,14 +102,14 @@ export function AddSiteForm({
         <div className="flex gap-2">
           <Link
             href={`/sites/${added.id}`}
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-foam/30 px-4 text-sm font-semibold text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-foam/30 px-4 text-sm font-semibold text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
           >
             Open site page
           </Link>
           <button
             type="button"
             onClick={onAdded}
-            className="min-h-11 flex-1 rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
+            className="button-primary flex-1"
           >
             Done
           </button>
@@ -124,7 +124,7 @@ export function AddSiteForm({
         <p className="text-sm leading-5 text-foam/80">Sign in with your email to add a dive site.</p>
         <Link
           href={signInHref("/")}
-          className="inline-flex min-h-11 items-center justify-center rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
+          className="button-primary"
         >
           Sign in
         </Link>
@@ -226,7 +226,7 @@ export function AddSiteForm({
       <button
         type="submit"
         disabled={pending || !point || name.trim().length === 0}
-        className="min-h-11 rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-50"
+        className="button-primary"
       >
         {pending ? (progress ?? "Adding…") : "Add site"}
       </button>

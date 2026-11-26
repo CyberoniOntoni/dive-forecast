@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { TideLine } from "./TideLine";
 import { useRouter } from "next/navigation";
 import { completeSignIn, requestSignIn } from "@/lib/account-actions";
 import { LOGIN_CODE_TTL_MS, NICKNAME_MAX } from "@/lib/accounts";
@@ -9,7 +10,7 @@ import { LOGIN_CODE_TTL_MS, NICKNAME_MAX } from "@/lib/accounts";
 const FIELD =
   "field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const PRIMARY =
-  "min-h-11 w-full rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50";
+  "button-primary w-full";
 
 /**
  * Two steps, no password: an email gets a six-digit code, the code signs in. A new address picks its nickname on the
@@ -72,10 +73,14 @@ export function SignInForm({
   }
 
   return (
-    <section className="flex min-w-0 flex-col gap-4 surface p-5" aria-labelledby="sign-in-heading">
-      <h1 id="sign-in-heading" className="text-xl font-semibold text-foam">
-        {step === "email" ? "Sign in or sign up" : askNickname ? "Welcome aboard" : "Check your email"}
-      </h1>
+    <section className="rise-in tideline-card flex min-w-0 flex-col gap-4 surface px-5 pt-10 pb-5" aria-labelledby="sign-in-heading">
+      <TideLine />
+      <div className="flex flex-col gap-0.5">
+        <p className="eyebrow">50Bar account</p>
+        <h1 id="sign-in-heading" className="text-xl font-semibold tracking-tight text-foam">
+          {step === "email" ? "Sign in or sign up" : askNickname ? "Welcome aboard" : "Check your email"}
+        </h1>
+      </div>
       {step === "email" ? (
         <form onSubmit={sendCode} className="flex min-w-0 flex-col gap-4">
           <p className="text-sm leading-6 text-foam/80">

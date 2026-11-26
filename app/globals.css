@@ -27,14 +27,80 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* A card: the forecast, the forms, the reports. Lifted off the page by a soft shadow, not a hard border. */
+/*
+ * A card: the forecast, the forms, the reports. The welcome card's look (components/ForecastIntro.tsx): deep water
+ * under a faint teal glow at the top corner, lifted off the page by a soft shadow, not a hard border.
+ */
 @utility surface {
   border-radius: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--foam) 10%, transparent);
   background-color: var(--glass);
+  background-image:
+    radial-gradient(120% 70% at 100% 0%, color-mix(in srgb, var(--incoming) 9%, transparent), transparent 55%),
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--ink) 35%, transparent));
   box-shadow:
     0 1px 0 color-mix(in srgb, var(--foam) 8%, transparent) inset,
     0 12px 32px -16px rgba(0, 0, 0, 0.55);
+}
+
+/* The small teal capital line over a title ("Welcome to 50Bar"): which part of the app, or what kind of thing. */
+@utility eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--incoming);
+}
+
+/* A rounded square holding a line icon, as beside each point of the welcome card. */
+@utility icon-tile {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 10px;
+  background-color: color-mix(in srgb, var(--incoming) 12%, transparent);
+  color: var(--incoming);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--incoming) 25%, transparent) inset;
+}
+
+/* The one main action of a card or page ("Got it", "Send report", "Make a plan"): a teal pill with a soft glow. */
+@utility button-primary {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background-color: var(--incoming);
+  padding-inline: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 8px 24px -10px var(--incoming);
+  transition:
+    transform 120ms ease-out,
+    filter 120ms ease-out;
+  &:hover {
+    filter: brightness(1.08);
+  }
+  &:active {
+    transform: scale(0.98);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--foam);
+    outline-offset: 2px;
+  }
+  &:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    filter: none;
+    transform: none;
+  }
 }
 
 /* A text field or select: the one look for every form on the site. Width and focus ring stay with the element. */
@@ -49,12 +115,12 @@
   color: var(--foam);
 }
 
-/* A quiet outlined button or link (Map, Clear, Back to now). Padding and width stay with the element. */
+/* A quiet outlined pill, beside or below a primary one (Map, Clear, Back to now). Padding and width stay with the element. */
 @utility button-quiet {
   display: inline-flex;
   min-height: 2.75rem;
   align-items: center;
-  border-radius: 0.75rem;
+  border-radius: 9999px;
   border: 1px solid color-mix(in srgb, var(--foam) 25%, transparent);
   font-size: 0.875rem;
   line-height: 1.25rem;
@@ -196,6 +262,7 @@ main > .chart-credit {
     overflow: visible !important;
   }
   .surface {
+    background-image: none;
     box-shadow: none;
     border-color: #c8d3d8;
   }
@@ -239,7 +306,21 @@ main > .chart-credit {
   }
 }
 
+/* A page's heading and first cards rise in once, like the welcome card, a beat apart. */
+.rise-in {
+  animation: intro-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* The tide line motif across the top of a card (components/TideLine.tsx). */
+.tideline-card {
+  position: relative;
+  overflow: hidden;
+  /* overflow: hidden drops a flex item's automatic minimum height: in a page's flex column it would be squashed. */
+  flex-shrink: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .rise-in,
   .intro-card,
   .intro-scrim {
     animation: none;

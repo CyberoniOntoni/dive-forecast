@@ -1,5 +1,6 @@
 "use client";
 
+import { TideLine } from "./TideLine";
 import { useActionState, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -115,10 +116,14 @@ export function ReportForm({
   );
 
   const heading = (
-    <div className="flex min-w-0 items-baseline justify-between gap-3">
-      <h2 id="report-heading" className="text-base font-semibold text-foam">
-        Report the current
-      </h2>
+    <div className="flex min-w-0 items-end justify-between gap-3">
+      <TideLine />
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <p className="eyebrow">After your dive</p>
+        <h2 id="report-heading" className="text-lg font-semibold tracking-tight text-foam">
+          Report the current
+        </h2>
+      </div>
       <Link href="/scoreboard" className="text-sm text-foam/80 underline decoration-incoming underline-offset-4">
         Scoreboard
       </Link>
@@ -127,7 +132,7 @@ export function ReportForm({
 
   if (!nickname) {
     return (
-      <section id="report" className="flex min-w-0 scroll-mt-4 flex-col gap-3 surface p-4 sm:p-5" aria-labelledby="report-heading">
+      <section id="report" className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-4 pt-9 pb-4 sm:px-5 sm:pt-10 sm:pb-5" aria-labelledby="report-heading">
         {heading}
         <p className="text-sm leading-6 text-foam/80">
           Sign in with your email to report what the current did on your dive. Reports sharpen the forecast for
@@ -136,7 +141,7 @@ export function ReportForm({
         <Link
           // The dive time a plan handed over comes back after signing in too.
           href={signInHref(`/sites/${siteId}${diveTime ? `?at=${encodeURIComponent(diveTime)}` : ""}#report`)}
-          className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming sm:w-auto sm:self-start"
+          className="button-primary w-full sm:w-auto sm:self-start"
         >
           Sign in to report
         </Link>
@@ -147,7 +152,7 @@ export function ReportForm({
   return (
     <section
       id="report"
-      className="flex min-w-0 scroll-mt-4 flex-col gap-3 surface p-4 sm:p-5"
+      className="tideline-card flex min-w-0 scroll-mt-4 flex-col gap-3 surface px-4 pt-9 pb-4 sm:px-5 sm:pt-10 sm:pb-5"
       aria-labelledby="report-heading"
     >
       {heading}
@@ -274,7 +279,7 @@ export function ReportForm({
         <button
           type="submit"
           disabled={pending || saved}
-          className="min-h-11 w-full rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50 sm:w-auto"
+          className="button-primary w-full sm:w-auto"
         >
           {pending ? "Adding…" : "Add report"}
         </button>

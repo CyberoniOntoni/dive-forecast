@@ -25,7 +25,7 @@ import { ScoreButtons } from "./ScoreButtons";
 const textareaClass =
   "min-h-28 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const primaryButton =
-  "min-h-11 rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-50";
+  "button-primary";
 const quietButton =
   "button-quiet justify-center px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50";
 

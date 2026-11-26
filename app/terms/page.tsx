@@ -30,7 +30,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
 export default function TermsPage() {
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
+        <p className="eyebrow">50Bar terms</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">Content rules and terms</h1>
         <p className="text-sm text-foam/75">
           For the 50Bar website (50bar.app) and the 50Bar: Maldives Dive Currents app for Android. Last updated {UPDATED}. You agree

@@ -1,5 +1,6 @@
 "use client";
 
+import { TideLine } from "./TideLine";
 import { useMemo, useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { seaDetail } from "@/lib/sea-text";
@@ -70,7 +71,8 @@ export function HourSlider({
 
   if (unavailable || hours.length === 0) {
     return (
-      <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
+      <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
+        <TideLine />
         <h2 id="forecast-heading" className="text-sm font-medium text-foam/80">
           Forecast
         </h2>
@@ -105,7 +107,8 @@ export function HourSlider({
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
-    <section aria-labelledby="forecast-heading" className="surface p-4 sm:p-6">
+    <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
+        <TideLine />
       <h2 id="forecast-heading" className="sr-only">
         Forecast hour
       </h2>

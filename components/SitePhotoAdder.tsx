@@ -32,7 +32,7 @@ export function SitePhotoAdder({ siteId, room }: { siteId: string; room: number 
           type="button"
           onClick={send}
           disabled={pending}
-          className="min-h-11 rounded-xl bg-incoming px-4 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-50"
+          className="button-primary"
         >
           {pending ? (progress ?? "Sending…") : photos.length === 1 ? "Save photo" : `Save ${photos.length} photos`}
         </button>

@@ -32,7 +32,7 @@ export function TermsPrompt() {
             else router.refresh();
           })
         }
-        className="min-h-11 self-start rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+        className="button-primary self-start"
       >
         I agree
       </button>

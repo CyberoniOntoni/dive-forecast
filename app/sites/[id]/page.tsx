@@ -82,13 +82,14 @@ export default async function SitePage({
         </Link>
         <Link
           href={navigateHref(site.id)}
-          className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-incoming/60 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           <NavigateIcon size={18} />
           Boat route
         </Link>
       </nav>
-      <header className="flex min-w-0 flex-col">
+      <header className="rise-in flex min-w-0 flex-col">
+        <p className="eyebrow">Current forecast</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam sm:text-3xl">{site.name}</h1>
         <SiteFacts site={site} />
       </header>

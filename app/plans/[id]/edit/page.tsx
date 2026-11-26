@@ -22,10 +22,11 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
   if (!plan) notFound();
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
         <Link href={`/plans/${plan.id}`} className="text-sm text-foam/80 underline decoration-incoming/60 underline-offset-4">
           Back to the plan
         </Link>
+        <p className="eyebrow">Dive plans</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">Edit {plan.title}</h1>
       </header>
       <PlanEditor sites={pickerSites()} plan={plan} today={toMaldivesWall(new Date().toISOString()).slice(0, 10)} />
