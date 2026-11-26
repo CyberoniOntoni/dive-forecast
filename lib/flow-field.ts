@@ -5,6 +5,9 @@ import type { FetchOptions } from "./marine";
 import { KM_PER_DEG_LAT, KM_PER_DEG_LON, rimForAtoll, rimWayId, ringBox, type RimRing } from "./rim";
 import { crossesRim, flowsAlongReef } from "./site-type";
 import { readCatalog } from "./store";
+import { gapFlows, reefFlows } from "./flow-gaps";
+import { oceanGridAt } from "./ocean-grid";
+import { readOpenings } from "./openings";
 import { encodeVectors, KNOTS_PER_MS, lagoonKnots, type FlowAtoll, type FlowFieldView } from "./flow-wire";
 import type { Atoll, MarineHour, Site } from "./types";
 
@@ -138,6 +141,14 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
   const ocean = oceanPoints(ring.samples, ring.series, time);
   const lagoon = own.length > 0 ? lagoonFlowGrid(lagoonGrid(rim, wayId), sources, time) : null;
   if (!lagoon && ocean.length === 0) return null;
+  const channelIds = new Set(roles.flatMap((role) => role.channels.map((channel) => channel.id)));
+  const gaps = gapFlows(
+    readOpenings().filter((opening) => opening.wayId === wayId),
+    rim,
+    ring,
+    sites.filter((site) => channelIds.has(site.id)),
+    time,
+  );
   return {
     wayId,
     atollId: first.id,
@@ -146,6 +157,8 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
     ocean,
     channels: roles.flatMap((role) => role.channels),
     walls: roles.flatMap((role) => role.walls),
+    gaps,
+    reef: reefFlows(ring, time),
   };
 }
 
@@ -163,9 +176,11 @@ export async function flowField(time: string, options: FetchOptions = { wait: fa
     const wayId = rimWayId(atoll);
     byOutline.set(wayId, [...(byOutline.get(wayId) ?? []), atoll]);
   }
-  const atolls = await Promise.all(
-    [...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null)),
-  );
+  const [atolls, ocean] = await Promise.all([
+    Promise.all([...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null))),
+    oceanGridAt(time, options).catch(() => null),
+  ]);
   const found = atolls.filter((item) => item != null);
-  return { time, atolls: found, missing: atolls.length - found.length };
+  // A grid not fetched yet counts as missing too, so the field is asked for again soon.
+  return { time, atolls: found, missing: atolls.length - found.length + (ocean ? 0 : 1), ocean };
 }

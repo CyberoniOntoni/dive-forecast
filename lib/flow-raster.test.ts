@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFlowRaster,
+  buildSeaRaster,
   cellAt,
+  decodeOcean,
   FlowParticles,
   KIND_LAGOON,
   KIND_LAND,
@@ -9,7 +11,7 @@ import {
   velocityAt,
   type FlowChannel,
   type FlowRaster,
-  type FlowVector,
+  type OceanGrid,
 } from "./flow-raster";
 import { decodeVectors, encodeVectors, FLOW_QUANTUM_KN, lagoonKnots, nearestWallHour, type FlowAtoll } from "./flow-wire";
 import type { RimRing } from "./rim";
@@ -100,7 +102,7 @@ describe("flow wire", () => {
 
 describe("buildFlowRaster", () => {
   it("marks the lagoon, the island and the sea, and keeps the lagoon model's heading inside", () => {
-    const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [ISLAND] }, [], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [ISLAND] }, []);
     expect(raster.kind[cellAt(raster, 4.05, 73.5)]).toBe(KIND_LAGOON);
     expect(raster.kind[cellAt(raster, 3.95, 73.5)]).toBe(KIND_LAND);
     expect(raster.kind[cellAt(raster, 4.0, 73.65)]).toBe(KIND_SEA);
@@ -115,7 +117,7 @@ describe("buildFlowRaster", () => {
 
   it("slows the lagoon to what the channels carry: speed × width spread over a half circle", () => {
     // The model says 1 knot everywhere; the one channel carries 1.6 knots through 400 m.
-    const raster = buildFlowRaster(atoll(uniformLagoon(-1, 0)), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(-1, 0)), { outline: RIM, islands: [] }, [EAST_PASS]);
     const expected = (1.6 * 0.4) / (Math.PI * 2);
     // Well away from the channel's jet and from the reef.
     const far = speedAt(raster, 3.96, 73.5);
@@ -129,13 +131,13 @@ describe("buildFlowRaster", () => {
     const columns = 6;
     const east = Array.from({ length: rows * columns }, (_, cell) => (cell % columns === 5 ? -3 : -1));
     const lagoon = { ...uniformLagoon(0, 0)!, vectors: encodeVectors(east, Array(rows * columns).fill(0)) };
-    const raster = buildFlowRaster(atoll(lagoon), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const raster = buildFlowRaster(atoll(lagoon), { outline: RIM, islands: [] }, [EAST_PASS]);
     expect(-speedAt(raster, 3.96, 73.5).east).toBeCloseTo((1.6 * 0.4) / (Math.PI * 2), 2);
   });
 
   it("does not run the lagoon flow into the reef away from a channel", () => {
     // The model runs east, straight at the east rim, which has no channel.
-    const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [] }, [], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [] }, []);
     expect(Math.abs(speedAt(raster, 4.05, 73.599).east)).toBeLessThan(0.01);
   });
 
@@ -145,7 +147,7 @@ describe("buildFlowRaster", () => {
       { lat: 4.0, lon: 73.7, east: 0, north: 0.5 },
       { lat: 3.8, lon: 73.7, east: 0, north: 0.5 },
     ];
-    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0), ocean), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0), ocean), { outline: RIM, islands: [] }, [EAST_PASS]);
     // 0.5 km south of the mouth, just outside: still running north, and now also west, into the pass.
     const below = speedAt(raster, 4.0 - 0.5 / 110.57, 73.603);
     expect(below.north).toBeGreaterThan(0);
@@ -162,7 +164,7 @@ describe("buildFlowRaster", () => {
       { lat: 4.0, lon: 73.7, east: -knots, north: knots },
       { lat: 4.0, lon: 73.3, east: -knots, north: knots },
     ];
-    const raster = buildFlowRaster(atoll(null, ocean), { outline: RIM, islands: [] }, [], []);
+    const raster = buildFlowRaster(atoll(null, ocean), { outline: RIM, islands: [] }, []);
     // Just off the east rim (a north-south reef) the water runs north along it: no westward part into the reef.
     const near = speedAt(raster, 4.0, 73.602);
     expect(Math.abs(near.east)).toBeLessThan(0.1);
@@ -174,7 +176,7 @@ describe("buildFlowRaster", () => {
   });
 
   it("runs a channel's jet along its heading at its band speed, a gate in the reef, wider and slower downstream", () => {
-    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [EAST_PASS]);
     const inGap = speedAt(raster, 4.0, 73.6);
     expect(inGap.east).toBeLessThan(-1.2);
     expect(Math.abs(inGap.north)).toBeLessThan(0.2);
@@ -188,13 +190,42 @@ describe("buildFlowRaster", () => {
     expect(raster.gate[cellAt(raster, 4.05, 73.6)]).toBe(0);
   });
 
-  it("lets a wall site's forecast hold the sea next to it, and not the lagoon behind it", () => {
-    const wall: FlowVector = { lat: 4.05, lon: 73.601, headingDeg: 0, knots: 1.6 };
-    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [], [wall]);
-    expect(speedAt(raster, 4.05, 73.605).north).toBeGreaterThan(1);
+  it("runs the sea next to the reef at the along-reef model's current, not the lagoon behind it", () => {
+    // The ring point on the east rim says 1.6 knots along the reef the "incoming" way: inward (west) turned 90°
+    // clockwise, so north there. The ocean is still.
+    const reef = [{ lat: 4.05, lon: 73.6, knots: 1.6 }];
+    const raster = buildFlowRaster({ ...atoll(uniformLagoon(0, 0)), reef }, { outline: RIM, islands: [] }, []);
+    expect(speedAt(raster, 4.05, 73.602).north).toBeGreaterThan(1.2);
+    // Round the corner on the north rim it runs on the same way round the atoll: inward (south) turned 90°
+    // clockwise is west.
+    const north = speedAt(raster, 4.102, 73.5);
+    expect(north.east).toBeLessThan(-1);
+    expect(Math.abs(north.north)).toBeLessThan(0.2);
     expect(Math.hypot(...Object.values(speedAt(raster, 4.05, 73.59)))).toBeLessThan(0.05);
   });
+
+  it("takes the open sea from the regional grid where the field has one", () => {
+    const grid = oceanFrom(0.5, -0.5);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [], grid);
+    const far = speedAt(raster, 4.0, 73.6 + 5 / 111);
+    expect(far.east).toBeCloseTo(0.5, 1);
+    expect(far.north).toBeCloseTo(-0.5, 1);
+  });
 });
+
+/** A regional grid over the test atoll with the same current everywhere. */
+function oceanFrom(east: number, north: number): OceanGrid {
+  const rows = 6;
+  const columns = 6;
+  return decodeOcean({
+    south: 3.7,
+    west: 73.2,
+    step: 0.12,
+    rows,
+    columns,
+    vectors: encodeVectors(Array(rows * columns).fill(east), Array(rows * columns).fill(north)),
+  });
+}
 
 /** A fixed sequence, so the particles' random places repeat. */
 function seeded(seed = 1): () => number {
@@ -210,7 +241,7 @@ describe("FlowParticles", () => {
 
   it("never takes a particle across the reef away from a gate", () => {
     // The lagoon runs east at 2 knots, straight at the east rim, which has no channel.
-    const raster = buildFlowRaster(atoll(uniformLagoon(2, 0)), { outline: RIM, islands: [] }, [], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(2, 0)), { outline: RIM, islands: [] }, []);
     const flock = new FlowParticles(300, 4, seeded(7));
     for (let step = 0; step < 400; step += 1) {
       const before = Array.from(flock.lat, (lat, index) => [lat, flock.lon[index]]);
@@ -227,7 +258,7 @@ describe("FlowParticles", () => {
   });
 
   it("carries particles from the sea into the lagoon through an incoming channel", () => {
-    const raster = buildFlowRaster(atoll(uniformLagoon(-0.4, 0)), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(-0.4, 0)), { outline: RIM, islands: [] }, [EAST_PASS]);
     // Close round the pass, so most new particles are fed into it.
     const near = { south: 3.97, west: 73.55, north: 4.03, east: 73.65 };
     const flock = new FlowParticles(200, 4, seeded(3));
@@ -243,8 +274,37 @@ describe("FlowParticles", () => {
     expect(crossed).toBeGreaterThan(20);
   });
 
+  it("carries particles from the open sea onto an atoll's raster and never across its reef", () => {
+    // The open sea heads west at 2 knots, straight at the east rim, which has no channel.
+    const grid = oceanFrom(-2, 0);
+    const sea = buildSeaRaster({ ...grid, south: 3.0, west: 72.8, step: 0.4, rows: 5, columns: 5, east: new Float32Array(25).fill(-2), north: new Float32Array(25) });
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [], grid);
+    const rasters = [raster, sea];
+    const wide = { south: 3.8, west: 73.3, north: 4.2, east: 73.9 };
+    const flock = new FlowParticles(300, 4, seeded(5));
+    let handed = 0;
+    for (let step = 0; step < 300; step += 1) {
+      const before = Array.from({ length: flock.count }, (_, index) => flock.rasterOf_(index));
+      const ages = Float32Array.from(flock.age);
+      flock.step(0.1, rasters, wide, degPerKnotSecond, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        // Handed over, not placed anew (a new particle starts its age again).
+        if (before[index] !== 1 || flock.rasterOf_(index) !== 0 || flock.age[index] < ages[index]) continue;
+        handed += 1;
+        // A particle that came from the sea is on the atoll raster's sea, never inside the lagoon.
+        expect(raster.kind[cellAt(raster, flock.lat[index], flock.lon[index])]).toBe(KIND_SEA);
+      }
+    }
+    expect(handed).toBeGreaterThan(0);
+    for (let index = 0; index < flock.count; index += 1) {
+      if (flock.rasterOf_(index) !== 1) continue;
+      // On the open sea's raster, never over the atoll's.
+      expect(cellAt(raster, flock.lat[index], flock.lon[index])).toBe(-1);
+    }
+  });
+
   it("never places a particle on an island", () => {
-    const raster = buildFlowRaster(atoll(uniformLagoon(0.3, 0.3)), { outline: RIM, islands: [ISLAND] }, [], []);
+    const raster = buildFlowRaster(atoll(uniformLagoon(0.3, 0.3)), { outline: RIM, islands: [ISLAND] }, []);
     const flock = new FlowParticles(500, 3, seeded(11));
     for (let step = 0; step < 50; step += 1) {
       flock.step(0.05, [raster], view, degPerKnotSecond, true);

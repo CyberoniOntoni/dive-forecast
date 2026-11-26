@@ -1,7 +1,7 @@
 import type { Control, Layer, Map as LeafletMap } from "leaflet";
 import { parseWall } from "./forecast";
-import { buildFlowRaster, DEFAULT_CHANNEL_KM, FlowParticles, screenFactor, stopsBetween, velocityAt, cellAt, KIND_LAND, type FlowRaster, type FlowShapes, type FlowVector } from "./flow-raster";
-import type { FlowFieldView } from "./flow-wire";
+import { buildFlowRaster, buildSeaRaster, decodeOcean, DEFAULT_CHANNEL_KM, FlowParticles, screenFactor, stopsBetween, velocityAt, cellAt, KIND_LAND, type FlowChannel, type FlowRaster, type FlowShapes, type FlowVector, type OceanGrid } from "./flow-raster";
+import type { FlowAtoll, FlowFieldView } from "./flow-wire";
 
 type LeafletLib = typeof import("leaflet");
 
@@ -21,7 +21,7 @@ export type FlowLayer = {
 };
 
 /** Below this zoom an atoll is a few pixels wide and the trails would be noise. */
-export const FLOW_MIN_ZOOM = 8;
+export const FLOW_MIN_ZOOM = 7;
 /** On-screen speed: pixels per second for one knot, at every zoom, so the flow reads the same zoomed in or out. */
 const PX_PER_KNOT = 22;
 /** Trail points kept per particle, one every TRAIL_EVERY_S: about 1 s of path. */
@@ -59,7 +59,7 @@ export function flowClass(knots: number): number {
 
 /** The legend's words; the lagoon part is approximate, and none of it is for navigation. */
 export const FLOW_NOTE =
-  "How the water moves this hour: through the channels and along the outer walls from the forecast. Inside the lagoon the flow is indicative only. Not for navigation.";
+  "How the water moves this hour: through every reef gap and along the outer reefs from the forecast, the open sea from the ocean model. Inside the lagoon the flow is indicative only. Not for navigation.";
 
 /** Trail segments are drawn in this many fading steps from tail to head. */
 const FADE_STEPS = 5;
@@ -108,6 +108,13 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   /** Rasters built for the current field and arrows, by way id; null while one is being built. */
   let rasters = new Map<string, FlowRaster | null>();
   let active: FlowRaster[] = [];
+  /** The field's open-sea grid and raster, made once per field. */
+  let ocean: { for: FlowFieldView; grid: OceanGrid; raster: FlowRaster | null } | null = null;
+  const oceanFor = (current: FlowFieldView) => {
+    if (!current.ocean) return null;
+    if (ocean?.for !== current) ocean = { for: current, grid: decodeOcean(current.ocean), raster: null };
+    return ocean;
+  };
   let particles: FlowParticles | null = null;
   let frame = 0;
   let last = 0;
@@ -178,6 +185,12 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   const refreshActive = () => {
     const wanted = new Set(inView());
     active = [...rasters.values()].filter((raster): raster is FlowRaster => raster != null && wanted.has(raster.wayId));
+    // The open sea last, so where an atoll's raster covers a point that one takes the particle.
+    const sea = field ? oceanFor(field) : null;
+    if (sea) {
+      sea.raster ??= buildSeaRaster(sea.grid);
+      active.push(sea.raster);
+    }
     particles?.reset();
   };
 
@@ -214,12 +227,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         scheduleBuild();
         return;
       }
-      const channels = atoll.channels.flatMap(({ id, widthM }) => {
-        const arrow = arrows.get(id);
-        return arrow ? [{ ...arrow, widthKm: widthM != null ? widthM / 1000 : DEFAULT_CHANNEL_KM }] : [];
-      });
-      const walls = atoll.walls.flatMap((id) => (arrows.get(id) ? [arrows.get(id) as FlowVector] : []));
-      rasters.set(wayId, buildFlowRaster(atoll, shape, channels, walls));
+      rasters.set(wayId, buildFlowRaster(atoll, shape, gatesOf(atoll, arrows), builtFor ? (oceanFor(builtFor)?.grid ?? null) : null));
       refreshActive();
       start();
       scheduleBuild();
@@ -620,14 +628,41 @@ function sameArrows(a: FlowArrows, b: FlowArrows): boolean {
 
 /** Whether two loads of a field carry the same flow, compared without serialising the lagoon grids. */
 function sameField(a: FlowFieldView, b: FlowFieldView): boolean {
-  if (a.time !== b.time || a.atolls.length !== b.atolls.length) return false;
+  if (a.time !== b.time || a.atolls.length !== b.atolls.length || a.ocean?.vectors !== b.ocean?.vectors) return false;
   return a.atolls.every((atoll, index) => {
     const other = b.atolls[index];
     return (
       atoll.wayId === other.wayId &&
       atoll.lagoon?.vectors === other.lagoon?.vectors &&
-      JSON.stringify([atoll.lagoon && { ...atoll.lagoon, vectors: "" }, atoll.ocean, atoll.channels, atoll.walls]) ===
-        JSON.stringify([other.lagoon && { ...other.lagoon, vectors: "" }, other.ocean, other.channels, other.walls])
+      JSON.stringify([atoll.lagoon && { ...atoll.lagoon, vectors: "" }, atoll.ocean, atoll.channels, atoll.gaps, atoll.reef]) ===
+        JSON.stringify([other.lagoon && { ...other.lagoon, vectors: "" }, other.ocean, other.channels, other.gaps, other.reef])
     );
   });
+}
+
+/**
+ * An atoll's gates this hour: every reef gap at its own heading, speed and width, except that a gap with a catalog
+ * channel site in it takes that site's forecast (its band speed, and its flood or ebb along the gap's own axis, so the
+ * water still crosses the whole gap); and each catalog channel site in no gap at its own arrow and width, as before.
+ */
+export function gatesOf(atoll: FlowAtoll, arrows: FlowArrows): FlowChannel[] {
+  const inGap = new Set<string>();
+  const gates: FlowChannel[] = (atoll.gaps ?? []).map((gap) => {
+    gap.siteIds.forEach((id) => inGap.add(id));
+    const own = gap.siteIds.map((id) => arrows.get(id)).find((arrow) => arrow != null);
+    let headingDeg = gap.headingDeg;
+    let knots = gap.knots;
+    if (own) {
+      const turn = (((own.headingDeg - gap.headingDeg) % 360) + 540) % 360 - 180;
+      if (Math.abs(turn) > 90) headingDeg = (gap.headingDeg + 180) % 360;
+      knots = own.knots;
+    }
+    return { lat: gap.lat, lon: gap.lon, headingDeg, knots, widthKm: gap.widthM / 1000 };
+  });
+  for (const { id, widthM } of atoll.channels) {
+    if (inGap.has(id)) continue;
+    const arrow = arrows.get(id);
+    if (arrow) gates.push({ ...arrow, widthKm: widthM != null ? widthM / 1000 : DEFAULT_CHANNEL_KM });
+  }
+  return gates;
 }
