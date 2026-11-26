@@ -123,6 +123,16 @@ describe("buildFlowRaster", () => {
     expect(-far.east).toBeLessThan(0.2);
   });
 
+  it("sets that scale from the lagoon side of the channel, whatever the model says out at sea", () => {
+    // The model's grid runs past the outline; there (east of 73.6) it says 3 knots, inside 1 knot.
+    const rows = 6;
+    const columns = 6;
+    const east = Array.from({ length: rows * columns }, (_, cell) => (cell % columns === 5 ? -3 : -1));
+    const lagoon = { ...uniformLagoon(0, 0)!, vectors: encodeVectors(east, Array(rows * columns).fill(0)) };
+    const raster = buildFlowRaster(atoll(lagoon), { outline: RIM, islands: [] }, [EAST_PASS], []);
+    expect(-speedAt(raster, 3.96, 73.5).east).toBeCloseTo((1.6 * 0.4) / (Math.PI * 2), 2);
+  });
+
   it("does not run the lagoon flow into the reef away from a channel", () => {
     // The model runs east, straight at the east rim, which has no channel.
     const raster = buildFlowRaster(atoll(uniformLagoon(0.5, 0)), { outline: RIM, islands: [] }, [], []);

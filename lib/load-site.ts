@@ -168,7 +168,10 @@ export async function lagoonSources(atoll: Atoll, mates: readonly Site[], option
     const porous = rimSources(ring);
     const sources = [
       ...(rim ? openRim(atoll.id, porous, rim) : porous),
-      ...loadedChannels.map((item, index) => channelSource(item.channel, item.hours, item.deg, ring.level, weights[index])),
+      ...loadedChannels.map((item, index) => ({
+        ...channelSource(item.channel, item.hours, item.deg, ring.level, weights[index]),
+        siteId: item.channel.id,
+      })),
     ];
     if (!pending) lagoonMemo.set(memoKey, { at: Date.now(), sources });
     return sources;

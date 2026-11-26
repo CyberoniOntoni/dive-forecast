@@ -1,5 +1,6 @@
 import type { Control, Layer, Map as LeafletMap } from "leaflet";
-import { buildFlowRaster, DEFAULT_CHANNEL_KM, FlowParticles, SCREEN_EXPONENT, velocityAt, cellAt, KIND_LAND, type FlowRaster, type FlowShapes, type FlowVector } from "./flow-raster";
+import { parseWall } from "./forecast";
+import { buildFlowRaster, DEFAULT_CHANNEL_KM, FlowParticles, screenFactor, stopsBetween, velocityAt, cellAt, KIND_LAND, type FlowRaster, type FlowShapes, type FlowVector } from "./flow-raster";
 import type { FlowFieldView } from "./flow-wire";
 
 type LeafletLib = typeof import("leaflet");
@@ -72,9 +73,11 @@ function smallScreen(): boolean {
 
 /** "Thu 14:00" from a Maldives wall hour. */
 function shortHour(time: string): string {
-  const [date, clock] = time.split("T");
-  const day = new Date(`${date}T00:00:00Z`);
-  return `${day.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })} ${clock?.slice(0, 5) ?? ""}`;
+  const ms = parseWall(time);
+  if (!Number.isFinite(ms)) return "";
+  // parseWall reads the wall clock as if it were UTC, so format in UTC to get the Maldives day and hour back.
+  const wall = new Date(ms);
+  return `${wall.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })} ${time.slice(11, 16)}`;
 }
 
 /**
@@ -413,13 +416,12 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         for (let step = 0; step < 20; step += 1) {
           if (!velocityAt(raster, lat, lon, velocity)) break;
           speed = Math.hypot(velocity[0], velocity[1]);
-          const screen = speed > 1e-6 ? speed ** (SCREEN_EXPONENT - 1) : 0;
+          const screen = screenFactor(speed);
           const nextLat = lat + velocity[1] * screen * degPerKnotSecond * 0.05;
           const nextLon = lon + velocity[0] * screen * degPerKnotSecond * lonScale * 0.05;
           const from = cellAt(raster, lat, lon);
           const to = cellAt(raster, nextLat, nextLon);
-          if (to < 0 || raster.kind[to] === KIND_LAND) break;
-          if (from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to]) break;
+          if (stopsBetween(raster, from, to)) break;
           lat = nextLat;
           lon = nextLon;
           points.push([projectX(lon, scale) - ox, projectY(lat, scale) - oy]);

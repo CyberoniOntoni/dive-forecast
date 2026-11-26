@@ -132,8 +132,7 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
     ...own,
     ...rest.flatMap((list, index) => {
       const channels = new Set(roles[index + 1].channels.map((channel) => channel.id));
-      const at = new Set(sites.filter((site) => channels.has(site.id)).map((site) => `${site.lat},${site.lon}`));
-      return list.filter((source) => at.has(`${source.lat},${source.lon}`));
+      return list.filter((source) => source.siteId != null && channels.has(source.siteId));
     }),
   ];
   const ocean = oceanPoints(ring.samples, ring.series, time);

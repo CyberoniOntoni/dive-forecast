@@ -2,6 +2,7 @@
  * How the map's current-flow layer gets its field from the server, and the speed scale both sides use. Shared by
  * lib/flow-field.ts (server) and lib/flow-layer.ts (browser), so it holds no server code.
  */
+import { parseWall } from "./forecast";
 import type { Strength } from "./types";
 
 /** One atoll's ingredients for the flow animation at one hour. Speeds are knots, as east and north components. */
@@ -67,15 +68,17 @@ export function lagoonKnots(index: number): number {
 /** Metres per second to knots. */
 export const KNOTS_PER_MS = 1.943844;
 
+/** The wall string for parseWall's milliseconds (its inverse). */
+const wallAtMs = (ms: number) => new Date(ms).toISOString().slice(0, 16);
+
 /** The Maldives wall hour nearest a wall time ("2026-11-26T14:40" is "2026-11-26T15:00"). Null for a malformed time. */
 export function nearestWallHour(wall: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(wall);
-  if (!match) return null;
-  const ms = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4]), Number(match[5]));
+  const ms = parseWall(wall);
   if (!Number.isFinite(ms)) return null;
   // Half past keeps the earlier hour, as the map's nowcast does (nearestForecastHour).
-  const hour = Math.floor(ms / 3_600_000) + (Number(match[5]) > 30 ? 1 : 0);
-  return new Date(hour * 3_600_000).toISOString().slice(0, 13) + ":00";
+  const minutes = Math.round(ms / 60_000) % 60;
+  const hour = Math.floor(ms / 3_600_000) + (minutes > 30 ? 1 : 0);
+  return wallAtMs(hour * 3_600_000).slice(0, 13) + ":00";
 }
 
 /** One step of a lagoon cell's speed on the wire, knots: a signed byte then reaches ±3.2 knots, past the map's top band. */

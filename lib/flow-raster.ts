@@ -283,7 +283,7 @@ export function buildFlowRaster(
   for (const island of shapes.islands) fillRing(raster, island, KIND_LAND);
   const band = reefBand(raster, outline, WALL_BAND_KM, frame);
   const lagoon = atoll.lagoon ? { grid: atoll.lagoon, ...decodeVectors(atoll.lagoon.vectors) } : null;
-  const scale = lagoon ? lagoonScale(lagoon, channels, frame) : DEFAULT_LAGOON_SCALE;
+  const scale = lagoon ? lagoonScale(raster, lagoon, channels, frame) : DEFAULT_LAGOON_SCALE;
 
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
@@ -327,11 +327,13 @@ export function buildFlowRaster(
 }
 
 /**
- * How much to scale the lagoon model's flow, which has no physical unit, so it agrees with the channels: just inside
- * each running channel, the water it carries (speed × width) spread over a half circle runs at speed × width / (π r).
- * The median over the channels, held to LAGOON_SCALE_RANGE; DEFAULT_LAGOON_SCALE when none runs.
+ * How much to scale the lagoon model's flow, which has no physical unit, so it agrees with the channels: the water a
+ * running channel carries (speed × width) spread over a half circle inside it runs at speed × width / (π r), and the
+ * lagoon model's own flow SCALE_AT_KM inside the channel (before the fans and jets go on top) is set to that. The
+ * median over the channels, held to LAGOON_SCALE_RANGE; DEFAULT_LAGOON_SCALE when none runs.
  */
 function lagoonScale(
+  raster: FlowRaster,
   lagoon: { grid: LagoonGrid; east: Float32Array; north: Float32Array },
   channels: readonly FlowChannel[],
   frame: Frame,
@@ -340,14 +342,20 @@ function lagoonScale(
   for (const channel of channels) {
     if (channel.knots < FEED_MIN_KNOTS) continue;
     const radians = (channel.headingDeg * Math.PI) / 180;
-    // Inside is downstream on the flood and upstream on the ebb; the lagoon flow is sampled on the inside either way,
-    // so take the side the lagoon grid says is faster toward or away from the channel.
-    const samples = [1, -1].map((sign) => {
-      const lat = channel.lat + (sign * SCALE_AT_KM * Math.cos(radians)) / KM_PER_DEG_LAT;
-      const lon = channel.lon + (sign * SCALE_AT_KM * Math.sin(radians)) / frame.kmLon;
-      return Math.hypot(bilinear(lagoon.grid, lagoon.east, lat, lon), bilinear(lagoon.grid, lagoon.north, lat, lon));
-    });
-    const model = Math.max(...samples);
+    // Inside is downstream on the flood and upstream on the ebb: of the two points SCALE_AT_KM along the channel's
+    // heading, use the one in the lagoon. A channel with both or neither there (an island, off the raster) is skipped.
+    const inside = [1, -1]
+      .map((sign) => ({
+        lat: channel.lat + (sign * SCALE_AT_KM * Math.cos(radians)) / KM_PER_DEG_LAT,
+        lon: channel.lon + (sign * SCALE_AT_KM * Math.sin(radians)) / frame.kmLon,
+      }))
+      .filter((point) => {
+        const cell = cellAt(raster, point.lat, point.lon);
+        return cell >= 0 && raster.kind[cell] === KIND_LAGOON;
+      });
+    if (inside.length !== 1) continue;
+    const [{ lat, lon }] = inside;
+    const model = Math.hypot(bilinear(lagoon.grid, lagoon.east, lat, lon), bilinear(lagoon.grid, lagoon.north, lat, lon));
     if (!(model > 0.02)) continue;
     ratios.push((channel.knots * widthOf(channel)) / (Math.PI * SCALE_AT_KM) / model);
   }
@@ -466,6 +474,21 @@ export function cellAt(raster: FlowRaster, lat: number, lon: number): number {
   const column = Math.floor((lon - raster.west) / raster.stepLon);
   if (row < 0 || row >= raster.rows || column < 0 || column >= raster.columns) return -1;
   return row * raster.columns + column;
+}
+
+/** On screen, speed goes as knots^SCREEN_EXPONENT: the factor to scale a velocity of `speed` knots by. */
+export const screenFactor = (speed: number) => (speed > 1e-6 ? speed ** (SCREEN_EXPONENT - 1) : 0);
+
+/**
+ * Whether water moving from cell `from` to cell `to` must stop: off the raster, on an island, or across the reef
+ * anywhere but a channel's gate. Particles and the reduced-motion streamlines share it.
+ */
+export function stopsBetween(raster: FlowRaster, from: number, to: number): boolean {
+  return (
+    to < 0 ||
+    raster.kind[to] === KIND_LAND ||
+    (from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to])
+  );
 }
 
 /** Bilinear velocity (knots) at a point into `out` [east, north]; false off the raster. */
@@ -637,8 +660,8 @@ export class FlowParticles {
       }
       const speed = Math.hypot(this.velocity[0], this.velocity[1]);
       this.speed[index] = speed;
-      // On screen speed goes as knots^SCREEN_EXPONENT: the slow lagoon still creeps visibly, the order is kept.
-      const screen = speed > 1e-6 ? speed ** (SCREEN_EXPONENT - 1) : 0;
+      // The slow lagoon still creeps visibly, the order is kept.
+      const screen = screenFactor(speed);
       const ve = this.velocity[0] * screen;
       const vn = this.velocity[1] * screen;
       const nextLat = lat + vn * degPerKnotSecond * seconds;
@@ -647,11 +670,7 @@ export class FlowParticles {
       const to = cellAt(raster, nextLat, nextLon);
       // An island, or the reef away from a channel's gate: the water cannot go on, so the particle stops and fades
       // out where it is rather than vanishing (the field turns along the reef, so few get here).
-      const blocked =
-        to < 0 ||
-        raster.kind[to] === KIND_LAND ||
-        (from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to]);
-      if (blocked) {
+      if (stopsBetween(raster, from, to)) {
         this.life[index] = Math.min(this.life[index], this.age[index] + FADE_OUT_S);
         this.speed[index] = 0;
         continue;

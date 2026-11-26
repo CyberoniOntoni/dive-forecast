@@ -23,8 +23,11 @@ const MIN_DISTANCE_KM = 0.5;
 const KM_PER_DEG_LAT = 110.57;
 const KM_PER_DEG_LON = 111.32;
 
-/** An opening in the rim: where it is, how much rim it stands for, and its net flow (positive in) by hour. */
-export type LagoonSource = { lat: number; lon: number; weightKm: number; flow: ReadonlyMap<string, number> };
+/**
+ * An opening in the rim: where it is, how much rim it stands for, and its net flow (positive in) by hour. A catalog
+ * channel's opening carries its site id.
+ */
+export type LagoonSource = { lat: number; lon: number; weightKm: number; flow: ReadonlyMap<string, number>; siteId?: string };
 
 type Point = { lat: number; lon: number };
 
