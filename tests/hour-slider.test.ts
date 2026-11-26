@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STRIP_HEIGHT, clampHourIndex, nextTurn, stripColor, turnText } from "@/components/HourSlider";
+import { STRIP_HEIGHT, clampHourIndex, nextTurn, shortTurnTarget, smoothPath, stripColor, tideTrend, tideTurns, turnText } from "@/components/HourSlider";
 import type { HourForecast } from "@/lib/types";
 
 describe("clampHourIndex", () => {
@@ -97,5 +97,42 @@ describe("stripColor", () => {
   it("uses the in and out colours at a channel", () => {
     expect(stripColor(hour("incoming", "strong"), false)).toBe("var(--incoming)");
     expect(stripColor(hour("outgoing", "slack"), false)).toBe("var(--outgoing)");
+  });
+});
+
+describe("tide and dial helpers", () => {
+  it("finds highs and lows, a flat top once, never at the ends", () => {
+    expect(tideTurns([0, 0.2, 0.2, 0.1, -0.3, -0.1, 0.4])).toEqual([
+      { index: 1, high: true },
+      { index: 4, high: false },
+    ]);
+    expect(tideTurns([1, 0, 1])).toEqual([{ index: 1, high: false }]);
+    expect(tideTurns([0, 1])).toEqual([]);
+  });
+
+  it("reads rising and falling from the hour before, the first hour from the one after", () => {
+    const levels = [0, 0.3, 0.3, 0.1];
+    expect(tideTrend(levels, 0)).toBe("rising");
+    expect(tideTrend(levels, 1)).toBe("rising");
+    expect(tideTrend(levels, 2)).toBeNull();
+    expect(tideTrend(levels, 3)).toBe("falling");
+    expect(tideTrend([0.1], 0)).toBeNull();
+  });
+
+  it("turns the arrow the short way round", () => {
+    expect(shortTurnTarget(350, 10)).toBe(370);
+    expect(shortTurnTarget(10, 350)).toBe(-10);
+    expect(shortTurnTarget(370, 180)).toBe(540);
+    // A half turn either way is as short; it goes back.
+    expect(shortTurnTarget(90, 270)).toBe(-90);
+  });
+
+  it("draws a smooth path through every point", () => {
+    expect(smoothPath([])).toBe("");
+    expect(smoothPath([[0, 50]])).toBe("M0,50");
+    const d = smoothPath([[0, 50], [1, 10], [2, 50]]);
+    expect(d.startsWith("M0,50 C")).toBe(true);
+    expect(d.match(/C/g)).toHaveLength(2);
+    expect(d.endsWith(" 2,50")).toBe(true);
   });
 });

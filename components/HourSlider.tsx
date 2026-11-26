@@ -1,7 +1,7 @@
 "use client";
 
 import { TideLine } from "./TideLine";
-import { useMemo, useState, type PointerEvent } from "react";
+import { useId, useMemo, useState, type PointerEvent } from "react";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowPath } from "@/lib/arrow-shape";
 import { seaDetail } from "@/lib/sea-text";
 import { FORECAST_GUIDANCE, SEA_SURFACE_NOTE } from "@/lib/safety-copy";
@@ -17,9 +17,9 @@ const STRENGTH_LABEL: Record<Strength, string> = {
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const RANGE_TRACK = "h-11 w-full min-w-0 cursor-pointer appearance-none bg-transparent bg-[linear-gradient(transparent_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_19px,color-mix(in_srgb,var(--foam)_35%,transparent)_25px,transparent_25px)]";
+const RANGE_TRACK = "h-11 w-full min-w-0 cursor-pointer appearance-none rounded-full bg-transparent bg-[linear-gradient(transparent_20px,color-mix(in_srgb,var(--foam)_22%,transparent)_20px,color-mix(in_srgb,var(--foam)_22%,transparent)_24px,transparent_24px)]";
 const RANGE_FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-incoming disabled:cursor-default";
-const RANGE_THUMB = "[&::-moz-range-thumb]:h-11 [&::-moz-range-thumb]:w-11 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-current [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:h-11 [&::-webkit-slider-thumb]:w-11 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-current";
+const RANGE_THUMB = "[&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:shadow-[0_0_14px_currentColor] [&::-moz-range-thumb]:border-[3px] [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-current [&::-moz-range-track]:bg-transparent [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:shadow-[0_0_14px_currentColor] [&::-webkit-slider-thumb]:border-[3px] [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-current";
 
 export function HourSlider({
   hours,
@@ -68,6 +68,8 @@ export function HourSlider({
   const [index, setIndex] = useState(initialIndex);
   // Built once per series, not on every slider move.
   const seaByTime = useMemo(() => new Map((seaState ?? []).map((sea) => [sea.time, sea])), [seaState]);
+  const levels = useMemo(() => hours.map((hour) => hour.levelM), [hours]);
+  const tideTurnList = useMemo(() => tideTurns(levels), [levels]);
 
   if (unavailable || hours.length === 0) {
     return (
@@ -114,29 +116,7 @@ export function HourSlider({
       </h2>
       <div className="flex min-w-0 items-center gap-4">
         {bearing == null ? null : (
-          <div className={`relative grid h-24 w-24 shrink-0 sm:h-28 sm:w-28 place-items-center rounded-full border border-foam/20 bg-ink/50 ${tone}`}>
-            <CompassMarks />
-            <svg
-              viewBox={dialViewBox(hour.strength)}
-              className={`h-16 w-16 sm:h-20 sm:w-20 ${quiet}`}
-              style={{ transform: `rotate(${bearing}deg)` }}
-              role="img"
-              aria-label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`}
-            >
-              {bearingSource === "fallback" ? (
-                <path
-                  d={arrowPath(ARROW_LENGTH[hour.strength])}
-                  fill="currentColor"
-                  fillOpacity={0.22}
-                  stroke="currentColor"
-                  strokeWidth={1}
-                  strokeLinejoin="round"
-                />
-              ) : (
-                <path d={arrowPath(ARROW_LENGTH[hour.strength])} fill="currentColor" />
-              )}
-            </svg>
-          </div>
+          <Dial bearing={bearing} strength={hour.strength} tone={tone} quiet={quiet} estimate={bearingSource === "fallback"} label={`${way} arrow, ${Math.round(bearing)} degrees clockwise from north`} />
         )}
         <div className="min-w-0">
           <p className="font-mono text-sm tabular-nums text-foam/80">{hourWhen(hour.time, today)}</p>
@@ -148,11 +128,29 @@ export function HourSlider({
               {hour.direction === "incoming" ? "Into the atoll" : "Out of the atoll"}, toward {compassWord(bearing)}
             </p>
           ) : null}
-          <p className="mt-1 text-lg sm:text-xl">
-            <span className={strengthTone(hour.strength)}>{STRENGTH_LABEL[hour.strength]}</span>
-            <span className={`text-sm sm:text-base ${confidenceText(hour.confidence)}`}> · {hour.confidence} confidence</span>
-          </p>
-          <p className="mt-1 text-sm leading-6 text-foam/80">{turnText(turn, hours, today, wordFor)}</p>
+          <p className={`mt-0.5 text-lg font-medium sm:text-xl ${strengthTone(hour.strength)}`}>{STRENGTH_LABEL[hour.strength]}</p>
+          <ConfidenceMeter confidence={hour.confidence} />
+        </div>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <TideCell levels={levels} turns={tideTurnList} selected={selected} hours={hours} today={today} />
+        <div className="min-w-0 rounded-2xl bg-ink/40 px-3 py-2.5 ring-1 ring-foam/10">
+          <p className="eyebrow !text-foam/70">Flow next</p>
+          {turn == null ? (
+            <>
+              <p className="mt-0.5 text-sm leading-5 font-medium text-foam">Holds</p>
+              <p className="text-xs leading-5 text-foam/70">to the end of the forecast</p>
+            </>
+          ) : (
+            <>
+              <p className={`mt-0.5 text-sm leading-5 font-semibold ${compass ? "text-foam" : directionTone(hours[turn].direction)}`}>
+                {wordFor(hours[turn].direction)}
+              </p>
+              <p className="text-xs leading-5 text-foam/70">
+                {turnWhen(hours[turn].time, today)} · in {turn - selected} h
+              </p>
+            </>
+          )}
         </div>
       </div>
       {seaState == null ? null : <SeaLine sea={sea} stale={seaStale} />}
@@ -164,7 +162,7 @@ export function HourSlider({
 
       <div className="mt-6">
         <WeekLegend up={wordFor("incoming")} down={wordFor("outgoing")} compass={compass} />
-        <WeekStrip hours={hours} selected={selected} nowIndex={nowIndex} compass={compass} today={today} onPick={setIndex} />
+        <WeekStrip hours={hours} levels={levels} selected={selected} nowIndex={nowIndex} compass={compass} today={today} onPick={setIndex} />
         {seaByTime.size > 0 ? <SeaStrip hours={hours} seaByTime={seaByTime} selected={selected} nowIndex={nowIndex} /> : null}
         <label className="block min-w-0" htmlFor="forecast-hour">
           <span className="sr-only">Forecast hour</span>
@@ -282,8 +280,8 @@ function SeaStrip({
 }) {
   const last = Math.max(hours.length - 1, 1);
   return (
-    <div className="mx-[22px] mt-2" aria-hidden="true">
-      <svg viewBox={`0 0 ${last} 10`} preserveAspectRatio="none" className="block h-3 w-full overflow-visible">
+    <div className="mx-[14px] mt-2" aria-hidden="true">
+      <svg viewBox={`0 0 ${last} 10`} preserveAspectRatio="none" shapeRendering="crispEdges" className="block h-2.5 w-full overflow-visible rounded-full">
         {hours.map((hour, index) => {
           const sea = seaByTime.get(hour.time);
           if (!sea) return null;
@@ -306,6 +304,200 @@ function SeaStrip({
           </span>
         ))}
       </p>
+    </div>
+  );
+}
+
+/** A smooth line through the points (Catmull-Rom turned into cubic Béziers), so a week of hours reads as water. */
+export function smoothPath(points: readonly (readonly [number, number])[]): string {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M${points[0][0]},${points[0][1]}`;
+  let d = `M${points[0][0]},${points[0][1]}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[Math.max(i - 1, 0)];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[Math.min(i + 2, points.length - 1)];
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += ` C${round2(c1x)},${round2(c1y)} ${round2(c2x)},${round2(c2y)} ${p2[0]},${round2(p2[1])}`;
+  }
+  return d;
+}
+
+function round2(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
+/** A high or low of the residual tide at hour `index`. */
+export type TideTurn = { index: number; high: boolean };
+
+/**
+ * Every high and low in the levels: an hour higher (lower) than the hour before and not lower (higher) than the hour
+ * after. A flat top counts once, at its first hour; the first and last hours never count. As the Android app's
+ * SiteOutlook.tideTurns: change both together.
+ */
+export function tideTurns(levels: readonly number[]): TideTurn[] {
+  const turns: TideTurn[] = [];
+  for (let i = 1; i < levels.length - 1; i += 1) {
+    const [before, here, after] = [levels[i - 1], levels[i], levels[i + 1]];
+    if (here > before && here >= after) turns.push({ index: i, high: true });
+    else if (here < before && here <= after) turns.push({ index: i, high: false });
+  }
+  return turns;
+}
+
+/** Rising or falling at hour `index`, by the hour before it (the first hour by the one after); null on a dead level. */
+export function tideTrend(levels: readonly number[], index: number): "rising" | "falling" | null {
+  if (levels.length < 2 || index < 0 || index >= levels.length) return null;
+  const [a, b] = index === 0 ? [levels[0], levels[1]] : [levels[index - 1], levels[index]];
+  if (b > a) return "rising";
+  if (b < a) return "falling";
+  return null;
+}
+
+/** Tide at the picked hour: rising or falling, and the next high or low. The tide is the sea level, not the current. */
+function TideCell({
+  levels,
+  turns,
+  selected,
+  hours,
+  today,
+}: {
+  levels: readonly number[];
+  turns: readonly TideTurn[];
+  selected: number;
+  hours: readonly HourForecast[];
+  today: string;
+}) {
+  const trend = tideTrend(levels, selected);
+  const next = turns.find((turn) => turn.index > selected) ?? null;
+  return (
+    <div className="min-w-0 rounded-2xl bg-ink/40 px-3 py-2.5 ring-1 ring-foam/10">
+      <p className="eyebrow !text-tide">Tide</p>
+      <p className="mt-0.5 flex items-center gap-1 text-sm leading-5 font-medium text-foam">
+        {trend === "rising" ? "Rising" : trend === "falling" ? "Falling" : "Steady"}
+        {trend == null ? null : (
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" className="text-tide" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            {trend === "rising" ? <path d="M7 17L17 7M9 7h8v8" /> : <path d="M7 7l10 10M17 9v8H9" />}
+          </svg>
+        )}
+      </p>
+      <p className="text-xs leading-5 text-foam/70">
+        {next ? `${next.high ? "High" : "Low"} ${turnWhen(hours[next.index].time, today)}` : "No high or low left this week"}
+      </p>
+    </div>
+  );
+}
+
+/** One, two or three bars lit for low, medium and high confidence, as in the Android app. */
+function ConfidenceMeter({ confidence }: { confidence: Confidence }) {
+  const lit = confidence === "low" ? 1 : confidence === "medium" ? 2 : 3;
+  return (
+    <p className="mt-1.5 flex items-center gap-1 text-xs text-foam/75 sm:text-sm">
+      {[0, 1, 2].map((bar) => (
+        <span key={bar} aria-hidden="true" className={`h-1.5 w-4 rounded-full ${bar < lit ? "bg-foam" : "bg-foam/20"}`} />
+      ))}
+      <span className="ml-1.5">{confidence.charAt(0).toUpperCase() + confidence.slice(1)} confidence</span>
+    </p>
+  );
+}
+
+/** The heading to turn to from `from` so the arrow takes the short way round (at most 180 degrees). */
+export function shortTurnTarget(from: number, to: number): number {
+  return from + ((((to - from) % 360) + 540) % 360) - 180;
+}
+
+/**
+ * The compass: a ring of degree ticks with the cardinal points, a glow in the flow's colour, and the arrow, which swings
+ * the short way round to each new hour's heading (straight there under reduced motion).
+ */
+function Dial({
+  bearing,
+  strength,
+  tone,
+  quiet,
+  estimate,
+  label,
+}: {
+  bearing: number;
+  strength: Strength;
+  tone: string;
+  quiet: string;
+  estimate: boolean;
+  label: string;
+}) {
+  // The arrow's running angle, kept past 360 so a turn from 350 to 10 degrees goes forward 20, not back 340.
+  const [turn, setTurn] = useState({ bearing, angle: bearing });
+  if (turn.bearing !== bearing) setTurn({ bearing, angle: shortTurnTarget(turn.angle, bearing) });
+  return (
+    <div className={`dial relative grid size-28 shrink-0 place-items-center rounded-full sm:size-32 ${tone}`}>
+      <svg viewBox="0 0 100 100" aria-hidden="true" className="absolute inset-0 size-full">
+        <circle cx={50} cy={50} r={48} fill="none" stroke="var(--foam)" strokeOpacity={0.14} />
+        {Array.from({ length: 72 }, (_, tick) => {
+          const major = tick % 18 === 0;
+          const mid = tick % 6 === 0;
+          const length = major ? 6 : mid ? 4 : 2;
+          return (
+            <line
+              key={tick}
+              x1={50}
+              x2={50}
+              y1={3}
+              y2={3 + length}
+              transform={`rotate(${tick * 5} 50 50)`}
+              stroke={tick === 0 ? "currentColor" : "var(--foam)"}
+              strokeOpacity={tick === 0 ? 1 : major ? 0.6 : mid ? 0.35 : 0.18}
+              strokeWidth={major ? 1.4 : 0.8}
+              strokeLinecap="round"
+            />
+          );
+        })}
+        {(
+          [
+            ["N", 50, 17.5],
+            ["E", 83, 51.5],
+            ["S", 50, 85.5],
+            ["W", 17, 51.5],
+          ] as const
+        ).map(([letter, x, y]) => (
+          <text
+            key={letter}
+            x={x}
+            y={y}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fontSize={8}
+            fontWeight={letter === "N" ? 700 : 500}
+            fill="var(--foam)"
+            fillOpacity={letter === "N" ? 0.95 : 0.55}
+          >
+            {letter}
+          </text>
+        ))}
+      </svg>
+      <svg
+        viewBox={dialViewBox(strength)}
+        className={`dial-arrow relative h-16 w-16 sm:h-20 sm:w-20 ${quiet}`}
+        style={{ transform: `rotate(${turn.angle}deg)` }}
+        role="img"
+        aria-label={label}
+      >
+        {estimate ? (
+          <path
+            d={arrowPath(ARROW_LENGTH[strength])}
+            fill="currentColor"
+            fillOpacity={0.22}
+            stroke="currentColor"
+            strokeWidth={1}
+            strokeLinejoin="round"
+          />
+        ) : (
+          <path d={arrowPath(ARROW_LENGTH[strength])} fill="currentColor" />
+        )}
+      </svg>
     </div>
   );
 }
@@ -342,40 +534,27 @@ export function turnText(
 /** Up-to-strength share of the strip's half height. Slack still shows a sliver so its hour reads. */
 export const STRIP_HEIGHT: Record<Strength, number> = { slack: 0.1, mild: 0.38, strong: 0.68, too_strong: 1 };
 
-/** N, E, S and W round the dial, so the arrow reads as a compass heading. */
-function CompassMarks() {
-  return (
-    <span aria-hidden="true" className="pointer-events-none absolute inset-0 font-mono text-[10px] leading-none text-foam/60">
-      <span className="absolute top-1.5 left-1/2 -translate-x-1/2 font-semibold text-foam">N</span>
-      <span className="absolute top-1/2 right-1.5 -translate-y-1/2">E</span>
-      <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2">S</span>
-      <span className="absolute top-1/2 left-1.5 -translate-y-1/2">W</span>
-    </span>
-  );
-}
-
 function WeekLegend({ up, down, compass }: { up: string; down: string; compass: boolean }) {
+  const swatch = "inline-block h-2.5 w-1.5 rounded-full";
   return (
     <p className="mb-1 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs text-foam/80">
-      <span className="inline-flex items-center gap-1">
-        <span aria-hidden="true" className={compass ? "text-foam" : "text-incoming"}>
-          ▲
-        </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className={`${swatch} ${compass ? "bg-foam" : "bg-incoming"}`} />
         {up}
       </span>
-      <span className="inline-flex items-center gap-1">
-        <span aria-hidden="true" className={compass ? "text-foam" : "text-outgoing"}>
-          ▼
-        </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className={`${swatch} ${compass ? "bg-foam/70" : "bg-outgoing"}`} />
         {down}
       </span>
-      <span className="inline-flex items-center gap-1">
-        <span aria-hidden="true" className="text-stop">
-          ■
-        </span>
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className={`${swatch} bg-stop`} />
         Very strong
       </span>
-      <span>Taller is stronger, fainter is less sure</span>
+      <span className="inline-flex items-center gap-1.5">
+        <span aria-hidden="true" className="inline-block h-0.5 w-3.5 rounded-full bg-tide" />
+        Tide
+      </span>
+      <span className="text-foam/65">Taller is stronger, fainter is less sure</span>
     </p>
   );
 }
@@ -386,6 +565,7 @@ function WeekLegend({ up, down, compass }: { up: string; down: string; compass: 
  */
 function WeekStrip({
   hours,
+  levels,
   selected,
   nowIndex,
   compass,
@@ -393,6 +573,7 @@ function WeekStrip({
   onPick,
 }: {
   hours: readonly HourForecast[];
+  levels: readonly number[];
   selected: number;
   nowIndex: number;
   compass: boolean;
@@ -402,6 +583,14 @@ function WeekStrip({
   const last = Math.max(hours.length - 1, 1);
   const spans = daySpans(hours);
   const at = (index: number) => `${(index / last) * 100}%`;
+  const id = useId();
+  const flowId = `flow-${id}`;
+  const depthId = `depth-${id}`;
+  const maxLevel = Math.max(0.05, ...levels.map((level) => Math.abs(level)));
+  const tideY = (index: number) => 50 - (levels[index] / maxLevel) * 36;
+  const flowPoints = hours.map((hour, index): [number, number] => [index, 50 - (hour.direction === "incoming" ? 1 : -1) * STRIP_HEIGHT[hour.strength] * 46]);
+  const flowLine = smoothPath(flowPoints);
+  const tideLine = smoothPath(levels.map((_, index): [number, number] => [index, tideY(index)]));
   const pick = (event: PointerEvent<HTMLDivElement>) => {
     const box = event.currentTarget.getBoundingClientRect();
     if (box.width <= 0) return;
@@ -410,14 +599,14 @@ function WeekStrip({
   };
 
   return (
-    <div className="mx-[22px]" aria-hidden="true">
+    <div className="mx-[14px]" aria-hidden="true">
       <div className="relative h-5 text-[10px] font-medium text-foam/80">
         <span className="absolute bottom-0 -translate-x-1/2 whitespace-nowrap" style={{ left: at(nowIndex) }}>
           Now
         </span>
       </div>
       <div
-        className="relative h-24 cursor-pointer touch-pan-y"
+        className="relative h-28 cursor-pointer touch-pan-y sm:h-32"
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
           pick(event);
@@ -429,23 +618,29 @@ function WeekStrip({
         onPointerCancel={releasePointer}
       >
         <svg viewBox={`0 0 ${last} 100`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-          {hours.map((hour, index) => {
-            const height = STRIP_HEIGHT[hour.strength] * 46;
-            const up = hour.direction === "incoming";
-            return (
-              <rect
-                key={hour.time}
-                x={index - 0.42}
-                width={0.84}
-                y={up ? 50 - height : 50}
-                height={height}
-                fill={stripColor(hour, compass)}
-                fillOpacity={confidenceOpacity(hour.confidence)}
-              />
-            );
-          })}
-          {nowIndex > 0 ? <rect x={-0.5} width={nowIndex} y={0} height={100} fill="var(--ink)" fillOpacity={0.55} /> : null}
-          <line x1={-0.5} x2={last + 0.5} y1={50} y2={50} stroke="var(--foam)" strokeOpacity={0.35} vectorEffect="non-scaling-stroke" />
+          <defs>
+            {/* One band of colour per hour along the week: the way's colour, very strong in red, faded by confidence. */}
+            <linearGradient id={flowId} gradientUnits="userSpaceOnUse" x1={-0.5} x2={last + 0.5} y1={0} y2={0}>
+              {hours.flatMap((hour, index) => {
+                const color = stripColor(hour, compass);
+                const opacity = confidenceOpacity(hour.confidence);
+                const width = last + 1;
+                return [
+                  <stop key={`${hour.time}-a`} offset={index / width} stopColor={color} stopOpacity={opacity} />,
+                  <stop key={`${hour.time}-b`} offset={(index + 1) / width} stopColor={color} stopOpacity={opacity} />,
+                ];
+              })}
+            </linearGradient>
+            {/* Brightest at the crest, fading toward the slack line, so the flow reads as a swell, not a block. */}
+            <linearGradient id={depthId} x1={0} x2={0} y1={0} y2={1}>
+              <stop offset={0} stopColor="white" stopOpacity={0.95} />
+              <stop offset={0.5} stopColor="white" stopOpacity={0.4} />
+              <stop offset={1} stopColor="white" stopOpacity={0.95} />
+            </linearGradient>
+            <mask id={`${depthId}-mask`} maskContentUnits="objectBoundingBox">
+              <rect x={0} y={0} width={1} height={1} fill={`url(#${depthId})`} />
+            </mask>
+          </defs>
           {spans.slice(1).map((span) => (
             <line
               key={span.date}
@@ -454,22 +649,34 @@ function WeekStrip({
               y1={0}
               y2={100}
               stroke="var(--foam)"
-              strokeOpacity={0.2}
+              strokeOpacity={0.12}
               vectorEffect="non-scaling-stroke"
             />
           ))}
+          <path d={`${flowLine} L${last},50 L0,50 Z`} fill={`url(#${flowId})`} mask={`url(#${depthId}-mask)`} />
+          <path d={flowLine} fill="none" stroke={`url(#${flowId})`} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+          <line x1={-0.5} x2={last + 0.5} y1={50} y2={50} stroke="var(--foam)" strokeOpacity={0.25} vectorEffect="non-scaling-stroke" />
+          <path d={tideLine} fill="none" stroke="var(--tide)" strokeOpacity={0.85} strokeWidth={1.5} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          {nowIndex > 0 ? <rect x={-0.5} width={nowIndex + 0.5} y={-4} height={108} fill="var(--ink)" fillOpacity={0.55} /> : null}
           <line
             x1={nowIndex}
             x2={nowIndex}
             y1={0}
             y2={100}
             stroke="var(--foam)"
-            strokeOpacity={0.7}
+            strokeOpacity={0.6}
             strokeDasharray="3 3"
             vectorEffect="non-scaling-stroke"
           />
-          <line x1={selected} x2={selected} y1={-4} y2={104} stroke="var(--foam)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
         </svg>
+        <span
+          className="pointer-events-none absolute -top-1 -bottom-1 w-0.5 -translate-x-1/2 rounded-full bg-foam shadow-[0_0_10px_2px_color-mix(in_srgb,var(--foam)_45%,transparent)]"
+          style={{ left: at(selected) }}
+        />
+        <span
+          className="pointer-events-none absolute size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink bg-tide"
+          style={{ left: at(selected), top: `${tideY(selected)}%` }}
+        />
       </div>
       <div className="relative mt-1 h-4 text-xs text-foam/80">
         {spans.map((span) =>
@@ -528,12 +735,6 @@ function arrowOpacity(confidence: Confidence): string {
   if (confidence === "low") return "opacity-40";
   if (confidence === "medium") return "opacity-75";
   return "opacity-100";
-}
-
-function confidenceText(confidence: Confidence): string {
-  if (confidence === "low") return "text-foam/50";
-  if (confidence === "medium") return "text-foam/75";
-  return "text-foam";
 }
 
 /** "Today · 6 Oct 20:00", or "Thu · 8 Oct 18:00" past tomorrow, so the day matches the strip's labels. */
