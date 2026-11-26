@@ -15,6 +15,7 @@ import app.fiftybar.divecurrent.data.api.Strength
 import app.fiftybar.divecurrent.data.session.Session
 import app.fiftybar.divecurrent.domain.MaldivesTime
 import app.fiftybar.divecurrent.domain.ReportTime
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -88,8 +89,11 @@ class SiteViewModel(
         try {
           val loaded = repository.site(siteId)
           _state.update { it.copy(site = loaded.value) }
-        } catch (_: ApiException) {
-          // Offline, the repository already answers with the last copy; only a site with none is left as shown.
+        } catch (e: CancellationException) {
+          throw e
+        } catch (_: Exception) {
+          // Offline, the repository already answers with the last copy; anything else (an answer it can't read) leaves
+          // the page as shown rather than crashing it.
         }
       }
     }

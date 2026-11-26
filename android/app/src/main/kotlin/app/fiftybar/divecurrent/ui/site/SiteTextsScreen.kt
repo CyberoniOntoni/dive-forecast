@@ -282,6 +282,7 @@ fun SiteTextsScreen(siteId: String, siteName: String, onBack: () -> Unit, onSign
           value = state.draft.note,
           max = form.limits.note,
           changed = false,
+          sent = true,
           enabled = !state.busy,
           minLines = 2,
           onChange = { text -> viewModel.edit { it.copy(note = text) } },
@@ -336,6 +337,8 @@ private fun TextSection(
   value: String,
   max: Int,
   changed: Boolean,
+  /** Goes out with Send, so its length can hold it: a changed text, or the note. */
+  sent: Boolean = changed,
   enabled: Boolean,
   minLines: Int,
   onChange: (String) -> Unit,
@@ -347,13 +350,14 @@ private fun TextSection(
       tag?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.dim) }
       if (changed) Pill("Not sent")
       Spacer(Modifier.weight(1f))
-      // Counted as the server counts it (ends trimmed, blank-line runs squeezed), so the count and Send agree.
+      // Counted as the server counts it (ends trimmed, blank-line runs squeezed), so the count and Send agree. A text
+      // that does not go out (left as the site has it) is never held by its length, so it gets no warning either.
       val count = SiteTextsDraft.clean(value).length
       Text(
         "$count / $max",
         style = MaterialTheme.typography.bodySmall,
-        color = if (count > max * 0.9) colors.stop else colors.dim,
-        fontWeight = if (count > max) FontWeight.Bold else null,
+        color = if (sent && count > max * 0.9) colors.stop else colors.dim,
+        fontWeight = if (sent && count > max) FontWeight.Bold else null,
         modifier = Modifier.semantics { contentDescription = "$count of $max characters" },
       )
     }
