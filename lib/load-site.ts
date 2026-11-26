@@ -125,7 +125,7 @@ export function clearLagoonMemo(): void {
  * shared by every lagoon site asking at once, unless a ring point or channel was still waiting on its first fetch:
  * then the next load builds them again with whatever has arrived.
  */
-async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
+export async function lagoonSources(atoll: Atoll, mates: readonly Site[], options: FetchOptions): Promise<LagoonSource[]> {
   // The long past window (options.past) has openings of its own.
   const memoKey = seriesWindowKey(options, atoll.id);
   const kept = lagoonMemo.get(memoKey);

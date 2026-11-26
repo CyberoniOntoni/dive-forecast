@@ -191,6 +191,16 @@ The flow at a wall, in m/s toward the east along the strait's axis:
 - **Confidence** is low, or medium with reports (see "Reports at walls, the strait and the lagoon").
 - **Fallback:** an atoll with no outline or ring data keeps the channel model. On the fallback, a report filed on the lagoon axis is read against the inward bearing: kept, or flipped when its axis pointed more than 90° from it.
 
+## The map's current-flow animation
+
+The map's "Current flow" overlay (on by default) animates this hour's forecast as particles with fading trails. It draws from the model and changes nothing in it (`lib/flow-field.ts` on the server, `lib/flow-raster.ts` and `lib/flow-layer.ts` in the browser):
+
+- **Inside the lagoon:** the lagoon model above, evaluated on a grid of about 1 km cells over each outline (`lagoonVelocity` with the same openings and sink as the lagoon sites), its index turned into knots so the band edges land between the band speeds below (`lagoonKnots` in `lib/flow-wire.ts`). Atolls that share an outline (Huvadhu) are one lagoon: the first atoll's openings plus the other's channels. The legend calls this part indicative only.
+- **Channels:** a jet at each catalog channel (`crossesRim`) along its pin's arrow at its band's speed (slack 0.1, mild 0.8, strong 1.6, very strong 2.5 knots, the boat route's), narrow through the pass and widening, so slowing, downstream. The jets are the only places a particle crosses the outline; 30 % of new particles are fed in upstream of a channel in view, so each shows its stream.
+- **Outside:** the ocean model's surface current at the ring points, blended by distance; within 2.5 km of the reef turned to run along it (×1.6), and at each wall site its own arrow and band speed, fading out over a couple of km.
+
+Particles move at 26 screen pixels a second per knot at every zoom, so the animation runs far faster than the water. Islands (OpenStreetMap) stop them. With reduced motion the layer draws still streamlines instead. On Cloudflare the field is kept in R2 per hour and built by the warm-up next to the map's nowcasts (`lib/flow-field-cache.ts`).
+
 ## Sea state
 
 Separate from the current: it never changes the current forecast or `FORECAST_MODEL_VERSION`. Code in `lib/waves.ts`, `lib/wind.ts`, `lib/islands.ts`, `lib/shoals.ts`, `lib/wave-exposure.ts`, `lib/sea-state.ts` and, for the map layer, `lib/shelter-grid.ts`.

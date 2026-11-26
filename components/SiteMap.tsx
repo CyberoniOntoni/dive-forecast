@@ -14,7 +14,10 @@ import { MAP_STYLE } from "@/components/map-style";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
-import { getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
+import { getFlowField, getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
+import type { FlowArrows } from "@/lib/flow-layer";
+import type { FlowVector } from "@/lib/flow-raster";
+import { FLOW_KNOTS, nearestWallHour } from "@/lib/flow-wire";
 import { addMapLayers } from "@/lib/map-layers";
 import { loadMapView, saveMapView, spotlightZoom, type MapView } from "@/lib/map-view";
 import { nowcastGlance, type NowcastGlance } from "@/lib/nowcast-glance";
@@ -29,6 +32,8 @@ const PIN_SIZE = 44;
 
 type MapProps = {
   siteGlances: readonly SiteGlance[];
+  /** The Maldives wall time the pins show: the flow animation draws the same hour. */
+  maldivesWall: string;
   draft: Point | null;
   adding: boolean;
   onPick: (point: Point) => void;
@@ -145,10 +150,18 @@ function mountDiveMap(
     onZoom: (zoom: number) => void;
     onView: (view: MapView) => void;
   },
-): { map: LeafletMapType; pins: MarkerClusterGroup; destroy: () => void } {
+): {
+  map: LeafletMapType;
+  pins: MarkerClusterGroup;
+  setFlowArrows: (time: string, arrows: FlowArrows) => void;
+  destroy: () => void;
+} {
   const map = L.map(container, { zoomControl: false });
   L.control.zoom({ position: "topright" }).addTo(map);
-  const { readSea } = addMapLayers(L, map, { shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint } });
+  const { readSea, setFlowArrows } = addMapLayers(L, map, {
+    shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint },
+    flow: { load: getFlowField, shapes: getShelterShapes },
+  });
   const pins = L.markerClusterGroup({
     disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,
     maxClusterRadius: 48,
@@ -196,6 +209,7 @@ function mountDiveMap(
   return {
     map,
     pins,
+    setFlowArrows,
     destroy: () => {
       resize.disconnect();
       detachCredits();
@@ -296,6 +310,16 @@ function placeDraftPin(L: LeafletLib, map: LeafletMapType, draft: Point): Circle
   return marker;
 }
 
+/** The pins' arrows as the flow animation reads them: heading and the band's speed, by site id. */
+function flowArrows(siteGlances: readonly SiteGlance[]): FlowArrows {
+  const arrows = new Map<string, FlowVector>();
+  for (const { site, glance } of siteGlances) {
+    if (glance.arrowBearing == null || glance.strength == null) continue;
+    arrows.set(site.id, { lat: site.lat, lon: site.lon, headingDeg: glance.arrowBearing, knots: FLOW_KNOTS[glance.strength] });
+  }
+  return arrows;
+}
+
 function glancesFor(
   sites: readonly Site[],
   nowcasts: readonly SiteNowcast[],
@@ -351,6 +375,7 @@ const LeafletMap = dynamic(
 
     function MapCanvas({
       siteGlances,
+      maldivesWall,
       draft,
       adding,
       onPick,
@@ -370,6 +395,7 @@ const LeafletMap = dynamic(
       const containerRef = useRef<HTMLDivElement>(null);
       const mapRef = useRef<LeafletMapType | null>(null);
       const pinsRef = useRef<MarkerClusterGroup | null>(null);
+      const setFlowRef = useRef<((time: string, arrows: FlowArrows) => void) | null>(null);
       const onViewRef = useRef(onView);
       const markersRef = useRef<Marker[]>([]);
       const draftMarkerRef = useRef<CircleMarker | null>(null);
@@ -416,6 +442,7 @@ const LeafletMap = dynamic(
         });
         mapRef.current = mounted.map;
         pinsRef.current = mounted.pins;
+        setFlowRef.current = mounted.setFlowArrows;
         setMapEpoch((epoch) => epoch + 1);
         return mounted.destroy;
       // eslint-disable-next-line react-hooks/exhaustive-deps -- W4 mounts the canvas once; marker sync is the next effect.
@@ -440,6 +467,13 @@ const LeafletMap = dynamic(
           onOpenRef.current(id);
         });
       }, [siteGlances, mapEpoch, showStrength]);
+
+      // The flow animation follows the pins: the same hour, and each channel's and wall's arrow.
+      useEffect(() => {
+        const hour = nearestWallHour(maldivesWall);
+        if (!setFlowRef.current || mapEpoch === 0 || !hour) return;
+        setFlowRef.current(hour, flowArrows(siteGlances));
+      }, [siteGlances, maldivesWall, mapEpoch]);
 
       useEffect(() => {
         const map = mapRef.current;
@@ -590,6 +624,7 @@ export function SiteMap({
         <div className="relative z-0 h-full min-h-0 min-w-0 flex-1">
           <LeafletMap
             siteGlances={siteGlances}
+            maldivesWall={maldivesWall}
             draft={draft}
             adding={adding}
             onPick={setDraft}

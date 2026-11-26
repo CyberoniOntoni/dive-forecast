@@ -22,10 +22,11 @@ function memoryStorage(initial: Record<string, string> = {}) {
 }
 
 describe("layer choice", () => {
-  it("starts on satellite with seamarks and the coordinate grid on", () => {
+  it("starts on satellite with seamarks, the current flow and the coordinate grid on", () => {
     expect(DEFAULT_LAYER_CHOICE.base).toBe("satellite");
     expect(Object.entries(DEFAULT_LAYER_CHOICE.overlays).filter(([, on]) => on)).toEqual([
       ["seamarks", true],
+      ["flow", true],
       ["grid", true],
     ]);
   });
@@ -57,6 +58,7 @@ describe("layer choice", () => {
         sonarDepths: false,
         depthContours: true,
         shelter: true,
+        flow: false,
         grid: true,
       },
     };

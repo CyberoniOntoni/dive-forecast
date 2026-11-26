@@ -8,6 +8,13 @@ vi.mock("./nowcast-cache", () => ({
     return { nowcasts: [], saved };
   },
 }));
+const flowBuilt: { hour: string; options: unknown }[] = [];
+vi.mock("./flow-field-cache", () => ({
+  buildFlowField: async (hour: string, options: unknown) => {
+    flowBuilt.push({ hour, options });
+    return { field: { time: hour, atolls: [] }, saved: true };
+  },
+}));
 const offshore: unknown[] = [];
 vi.mock("./sea-state", () => ({
   loadOffshore: async (_atoll: unknown, options: unknown) => {
@@ -21,6 +28,7 @@ const { WARM_HEADER, isWarmPath } = await import("./warm-path");
 
 afterEach(() => {
   built.length = 0;
+  flowBuilt.length = 0;
   offshore.length = 0;
   vi.unstubAllEnvs();
 });
@@ -50,6 +58,8 @@ describe("warmCaches", () => {
   it("builds only the next hour's map from minute 40, refreshing as it goes", async () => {
     const result = await warmCaches(Date.parse("2026-11-05T10:50:00Z"));
     expect(built).toEqual([{ wall: "2026-11-05T16:00", options: { refreshOlderThanMs: WARM_REFRESH_MS } }]);
+    // The flow animation's field for the same hour, from the same refreshed series.
+    expect(flowBuilt).toEqual([{ hour: "2026-11-05T16:00", options: { refreshOlderThanMs: WARM_REFRESH_MS } }]);
     expect(result.hour).toBe("2026-11-05T16");
   });
 

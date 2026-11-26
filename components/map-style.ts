@@ -30,6 +30,16 @@ ${CREDIT_STYLE}
 .dive-atlas-legend-note{margin:0 0 4px;color:color-mix(in srgb, var(--foam) 75%, transparent)}
 .dive-atlas-legend ul{list-style:none;margin:0;padding:0}
 .dive-atlas-legend li{display:flex;align-items:center;gap:6px;margin:2px 0}
+.dive-flow-legend{max-width:220px}
+.dive-flow-head{display:flex;align-items:center;gap:4px;width:100%;background:none;border:0;padding:0;color:inherit;font:inherit;font-weight:600;text-align:left;cursor:pointer;min-height:24px}
+.dive-flow-head:focus-visible{outline:2px solid var(--incoming);outline-offset:2px;border-radius:6px}
+.dive-flow-chevron{margin-left:auto;width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin-top:-3px}
+.dive-flow-legend[data-open="true"] .dive-flow-chevron{transform:rotate(-135deg);margin-top:3px}
+.dive-flow-time{margin-left:4px;font-weight:500;color:color-mix(in srgb, var(--foam) 75%, transparent);font-variant-numeric:tabular-nums}
+.dive-flow-key{display:grid;grid-template-columns:1fr 1fr;column-gap:8px;margin:2px 0 4px!important}
+.dive-flow-swatch{display:inline-block;width:18px;border-radius:2px}
+.dive-flow-note{margin:2px 0 0!important;font-size:11px}
+.dive-flow-canvas{pointer-events:none}
 .dive-shelter-legend{min-width:210px;max-width:240px}
 .dive-shelter-time{display:flex;align-items:center;gap:6px;margin:2px 0 6px;font-variant-numeric:tabular-nums}
 .dive-shelter-time>span{flex:1;text-align:center}

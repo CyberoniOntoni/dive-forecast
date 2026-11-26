@@ -1,6 +1,7 @@
 import { clearRingMemo } from "./atoll-ring";
 import { appSetting } from "./cloudflare";
 import { toMaldivesWall } from "./forecast";
+import { buildFlowField } from "./flow-field-cache";
 import { buildMapNowcasts } from "./nowcast-cache";
 import { clearLagoonMemo } from "./load-site";
 import { ready } from "./ready";
@@ -34,7 +35,8 @@ export type WarmResult = {
  * Keeps the caches ahead of the visitors, once an hour. The map's nowcasts are built and saved for the coming hour
  * (this hour's when run before minute 40), and on the way every site's series (the site's own, the ring points and
  * lagoon openings its model reads) is refreshed when WARM_REFRESH_MS old, by the same loads the pages run. Then every
- * atoll's offshore waves and wind, after the map so a down wave host cannot hold the map up. The ring and lagoon
+ * atoll's offshore waves and wind, after the map so a down wave host cannot hold the map up. The map's current-flow
+ * field for that hour is built next to its nowcasts. The ring and lagoon
  * memos are cleared first, so each atoll's are built once in the run from the refreshed series. One map build per
  * run. Pages still refresh by themselves if a run is missed.
  */
@@ -52,6 +54,9 @@ export async function warmCaches(now = Date.now()): Promise<WarmResult> {
   clearRingMemo();
   clearLagoonMemo();
   const { saved } = await buildMapNowcasts(sites, atolls, target, options);
+  // The flow animation's field for the same hour, from the series and lagoon openings the map build just loaded. A
+  // failure here does not fail the run: the map builds its own field on the first visit.
+  await buildFlowField(`${target.slice(0, 13)}:00`, options).catch((error: unknown) => console.warn("Flow field warm-up failed", error));
   const offshore = await Promise.all(atolls.map((atoll) => loadOffshore(atoll, options).catch(() => null)));
   // An atoll with an outline that got no wave side or no wind (no outline means no offshore samples at all).
   const offshoreFailed = offshore.filter(
