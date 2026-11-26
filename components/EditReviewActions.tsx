@@ -20,7 +20,7 @@ export function EditReviewActions({ editId, cannotApprove, stale }: { editId: st
           value={reason}
           maxLength={EDIT_NOTE_MAX}
           onChange={(event) => setReason(event.target.value)}
-          className="min-h-11 w-full rounded-xl border border-foam/20 bg-ink px-3 text-sm text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         />
       </label>
       <div className="flex flex-wrap gap-2">

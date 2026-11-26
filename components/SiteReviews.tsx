@@ -23,7 +23,7 @@ import { PhotoPicker, uploadPhotos, type PickedPhoto } from "./PhotoPicker";
 import { ScoreButtons } from "./ScoreButtons";
 
 const textareaClass =
-  "min-h-28 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+  "field min-h-28 w-full resize-y py-2 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const primaryButton =
   "button-primary";
 const quietButton =
@@ -134,7 +134,7 @@ export function SiteReviews({
       {signedIn ? (
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-foam" id="my-rating-label">
-            Your rating {mine?.score ?? "—"}
+            {mine ? `Your rating ${mine.score}` : "Your rating"}
             {mine == null ? <span className="font-normal text-foam/70"> · rate it for {POINTS.rating} points</span> : null}
           </p>
           <ScoreButtons

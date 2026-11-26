@@ -15,7 +15,7 @@ const HINTS: Record<WikiField, string> = {
   howToDive: "Entry and exit, the route, depths, which tide to dive it on, hazards.",
 };
 const textareaClass =
-  "min-h-32 w-full rounded-xl border border-foam/20 bg-ink px-3 py-2 text-sm leading-6 text-foam placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+  "field min-h-32 w-full resize-y py-2 placeholder:text-foam/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
 const primaryButton =
   "button-primary";
 const quietButton =
@@ -149,7 +149,7 @@ export function SiteWiki({ initial, siteName }: { initial: Wiki; siteName: strin
               value={note}
               maxLength={EDIT_NOTE_MAX}
               onChange={(event) => setNote(event.target.value)}
-              className="min-h-11 w-full rounded-xl border border-foam/20 bg-ink px-3 text-sm text-foam focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+              className="field w-full min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
             />
           </label>
           <p className="meta">
