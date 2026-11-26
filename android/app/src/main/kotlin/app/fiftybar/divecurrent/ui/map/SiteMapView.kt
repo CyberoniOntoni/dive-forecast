@@ -39,9 +39,12 @@ import org.maplibre.android.geometry.LatLngQuad
 import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.expressions.Expression.eq
 import org.maplibre.android.style.expressions.Expression.geometryType
 import org.maplibre.android.style.expressions.Expression.get
+import org.maplibre.android.style.expressions.Expression.has
+import org.maplibre.android.style.expressions.Expression.not
 import org.maplibre.android.style.expressions.Expression.literal
 import org.maplibre.android.style.expressions.Expression.toColor
 import org.maplibre.android.style.expressions.Expression.interpolate
@@ -94,6 +97,7 @@ import org.maplibre.android.style.layers.PropertyFactory.rasterOpacity
 import org.maplibre.android.style.layers.PropertyFactory.rasterResampling
 import org.maplibre.android.style.layers.RasterLayer
 import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.sources.GeoJsonOptions
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.android.style.sources.ImageSource
 import org.maplibre.geojson.Feature
@@ -110,6 +114,19 @@ private const val BADGES = "site-badges"
 private const val PULSE = "site-pulse"
 private const val HIGHLIGHT = "site-highlight"
 private const val NAMES = "site-names"
+private const val CLUSTERS = "site-clusters"
+private const val CLUSTER_COUNTS = "site-cluster-counts"
+
+/**
+ * Below this zoom nearby pins merge into a numbered bubble, as the web map's do below its CLUSTER_UNTIL_ZOOM (11); from
+ * it every pin shows with its arrow. MapLibre's zoom 10 is Leaflet's 11 (its tiles are 512 dp to Leaflet's 256 px), so
+ * the pins part at the same scale on the phone as on the web. Without it, pins over a whole atoll sit on top of each
+ * other and flicker as the arrows move.
+ */
+internal const val CLUSTER_UNTIL_ZOOM = 10
+
+/** How near pins merge, in dp: the web's maxClusterRadius (48 px). */
+internal const val CLUSTER_RADIUS = 48
 
 /**
  * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
@@ -188,7 +205,9 @@ fun SiteMapView(
       m.uiSettings.isTiltGesturesEnabled = false
       m.addOnMapClickListener { point ->
         val screen = m.projection.toScreenLocation(point)
-        val hit = siteAt(m, screen, context.resources.displayMetrics.density)
+        val density = context.resources.displayMetrics.density
+        if (zoomIntoCluster(m, screen, density)) return@addOnMapClickListener true
+        val hit = siteAt(m, screen, density)
         if (hit != null) openSite(hit)
         hit != null || tapped(point.latitude, point.longitude)
       }
@@ -409,6 +428,22 @@ private fun viewBox(map: MapLibreMap): MapViewBox {
   return MapViewBox(bounds.latitudeSouth, bounds.longitudeWest, bounds.latitudeNorth, bounds.longitudeEast, map.cameraPosition.zoom)
 }
 
+/**
+ * A tap on a numbered bubble zooms in to where its pins part (the web cluster's default), centred on it. True when the
+ * tap was on one.
+ */
+private fun zoomIntoCluster(map: MapLibreMap, screen: PointF, density: Float): Boolean {
+  val slop = 4f * density
+  val box = RectF(screen.x - slop, screen.y - slop, screen.x + slop, screen.y + slop)
+  val cluster = map.queryRenderedFeatures(box, CLUSTERS).firstOrNull() ?: return false
+  val point = cluster.geometry() as? Point ?: return false
+  val source = map.style?.getSourceAs<GeoJsonSource>(SOURCE) ?: return false
+  // At least to where clustering stops, so one tap is enough even for pins the source would part only further in.
+  val zoom = source.getClusterExpansionZoom(cluster).toDouble().coerceAtLeast(map.cameraPosition.zoom + 1).coerceAtMost(CLUSTER_UNTIL_ZOOM.toDouble())
+  map.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(point.latitude(), point.longitude()), zoom))
+  return true
+}
+
 /** The site under a tap: on its badge or its arrow, within a finger's width (12 dp each way) of either. */
 private fun siteAt(map: MapLibreMap, screen: PointF, density: Float): String? {
   val slop = 12f * density
@@ -466,7 +501,15 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
       )
       .withFilter(eq(geometryType(), literal("Point")))
   )
-  style.addSource(GeoJsonSource(SOURCE, FeatureCollection.fromFeatures(emptyList())))
+  style.addSource(
+    GeoJsonSource(
+      SOURCE,
+      FeatureCollection.fromFeatures(emptyList()),
+      GeoJsonOptions().withCluster(true).withClusterMaxZoom(CLUSTER_UNTIL_ZOOM - 1).withClusterRadius(CLUSTER_RADIUS),
+    )
+  )
+  // A bubble carries point_count; a lone site does not.
+  val lone = not(has("point_count"))
   // A very strong site's ring, under its badge; MapScreen's clock grows and fades it.
   style.addLayer(
     CircleLayer(PULSE, SOURCE)
@@ -478,7 +521,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circleStrokeOpacity(0f),
         circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
       )
-      .withFilter(eq(get("pulse"), literal(true)))
+      .withFilter(Expression.all(lone, eq(get("pulse"), literal(true))))
   )
   // The site the page sent the diver to see: a foam ring round its badge. No site matches "" until one is set.
   style.addLayer(
@@ -504,6 +547,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circleStrokeWidth(interpolate(linear(), zoom(), stop(5, 1f), stop(11, 1.6f))),
         circleStrokeOpacity(get("opacity")),
       )
+      .withFilter(lone)
   )
   style.addLayer(
     SymbolLayer(ARROWS, SOURCE)
@@ -517,6 +561,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         iconAllowOverlap(true),
         iconIgnorePlacement(true),
       )
+      .withFilter(lone)
   )
   style.addLayer(
     SymbolLayer(NAMES, SOURCE)
@@ -531,7 +576,34 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         textOffset(arrayOf(0f, 1.2f)),
         textOptional(true),
       )
+      .withFilter(lone)
       .apply { minZoom = 10.5f }
+  )
+  // Several sites near each other at this zoom: one glass bubble with how many, as the web's dive-cluster. A tap zooms
+  // in (zoomIntoCluster).
+  style.addLayer(
+    CircleLayer(CLUSTERS, SOURCE)
+      .withProperties(
+        circleRadius(22f),
+        circleColor(colorHex(colors.glass.toArgb())),
+        circleOpacity(colors.glass.alpha),
+        circleStrokeColor(colors.incoming.toArgb()),
+        circleStrokeWidth(2f),
+        circleStrokeOpacity(0.7f),
+      )
+      .withFilter(has("point_count"))
+  )
+  style.addLayer(
+    SymbolLayer(CLUSTER_COUNTS, SOURCE)
+      .withProperties(
+        textField(get("point_count_abbreviated")),
+        textFont(arrayOf(LABEL_FONT)),
+        textSize(15f),
+        textColor(colors.foam.toArgb()),
+        textAllowOverlap(true),
+        textIgnorePlacement(true),
+      )
+      .withFilter(has("point_count"))
   )
 }
 
