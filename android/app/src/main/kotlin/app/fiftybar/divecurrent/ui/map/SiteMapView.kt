@@ -120,15 +120,19 @@ private const val CLUSTERS = "site-clusters"
 private const val CLUSTER_COUNTS = "site-cluster-counts"
 
 /**
- * Below this zoom nearby pins merge into a numbered bubble, as the web map's do below its CLUSTER_UNTIL_ZOOM (11); from
+ * Below this zoom pins that would overlap merge into a numbered bubble, as the web map's do below its CLUSTER_UNTIL_ZOOM (11); from
  * it every pin shows with its arrow. MapLibre's zoom 10 is Leaflet's 11 (its tiles are 512 dp to Leaflet's 256 px), so
  * the pins part at the same scale on the phone as on the web. Without it, pins over a whole atoll sit on top of each
  * other and flicker as the arrows move.
  */
 internal const val CLUSTER_UNTIL_ZOOM = 10
 
-/** How near pins merge, in dp: the web's maxClusterRadius (48 px). */
-internal const val CLUSTER_RADIUS = 48
+/**
+ * How near pins merge, in dp: about a badge's width at atoll zoom (8.5 to 11.5 dp radius), so only pins that would sit on
+ * top of each other merge and an atoll on screen still shows most sites' arrows. Tighter than the web's 48 px on
+ * purpose (owner's call, 26 Nov).
+ */
+internal const val CLUSTER_RADIUS = 22
 
 /**
  * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
