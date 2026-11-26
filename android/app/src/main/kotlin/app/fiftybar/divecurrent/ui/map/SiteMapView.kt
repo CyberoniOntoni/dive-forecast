@@ -127,11 +127,14 @@ private const val CLUSTER_COUNTS = "site-cluster-counts"
  */
 internal const val CLUSTER_UNTIL_ZOOM = 14
 
-/** How near pins merge, in dp: about a badge's width (8.5 to 13 dp radius), so only pins that would overlap merge. */
-internal const val CLUSTER_RADIUS = 24
+/**
+ * How near pins merge, in dp: a little under a badge's width at atoll zoom (8.5 to 11.5 dp radius), so only pins that
+ * clearly overlap merge and an atoll on screen keeps most arrows (24 dp hid most of North Malé's on the phone).
+ */
+internal const val CLUSTER_RADIUS = 18
 
-/** A bubble's radius in dp: little bigger than a badge, so two bubbles [CLUSTER_RADIUS] apart barely touch. */
-private const val BUBBLE_RADIUS = 14f
+/** A bubble's radius in dp: about a badge's, so bubbles and pins take the same room. */
+private const val BUBBLE_RADIUS = 12f
 
 /**
  * The site-name font, served by the app's own server from public/map-fonts/ (Open Sans Semibold glyphs), not from
@@ -602,7 +605,7 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
       .withProperties(
         textField(get("point_count_abbreviated")),
         textFont(arrayOf(LABEL_FONT)),
-        textSize(13f),
+        textSize(12f),
         textColor(colors.foam.toArgb()),
         textAllowOverlap(true),
         textIgnorePlacement(true),
