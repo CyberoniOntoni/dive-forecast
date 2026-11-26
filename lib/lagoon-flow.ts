@@ -23,8 +23,11 @@ const MIN_DISTANCE_KM = 0.5;
 const KM_PER_DEG_LAT = 110.57;
 const KM_PER_DEG_LON = 111.32;
 
-/** An opening in the rim: where it is, how much rim it stands for, and its net flow (positive in) by hour. */
-export type LagoonSource = { lat: number; lon: number; weightKm: number; flow: ReadonlyMap<string, number> };
+/**
+ * An opening in the rim: where it is, how much rim it stands for, and its net flow (positive in) by hour. A catalog
+ * channel's opening carries its site id.
+ */
+export type LagoonSource = { lat: number; lon: number; weightKm: number; flow: ReadonlyMap<string, number>; siteId?: string };
 
 type Point = { lat: number; lon: number };
 
@@ -162,6 +165,14 @@ const SINK_CELLS = 1500;
 export type LagoonSink = { east: number; north: number; areaKm2: number };
 
 export function lagoonSink(site: Point, rim: RimRing): LagoonSink {
+  return sinkAt(site, lagoonSinkCells(rim));
+}
+
+/** The lagoon's sink cells: the centres of the grid cells inside the outline, and each cell's area. */
+export type SinkCells = { kmLon: number; cellKm2: number; lats: Float64Array; lons: Float64Array };
+
+/** lagoonSink's cells for an outline, built once so a grid of points can share them. */
+export function lagoonSinkCells(rim: RimRing): SinkCells {
   const lats = rim.map(([lat]) => lat);
   const lons = rim.map(([, lon]) => lon);
   const minLat = Math.min(...lats);
@@ -171,24 +182,33 @@ export function lagoonSink(site: Point, rim: RimRing): LagoonSink {
   const kmLon = KM_PER_DEG_LON * Math.cos((((minLat + maxLat) / 2) * Math.PI) / 180);
   const boxKm2 = (maxLat - minLat) * KM_PER_DEG_LAT * (maxLon - minLon) * kmLon;
   const stepKm = Math.max(0.5, Math.sqrt(boxKm2 / SINK_CELLS));
-  const cellKm2 = stepKm * stepKm;
-  let east = 0;
-  let north = 0;
-  let areaKm2 = 0;
+  const inLat: number[] = [];
+  const inLon: number[] = [];
   for (let lat = minLat + stepKm / KM_PER_DEG_LAT / 2; lat < maxLat; lat += stepKm / KM_PER_DEG_LAT) {
     for (let lon = minLon + stepKm / kmLon / 2; lon < maxLon; lon += stepKm / kmLon) {
       if (!pointInRing(lat, lon, rim)) continue;
-      areaKm2 += cellKm2;
-      const dx = (site.lon - lon) * kmLon;
-      const dy = (site.lat - lat) * KM_PER_DEG_LAT;
-      const r = Math.max(MIN_DISTANCE_KM, Math.hypot(dx, dy));
-      // A sink draws toward itself: the opposite of a source's push.
-      const scale = -cellKm2 / (2 * Math.PI * r * r);
-      east += scale * dx;
-      north += scale * dy;
+      inLat.push(lat);
+      inLon.push(lon);
     }
   }
-  return { east, north, areaKm2 };
+  return { kmLon, cellKm2: stepKm * stepKm, lats: Float64Array.from(inLat), lons: Float64Array.from(inLon) };
+}
+
+/** The sink's pull at a point from an outline's sink cells (lagoonSinkCells). */
+export function sinkAt(site: Point, cells: SinkCells): LagoonSink {
+  const { kmLon, cellKm2, lats, lons } = cells;
+  let east = 0;
+  let north = 0;
+  for (let index = 0; index < lats.length; index += 1) {
+    const dx = (site.lon - lons[index]) * kmLon;
+    const dy = (site.lat - lats[index]) * KM_PER_DEG_LAT;
+    const r = Math.max(MIN_DISTANCE_KM, Math.hypot(dx, dy));
+    // A sink draws toward itself: the opposite of a source's push.
+    const scale = -cellKm2 / (2 * Math.PI * r * r);
+    east += scale * dx;
+    north += scale * dy;
+  }
+  return { east, north, areaKm2: lats.length * cellKm2 };
 }
 
 /**

@@ -13,6 +13,8 @@ import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
+import { flowHourInWindow, mapFlowField } from "./flow-field-cache";
+import type { FlowFieldView } from "./flow-wire";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
@@ -788,6 +790,16 @@ export async function getShelterPoint(lat: number, lon: number, time: string): P
   if (![lat, lon].every((value) => typeof value === "number" && Number.isFinite(value))) throw new Error("Bad point");
   if (typeof time !== "string" || !WALL_HOUR.test(time)) throw new Error("Bad time");
   return shelterPoint(lat, lon, time);
+}
+
+/**
+ * The map's current-flow animation for one wall hour: each atoll's lagoon flow on a grid, the ocean current round it,
+ * and which sites are channels and walls (lib/flow-field.ts). Atolls whose series are not cached yet are left out.
+ */
+export async function getFlowField(time: string): Promise<FlowFieldView> {
+  await ready();
+  if (typeof time !== "string" || !WALL_HOUR.test(time) || !flowHourInWindow(time)) throw new Error("Bad time");
+  return mapFlowField(time);
 }
 
 export type { BoatTrip } from "./boat-route-data";

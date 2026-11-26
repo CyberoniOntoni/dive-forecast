@@ -36,7 +36,7 @@ Pages only ever ask Open-Meteo behind the response (a copy past the TTL is check
 every series from R2 and the first map of each hour builds every site's nowcast. A cron trigger
 (`triggers.crons` in `wrangler.jsonc`, hourly at :50) runs `scheduled()` in `cloudflare-worker.js`, which asks
 `POST /api/warm` through Next with `AUTH_SECRET` in a header (`lib/warm.ts`; the worker answers 404 to that path from
-outside, and the route does without the token). It builds and saves the next hour's map nowcasts, and on the way
+outside, and the route does without the token). It builds and saves the next hour's map nowcasts and the map's current-flow field (`lib/flow-field-cache.ts`, R2 key `flowfield/<hour>.json`), and on the way
 refreshes every series 4.5 hours old or more (each site's own, ring points, lagoon openings, offshore waves and wind),
 so with an hour between runs none passes the 6-hour TTL; offshore waves and wind come after the map, so a down wave host cannot hold it up. A missed run changes nothing but speed. A run whose map list R2 refused fails (Trigger events show it); `offshoreFailed` in the log counts atolls that got no waves or wind. Its edge copies land in the cron's own data centre only: visitors' data centres copy from R2, which is why the caches sit in an Asia-Pacific bucket. Each run's result is
 in the worker's logs (`Cache warm-up: {...}`); past runs are under the worker's Settings → Trigger events. No
