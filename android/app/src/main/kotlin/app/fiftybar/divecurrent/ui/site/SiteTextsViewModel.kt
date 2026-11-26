@@ -168,11 +168,14 @@ class SiteTextsViewModel(
       if (!stale(token)) show(form, done = null)
     }
 
+  /** A send, withdraw or terms call on its way: the form stays busy until it answers, whoever is signed in by then. */
+  private var acting = false
+
   /** Shows [form]; with [typing], the fields keep what the diver had typed rather than starting over. */
   private fun show(form: ApiSiteTexts, done: String?, typing: SiteTextsDraft? = null) {
     val start = SiteTextsDraft.start(form)
     _state.update {
-      it.copy(loading = false, busy = false, form = form, start = start, draft = typing ?: start, error = null, done = done)
+      it.copy(loading = false, busy = acting, form = form, start = start, draft = typing ?: start, error = null, done = done)
     }
   }
 
@@ -180,7 +183,8 @@ class SiteTextsViewModel(
   private fun stale(token: String?): Boolean = account.sessions.current()?.token != token
 
   private fun act(block: suspend (token: String?) -> Unit) {
-    if (_state.value.busy) return
+    if (_state.value.busy || acting) return
+    acting = true
     _state.update { it.copy(busy = true, error = null, done = null) }
     val token = account.sessions.current()?.token
     viewModelScope.launch {
@@ -195,6 +199,14 @@ class SiteTextsViewModel(
         // Refused: often the edit changed under the form (a moderator looked at it, or it was withdrawn elsewhere).
         // Read the form again so the card and buttons are true, keeping what the diver typed.
         if (e is ApiException.Server && (e.status == 400 || e.status == 404)) catchUp(token)
+      } finally {
+        // Busy ends only when the call has answered, so the screen never sticks on "Sending…" (Back is held while
+        // busy) and a sign-in in the meantime cannot let the same edit be sent twice.
+        acting = false
+        _state.update { it.copy(busy = false) }
+        // The answer was the last sign-in's and was dropped: the diver signed in again (as the same diver, typing
+        // kept) while it was on its way, so read the form again to show what the call did.
+        if (stale(token) && account.sessions.current() != null) load(keepTyping = true)
       }
     }
   }
