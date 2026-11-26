@@ -141,6 +141,7 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
   return {
     wayId,
     atollId: first.id,
+    box: ringBox(rim),
     lagoon,
     ocean,
     channels: roles.flatMap((role) => role.channels),

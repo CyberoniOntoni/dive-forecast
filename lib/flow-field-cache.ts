@@ -10,35 +10,79 @@ import type { FetchOptions } from "./marine";
 const FRESH_MS = 5 * 60 * 1000;
 const KEY_PREFIX = "flowfield/";
 const EDGE_SECONDS = 65 * 60;
-const MALDIVES_OFFSET_MS = 5 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const MALDIVES_OFFSET_MS = 5 * HOUR_MS;
 
 type SavedField = { computedAt: number; field: FlowFieldView };
 
-/** A background rebuild of an hour's field starts at most this often per isolate. */
-const REBUILD_EVERY_MS = 60 * 1000;
-/** When this isolate last started each hour's background rebuild: plain times, shared across requests. */
-const lastRebuild = new Map<string, number>();
+/** A data centre's copy older than FRESH_MS is checked against R2, or rebuilt, at most this often per isolate. */
+const CHECK_EVERY_MS = 60 * 1000;
+/** When this isolate last checked each hour's field: plain times, shared across requests, pruned to recent hours. */
+const lastChecked = new Map<string, number>();
 /** Builds in flight in this request, by hour (per request on a worker: lib/cloudflare.ts perRequest). */
 const building = inFlightPerRequest<FlowFieldView>();
+/** On Node, each hour's field for FRESH_MS: the process is long lived, so a few recent hours are kept in memory. */
+const nodeFields = new Map<string, { at: number; field: FlowFieldView }>();
+const NODE_HOURS_KEPT = 4;
+
+/** Whether a wall hour is one the map can show: from a day before now to the end of the forecast week. */
+export function flowHourInWindow(hour: string, nowMs: number = Date.now()): boolean {
+  const start = parseWall(`${hour.slice(0, 13)}:00`) - MALDIVES_OFFSET_MS;
+  return Number.isFinite(start) && start >= nowMs - 26 * HOUR_MS && start <= nowMs + 8 * 24 * HOUR_MS;
+}
 
 /**
- * The map's flow field for a wall hour. On Node it is built on each call, as the process keeps the series and lagoon
- * memos warm. On a worker a fresh isolate would first read every ring point's and channel's series, so the finished
- * field is kept in R2 per hour, with a copy in the serving data centre, as the map's nowcasts are (lib/nowcast-cache.ts):
- * a saved field is served at once and one older than FRESH_MS is rebuilt in the background. The warm-up builds the
- * coming hour's.
+ * The map's flow field for a wall hour. On Node it is built and kept in memory for FRESH_MS. On a worker a fresh
+ * isolate would first read every ring point's and channel's series, so the finished field is kept in R2 per hour,
+ * with a copy in the serving data centre, as the map's nowcasts are (lib/nowcast-cache.ts): a saved field is served
+ * at once; a data centre's copy older than FRESH_MS is checked against R2 in the background, and rebuilt only when R2
+ * has nothing newer and fresh. A fresh field read from R2 is copied to the data centre. The warm-up builds the coming
+ * hour's.
  */
 export async function mapFlowField(hour: string): Promise<FlowFieldView> {
   const env = workerEnv();
-  if (!env) return flowField(hour);
+  if (!env) {
+    const kept = nodeFields.get(hour);
+    if (kept && Date.now() - kept.at <= FRESH_MS) return kept.field;
+    const field = await flowField(hour);
+    nodeFields.set(hour, { at: Date.now(), field });
+    while (nodeFields.size > NODE_HOURS_KEPT) nodeFields.delete(nodeFields.keys().next().value as string);
+    return field;
+  }
   const key = hourKey(hour);
-  const saved = parseSaved(await edgeRead(key)) ?? parseSaved(await cacheGet(env, key).catch(() => null));
-  if (saved) {
-    if (!isFresh(saved, hour) && Date.now() - (lastRebuild.get(hour) ?? 0) >= REBUILD_EVERY_MS) {
-      lastRebuild.set(hour, Date.now());
-      runInBackground(rebuild(hour));
+  const claimCheck = () => {
+    const now = Date.now();
+    if (now - (lastChecked.get(hour) ?? 0) < CHECK_EVERY_MS) return false;
+    for (const [other, at] of lastChecked) if (now - at > HOUR_MS) lastChecked.delete(other);
+    lastChecked.set(hour, now);
+    return true;
+  };
+  const edgeText = await edgeRead(key);
+  const edge = parseSaved(edgeText);
+  if (edge) {
+    if (!isFresh(edge, hour) && claimCheck()) {
+      runInBackground(
+        (async () => {
+          // Another data centre, an isolate or the warm-up may have saved a newer field already.
+          const text = await cacheGet(env, key).catch(() => null);
+          const stored = parseSaved(text);
+          if (text && stored && stored.computedAt > edge.computedAt && isFresh(stored, hour)) {
+            return edgeWrite(key, text, EDGE_SECONDS);
+          }
+          await rebuild(hour);
+        })(),
+      );
     }
-    return saved.field;
+    return edge.field;
+  }
+  const text = await cacheGet(env, key).catch(() => null);
+  const stored = parseSaved(text);
+  if (text && stored) {
+    // A fresh field goes to the edge, so the next request here takes the path above. An old one does not: it could
+    // land on top of the newer copy a rebuild has just written there.
+    if (isFresh(stored, hour)) edgeWrite(key, text, EDGE_SECONDS);
+    else if (claimCheck()) runInBackground(rebuild(hour));
+    return stored.field;
   }
   return rebuild(hour);
 }

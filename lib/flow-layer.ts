@@ -33,6 +33,9 @@ const MIN_PARTICLES = 150;
 const MAX_PARTICLES = 1400;
 /** Phones and small windows: fewer particles, so the map stays smooth and the battery lasts. */
 const MAX_PARTICLES_SMALL = 500;
+/** A failed or empty field is asked for again on a move this long after; any field is reloaded after RELOAD_MS. */
+const RETRY_MS = 15 * 1000;
+const RELOAD_MS = 5 * 60 * 1000;
 /** Longest step a frame may take; a slow frame or a tab coming back does not throw the particles. */
 const MAX_STEP_S = 0.05;
 
@@ -100,6 +103,8 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   let fieldFor: string | null = null;
   let loading: Promise<void> | null = null;
   let failed = false;
+  /** When the field was last asked for (a load that came back or failed), for the retries in refresh. */
+  let askedAt = 0;
   /** Rasters built for the current field and arrows, by way id; null while one is being built. */
   let rasters = new Map<string, FlowRaster | null>();
   let active: FlowRaster[] = [];
@@ -161,13 +166,11 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     const pad = 0.06;
     return field.atolls
       .filter((atoll) => {
-        const box = atollBoxes.get(atoll.wayId);
+        const box = atoll.box;
         return !box || (box.north + pad >= view.south && box.south - pad <= view.north && box.east + pad >= view.west && box.west - pad <= view.east);
       })
       .map((atoll) => atoll.wayId);
   };
-  /** Each atoll's outline box, once its shapes are in, so atolls far out of view are not built. */
-  const atollBoxes = new Map<string, { south: number; north: number; west: number; east: number }>();
 
   const refreshActive = () => {
     const wanted = new Set(inView());
@@ -182,13 +185,15 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     if (!wayId || !field || !on()) return;
     const atoll = field.atolls.find((item) => item.wayId === wayId);
     const builtFor = field;
-    if (!atoll || rasters.get(wayId)) {
+    const builtInto = rasters;
+    if (!atoll || rasters.has(wayId)) {
       scheduleBuild();
       return;
     }
     rasters.set(wayId, null);
     void shapesFor(wayId).then((shape) => {
-      if (field !== builtFor) return;
+      // A new field or new arrows since: this build belongs to a map that is gone.
+      if (field !== builtFor || rasters !== builtInto) return;
       if (!shape) {
         rasters.delete(wayId);
         scheduleBuild();
@@ -198,7 +203,6 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         (acc, [lat, lon]) => ({ south: Math.min(acc.south, lat), north: Math.max(acc.north, lat), west: Math.min(acc.west, lon), east: Math.max(acc.east, lon) }),
         { south: Infinity, north: -Infinity, west: Infinity, east: -Infinity },
       );
-      atollBoxes.set(wayId, box);
       const view = viewBox();
       const near = box.north + 0.06 >= view.south && box.south - 0.06 <= view.north && box.east + 0.06 >= view.west && box.west - 0.06 <= view.east;
       if (!near) {
@@ -238,18 +242,44 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     try {
       const next = await source.load(asked);
       if (time !== asked) return;
-      field = next;
-      rasters = new Map();
-      active = [];
+      askedAt = Date.now();
+      // A reload that brings the same field keeps the rasters built for it.
+      if (!field || JSON.stringify(field) !== JSON.stringify(next)) {
+        field = next;
+        rasters = new Map();
+        active = [];
+        buildQueue = [];
+      }
       showTime();
-      refresh();
     } catch {
       if (time === asked) {
+        askedAt = Date.now();
         failed = true;
         fieldFor = null;
         setNote("The flow is unavailable right now");
       }
     }
+  };
+
+  /**
+   * Loads the field when there is none, and again when the last load failed or came back with no atolls (a while
+   * later, RETRY_MS) or is older than RELOAD_MS: atolls whose series were not cached yet join on a later load.
+   * When a load ends, refresh runs again, so an hour that changed meanwhile gets its own field.
+   */
+  const ensureField = (): boolean => {
+    // No hour yet (the arrows come after the layer is added): nothing to load until setArrows.
+    if (loading || !time) return false;
+    const since = Date.now() - askedAt;
+    const retry = (failed || field?.atolls.length === 0) && since >= RETRY_MS;
+    if (field && !retry && since < RELOAD_MS) return true;
+    if (failed && !retry) return false;
+    failed = false;
+    fieldFor = null;
+    loading = loadField().finally(() => {
+      loading = null;
+      refresh();
+    });
+    return field != null;
   };
 
   const showTime = () => {
@@ -260,15 +290,11 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   const refresh = () => {
     if (!on()) return;
     if (!source) return setNote("Not available here");
-    if (failed) return;
     if (map.getZoom() < FLOW_MIN_ZOOM) {
       clear();
       return setNote("Zoom in on an atoll to see it");
     }
-    if (!field) {
-      if (!loading) loading = loadField().finally(() => (loading = null));
-      return;
-    }
+    if (!ensureField() || !field) return;
     setNote(field.atolls.length === 0 ? "The flow for this hour is still loading. Move the map in a moment." : FLOW_NOTE);
     refreshActive();
     queueVisible();

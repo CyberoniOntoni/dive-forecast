@@ -10,6 +10,8 @@ export type FlowAtoll = {
   /** The outline's OSM way id: the key getShelterShapes takes for the outline and islands. */
   wayId: string;
   atollId: string;
+  /** The outline's box, so the map builds only atolls near the view. Absent in fields saved before it was added. */
+  box?: { south: number; north: number; west: number; east: number };
   /**
    * The lagoon model's flow (lib/lagoon-flow.ts) on a grid over the outline's box, row 0 at the south, column 0 at
    * the west, cell centres half a step in. Defined on both sides of the outline; the map uses it inside only. Null

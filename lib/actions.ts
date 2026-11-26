@@ -13,7 +13,7 @@ import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
 import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
-import { mapFlowField } from "./flow-field-cache";
+import { flowHourInWindow, mapFlowField } from "./flow-field-cache";
 import type { FlowFieldView } from "./flow-wire";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
@@ -798,7 +798,7 @@ export async function getShelterPoint(lat: number, lon: number, time: string): P
  */
 export async function getFlowField(time: string): Promise<FlowFieldView> {
   await ready();
-  if (typeof time !== "string" || !WALL_HOUR.test(time)) throw new Error("Bad time");
+  if (typeof time !== "string" || !WALL_HOUR.test(time) || !flowHourInWindow(time)) throw new Error("Bad time");
   return mapFlowField(time);
 }
 
