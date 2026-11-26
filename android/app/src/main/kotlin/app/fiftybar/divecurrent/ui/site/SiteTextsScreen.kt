@@ -347,13 +347,14 @@ private fun TextSection(
       tag?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = colors.dim) }
       if (changed) Pill("Not sent")
       Spacer(Modifier.weight(1f))
+      // Counted as the server counts it (ends trimmed, blank-line runs squeezed), so the count and Send agree.
+      val count = SiteTextsDraft.clean(value).length
       Text(
-        "${value.length} / $max",
+        "$count / $max",
         style = MaterialTheme.typography.bodySmall,
-        color = if (value.length > max * 0.9) colors.stop else colors.dim,
-        // Over the limit as the server counts it (ends trimmed), which is also when Send waits.
-        fontWeight = if (SiteTextsDraft.clean(value).length > max) FontWeight.Bold else null,
-        modifier = Modifier.semantics { contentDescription = "${value.length} of $max characters" },
+        color = if (count > max * 0.9) colors.stop else colors.dim,
+        fontWeight = if (count > max) FontWeight.Bold else null,
+        modifier = Modifier.semantics { contentDescription = "$count of $max characters" },
       )
     }
     OutlinedTextField(
@@ -410,8 +411,8 @@ private fun StatusRow(color: Color, title: String, detail: String? = null, modif
 @Composable
 private fun MyEditCard(form: ApiSiteTexts, busy: Boolean, thanks: String?, onWithdraw: () -> Unit) {
   val mine = form.mine ?: return
-  // A moderator's own edits go live at once; the line under Send already says so.
-  if (mine.status == "approved" && form.moderator) return
+  // A moderator's own edits go live at once; the line under Send already says so. One taken back since still shows.
+  if (mine.status == "approved" && mine.standing && form.moderator) return
   val colors = CurrentTheme.colors
   SurfaceCard {
     when (mine.status) {

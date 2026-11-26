@@ -36,9 +36,6 @@ data class Loaded<T>(val value: T, val savedAt: Long, val offlineError: ApiExcep
     get() = offlineError != null
 }
 
-/** The latest change to the sites made on this phone: [siteId] is the one site it touched, or null for the list. */
-data class SitesChange(val count: Int = 0, val siteId: String? = null)
-
 /**
  * Network first, then the last copy. A fetch that works replaces the copy; one that fails falls back to it, and only
  * a failure with no copy at all reaches the caller as an exception. A 404 is never hidden behind an old copy: the
@@ -49,16 +46,23 @@ class DataRepository(
   private val cache: CachedBodyDao,
   private val now: () -> Long = System::currentTimeMillis,
 ) {
-  private val _sitesChanged = MutableStateFlow(SitesChange())
+  private val _sitesChanged = MutableStateFlow(0)
+  private val _siteVersions = MutableStateFlow<Map<String, Int>>(emptyMap())
+
+  /** Counts every change to the sites made on this phone (a site added, a site's texts live), so the map reads the list again. */
+  val sitesChanged: StateFlow<Int> = _sitesChanged.asStateFlow()
 
   /**
-   * Counts changes made on this phone to the site list (a site added) or to one site (its texts went live), so the
-   * map reads the list again and that site's page reads the site again.
+   * Counts changes made on this phone per site (its texts went live), so that site's page reads it again. A count per
+   * site, not the latest id alone: two changes close together must not hide the first.
    */
-  val sitesChanged: StateFlow<SitesChange> = _sitesChanged.asStateFlow()
+  val siteVersions: StateFlow<Map<String, Int>> = _siteVersions.asStateFlow()
 
-  /** [siteId]: the one site that changed; null for a change to the list, such as a new site. */
-  fun markSitesChanged(siteId: String? = null) = _sitesChanged.update { SitesChange(it.count + 1, siteId) }
+  /** [siteId]: the one site that changed; null for a change to the list only, such as a new site. */
+  fun markSitesChanged(siteId: String? = null) {
+    if (siteId != null) _siteVersions.update { it + (siteId to (it[siteId] ?: 0) + 1) }
+    _sitesChanged.update { it + 1 }
+  }
 
   suspend fun sites(): Loaded<ApiSites> = load(Keys.SITES, ApiSites.serializer()) { api.sites().second }
 

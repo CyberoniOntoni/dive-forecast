@@ -571,7 +571,9 @@ the edit went live at once.
 
 ### `DELETE /api/v1/sites/{id}/texts/{editId}`
 
-Withdraws the diver's own edit while it waits (`mine.id`); it does not give that day's slot back.
+Withdraws the diver's own edit while it waits (`mine.id`); it does not give that day's slot back. It answers 404 when the edit is not that diver's, is on another site, or is no longer waiting, including when a
+moderator approved or rejected it just before the withdraw arrived; read the form again (`GET …/texts`) to see what
+happened to it.
 
 ## Adding sites
 

@@ -33,19 +33,23 @@ data class SiteTextsUiState(
   val dirty: Boolean
     get() = start != null && draft != start
 
-  /** Why Send is held: a text past its limit ("About the site is 2040 characters…"), or null. */
+  /**
+   * Why Send is held: a text it would send is past its limit ("About the site is 2040 characters…"), or null. Only
+   * what goes out counts, as cleaned for the server: a long text the diver left alone does not hold an edit to another.
+   */
   val tooLong: String?
     get() {
       val f = form ?: return null
+      val out = body ?: return null
       val over =
         listOf(
-            Triple("About the site", draft.description, f.limits.description),
-            Triple("How to dive it", draft.howToDive, f.limits.howToDive),
-            Triple("The note", draft.note, f.limits.note),
+            Triple("About the site", out.texts.description, f.limits.description),
+            Triple("How to dive it", out.texts.howToDive, f.limits.howToDive),
+            Triple("The note", out.note, f.limits.note),
           )
-          .firstOrNull { (_, text, max) -> SiteTextsDraft.clean(text).length > max } ?: return null
+          .firstOrNull { (_, text, max) -> text != null && text.length > max } ?: return null
       val (label, text, max) = over
-      return "$label is ${SiteTextsDraft.clean(text).length} characters. Shorten it to $max to send."
+      return "$label is ${text!!.length} characters. Shorten it to $max to send."
     }
 
   /** The body Send would post, or null with nothing changed. */
@@ -77,7 +81,8 @@ class SiteTextsViewModel(
     viewModelScope.launch {
       session.distinctUntilChangedBy { it?.token }.drop(1).collect { now ->
         when {
-          now == null -> _state.update { it.copy(loading = false, busy = false) }
+          // A send still on its way keeps the form busy until it answers; the screen hides Send while signed out.
+          now == null -> _state.update { it.copy(loading = false) }
           now.nickname == owner -> load(keepTyping = true)
           else -> {
             owner = now.nickname

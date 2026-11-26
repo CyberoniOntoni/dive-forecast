@@ -19,8 +19,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -83,8 +84,13 @@ class SiteViewModel(
     // An edit to this site's texts went live (a moderator's, SiteTextsScreen): read the site again. Other sites'
     // changes, and a new site, leave this page alone.
     viewModelScope.launch {
-      repository.sitesChanged.drop(1).filter { it.siteId == siteId }.collect {
-        runCatching { repository.site(siteId) }.getOrNull()?.let { loaded -> _state.update { it.copy(site = loaded.value) } }
+      repository.siteVersions.map { it[siteId] ?: 0 }.distinctUntilChanged().drop(1).collect {
+        try {
+          val loaded = repository.site(siteId)
+          _state.update { it.copy(site = loaded.value) }
+        } catch (_: ApiException) {
+          // Offline, the repository already answers with the last copy; only a site with none is left as shown.
+        }
       }
     }
   }
