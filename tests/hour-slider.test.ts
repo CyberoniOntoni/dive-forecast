@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { STRIP_HEIGHT, clampHourIndex, nextTurn, shortTurnTarget, smoothPath, stripColor, tideTrend, tideTurns, turnText } from "@/components/HourSlider";
+import { STRIP_HEIGHT, clampHourIndex, flowNextText, nextFlowChange, shortTurnTarget, smoothPath, stripColor, tideTrend, tideTurns } from "@/components/HourSlider";
 import type { HourForecast } from "@/lib/types";
 
 describe("clampHourIndex", () => {
@@ -13,30 +13,30 @@ describe("clampHourIndex", () => {
   });
 });
 
-describe("nextTurn", () => {
-  const hour = (time: string, direction: HourForecast["direction"]): HourForecast => ({
+describe("nextFlowChange", () => {
+  const hour = (time: string, direction: HourForecast["direction"], strength: HourForecast["strength"] = "mild"): HourForecast => ({
     time,
     direction,
-    strength: "mild",
+    strength,
     confidence: "medium",
     levelM: 0,
   });
   const hours = [
     hour("2026-10-06T20:00", "outgoing"),
-    hour("2026-10-06T21:00", "outgoing"),
-    hour("2026-10-06T22:00", "incoming"),
-    hour("2026-10-06T23:00", "incoming"),
+    hour("2026-10-06T21:00", "outgoing", "strong"),
+    hour("2026-10-06T22:00", "incoming", "strong"),
+    hour("2026-10-06T23:00", "incoming", "strong"),
   ];
 
-  it("finds the first later hour that runs the other way", () => {
-    expect(nextTurn(hours, 0)).toBe(2);
-    expect(nextTurn(hours, 1)).toBe(2);
+  it("counts a new strength as a change, not only a new way", () => {
+    expect(nextFlowChange(hours, 0)).toBe(1);
+    expect(nextFlowChange(hours, 1)).toBe(2);
   });
 
-  it("is null when the series never turns after the hour", () => {
-    expect(nextTurn(hours, 2)).toBeNull();
-    expect(nextTurn(hours, 3)).toBeNull();
-    expect(nextTurn([], 0)).toBeNull();
+  it("is null when the flow holds to the end", () => {
+    expect(nextFlowChange(hours, 2)).toBeNull();
+    expect(nextFlowChange(hours, 3)).toBeNull();
+    expect(nextFlowChange([], 0)).toBeNull();
   });
 });
 
@@ -49,29 +49,33 @@ describe("STRIP_HEIGHT", () => {
   });
 });
 
-describe("turnText", () => {
-  const hour = (time: string, direction: HourForecast["direction"]): HourForecast => ({
+describe("flowNextText", () => {
+  const hour = (time: string, direction: HourForecast["direction"], strength: HourForecast["strength"]): HourForecast => ({
     time,
     direction,
-    strength: "mild",
+    strength,
     confidence: "medium",
     levelM: 0,
   });
-  const hours = [hour("2026-10-06T20:00", "outgoing"), hour("2026-10-06T22:00", "incoming"), hour("2026-10-07T02:00", "outgoing")];
+  const hours = [
+    hour("2026-10-06T20:00", "outgoing", "mild"),
+    hour("2026-10-06T21:00", "outgoing", "strong"),
+    hour("2026-10-07T02:00", "incoming", "slack"),
+  ];
   const channelWord = (direction: HourForecast["direction"]) => (direction === "incoming" ? "Incoming" : "Outgoing");
   const compassWord = (direction: HourForecast["direction"]) => (direction === "incoming" ? "Running NE" : "Running SW");
 
-  it("says a channel turn by its time today and by weekday later", () => {
-    expect(turnText(1, hours, "2026-10-06", channelWord)).toBe("Turns incoming at 22:00");
-    expect(turnText(2, hours, "2026-10-06", channelWord)).toBe("Turns outgoing Wed 7 at 02:00");
+  it("names only the strength while the way holds", () => {
+    expect(flowNextText(1, hours, 0, "2026-10-06", channelWord)).toEqual({ title: "Strong", when: "at 21:00 · in 1 h" });
   });
 
-  it("says a compass turn as 'to run' and a heading", () => {
-    expect(turnText(2, hours, "2026-10-06", compassWord)).toBe("Turns to run SW Wed 7 at 02:00");
+  it("adds the way when it turns, by weekday on a later day", () => {
+    expect(flowNextText(2, hours, 1, "2026-10-06", channelWord)).toEqual({ title: "Slack, incoming", when: "Wed 7 at 02:00 · in 1 h" });
+    expect(flowNextText(2, hours, 1, "2026-10-06", compassWord).title).toBe("Slack, running NE");
   });
 
-  it("says so when the series never turns", () => {
-    expect(turnText(null, hours, "2026-10-06", channelWord)).toBe("No turn in the rest of the forecast.");
+  it("says the flow holds when nothing changes", () => {
+    expect(flowNextText(null, hours, 2, "2026-10-06", channelWord)).toEqual({ title: "Holds", when: "to the end of the forecast" });
   });
 });
 

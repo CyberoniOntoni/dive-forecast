@@ -105,7 +105,8 @@ export function HourSlider({
   const tone = compass ? "text-foam" : directionTone(hour.direction);
   const quiet = arrowOpacity(hour.confidence);
   const way = wordFor(hour.direction);
-  const turn = nextTurn(hours, selected);
+  const change = nextFlowChange(hours, selected);
+  const flowNext = flowNextText(change, hours, selected, today, wordFor);
   const sea = seaByTime.get(hour.time) ?? null;
 
   return (
@@ -136,21 +137,10 @@ export function HourSlider({
         <TideCell levels={levels} turns={tideTurnList} selected={selected} hours={hours} today={today} />
         <div className="min-w-0 rounded-2xl bg-ink/40 px-3 py-2.5 ring-1 ring-foam/10">
           <p className="eyebrow !text-foam/70">Flow next</p>
-          {turn == null ? (
-            <>
-              <p className="mt-0.5 text-sm leading-5 font-medium text-foam">Holds</p>
-              <p className="text-xs leading-5 text-foam/70">to the end of the forecast</p>
-            </>
-          ) : (
-            <>
-              <p className={`mt-0.5 text-sm leading-5 font-semibold ${compass ? "text-foam" : directionTone(hours[turn].direction)}`}>
-                {wordFor(hours[turn].direction)}
-              </p>
-              <p className="text-xs leading-5 text-foam/70">
-                {turnWhen(hours[turn].time, today)} · in {turn - selected} h
-              </p>
-            </>
-          )}
+          <p className={`mt-0.5 text-sm leading-5 font-semibold ${change == null ? "text-foam" : flowTone(hours[change], compass)}`}>
+            {flowNext.title}
+          </p>
+          <p className="text-xs leading-5 text-foam/70">{flowNext.when}</p>
         </div>
       </div>
       {seaState == null ? null : <SeaLine sea={sea} stale={seaStale} />}
@@ -507,28 +497,36 @@ export function clampHourIndex(index: number, hourCount: number): number {
   return Math.max(0, Math.min(index, hourCount - 1));
 }
 
-/** The first hour after `from` whose direction differs, or null when the series never turns after it. */
-export function nextTurn(hours: readonly HourForecast[], from: number): number | null {
+/**
+ * The first hour after `from` whose flow reads differently: another strength or another way (the colour follows from
+ * the two). Null when the series ends first. As the Android app's SiteOutlook.nextFlowChange: change both together.
+ */
+export function nextFlowChange(hours: readonly HourForecast[], from: number): number | null {
   const start = hours[from];
   if (start == null) return null;
   for (let index = from + 1; index < hours.length; index += 1) {
-    if (hours[index].direction !== start.direction) return index;
+    if (hours[index].direction !== start.direction || hours[index].strength !== start.strength) return index;
   }
   return null;
 }
 
-/** "Turns incoming at 23:00", "Turns to run W Wed 7 at 02:00", or no turn left in the series. */
-export function turnText(
-  turn: number | null,
+/**
+ * The "Flow next" cell: the new strength, with the way only when it turns ("Strong", "Mild, outgoing", "Slack, running
+ * SW"), and when ("at 20:00 · in 6 h", "Wed 7 at 02:00 · in 14 h"); "Holds" to the end when nothing changes.
+ */
+export function flowNextText(
+  change: number | null,
   hours: readonly HourForecast[],
+  from: number,
   today: string,
   wordFor: (direction: Direction) => string,
-): string {
-  if (turn == null) return "No turn in the rest of the forecast.";
-  const at = hours[turn];
+): { title: string; when: string } {
+  if (change == null) return { title: "Holds", when: "to the end of the forecast" };
+  const at = hours[change];
+  const turns = hours[from] != null && at.direction !== hours[from].direction;
   const word = wordFor(at.direction);
-  const verb = word.startsWith("Running ") ? `to run ${word.slice("Running ".length)}` : word.toLowerCase();
-  return `Turns ${verb} ${turnWhen(at.time, today)}`;
+  const title = STRENGTH_LABEL[at.strength] + (turns ? `, ${word.charAt(0).toLowerCase()}${word.slice(1)}` : "");
+  return { title, when: `${turnWhen(at.time, today)} · in ${change - from} h` };
 }
 
 /** Up-to-strength share of the strip's half height. Slack still shows a sliver so its hour reads. */
@@ -715,6 +713,12 @@ function dialViewBox(strength: Strength): string {
   const size = 34;
   const middle = ARROW_LENGTH[strength] / 2;
   return `${ARROW_WIDTH / 2 - size / 2} ${middle - size / 2} ${size} ${size}`;
+}
+
+/** The "Flow next" word's colour: very strong in red, else the way's colour, or foam where the way is a heading. */
+function flowTone(hour: HourForecast, compass: boolean): string {
+  if (hour.strength === "too_strong") return "text-stop";
+  return compass ? "text-foam" : directionTone(hour.direction);
 }
 
 function directionTone(direction: Direction): string {
