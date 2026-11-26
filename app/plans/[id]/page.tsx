@@ -35,7 +35,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
       {/* The top padding is on the header, not the page, so the day bar sticks flush to the top edge. */}
       <header className="flex min-w-0 flex-col gap-3 pt-5 sm:pt-8">
         <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-incoming">Dive plan · {plan.span}</p>
+          <p className="eyebrow">Dive plan · {plan.span}</p>
           <h1 className="text-2xl font-semibold tracking-tight text-balance text-foam sm:text-3xl">{plan.title}</h1>
           <p className="text-sm text-foam/70">
             {plan.ownerNickname ? (

@@ -48,13 +48,14 @@ function Step({ n, title, children }: { n: number; title: string; children: Reac
 }
 
 const BUTTON =
-  "inline-flex min-h-11 w-fit items-center rounded-full bg-incoming px-4 text-sm font-semibold text-ink !no-underline hover:bg-incoming/90 hover:!text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming";
+  "button-primary w-fit !no-underline hover:!text-ink";
 
 /** How to join the Android closed test (lib/android-beta.ts), linked from the header strip and /account. */
 export default function AndroidBetaPage() {
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <header className="flex min-w-0 flex-col gap-2">
+      <header className="rise-in flex min-w-0 flex-col gap-2">
+        <p className="eyebrow">Android beta</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">Help test the 50Bar app for Android</h1>
         <p className="text-sm leading-6 text-foam/80">
           50Bar: Maldives Dive Currents is in a closed test on Google Play before it goes public. Anyone who dives here

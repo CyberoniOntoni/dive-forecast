@@ -326,7 +326,7 @@ export function PlanEditor({
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-incoming px-5 text-base font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam disabled:opacity-60"
+            className="button-primary"
           >
             {saving ? "Saving…" : plan ? "Save changes" : "Save and get the link"}
           </button>

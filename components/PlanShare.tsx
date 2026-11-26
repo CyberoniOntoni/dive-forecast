@@ -34,7 +34,7 @@ export function PlanShare({ title, path, children }: { title: string; path: stri
         <button
           type="button"
           onClick={share}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-incoming px-4 text-sm font-semibold text-[#07151d] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foam"
+          className="button-primary"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 3v12M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" />

@@ -130,7 +130,7 @@ export function ContentActions({
             <button
               type="submit"
               disabled={pending || !reason}
-              className="min-h-11 rounded-xl bg-foam px-4 text-sm font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+              className="button-primary"
             >
               Send report
             </button>

@@ -167,7 +167,7 @@ export function CurrentOverlay({
       </div>
       <div className="sticky top-0 z-10 hidden border-b border-foam/15 bg-ink px-3 py-3 lg:block">
         <div className="flex min-h-11 items-center justify-between gap-3">
-          <h2 className="text-base font-semibold tracking-tight">now</h2>
+          <h2 className="eyebrow">Currents now</h2>
           <p className="text-sm tabular-nums text-foam/80">{countLabel}</p>
         </div>
       </div>
@@ -176,7 +176,7 @@ export function CurrentOverlay({
         <div className="flex flex-col gap-2 px-3 py-3">
           <button
             type="button"
-            className="min-h-11 w-full rounded-xl border border-foam/30 px-3 text-sm font-semibold hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+            className="min-h-11 w-full rounded-full border border-incoming/50 px-3 text-sm font-semibold hover:bg-foam/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
             aria-expanded={adding}
             aria-controls={adding ? "add-site-form" : undefined}
             onClick={() => onAddingChange(!adding)}

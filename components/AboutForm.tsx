@@ -61,7 +61,7 @@ export function AboutForm({ about, userId }: { about: string; userId: string }) 
           <button
             type="submit"
             disabled={pending || text.trim() === saved}
-            className="min-h-11 rounded-xl bg-foam px-4 text-base font-medium text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+            className="button-primary"
           >
             Save
           </button>

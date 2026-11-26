@@ -17,7 +17,8 @@ export default async function NewPlanPage() {
   if (!session) redirect(signInHref("/plans/new"));
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-5 sm:px-8 sm:py-8">
-      <header className="flex min-w-0 flex-col gap-1">
+      <header className="rise-in flex min-w-0 flex-col gap-1">
+        <p className="eyebrow">Dive plans</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foam">New dive plan</h1>
         <p className="text-sm leading-6 text-foam/80">
           Add days and dives: a site and a time in the water for each, in Maldives time. Saving gives you a link to share.
