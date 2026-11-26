@@ -111,7 +111,7 @@ export function HourSlider({
 
   return (
     <section aria-labelledby="forecast-heading" className="rise-in tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
-        <TideLine />
+      <TideLine />
       <h2 id="forecast-heading" className="sr-only">
         Forecast hour
       </h2>
@@ -645,13 +645,14 @@ function WeekStrip({
               })}
             </linearGradient>
             {/* Brightest at the crest, fading toward the slack line, so the flow reads as a swell, not a block. */}
-            <linearGradient id={depthId} x1={0} x2={0} y1={0} y2={1}>
+            {/* In the chart's own units, so the faint band sits on the slack line whatever the week's shape. */}
+            <linearGradient id={depthId} gradientUnits="userSpaceOnUse" x1={0} x2={0} y1={4} y2={96}>
               <stop offset={0} stopColor="white" stopOpacity={0.95} />
               <stop offset={0.5} stopColor="white" stopOpacity={0.4} />
               <stop offset={1} stopColor="white" stopOpacity={0.95} />
             </linearGradient>
-            <mask id={`${depthId}-mask`} maskContentUnits="objectBoundingBox">
-              <rect x={0} y={0} width={1} height={1} fill={`url(#${depthId})`} />
+            <mask id={`${depthId}-mask`} maskUnits="userSpaceOnUse" x={-1} y={-4} width={last + 2} height={108}>
+              <rect x={-1} y={-4} width={last + 2} height={108} fill={`url(#${depthId})`} />
             </mask>
           </defs>
           {spans.slice(1).map((span) => (
