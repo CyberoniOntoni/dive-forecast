@@ -36,14 +36,14 @@ data class Loaded<T>(val value: T, val savedAt: Long, val offlineError: ApiExcep
     get() = offlineError != null
 }
 
+/** The latest change to the sites made on this phone: [siteId] is the one site it touched, or null for the list. */
+data class SitesChange(val count: Int = 0, val siteId: String? = null)
+
 /**
  * Network first, then the last copy. A fetch that works replaces the copy; one that fails falls back to it, and only
  * a failure with no copy at all reaches the caller as an exception. A 404 is never hidden behind an old copy: the
  * site is gone or hidden.
  */
-/** The latest change to the sites made on this phone: [siteId] is the one site it touched, or null for the list. */
-data class SitesChange(val count: Int = 0, val siteId: String? = null)
-
 class DataRepository(
   private val api: DiveCurrentApi,
   private val cache: CachedBodyDao,

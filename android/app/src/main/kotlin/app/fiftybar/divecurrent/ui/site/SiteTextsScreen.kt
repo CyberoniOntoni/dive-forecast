@@ -351,7 +351,8 @@ private fun TextSection(
         "${value.length} / $max",
         style = MaterialTheme.typography.bodySmall,
         color = if (value.length > max * 0.9) colors.stop else colors.dim,
-        fontWeight = if (value.length > max) FontWeight.Bold else null,
+        // Over the limit as the server counts it (ends trimmed), which is also when Send waits.
+        fontWeight = if (SiteTextsDraft.clean(value).length > max) FontWeight.Bold else null,
         modifier = Modifier.semantics { contentDescription = "${value.length} of $max characters" },
       )
     }
