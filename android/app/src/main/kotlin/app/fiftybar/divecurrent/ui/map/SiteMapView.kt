@@ -612,10 +612,10 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
       )
       .withFilter(has("point_count"))
   )
-  // The site the page sent the diver to see: a foam ring round its badge, over the bubbles, so it still shows where the
-  // site is when it has merged into one.
+  // The site the page sent the diver to see: a foam ring round its badge, under the names so it leaves the label
+  // readable. Wider than a bubble, so it still shows where the site is when it has merged into one.
   style.addSource(GeoJsonSource(HIGHLIGHT_SOURCE, FeatureCollection.fromFeatures(emptyList())))
-  style.addLayer(
+  style.addLayerBelow(
     CircleLayer(HIGHLIGHT, HIGHLIGHT_SOURCE)
       .withProperties(
         circleRadius(badgeRadius(1.5f)),
@@ -623,7 +623,8 @@ private fun addSiteLayers(context: Context, style: Style, colors: CurrentColors)
         circleStrokeColor(colors.foam.toArgb()),
         circleStrokeWidth(3f),
         circlePitchAlignment(Property.CIRCLE_PITCH_ALIGNMENT_MAP),
-      )
+      ),
+    NAMES,
   )
 }
 
