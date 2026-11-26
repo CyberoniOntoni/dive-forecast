@@ -224,14 +224,14 @@ fun MapScreen(
     listOpen = false
     reveal = show.siteId
     highlight = show.siteId
-    moveTo(show.lat, show.lon, 13.5)
+    moveTo(show.lat, show.lon, SITE_ZOOM)
     onShown()
   }
   LaunchedEffect(peekSite) {
     val peek = peekSite
     if (peek != null) {
       if (beforePeek == null) beforePeek = settled
-      moveTo(peek.lat, peek.lon, 13.5)
+      moveTo(peek.lat, peek.lon, SITE_ZOOM)
     } else {
       val was = beforePeek ?: return@LaunchedEffect
       beforePeek = null
@@ -913,3 +913,6 @@ private val LayersIcon: ImageVector by lazy {
     }
     .build()
 }
+
+/** Where the map flies to show one site: where pins no longer merge into bubbles, so the site's own arrow shows. */
+private val SITE_ZOOM = CLUSTER_UNTIL_ZOOM.toDouble()
