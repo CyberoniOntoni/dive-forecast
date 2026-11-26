@@ -20,7 +20,7 @@ export default function Loading() {
         <div className="h-8 w-2/3 max-w-sm rounded-xl bg-foam/15 sm:h-9" />
       </header>
       {/* Shaped like the forecast card (components/HourSlider.tsx), so the page does not jump when it arrives. */}
-      <section className="tideline-card surface px-4 pt-9 pb-4 sm:px-6 sm:pt-10 sm:pb-6">
+      <section className="tideline-card surface px-5 pt-10 pb-5 sm:px-6 sm:pb-6">
         <TideLine />
         <div className="flex min-w-0 items-center gap-4">
           <div className="size-28 shrink-0 animate-pulse rounded-full bg-foam/15 sm:size-32" />

@@ -105,7 +105,7 @@ export function PhotoPicker({
             type="button"
             onClick={() => input.current?.click()}
             disabled={disabled || busy}
-            className="min-h-11 rounded-xl border border-dashed border-foam/40 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
+            className="min-h-11 rounded-full border border-dashed border-foam/40 px-4 text-sm font-medium text-foam hover:bg-foam/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming disabled:opacity-50"
           >
             {busy ? "Preparing…" : photos.length ? "Add more photos" : "Add photos"}
           </button>

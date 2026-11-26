@@ -177,7 +177,7 @@ function SiteFacts({ site }: { site: Site }) {
   if (parts.length === 0) return null;
 
   return (
-    <p className="flex min-w-0 flex-wrap items-center gap-x-3 text-sm leading-6 text-foam/80">
+    <p className="copy flex min-w-0 flex-wrap items-center gap-x-3">
       <span>
         {parts.join(" · ")}
       </span>
@@ -188,7 +188,7 @@ function SiteFacts({ site }: { site: Site }) {
           href={source.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex min-h-11 min-w-11 items-center whitespace-nowrap font-medium text-foam underline decoration-incoming underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
+          className="inline-link inline-flex min-h-11 min-w-11 items-center whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-incoming"
         >
           {source.label}
         </a>

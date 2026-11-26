@@ -44,7 +44,7 @@ export function EditReviewActions({ editId, cannotApprove, stale }: { editId: st
           Reject
         </button>
       </div>
-      {cannotApprove ? <p className="text-xs text-foam/70">{cannotApprove}</p> : null}
+      {cannotApprove ? <p className="meta">{cannotApprove}</p> : null}
       <ModerationError error={error} />
     </div>
   );

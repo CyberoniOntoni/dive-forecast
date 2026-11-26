@@ -106,6 +106,42 @@
   }
 }
 
+/* A card's title (About this site, Recent reports, Report the current): one size for every card on a page. */
+@utility card-title {
+  font-size: 1.125rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--foam);
+}
+
+/* Running text in a card: one size, line height and tint, so cards side by side read as one page. */
+@utility copy {
+  font-size: 0.875rem;
+  line-height: 1.5rem;
+  color: color-mix(in srgb, var(--foam) 82%, transparent);
+}
+
+/* Small print under copy: times, counts, hints, credits. */
+@utility meta {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+  color: color-mix(in srgb, var(--foam) 70%, transparent);
+}
+
+/* A link inside text: the one underline the app uses, teal under foam. */
+@utility inline-link {
+  font-weight: 500;
+  color: var(--foam);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, var(--incoming) 70%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  &:hover {
+    text-decoration-color: var(--incoming);
+  }
+}
+
 /* A text field or select: the one look for every form on the site. Width and focus ring stay with the element. */
 @utility field {
   min-height: 2.75rem;

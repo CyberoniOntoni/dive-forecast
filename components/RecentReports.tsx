@@ -15,13 +15,13 @@ export function RecentReports({ rows }: { rows: readonly RecentReportRow[] }) {
   return (
     <section
       aria-labelledby="recent-reports-heading"
-      className="flex min-w-0 flex-col gap-3 surface p-4 sm:p-5"
+      className="flex min-w-0 flex-col gap-3 surface p-5 sm:p-6"
     >
-      <h2 id="recent-reports-heading" className="text-base font-semibold text-foam">
+      <h2 id="recent-reports-heading" className="card-title">
         Recent reports
       </h2>
       {rows.length === 0 ? (
-        <p className="text-sm leading-6 text-foam/80">No reports yet. Add one below after your dive.</p>
+        <p className="copy">No reports yet. Add one below after your dive.</p>
       ) : (
         <ul className="flex min-w-0 flex-col divide-y divide-foam/10">
           {rows.map((row) => (
@@ -30,7 +30,7 @@ export function RecentReports({ rows }: { rows: readonly RecentReportRow[] }) {
         </ul>
       )}
       {rows.some((row) => row.beforeAxis) ? (
-        <p className="text-xs leading-5 text-foam/70">
+        <p className="meta">
           * Filed when this site was still forecast as incoming or outgoing, before it showed a compass direction.
         </p>
       ) : null}
@@ -47,12 +47,12 @@ function ReportRow({ row }: { row: RecentReportRow }) {
           {row.way}
           {row.beforeAxis ? "*" : ""}, {row.strength}
         </p>
-        <p className="font-mono text-xs tabular-nums text-foam/70">
+        <p className="meta tabular-nums">
           <time dateTime={row.time}>{row.when}</time> · {row.ago}
-          {row.by ? <span className="font-sans"> · {row.by}</span> : null}
+          {row.by ? <span> · {row.by}</span> : null}
         </p>
       </div>
-      <p className="shrink-0 text-xs text-foam/75">
+      <p className="meta shrink-0">
         {row.forecast && match ? (
           <>
             Forecast: {row.forecast.way}, {row.forecast.strength}{" "}
