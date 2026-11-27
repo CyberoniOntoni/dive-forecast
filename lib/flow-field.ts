@@ -6,7 +6,6 @@ import { KM_PER_DEG_LAT, KM_PER_DEG_LON, rimForAtoll, rimWayId, ringBox, type Ri
 import { crossesRim, flowsAlongReef } from "./site-type";
 import { readCatalog } from "./store";
 import { gapFlows, reefFlows } from "./flow-gaps";
-import { oceanGridAt } from "./ocean-grid";
 import { readOpenings } from "./openings";
 import { encodeVectors, KNOTS_PER_MS, lagoonKnots, type FlowAtoll, type FlowFieldView } from "./flow-wire";
 import type { Atoll, MarineHour, Site } from "./types";
@@ -176,11 +175,9 @@ export async function flowField(time: string, options: FetchOptions = { wait: fa
     const wayId = rimWayId(atoll);
     byOutline.set(wayId, [...(byOutline.get(wayId) ?? []), atoll]);
   }
-  const [atolls, ocean] = await Promise.all([
-    Promise.all([...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null))),
-    oceanGridAt(time, options).catch(() => null),
-  ]);
+  const atolls = await Promise.all(
+    [...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null)),
+  );
   const found = atolls.filter((item) => item != null);
-  // A grid not fetched yet counts as missing too, so the field is asked for again soon.
-  return { time, atolls: found, missing: atolls.length - found.length + (ocean ? 0 : 1), ocean };
+  return { time, atolls: found, missing: atolls.length - found.length };
 }

@@ -1,6 +1,6 @@
 import type { Control, Layer, Map as LeafletMap } from "leaflet";
 import { parseWall } from "./forecast";
-import { buildFlowRaster, buildSeaRaster, decodeOcean, DEFAULT_CHANNEL_KM, FlowParticles, screenFactor, stopsBetween, velocityAt, cellAt, KIND_LAND, type FlowChannel, type FlowRaster, type FlowShapes, type FlowVector, type OceanGrid } from "./flow-raster";
+import { buildFlowRaster, buildSeaRaster, DEFAULT_CHANNEL_KM, FlowParticles, screenFactor, stopsBetween, velocityAt, cellAt, KIND_LAND, type FlowChannel, type FlowRaster, type FlowShapes, type FlowVector, type OceanPoint } from "./flow-raster";
 import type { FlowAtoll, FlowFieldView } from "./flow-wire";
 
 type LeafletLib = typeof import("leaflet");
@@ -108,11 +108,10 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
   /** Rasters built for the current field and arrows, by way id; null while one is being built. */
   let rasters = new Map<string, FlowRaster | null>();
   let active: FlowRaster[] = [];
-  /** The field's open-sea grid and raster, made once per field. */
-  let ocean: { for: FlowFieldView; grid: OceanGrid; raster: FlowRaster | null } | null = null;
+  /** Every atoll's ring points (the open sea's current) and the open-sea raster blended from them, made once per field. */
+  let ocean: { for: FlowFieldView; points: OceanPoint[]; raster: FlowRaster | null | undefined } | null = null;
   const oceanFor = (current: FlowFieldView) => {
-    if (!current.ocean) return null;
-    if (ocean?.for !== current) ocean = { for: current, grid: decodeOcean(current.ocean), raster: null };
+    if (ocean?.for !== current) ocean = { for: current, points: current.atolls.flatMap((atoll) => atoll.ocean), raster: undefined };
     return ocean;
   };
   let particles: FlowParticles | null = null;
@@ -188,8 +187,8 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     // The open sea last, so where an atoll's raster covers a point that one takes the particle.
     const sea = field ? oceanFor(field) : null;
     if (sea) {
-      sea.raster ??= buildSeaRaster(sea.grid);
-      active.push(sea.raster);
+      if (sea.raster === undefined) sea.raster = buildSeaRaster(sea.points);
+      if (sea.raster) active.push(sea.raster);
     }
     particles?.reset();
   };
@@ -227,7 +226,7 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
         scheduleBuild();
         return;
       }
-      rasters.set(wayId, buildFlowRaster(atoll, shape, gatesOf(atoll, arrows), builtFor ? (oceanFor(builtFor)?.grid ?? null) : null));
+      rasters.set(wayId, buildFlowRaster(atoll, shape, gatesOf(atoll, arrows), oceanFor(builtFor).points));
       refreshActive();
       start();
       scheduleBuild();
@@ -628,7 +627,7 @@ function sameArrows(a: FlowArrows, b: FlowArrows): boolean {
 
 /** Whether two loads of a field carry the same flow, compared without serialising the lagoon grids. */
 function sameField(a: FlowFieldView, b: FlowFieldView): boolean {
-  if (a.time !== b.time || a.atolls.length !== b.atolls.length || a.ocean?.vectors !== b.ocean?.vectors) return false;
+  if (a.time !== b.time || a.atolls.length !== b.atolls.length) return false;
   return a.atolls.every((atoll, index) => {
     const other = b.atolls[index];
     return (

@@ -56,16 +56,10 @@ export type FlowGap = { lat: number; lon: number; widthM: number; headingDeg: nu
 export type FlowReef = { lat: number; lon: number; knots: number };
 
 /**
- * The open sea's surface current on a regular grid (lib/ocean-grid.ts): `step` degrees both ways, row 0 at `south`,
- * column 0 at `west`, points on the grid lines. Knots as encodeVectors bytes.
- */
-export type FlowOcean = { south: number; west: number; step: number; rows: number; columns: number; vectors: string };
-
-/**
  * One hour's flow. `missing` counts the outlines left out (series not cached yet, or a failure), so a partial field
  * is kept only briefly and asked for again; absent in fields saved before it was added.
  */
-export type FlowFieldView = { time: string; atolls: FlowAtoll[]; missing?: number; ocean?: FlowOcean | null };
+export type FlowFieldView = { time: string; atolls: FlowAtoll[]; missing?: number };
 
 /** The map's speed for each forecast band, knots: the boat route's (lib/route-current.ts), with slack barely moving. */
 export const FLOW_KNOTS: Record<Strength, number> = { slack: 0.1, mild: 0.8, strong: 1.6, too_strong: 2.5 };

@@ -3,7 +3,6 @@ import {
   buildFlowRaster,
   buildSeaRaster,
   cellAt,
-  decodeOcean,
   FlowParticles,
   KIND_LAGOON,
   KIND_LAND,
@@ -11,7 +10,7 @@ import {
   velocityAt,
   type FlowChannel,
   type FlowRaster,
-  type OceanGrid,
+  type OceanPoint,
 } from "./flow-raster";
 import { decodeVectors, encodeVectors, FLOW_QUANTUM_KN, lagoonKnots, nearestWallHour, type FlowAtoll } from "./flow-wire";
 import type { RimRing } from "./rim";
@@ -204,26 +203,43 @@ describe("buildFlowRaster", () => {
     expect(Math.hypot(...Object.values(speedAt(raster, 4.05, 73.59)))).toBeLessThan(0.05);
   });
 
-  it("takes the open sea from the regional grid where the field has one", () => {
-    const grid = oceanFrom(0.5, -0.5);
-    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [], grid);
-    const far = speedAt(raster, 4.0, 73.6 + 5 / 111);
-    expect(far.east).toBeCloseTo(0.5, 1);
-    expect(far.north).toBeCloseTo(-0.5, 1);
+  it("blends its open sea from a neighbouring atoll's ring points too", () => {
+    // The atoll's own points run east; a neighbour 40 km west runs north. Midway between, both show.
+    const own = ringOf(4.0, 73.5, 14, 1, 0);
+    const neighbour = ringOf(4.0, 73.14, 6, 0, 1);
+    const alone = buildFlowRaster(atoll(uniformLagoon(0, 0), own), { outline: RIM, islands: [] }, []);
+    const shared = buildFlowRaster(atoll(uniformLagoon(0, 0), own), { outline: RIM, islands: [] }, [], [...own, ...neighbour]);
+    const west = (raster: FlowRaster) => speedAt(raster, 4.0, 73.4 - 5 / 111);
+    expect(west(alone).north).toBeCloseTo(0, 2);
+    expect(west(shared).north).toBeGreaterThan(0.1);
+    expect(west(shared).east).toBeGreaterThan(0.3);
   });
 });
 
-/** A regional grid over the test atoll with the same current everywhere. */
-function oceanFrom(east: number, north: number): OceanGrid {
-  const rows = 6;
-  const columns = 6;
-  return decodeOcean({
-    south: 3.7,
-    west: 73.2,
-    step: 0.12,
-    rows,
-    columns,
-    vectors: encodeVectors(Array(rows * columns).fill(east), Array(rows * columns).fill(north)),
+describe("buildSeaRaster", () => {
+  it("fills the sea between two atolls from both sides' ring points", () => {
+    const north = ringOf(5.0, 73.5, 10, 1, 0);
+    const south = ringOf(4.0, 73.5, 10, -1, 0);
+    const sea = buildSeaRaster([...north, ...south])!;
+    expect(sea.regional).toBe(true);
+    // Beside each atoll its own current; midway, the two cancel.
+    expect(speedAt(sea, 5.0, 73.5).east).toBeGreaterThan(0.6);
+    expect(speedAt(sea, 4.0, 73.5).east).toBeLessThan(-0.6);
+    expect(Math.abs(speedAt(sea, 4.5, 73.5).east)).toBeLessThan(0.1);
+    // It reaches past the outermost points.
+    expect(sea.south).toBeLessThan(4.0 - 10 / 111 - 0.2);
+  });
+
+  it("has no raster with no points", () => {
+    expect(buildSeaRaster([])).toBeNull();
+  });
+});
+
+/** Twelve ring points `km` from a centre, all with the same current (knots). */
+function ringOf(lat: number, lon: number, km: number, east: number, north: number): OceanPoint[] {
+  return Array.from({ length: 12 }, (_, index) => {
+    const angle = (index / 12) * 2 * Math.PI;
+    return { lat: lat + (km * Math.cos(angle)) / 110.57, lon: lon + (km * Math.sin(angle)) / 111, east, north };
   });
 }
 
@@ -276,9 +292,9 @@ describe("FlowParticles", () => {
 
   it("carries particles from the open sea onto an atoll's raster and never across its reef", () => {
     // The open sea heads west at 2 knots, straight at the east rim, which has no channel.
-    const grid = oceanFrom(-2, 0);
-    const sea = buildSeaRaster({ ...grid, south: 3.0, west: 72.8, step: 0.4, rows: 5, columns: 5, east: new Float32Array(25).fill(-2), north: new Float32Array(25) });
-    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [], grid);
+    const points = ringOf(4.0, 73.5, 14, -2, 0);
+    const sea = buildSeaRaster(points)!;
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0), points), { outline: RIM, islands: [] }, []);
     const rasters = [raster, sea];
     const wide = { south: 3.8, west: 73.3, north: 4.2, east: 73.9 };
     const flock = new FlowParticles(300, 4, seeded(5));

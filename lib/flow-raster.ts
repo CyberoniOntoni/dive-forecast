@@ -9,8 +9,8 @@
  * channels' flow spread over the lagoon makes them (continuity). Made of, in order:
  *  - inside the outline, the lagoon model's flow pattern (FlowAtoll.lagoon), scaled so that just inside each running
  *    channel it matches the speed that channel's water has once spread over a half circle (lagoonScale);
- *  - outside, the ocean model's surface current: the regional grid (FlowFieldView.ocean) when there is one, else
- *    blended from the ring points;
+ *  - outside, the ocean model's surface current, blended from the ring points of this atoll and its neighbours (the
+ *    points the forecast already fetches, so the open sea costs no extra requests);
  *  - on both sides of the reef, the part running at the reef taken away close to it, so the water slides along it;
  *    outside, within WALL_BAND_KM, turned to the along-reef model's current at the ring points (FlowAtoll.reef);
  *  - at each channel (every reef gap, and catalog channel sites in no gap), a sink fan upstream (speed falling as 1/r)
@@ -19,7 +19,7 @@
  * The open sea between the atolls is one more, coarser raster (buildSeaRaster); particles pass between it and the
  * atolls' rasters.
  */
-import { decodeVectors, type FlowAtoll, type FlowOcean } from "./flow-wire";
+import { decodeVectors, type FlowAtoll } from "./flow-wire";
 import type { RimRing } from "./rim";
 
 export const KIND_SEA = 0;
@@ -39,8 +39,9 @@ export const WALL_BAND_KM = 2.5;
 const LAGOON_EDGE_KM = 0.8;
 /** With no along-reef samples (old saved fields), the ocean's along-reef part is sped up by this much near the reef. */
 const WALL_GAIN = 1.4;
-/** The open-sea raster's cells, km, and its most cells. */
-const SEA_CELL_KM = 1;
+/** The open-sea raster's cells, km, and its most cells. The ring points are a few km apart round each atoll and tens of
+ * km apart between them, so finer cells would show nothing more. */
+const SEA_CELL_KM = 2;
 const MAX_SEA_CELLS = 200_000;
 /** A channel's width when the catalog has none, and the range a width is held to, km. */
 export const DEFAULT_CHANNEL_KM = 0.4;
@@ -99,29 +100,15 @@ export type FlowRaster = {
 
 type Frame = { refLat: number; kmLon: number };
 
-/** The regional ocean grid decoded: knots at grid points `step` degrees apart from (south, west). */
-export type OceanGrid = { south: number; west: number; step: number; rows: number; columns: number; east: Float32Array; north: Float32Array };
-
-export function decodeOcean(wire: FlowOcean): OceanGrid {
-  const { east, north } = decodeVectors(wire.vectors);
-  return { south: wire.south, west: wire.west, step: wire.step, rows: wire.rows, columns: wire.columns, east, north };
-}
-
-/** The grid's current at a point, bilinear between its points; held to the edge outside it. */
-export function oceanGridAt(grid: OceanGrid, lat: number, lon: number): [number, number] {
-  const y = Math.max(0, Math.min(grid.rows - 1, (lat - grid.south) / grid.step));
-  const x = Math.max(0, Math.min(grid.columns - 1, (lon - grid.west) / grid.step));
-  const row = Math.min(grid.rows - 2, Math.floor(y));
-  const column = Math.min(grid.columns - 2, Math.floor(x));
-  const fy = y - row;
-  const fx = x - column;
-  const at = (values: Float32Array) => {
-    const c00 = row * grid.columns + column;
-    const c10 = c00 + grid.columns;
-    return (values[c00] * (1 - fx) + values[c00 + 1] * fx) * (1 - fy) + (values[c10] * (1 - fx) + values[c10 + 1] * fx) * fy;
-  };
-  return [at(grid.east), at(grid.north)];
-}
+/** The ocean model's surface current at ring sample points (FlowAtoll.ocean), knots: the open sea is blended from them. */
+export type OceanPoint = FlowAtoll["ocean"][number];
+/** Open-sea points farther than this from an atoll's box add nothing to its raster, km. */
+const OCEAN_NEAR_KM = 80;
+/**
+ * Softening of the inverse-distance weights, km²: a point's pull falls as 1/(d² + this), so close to the reef each ring
+ * point's own current shows and between the atolls the points on both sides blend smoothly.
+ */
+const OCEAN_SOFT_KM2 = 25;
 
 type LagoonGrid = Omit<NonNullable<FlowAtoll["lagoon"]>, "vectors">;
 
@@ -214,14 +201,14 @@ const smooth = (t: number) => {
 };
 
 /** The ocean current at a point: inverse-distance-squared blend of the ring points. */
-function oceanAt(ocean: FlowAtoll["ocean"], lat: number, lon: number, frame: Frame): [number, number] {
+function oceanAt(points: readonly OceanPoint[], lat: number, lon: number, frame: Frame): [number, number] {
   let east = 0;
   let north = 0;
   let total = 0;
-  for (const point of ocean) {
+  for (const point of points) {
     const dx = (lon - point.lon) * frame.kmLon;
     const dy = (lat - point.lat) * KM_PER_DEG_LAT;
-    const weight = 1 / (dx * dx + dy * dy + 4);
+    const weight = 1 / (dx * dx + dy * dy + OCEAN_SOFT_KM2);
     east += point.east * weight;
     north += point.north * weight;
     total += weight;
@@ -288,13 +275,14 @@ const widthOf = (channel: FlowChannel) =>
 
 /**
  * Builds one atoll's raster for one hour. `channels` are the gates this hour: every reef gap and the catalog channel
- * sites in none, each with its heading, speed and width. `ocean` is the regional grid, when the field has one.
+ * sites in none, each with its heading, speed and width. `ocean` is every atoll's ring points (the field's), so the sea
+ * round this atoll blends into its neighbours'; the atoll's own when not given.
  */
 export function buildFlowRaster(
   atoll: FlowAtoll,
   shapes: FlowShapes,
   channels: readonly FlowChannel[],
-  ocean: OceanGrid | null = null,
+  ocean: readonly OceanPoint[] = atoll.ocean,
 ): FlowRaster {
   const outline = shapes.outline;
   let south = Infinity;
@@ -351,6 +339,11 @@ export function buildFlowRaster(
   const turn = ringTurn(outline, frame);
   const lagoon = atoll.lagoon ? { grid: atoll.lagoon, ...decodeVectors(atoll.lagoon.vectors) } : null;
   const scale = lagoon ? lagoonScale(raster, lagoon, channels, frame) : DEFAULT_LAGOON_SCALE;
+  const nearLat = OCEAN_NEAR_KM / KM_PER_DEG_LAT;
+  const nearLon = OCEAN_NEAR_KM / frame.kmLon;
+  const seaPoints = ocean.filter(
+    (point) => point.lat >= south - nearLat && point.lat <= north + nearLat && point.lon >= west - nearLon && point.lon <= east + nearLon,
+  );
 
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
@@ -367,7 +360,7 @@ export function buildFlowRaster(
           vn = bilinear(lagoon.grid, lagoon.north, lat, lon) * scale;
         }
       } else {
-        [ve, vn] = ocean ? oceanGridAt(ocean, lat, lon) : oceanAt(atoll.ocean, lat, lon, frame);
+        [ve, vn] = oceanAt(seaPoints, lat, lon, frame);
       }
       const d = band.distance[cell];
       const reach = kind === KIND_LAGOON ? LAGOON_EDGE_KM : WALL_BAND_KM;
@@ -515,21 +508,37 @@ function applyBlend(raster: FlowRaster, blend: Blend): void {
   }
 }
 
+/** The open-sea raster reaches this far past the outermost ring points, km. */
+const SEA_REACH_KM = 30;
+
 /**
- * The open sea between the atolls: the regional grid on cells of about SEA_CELL_KM, all sea, no gates. Particles
- * drift through it and pass to an atoll's raster where one covers them (FlowParticles.step), so the ocean current
- * shows between the atolls and carries on along their reefs and into their channels.
+ * The open sea between the atolls: the ring points' current (every atoll's, `points`) blended on cells of about
+ * SEA_CELL_KM, all sea, no gates. Particles drift through it and pass to an atoll's raster where one covers them
+ * (FlowParticles.step), so the ocean current shows between the atolls and carries on along their reefs and into their
+ * channels. Null with no points.
  */
-export function buildSeaRaster(ocean: OceanGrid): FlowRaster {
-  const south = ocean.south;
-  const west = ocean.west;
-  const north = ocean.south + (ocean.rows - 1) * ocean.step;
-  const east = ocean.west + (ocean.columns - 1) * ocean.step;
-  const kmLon = KM_PER_DEG_LON * Math.cos((((south + north) / 2) * Math.PI) / 180);
-  const areaKm2 = (north - south) * KM_PER_DEG_LAT * (east - west) * kmLon;
+export function buildSeaRaster(points: readonly OceanPoint[]): FlowRaster | null {
+  if (points.length === 0) return null;
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const point of points) {
+    south = Math.min(south, point.lat);
+    north = Math.max(north, point.lat);
+    west = Math.min(west, point.lon);
+    east = Math.max(east, point.lon);
+  }
+  const refLat = (south + north) / 2;
+  const frame: Frame = { refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) };
+  south -= SEA_REACH_KM / KM_PER_DEG_LAT;
+  north += SEA_REACH_KM / KM_PER_DEG_LAT;
+  west -= SEA_REACH_KM / frame.kmLon;
+  east += SEA_REACH_KM / frame.kmLon;
+  const areaKm2 = (north - south) * KM_PER_DEG_LAT * (east - west) * frame.kmLon;
   const cellKm = Math.max(SEA_CELL_KM, Math.sqrt(areaKm2 / MAX_SEA_CELLS));
   const stepLat = cellKm / KM_PER_DEG_LAT;
-  const stepLon = cellKm / kmLon;
+  const stepLon = cellKm / frame.kmLon;
   const rows = Math.max(1, Math.ceil((north - south) / stepLat));
   const columns = Math.max(1, Math.ceil((east - west) / stepLon));
   const size = rows * columns;
@@ -553,7 +562,7 @@ export function buildSeaRaster(ocean: OceanGrid): FlowRaster {
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
     for (let column = 0; column < columns; column += 1) {
-      const [ve, vn] = oceanGridAt(ocean, lat, west + (column + 0.5) * stepLon);
+      const [ve, vn] = oceanAt(points, lat, west + (column + 0.5) * stepLon, frame);
       raster.vEast[row * columns + column] = ve;
       raster.vNorth[row * columns + column] = vn;
     }
