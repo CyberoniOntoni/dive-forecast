@@ -230,6 +230,23 @@ describe("buildSeaRaster", () => {
     expect(sea.south).toBeLessThan(4.0 - 10 / 111 - 0.2);
   });
 
+  it("stops a particle at an island out on the open sea", () => {
+    // The sea runs east at 2 knots onto an island 4 km across, with no atoll raster anywhere.
+    const island = { south: 4.48, north: 4.52, west: 73.58, east: 73.62 };
+    const sea = buildSeaRaster(ringOf(4.5, 73.5, 20, 2, 0), [island])!;
+    expect(sea.kind[cellAt(sea, 4.5, 73.6)]).toBe(KIND_LAND);
+    expect(sea.kind[cellAt(sea, 4.5, 73.5)]).toBe(KIND_SEA);
+    const near = { south: 4.45, west: 73.45, north: 4.55, east: 73.65 };
+    const flock = new FlowParticles(300, 4, seeded(9));
+    for (let step = 0; step < 300; step += 1) {
+      flock.step(0.1, [sea], near, 0.001, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        if (flock.rasterOf_(index) < 0) continue;
+        expect(sea.kind[cellAt(sea, flock.lat[index], flock.lon[index])]).not.toBe(KIND_LAND);
+      }
+    }
+  });
+
   it("has no raster with no points", () => {
     expect(buildSeaRaster([])).toBeNull();
   });

@@ -201,19 +201,38 @@ const smooth = (t: number) => {
 };
 
 /** The ocean current at a point: inverse-distance-squared blend of the ring points. */
-function oceanAt(points: readonly OceanPoint[], lat: number, lon: number, frame: Frame): [number, number] {
-  let east = 0;
-  let north = 0;
+/**
+ * Points' values blended by inverse distance, weight 1/(d² + soft) with d in km, into `out`: `value(point, k)` is a
+ * point's k-th value, for k below out.length. False with no points.
+ */
+function blendNear<T extends { lat: number; lon: number }>(
+  points: readonly T[],
+  lat: number,
+  lon: number,
+  frame: Frame,
+  soft: number,
+  value: (point: T, k: number) => number,
+  out: number[],
+): boolean {
+  out.fill(0);
   let total = 0;
   for (const point of points) {
     const dx = (lon - point.lon) * frame.kmLon;
     const dy = (lat - point.lat) * KM_PER_DEG_LAT;
-    const weight = 1 / (dx * dx + dy * dy + OCEAN_SOFT_KM2);
-    east += point.east * weight;
-    north += point.north * weight;
+    const weight = 1 / (dx * dx + dy * dy + soft);
+    for (let k = 0; k < out.length; k += 1) out[k] += value(point, k) * weight;
     total += weight;
   }
-  return total > 0 ? [east / total, north / total] : [0, 0];
+  if (total <= 0) return false;
+  for (let index = 0; index < out.length; index += 1) out[index] /= total;
+  return true;
+}
+
+const oceanPart = (point: OceanPoint, k: number) => (k === 0 ? point.east : point.north);
+
+function oceanAt(points: readonly OceanPoint[], lat: number, lon: number, frame: Frame): [number, number] {
+  const out = [0, 0];
+  return blendNear(points, lat, lon, frame, OCEAN_SOFT_KM2, oceanPart, out) ? [out[0], out[1]] : [0, 0];
 }
 
 /**
@@ -221,17 +240,8 @@ function oceanAt(points: readonly OceanPoint[], lat: number, lon: number, frame:
  * inverse distance squared. Null with no samples.
  */
 function reefAlong(reef: readonly NonNullable<FlowAtoll["reef"]>[number][], lat: number, lon: number, frame: Frame): number | null {
-  if (reef.length === 0) return null;
-  let sum = 0;
-  let total = 0;
-  for (const point of reef) {
-    const dx = (lon - point.lon) * frame.kmLon;
-    const dy = (lat - point.lat) * KM_PER_DEG_LAT;
-    const weight = 1 / (dx * dx + dy * dy + 1);
-    sum += weight * point.knots;
-    total += weight;
-  }
-  return sum / total;
+  const out = [0];
+  return blendNear(reef, lat, lon, frame, 1, (point) => point.knots, out) ? out[0] : null;
 }
 
 /**
@@ -270,6 +280,45 @@ function forCellsNear(
   }
 }
 
+type Box = { south: number; north: number; west: number; east: number };
+
+const frameAt = (refLat: number): Frame => ({ refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) });
+
+/** A box grown by `km` on every side. */
+const padded = (box: Box, km: number, frame: Frame): Box => ({
+  south: box.south - km / KM_PER_DEG_LAT,
+  north: box.north + km / KM_PER_DEG_LAT,
+  west: box.west - km / frame.kmLon,
+  east: box.east + km / frame.kmLon,
+});
+
+/** An all-sea, still raster over a box: cells of `cellKm`, or coarser so there are at most `maxCells`. */
+function emptyRaster(wayId: string, box: Box, frame: Frame, cellKm: number, maxCells: number): FlowRaster {
+  const areaKm2 = (box.north - box.south) * KM_PER_DEG_LAT * (box.east - box.west) * frame.kmLon;
+  const sizeKm = Math.max(cellKm, Math.sqrt(areaKm2 / maxCells));
+  const stepLat = sizeKm / KM_PER_DEG_LAT;
+  const stepLon = sizeKm / frame.kmLon;
+  const rows = Math.max(1, Math.ceil((box.north - box.south) / stepLat));
+  const columns = Math.max(1, Math.ceil((box.east - box.west) / stepLon));
+  const size = rows * columns;
+  return {
+    wayId,
+    south: box.south,
+    west: box.west,
+    north: box.south + rows * stepLat,
+    east: box.west + columns * stepLon,
+    stepLat,
+    stepLon,
+    rows,
+    columns,
+    vEast: new Float32Array(size),
+    vNorth: new Float32Array(size),
+    kind: new Uint8Array(size),
+    gate: new Uint8Array(size),
+    jets: [],
+  };
+}
+
 const widthOf = (channel: FlowChannel) =>
   Math.max(CHANNEL_KM_RANGE[0], Math.min(CHANNEL_KM_RANGE[1], channel.widthKm > 0 ? channel.widthKm : DEFAULT_CHANNEL_KM));
 
@@ -295,43 +344,19 @@ export function buildFlowRaster(
     west = Math.min(west, lon);
     east = Math.max(east, lon);
   }
-  const refLat = (south + north) / 2;
-  const frame: Frame = { refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) };
-  south -= SEA_MARGIN_KM / KM_PER_DEG_LAT;
-  north += SEA_MARGIN_KM / KM_PER_DEG_LAT;
-  west -= SEA_MARGIN_KM / frame.kmLon;
-  east += SEA_MARGIN_KM / frame.kmLon;
-  const areaKm2 = (north - south) * KM_PER_DEG_LAT * (east - west) * frame.kmLon;
-  const cellKm = Math.max(CELL_KM, Math.sqrt(areaKm2 / MAX_CELLS));
-  const stepLat = cellKm / KM_PER_DEG_LAT;
-  const stepLon = cellKm / frame.kmLon;
-  const rows = Math.max(1, Math.ceil((north - south) / stepLat));
-  const columns = Math.max(1, Math.ceil((east - west) / stepLon));
-  const size = rows * columns;
-  const raster: FlowRaster = {
-    wayId: atoll.wayId,
-    south,
-    west,
-    north: south + rows * stepLat,
-    east: west + columns * stepLon,
-    stepLat,
-    stepLon,
-    rows,
-    columns,
-    vEast: new Float32Array(size),
-    vNorth: new Float32Array(size),
-    kind: new Uint8Array(size),
-    gate: new Uint8Array(size),
-    jets: channels
-      .filter((site) => site.knots >= FEED_MIN_KNOTS)
-      .map((site) => ({
-        lat: site.lat,
-        lon: site.lon,
-        east: Math.sin((site.headingDeg * Math.PI) / 180),
-        north: Math.cos((site.headingDeg * Math.PI) / 180),
-        widthKm: widthOf(site),
-      })),
-  };
+  const frame = frameAt((south + north) / 2);
+  const raster = emptyRaster(atoll.wayId, padded({ south, north, west, east }, SEA_MARGIN_KM, frame), frame, CELL_KM, MAX_CELLS);
+  raster.jets = channels
+    .filter((site) => site.knots >= FEED_MIN_KNOTS)
+    .map((site) => ({
+      lat: site.lat,
+      lon: site.lon,
+      east: Math.sin((site.headingDeg * Math.PI) / 180),
+      north: Math.cos((site.headingDeg * Math.PI) / 180),
+      widthKm: widthOf(site),
+    }));
+  const { rows, columns, stepLat, stepLon } = raster;
+  ({ south, west, north, east } = raster);
   fillRing(raster, outline, KIND_LAGOON);
   for (const island of shapes.islands) fillRing(raster, island, KIND_LAND);
   const band = reefBand(raster, outline, WALL_BAND_KM, frame);
@@ -513,58 +538,43 @@ const SEA_REACH_KM = 30;
 
 /**
  * The open sea between the atolls: the ring points' current (every atoll's, `points`) blended on cells of about
- * SEA_CELL_KM, all sea, no gates. Particles drift through it and pass to an atoll's raster where one covers them
- * (FlowParticles.step), so the ocean current shows between the atolls and carries on along their reefs and into their
- * channels. Null with no points.
+ * SEA_CELL_KM, no gates. `land` is what water cannot cross out there, as boxes: islands outside every outline, and
+ * the outlines' own boxes, so a particle stops at an atoll whose own raster is not built (one that is built covers
+ * a margin round its box and takes the particle over first). Particles drift through it and pass to an atoll's
+ * raster where one covers them (FlowParticles.step), so the ocean current shows between the atolls and carries on
+ * along their reefs and into their channels. Null with no points.
  */
-export function buildSeaRaster(points: readonly OceanPoint[]): FlowRaster | null {
+export function buildSeaRaster(points: readonly OceanPoint[], land: readonly Box[] = []): FlowRaster | null {
   if (points.length === 0) return null;
-  let south = Infinity;
-  let north = -Infinity;
-  let west = Infinity;
-  let east = -Infinity;
+  const box: Box = { south: Infinity, north: -Infinity, west: Infinity, east: -Infinity };
   for (const point of points) {
-    south = Math.min(south, point.lat);
-    north = Math.max(north, point.lat);
-    west = Math.min(west, point.lon);
-    east = Math.max(east, point.lon);
+    box.south = Math.min(box.south, point.lat);
+    box.north = Math.max(box.north, point.lat);
+    box.west = Math.min(box.west, point.lon);
+    box.east = Math.max(box.east, point.lon);
   }
-  const refLat = (south + north) / 2;
-  const frame: Frame = { refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) };
-  south -= SEA_REACH_KM / KM_PER_DEG_LAT;
-  north += SEA_REACH_KM / KM_PER_DEG_LAT;
-  west -= SEA_REACH_KM / frame.kmLon;
-  east += SEA_REACH_KM / frame.kmLon;
-  const areaKm2 = (north - south) * KM_PER_DEG_LAT * (east - west) * frame.kmLon;
-  const cellKm = Math.max(SEA_CELL_KM, Math.sqrt(areaKm2 / MAX_SEA_CELLS));
-  const stepLat = cellKm / KM_PER_DEG_LAT;
-  const stepLon = cellKm / frame.kmLon;
-  const rows = Math.max(1, Math.ceil((north - south) / stepLat));
-  const columns = Math.max(1, Math.ceil((east - west) / stepLon));
-  const size = rows * columns;
-  const raster: FlowRaster = {
-    wayId: "sea",
-    regional: true,
-    south,
-    west,
-    north: south + rows * stepLat,
-    east: west + columns * stepLon,
-    stepLat,
-    stepLon,
-    rows,
-    columns,
-    vEast: new Float32Array(size),
-    vNorth: new Float32Array(size),
-    kind: new Uint8Array(size),
-    gate: new Uint8Array(size),
-    jets: [],
-  };
+  const frame = frameAt((box.south + box.north) / 2);
+  const raster = emptyRaster("sea", padded(box, SEA_REACH_KM, frame), frame, SEA_CELL_KM, MAX_SEA_CELLS);
+  raster.regional = true;
+  const { south, west, stepLat, stepLon, rows, columns } = raster;
+  for (const item of land) {
+    // Every cell the box touches: a 2 km cell holds land when any of it is land.
+    const rowFrom = Math.max(0, Math.floor((item.south - south) / stepLat));
+    const rowTo = Math.min(rows - 1, Math.floor((item.north - south) / stepLat));
+    const columnFrom = Math.max(0, Math.floor((item.west - west) / stepLon));
+    const columnTo = Math.min(columns - 1, Math.floor((item.east - west) / stepLon));
+    for (let row = rowFrom; row <= rowTo; row += 1) {
+      for (let column = columnFrom; column <= columnTo; column += 1) raster.kind[row * columns + column] = KIND_LAND;
+    }
+  }
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
     for (let column = 0; column < columns; column += 1) {
+      const cell = row * columns + column;
+      if (raster.kind[cell] === KIND_LAND) continue;
       const [ve, vn] = oceanAt(points, lat, west + (column + 0.5) * stepLon, frame);
-      raster.vEast[row * columns + column] = ve;
-      raster.vNorth[row * columns + column] = vn;
+      raster.vEast[cell] = ve;
+      raster.vNorth[cell] = vn;
     }
   }
   return raster;

@@ -34,7 +34,11 @@ export type FlowAtoll = {
    * its width in metres (the published section's, else the Allen Coral Atlas measure), or null when neither is known.
    */
   channels: { id: string; widthM: number | null }[];
-  /** Catalog sites whose current runs along the reef (outer walls, strait walls). Kept for old saved fields. */
+  /**
+   * Catalog sites whose current runs along the reef (outer walls, strait walls). The map no longer reads it (the
+   * along-reef model at the ring points, `reef`, took its place; a field saved before that falls back to the ocean
+   * current turned along the reef); still sent so the shape stays the same.
+   */
   walls: string[];
   /** Every reef gap of the outline with its flow this hour (lib/flow-gaps.ts). Absent in fields saved before it. */
   gaps?: FlowGap[];
@@ -59,7 +63,16 @@ export type FlowReef = { lat: number; lon: number; knots: number };
  * One hour's flow. `missing` counts the outlines left out (series not cached yet, or a failure), so a partial field
  * is kept only briefly and asked for again; absent in fields saved before it was added.
  */
-export type FlowFieldView = { time: string; atolls: FlowAtoll[]; missing?: number };
+export type FlowFieldView = {
+  time: string;
+  atolls: FlowAtoll[];
+  missing?: number;
+  /**
+   * Islands outside every outline as boxes, for the open sea between the atolls (water stops there). Absent in fields
+   * saved before it was added.
+   */
+  land?: { south: number; north: number; west: number; east: number }[];
+};
 
 /** The map's speed for each forecast band, knots: the boat route's (lib/route-current.ts), with slack barely moving. */
 export const FLOW_KNOTS: Record<Strength, number> = { slack: 0.1, mild: 0.8, strong: 1.6, too_strong: 2.5 };

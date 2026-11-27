@@ -187,7 +187,14 @@ export function flowLayer(L: LeafletLib, map: LeafletMap, source: FlowSource | u
     // The open sea last, so where an atoll's raster covers a point that one takes the particle.
     const sea = field ? oceanFor(field) : null;
     if (sea) {
-      if (sea.raster === undefined) sea.raster = buildSeaRaster(sea.points);
+      if (sea.raster === undefined) {
+        // Islands out on the open sea, and each outline's box (the atoll's own raster, once built, covers more).
+        const outlines = sea.for.atolls.flatMap((atoll) => {
+          const box = atoll.box ?? shapeBoxes.get(atoll.wayId);
+          return box ? [box] : [];
+        });
+        sea.raster = buildSeaRaster(sea.points, [...(sea.for.land ?? []), ...outlines]);
+      }
       if (sea.raster) active.push(sea.raster);
     }
     particles?.reset();
