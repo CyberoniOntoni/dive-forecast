@@ -585,6 +585,20 @@ function coveredByAtoll(rasters: readonly FlowRaster[], lat: number, lon: number
   return rasters.some((raster) => !raster.regional && cellAt(raster, lat, lon) >= 0);
 }
 
+/**
+ * Whether another atoll's raster than `at` has its reef side there: lagoon or land. Neighbouring atolls' rasters
+ * overlap in their sea margins, and each knows only its own outline and islands, so a particle on one must not drift
+ * across the other's reef where that one says there is no open sea.
+ */
+function otherAtollSaysNotSea(rasters: readonly FlowRaster[], at: number, lat: number, lon: number): boolean {
+  for (let other = 0; other < rasters.length; other += 1) {
+    if (other === at || rasters[other].regional) continue;
+    const cell = cellAt(rasters[other], lat, lon);
+    if (cell >= 0 && rasters[other].kind[cell] !== KIND_SEA) return true;
+  }
+  return false;
+}
+
 /** The cell index at a point, or -1 off the raster. */
 export function cellAt(raster: FlowRaster, lat: number, lon: number): number {
   const row = Math.floor((lat - raster.south) / raster.stepLat);
@@ -682,6 +696,8 @@ export class FlowParticles {
         if (cell < 0 || rasters[at].kind[cell] === KIND_LAND) continue;
         // The open sea only where no atoll's raster is: over an atoll that one decides (an island there is land).
         if (rasters[at].regional && coveredByAtoll(rasters, lat, lon)) break;
+        // Over a neighbour's reef, lagoon or island, that neighbour's raster decides.
+        if (!rasters[at].regional && otherAtollSaysNotSea(rasters, at, lat, lon)) continue;
         this.lat[index] = lat;
         this.lon[index] = lon;
         this.rasterOf[index] = at;
@@ -723,17 +739,23 @@ export class FlowParticles {
   }
 
   /**
-   * The raster a particle on raster `at` moves onto at a point: from the open sea, an atoll's raster that has open sea
-   * there; from an atoll's raster (leaving its edge), the open sea's. -1 when there is none.
+   * The raster a particle on raster `at` moves onto at a point, always onto open sea: from the open sea, an atoll's
+   * raster; from an atoll's raster (leaving its edge), a neighbouring atoll's whose margin reaches there, else the open
+   * sea's. -1 when there is none.
    */
   private handOff(rasters: readonly FlowRaster[], at: number, lat: number, lon: number): number {
     const fromRegional = rasters[at].regional === true;
+    let sea = -1;
     for (let other = 0; other < rasters.length; other += 1) {
-      if (other === at || (rasters[other].regional === true) === fromRegional) continue;
+      if (other === at) continue;
+      const regional = rasters[other].regional === true;
+      if (regional && fromRegional) continue;
       const cell = cellAt(rasters[other], lat, lon);
-      if (cell >= 0 && rasters[other].kind[cell] === KIND_SEA) return other;
+      if (cell < 0 || rasters[other].kind[cell] !== KIND_SEA) continue;
+      if (!regional) return other;
+      sea = other;
     }
-    return -1;
+    return sea;
   }
 
   private pushTrail(index: number): void {
@@ -817,9 +839,12 @@ export class FlowParticles {
         continue;
       }
       // An island, or the reef away from a channel's gate: the water cannot go on, so the particle stops and fades
-      // out where it is rather than vanishing (the field turns along the reef, so few get here). On the open sea, an
-      // atoll's raster with no sea at the point (its reef, lagoon or land) stops it the same way.
-      if (stopsBetween(raster, from, to) || (raster.regional && coveredByAtoll(rasters, nextLat, nextLon))) {
+      // out where it is rather than vanishing (the field turns along the reef, so few get here). Another atoll's raster
+      // with no sea at the point (its reef, lagoon or land) stops it the same way, on the open sea or a neighbour's margin.
+      const intoOther =
+        (raster.regional && coveredByAtoll(rasters, nextLat, nextLon)) ||
+        (!raster.regional && raster.kind[to] === KIND_SEA && otherAtollSaysNotSea(rasters, at, nextLat, nextLon));
+      if (stopsBetween(raster, from, to) || intoOther) {
         this.life[index] = Math.min(this.life[index], this.age[index] + FADE_OUT_S);
         this.speed[index] = 0;
         continue;

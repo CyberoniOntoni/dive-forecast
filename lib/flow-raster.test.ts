@@ -336,6 +336,41 @@ describe("FlowParticles", () => {
     }
   });
 
+  it("keeps a particle on one atoll's margin off its neighbour's reef, and hands it on to the neighbour's raster", () => {
+    // A second square atoll 3 km east of the first, inside the first's sea margin; the sea runs east at 2 knots.
+    const shift = 0.23;
+    const east: RimRing = RIM.map(([lat, lon]) => [lat, lon + shift]);
+    const points = [...ringOf(4.0, 73.5, 14, 2, 0), ...ringOf(4.0, 73.5 + shift, 14, 2, 0)];
+    const a = buildFlowRaster(atoll(uniformLagoon(0, 0), points), { outline: RIM, islands: [] }, []);
+    const b = buildFlowRaster({ ...atoll(uniformLagoon(0, 0), points), wayId: "2" }, { outline: east, islands: [] }, []);
+    const boxes = [RIM, east].map((ring) => ({
+      south: Math.min(...ring.map((p) => p[0])),
+      north: Math.max(...ring.map((p) => p[0])),
+      west: Math.min(...ring.map((p) => p[1])),
+      east: Math.max(...ring.map((p) => p[1])),
+    }));
+    const sea = buildSeaRaster(points, boxes)!;
+    const rasters = [a, b, sea];
+    // The strip between them, where the first's margin reaches the neighbour's reef, and the sea south of both, where
+    // the first's margin ends on the neighbour's.
+    const strip = { south: 3.86, west: 73.6, north: 4.05, east: 73.68 };
+    const flock = new FlowParticles(300, 4, seeded(13));
+    let handed = 0;
+    for (let step = 0; step < 300; step += 1) {
+      const before = Array.from({ length: flock.count }, (_, index) => flock.rasterOf_(index));
+      const ages = Float32Array.from(flock.age);
+      flock.step(0.1, rasters, strip, 0.001, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        if (flock.rasterOf_(index) === 0) {
+          const cell = cellAt(b, flock.lat[index], flock.lon[index]);
+          if (cell >= 0) expect(b.kind[cell]).toBe(KIND_SEA);
+        }
+        if (before[index] === 0 && flock.rasterOf_(index) === 1 && flock.age[index] >= ages[index]) handed += 1;
+      }
+    }
+    expect(handed).toBeGreaterThan(0);
+  });
+
   it("never places a particle on an island", () => {
     const raster = buildFlowRaster(atoll(uniformLagoon(0.3, 0.3)), { outline: RIM, islands: [ISLAND] }, []);
     const flock = new FlowParticles(500, 3, seeded(11));
