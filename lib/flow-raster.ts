@@ -9,12 +9,15 @@
  * channels' flow spread over the lagoon makes them (continuity). Made of, in order:
  *  - inside the outline, the lagoon model's flow pattern (FlowAtoll.lagoon), scaled so that just inside each running
  *    channel it matches the speed that channel's water has once spread over a half circle (lagoonScale);
- *  - outside, the ocean model's surface current, blended from the ring points;
+ *  - outside, the ocean model's surface current, blended from the ring points of this atoll and its neighbours (the
+ *    points the forecast already fetches, so the open sea costs no extra requests);
  *  - on both sides of the reef, the part running at the reef taken away close to it, so the water slides along it;
- *    outside, within WALL_BAND_KM, the along-reef part sped up as the along-reef model does;
- *  - at each wall site, that site's forecast heading and band speed, fading out over a couple of km;
- *  - at each channel site, a sink fan upstream (speed falling as 1/r) and a jet downstream along its forecast heading.
- *    Only the channels are gates: a particle crosses the reef nowhere else.
+ *    outside, within WALL_BAND_KM, turned to the along-reef model's current at the ring points (FlowAtoll.reef);
+ *  - at each channel (every reef gap, and catalog channel sites in no gap), a sink fan upstream (speed falling as 1/r)
+ *    and a jet downstream along its heading, both as wide as the gap. Only the channels are gates: a particle crosses
+ *    the reef nowhere else.
+ * The open sea between the atolls is one more, coarser raster (buildSeaRaster); particles pass between it and the
+ * atolls' rasters.
  */
 import { decodeVectors, type FlowAtoll } from "./flow-wire";
 import type { RimRing } from "./rim";
@@ -34,13 +37,15 @@ const MAX_CELLS = 160_000;
 export const WALL_BAND_KM = 2.5;
 /** Inside, the flow at the reef is turned along it over this distance: the rim is closed except at the channels. */
 const LAGOON_EDGE_KM = 0.8;
-/** The along-reef model's tidal gain is about 3; the drift part has none. A middle value for the map. */
+/** With no along-reef samples (old saved fields), the ocean's along-reef part is sped up by this much near the reef. */
 const WALL_GAIN = 1.4;
-/** A wall site's own forecast holds over this distance (Gaussian sigma). */
-const WALL_SIGMA_KM = 1.4;
+/** The open-sea raster's cells, km, and its most cells. The ring points are a few km apart round each atoll and tens of
+ * km apart between them, so finer cells would show nothing more. */
+const SEA_CELL_KM = 2;
+const MAX_SEA_CELLS = 200_000;
 /** A channel's width when the catalog has none, and the range a width is held to, km. */
 export const DEFAULT_CHANNEL_KM = 0.4;
-const CHANNEL_KM_RANGE: readonly [number, number] = [0.1, 1];
+const CHANNEL_KM_RANGE: readonly [number, number] = [0.1, 2];
 /** The upstream fan reaches this far, km. */
 const FAN_KM = 2;
 /** The downstream jet: how far it is drawn (km), and its half-width's growth per km (a plane jet's is about 0.1). */
@@ -74,6 +79,8 @@ export type FlowShapes = { outline: RimRing; islands: readonly RimRing[] };
 
 export type FlowRaster = {
   wayId: string;
+  /** The open sea between the atolls (buildSeaRaster): a particle on it moves to an atoll's raster where one covers it. */
+  regional?: boolean;
   south: number;
   west: number;
   north: number;
@@ -92,6 +99,16 @@ export type FlowRaster = {
 };
 
 type Frame = { refLat: number; kmLon: number };
+
+/** The ocean model's surface current at ring sample points (FlowAtoll.ocean), knots: the open sea is blended from them. */
+export type OceanPoint = FlowAtoll["ocean"][number];
+/** Open-sea points farther than this from an atoll's box add nothing to its raster, km. */
+const OCEAN_NEAR_KM = 80;
+/**
+ * Softening of the inverse-distance weights, km²: a point's pull falls as 1/(d² + this), so close to the reef each ring
+ * point's own current shows and between the atolls the points on both sides blend smoothly.
+ */
+const OCEAN_SOFT_KM2 = 25;
 
 type LagoonGrid = Omit<NonNullable<FlowAtoll["lagoon"]>, "vectors">;
 
@@ -184,19 +201,61 @@ const smooth = (t: number) => {
 };
 
 /** The ocean current at a point: inverse-distance-squared blend of the ring points. */
-function oceanAt(ocean: FlowAtoll["ocean"], lat: number, lon: number, frame: Frame): [number, number] {
-  let east = 0;
-  let north = 0;
+/**
+ * Points' values blended by inverse distance, weight 1/(d² + soft) with d in km, into `out`: `value(point, k)` is a
+ * point's k-th value, for k below out.length. False with no points.
+ */
+function blendNear<T extends { lat: number; lon: number }>(
+  points: readonly T[],
+  lat: number,
+  lon: number,
+  frame: Frame,
+  soft: number,
+  value: (point: T, k: number) => number,
+  out: number[],
+): boolean {
+  out.fill(0);
   let total = 0;
-  for (const point of ocean) {
+  for (const point of points) {
     const dx = (lon - point.lon) * frame.kmLon;
     const dy = (lat - point.lat) * KM_PER_DEG_LAT;
-    const weight = 1 / (dx * dx + dy * dy + 4);
-    east += point.east * weight;
-    north += point.north * weight;
+    const weight = 1 / (dx * dx + dy * dy + soft);
+    for (let k = 0; k < out.length; k += 1) out[k] += value(point, k) * weight;
     total += weight;
   }
-  return total > 0 ? [east / total, north / total] : [0, 0];
+  if (total <= 0) return false;
+  for (let index = 0; index < out.length; index += 1) out[index] /= total;
+  return true;
+}
+
+const oceanPart = (point: OceanPoint, k: number) => (k === 0 ? point.east : point.north);
+
+function oceanAt(points: readonly OceanPoint[], lat: number, lon: number, frame: Frame): [number, number] {
+  const out = [0, 0];
+  return blendNear(points, lat, lon, frame, OCEAN_SOFT_KM2, oceanPart, out) ? [out[0], out[1]] : [0, 0];
+}
+
+/**
+ * The along-reef model's current at a point near the reef, signed knots (FlowReef): the ring points' values blended by
+ * inverse distance squared. Null with no samples.
+ */
+function reefAlong(reef: readonly NonNullable<FlowAtoll["reef"]>[number][], lat: number, lon: number, frame: Frame): number | null {
+  const out = [0];
+  return blendNear(reef, lat, lon, frame, 1, (point) => point.knots, out) ? out[0] : null;
+}
+
+/**
+ * +1 when the ring runs anticlockwise on the map (interior on the left of each segment), -1 clockwise. A segment's
+ * direction times this is the outline's inward normal turned 90° clockwise: the way a positive FlowReef value runs.
+ */
+function ringTurn(ring: RimRing, frame: Frame): number {
+  let area = 0;
+  for (let index = 0; index + 1 < ring.length; index += 1) {
+    const [lat1, lon1] = ring[index];
+    const [lat2, lon2] = ring[index + 1];
+    area += lon1 * frame.kmLon * lat2 * KM_PER_DEG_LAT - lon2 * frame.kmLon * lat1 * KM_PER_DEG_LAT;
+  }
+  return area >= 0 ? 1 : -1;
 }
 
 /** Adds weighted vectors into running sums over a box of cells round a point. */
@@ -221,15 +280,58 @@ function forCellsNear(
   }
 }
 
+type Box = { south: number; north: number; west: number; east: number };
+
+const frameAt = (refLat: number): Frame => ({ refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) });
+
+/** A box grown by `km` on every side. */
+const padded = (box: Box, km: number, frame: Frame): Box => ({
+  south: box.south - km / KM_PER_DEG_LAT,
+  north: box.north + km / KM_PER_DEG_LAT,
+  west: box.west - km / frame.kmLon,
+  east: box.east + km / frame.kmLon,
+});
+
+/** An all-sea, still raster over a box: cells of `cellKm`, or coarser so there are at most `maxCells`. */
+function emptyRaster(wayId: string, box: Box, frame: Frame, cellKm: number, maxCells: number): FlowRaster {
+  const areaKm2 = (box.north - box.south) * KM_PER_DEG_LAT * (box.east - box.west) * frame.kmLon;
+  const sizeKm = Math.max(cellKm, Math.sqrt(areaKm2 / maxCells));
+  const stepLat = sizeKm / KM_PER_DEG_LAT;
+  const stepLon = sizeKm / frame.kmLon;
+  const rows = Math.max(1, Math.ceil((box.north - box.south) / stepLat));
+  const columns = Math.max(1, Math.ceil((box.east - box.west) / stepLon));
+  const size = rows * columns;
+  return {
+    wayId,
+    south: box.south,
+    west: box.west,
+    north: box.south + rows * stepLat,
+    east: box.west + columns * stepLon,
+    stepLat,
+    stepLon,
+    rows,
+    columns,
+    vEast: new Float32Array(size),
+    vNorth: new Float32Array(size),
+    kind: new Uint8Array(size),
+    gate: new Uint8Array(size),
+    jets: [],
+  };
+}
+
 const widthOf = (channel: FlowChannel) =>
   Math.max(CHANNEL_KM_RANGE[0], Math.min(CHANNEL_KM_RANGE[1], channel.widthKm > 0 ? channel.widthKm : DEFAULT_CHANNEL_KM));
 
-/** Builds one atoll's raster for one hour. `channels` and `walls` are the sites' forecast arrows this hour. */
+/**
+ * Builds one atoll's raster for one hour. `channels` are the gates this hour: every reef gap and the catalog channel
+ * sites in none, each with its heading, speed and width. `ocean` is every atoll's ring points (the field's), so the sea
+ * round this atoll blends into its neighbours'; the atoll's own when not given.
+ */
 export function buildFlowRaster(
   atoll: FlowAtoll,
   shapes: FlowShapes,
   channels: readonly FlowChannel[],
-  walls: readonly FlowVector[],
+  ocean: readonly OceanPoint[] = atoll.ocean,
 ): FlowRaster {
   const outline = shapes.outline;
   let south = Infinity;
@@ -242,48 +344,31 @@ export function buildFlowRaster(
     west = Math.min(west, lon);
     east = Math.max(east, lon);
   }
-  const refLat = (south + north) / 2;
-  const frame: Frame = { refLat, kmLon: KM_PER_DEG_LON * Math.cos((refLat * Math.PI) / 180) };
-  south -= SEA_MARGIN_KM / KM_PER_DEG_LAT;
-  north += SEA_MARGIN_KM / KM_PER_DEG_LAT;
-  west -= SEA_MARGIN_KM / frame.kmLon;
-  east += SEA_MARGIN_KM / frame.kmLon;
-  const areaKm2 = (north - south) * KM_PER_DEG_LAT * (east - west) * frame.kmLon;
-  const cellKm = Math.max(CELL_KM, Math.sqrt(areaKm2 / MAX_CELLS));
-  const stepLat = cellKm / KM_PER_DEG_LAT;
-  const stepLon = cellKm / frame.kmLon;
-  const rows = Math.max(1, Math.ceil((north - south) / stepLat));
-  const columns = Math.max(1, Math.ceil((east - west) / stepLon));
-  const size = rows * columns;
-  const raster: FlowRaster = {
-    wayId: atoll.wayId,
-    south,
-    west,
-    north: south + rows * stepLat,
-    east: west + columns * stepLon,
-    stepLat,
-    stepLon,
-    rows,
-    columns,
-    vEast: new Float32Array(size),
-    vNorth: new Float32Array(size),
-    kind: new Uint8Array(size),
-    gate: new Uint8Array(size),
-    jets: channels
-      .filter((site) => site.knots >= FEED_MIN_KNOTS)
-      .map((site) => ({
-        lat: site.lat,
-        lon: site.lon,
-        east: Math.sin((site.headingDeg * Math.PI) / 180),
-        north: Math.cos((site.headingDeg * Math.PI) / 180),
-        widthKm: widthOf(site),
-      })),
-  };
+  const frame = frameAt((south + north) / 2);
+  const raster = emptyRaster(atoll.wayId, padded({ south, north, west, east }, SEA_MARGIN_KM, frame), frame, CELL_KM, MAX_CELLS);
+  raster.jets = channels
+    .filter((site) => site.knots >= FEED_MIN_KNOTS)
+    .map((site) => ({
+      lat: site.lat,
+      lon: site.lon,
+      east: Math.sin((site.headingDeg * Math.PI) / 180),
+      north: Math.cos((site.headingDeg * Math.PI) / 180),
+      widthKm: widthOf(site),
+    }));
+  const { rows, columns, stepLat, stepLon } = raster;
+  ({ south, west, north, east } = raster);
   fillRing(raster, outline, KIND_LAGOON);
   for (const island of shapes.islands) fillRing(raster, island, KIND_LAND);
   const band = reefBand(raster, outline, WALL_BAND_KM, frame);
+  const reef = atoll.reef ?? [];
+  const turn = ringTurn(outline, frame);
   const lagoon = atoll.lagoon ? { grid: atoll.lagoon, ...decodeVectors(atoll.lagoon.vectors) } : null;
   const scale = lagoon ? lagoonScale(raster, lagoon, channels, frame) : DEFAULT_LAGOON_SCALE;
+  const nearLat = OCEAN_NEAR_KM / KM_PER_DEG_LAT;
+  const nearLon = OCEAN_NEAR_KM / frame.kmLon;
+  const seaPoints = ocean.filter(
+    (point) => point.lat >= south - nearLat && point.lat <= north + nearLat && point.lon >= west - nearLon && point.lon <= east + nearLon,
+  );
 
   for (let row = 0; row < rows; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
@@ -300,7 +385,7 @@ export function buildFlowRaster(
           vn = bilinear(lagoon.grid, lagoon.north, lat, lon) * scale;
         }
       } else {
-        [ve, vn] = oceanAt(atoll.ocean, lat, lon, frame);
+        [ve, vn] = oceanAt(seaPoints, lat, lon, frame);
       }
       const d = band.distance[cell];
       const reach = kind === KIND_LAGOON ? LAGOON_EDGE_KM : WALL_BAND_KM;
@@ -308,7 +393,8 @@ export function buildFlowRaster(
         // The reef stops the part running at it: close to it the water slides along it (outside, faster: the wall).
         const te = band.tangentEast[cell];
         const tn = band.tangentNorth[cell];
-        const along = (ve * te + vn * tn) * (kind === KIND_LAGOON ? 1 : WALL_GAIN);
+        const modelled = kind === KIND_LAGOON ? null : reefAlong(reef, lat, lon, frame);
+        const along = modelled != null ? modelled * turn : (ve * te + vn * tn) * (kind === KIND_LAGOON ? 1 : WALL_GAIN);
         const share = 1 - smooth(d / reach);
         ve = ve * (1 - share) + along * te * share;
         vn = vn * (1 - share) + along * tn * share;
@@ -318,8 +404,6 @@ export function buildFlowRaster(
     }
   }
 
-  // Wall sites: their own forecast along the reef, outside only.
-  applyBlend(raster, wallBlend(raster, walls, frame));
   // Channels: the fan that feeds them, added to whatever runs past, then the jet they make.
   addFans(raster, channels, frame);
   applyBlend(raster, jetBlend(raster, channels, frame));
@@ -374,25 +458,6 @@ function newBlend(raster: FlowRaster): Blend {
 
 const inRaster = (raster: FlowRaster, site: { lat: number; lon: number }) =>
   site.lat >= raster.south && site.lat <= raster.north && site.lon >= raster.west && site.lon <= raster.east;
-
-function wallBlend(raster: FlowRaster, walls: readonly FlowVector[], frame: Frame): Blend {
-  const blend = newBlend(raster);
-  for (const site of walls) {
-    if (!inRaster(raster, site)) continue;
-    const radians = (site.headingDeg * Math.PI) / 180;
-    const he = Math.sin(radians);
-    const hn = Math.cos(radians);
-    forCellsNear(raster, site.lat, site.lon, 3 * WALL_SIGMA_KM, frame, (cell, dx, dy) => {
-      if (raster.kind[cell] !== KIND_SEA) return;
-      const weight = Math.exp(-(dx * dx + dy * dy) / (2 * WALL_SIGMA_KM ** 2));
-      if (weight < 0.01) return;
-      blend.weight[cell] += weight;
-      blend.east[cell] += weight * site.knots * he;
-      blend.north[cell] += weight * site.knots * hn;
-    });
-  }
-  return blend;
-}
 
 /**
  * The upstream fan: the water a channel carries comes from all round its mouth on the upstream side, so toward the
@@ -466,6 +531,72 @@ function applyBlend(raster: FlowRaster, blend: Blend): void {
     raster.vEast[cell] = raster.vEast[cell] * (1 - share) + (blend.east[cell] / total) * share;
     raster.vNorth[cell] = raster.vNorth[cell] * (1 - share) + (blend.north[cell] / total) * share;
   }
+}
+
+/** The open-sea raster reaches this far past the outermost ring points, km. */
+const SEA_REACH_KM = 30;
+
+/**
+ * The open sea between the atolls: the ring points' current (every atoll's, `points`) blended on cells of about
+ * SEA_CELL_KM, no gates. `land` is what water cannot cross out there, as boxes: islands outside every outline, and
+ * the outlines' own boxes, so a particle stops at an atoll whose own raster is not built (one that is built covers
+ * a margin round its box and takes the particle over first). Particles drift through it and pass to an atoll's
+ * raster where one covers them (FlowParticles.step), so the ocean current shows between the atolls and carries on
+ * along their reefs and into their channels. Null with no points.
+ */
+export function buildSeaRaster(points: readonly OceanPoint[], land: readonly Box[] = []): FlowRaster | null {
+  if (points.length === 0) return null;
+  const box: Box = { south: Infinity, north: -Infinity, west: Infinity, east: -Infinity };
+  for (const point of points) {
+    box.south = Math.min(box.south, point.lat);
+    box.north = Math.max(box.north, point.lat);
+    box.west = Math.min(box.west, point.lon);
+    box.east = Math.max(box.east, point.lon);
+  }
+  const frame = frameAt((box.south + box.north) / 2);
+  const raster = emptyRaster("sea", padded(box, SEA_REACH_KM, frame), frame, SEA_CELL_KM, MAX_SEA_CELLS);
+  raster.regional = true;
+  const { south, west, stepLat, stepLon, rows, columns } = raster;
+  for (const item of land) {
+    // Every cell the box touches: a 2 km cell holds land when any of it is land.
+    const rowFrom = Math.max(0, Math.floor((item.south - south) / stepLat));
+    const rowTo = Math.min(rows - 1, Math.floor((item.north - south) / stepLat));
+    const columnFrom = Math.max(0, Math.floor((item.west - west) / stepLon));
+    const columnTo = Math.min(columns - 1, Math.floor((item.east - west) / stepLon));
+    for (let row = rowFrom; row <= rowTo; row += 1) {
+      for (let column = columnFrom; column <= columnTo; column += 1) raster.kind[row * columns + column] = KIND_LAND;
+    }
+  }
+  for (let row = 0; row < rows; row += 1) {
+    const lat = south + (row + 0.5) * stepLat;
+    for (let column = 0; column < columns; column += 1) {
+      const cell = row * columns + column;
+      if (raster.kind[cell] === KIND_LAND) continue;
+      const [ve, vn] = oceanAt(points, lat, west + (column + 0.5) * stepLon, frame);
+      raster.vEast[cell] = ve;
+      raster.vNorth[cell] = vn;
+    }
+  }
+  return raster;
+}
+
+/** Whether an atoll's raster (not the open sea's) covers a point. */
+function coveredByAtoll(rasters: readonly FlowRaster[], lat: number, lon: number): boolean {
+  return rasters.some((raster) => !raster.regional && cellAt(raster, lat, lon) >= 0);
+}
+
+/**
+ * Whether another atoll's raster than `at` has its reef side there: lagoon or land. Neighbouring atolls' rasters
+ * overlap in their sea margins, and each knows only its own outline and islands, so a particle on one must not drift
+ * across the other's reef where that one says there is no open sea.
+ */
+function otherAtollSaysNotSea(rasters: readonly FlowRaster[], at: number, lat: number, lon: number): boolean {
+  for (let other = 0; other < rasters.length; other += 1) {
+    if (other === at || rasters[other].regional) continue;
+    const cell = cellAt(rasters[other], lat, lon);
+    if (cell >= 0 && rasters[other].kind[cell] !== KIND_SEA) return true;
+  }
+  return false;
 }
 
 /** The cell index at a point, or -1 off the raster. */
@@ -563,6 +694,10 @@ export class FlowParticles {
       for (let at = 0; at < rasters.length; at += 1) {
         const cell = cellAt(rasters[at], lat, lon);
         if (cell < 0 || rasters[at].kind[cell] === KIND_LAND) continue;
+        // The open sea only where no atoll's raster is: over an atoll that one decides (an island there is land).
+        if (rasters[at].regional && coveredByAtoll(rasters, lat, lon)) break;
+        // Over a neighbour's reef, lagoon or island, that neighbour's raster decides.
+        if (!rasters[at].regional && otherAtollSaysNotSea(rasters, at, lat, lon)) continue;
         this.lat[index] = lat;
         this.lon[index] = lon;
         this.rasterOf[index] = at;
@@ -603,6 +738,26 @@ export class FlowParticles {
     return false;
   }
 
+  /**
+   * The raster a particle on raster `at` moves onto at a point, always onto open sea: from the open sea, an atoll's
+   * raster; from an atoll's raster (leaving its edge), a neighbouring atoll's whose margin reaches there, else the open
+   * sea's. -1 when there is none.
+   */
+  private handOff(rasters: readonly FlowRaster[], at: number, lat: number, lon: number): number {
+    const fromRegional = rasters[at].regional === true;
+    let sea = -1;
+    for (let other = 0; other < rasters.length; other += 1) {
+      if (other === at) continue;
+      const regional = rasters[other].regional === true;
+      if (regional && fromRegional) continue;
+      const cell = cellAt(rasters[other], lat, lon);
+      if (cell < 0 || rasters[other].kind[cell] !== KIND_SEA) continue;
+      if (!regional) return other;
+      sea = other;
+    }
+    return sea;
+  }
+
   private pushTrail(index: number): void {
     const head = (this.head[index] + 1) % this.trail;
     this.head[index] = head;
@@ -615,6 +770,11 @@ export class FlowParticles {
   opacity(index: number): number {
     const age = this.age[index];
     return Math.max(0, Math.min(1, age / FADE_IN_S, (this.life[index] - age) / FADE_OUT_S));
+  }
+
+  /** Which raster particle `index` is on (-1 none). For tests. */
+  rasterOf_(index: number): number {
+    return this.rasterOf[index];
   }
 
   /** Forgets every trail (after the map jumps), keeping the particles where they are. */
@@ -668,9 +828,23 @@ export class FlowParticles {
       const nextLon = lon + ve * degPerKnotSecond * lonScale * seconds;
       const from = cellAt(raster, lat, lon);
       const to = cellAt(raster, nextLat, nextLon);
+      // Between rasters: from the open sea onto an atoll's raster where one covers the point, and off the edge of an
+      // atoll's raster onto the open sea. Only onto water of the same kind it is on (sea), so no reef is crossed.
+      const handed = raster.regional || to < 0 ? this.handOff(rasters, at, nextLat, nextLon) : -1;
+      if (handed >= 0) {
+        this.rasterOf[index] = handed;
+        this.lat[index] = nextLat;
+        this.lon[index] = nextLon;
+        if (record) this.pushTrail(index);
+        continue;
+      }
       // An island, or the reef away from a channel's gate: the water cannot go on, so the particle stops and fades
-      // out where it is rather than vanishing (the field turns along the reef, so few get here).
-      if (stopsBetween(raster, from, to)) {
+      // out where it is rather than vanishing (the field turns along the reef, so few get here). Another atoll's raster
+      // with no sea at the point (its reef, lagoon or land) stops it the same way, on the open sea or a neighbour's margin.
+      const intoOther =
+        (raster.regional && coveredByAtoll(rasters, nextLat, nextLon)) ||
+        (!raster.regional && raster.kind[to] === KIND_SEA && otherAtollSaysNotSea(rasters, at, nextLat, nextLon));
+      if (stopsBetween(raster, from, to) || intoOther) {
         this.life[index] = Math.min(this.life[index], this.age[index] + FADE_OUT_S);
         this.speed[index] = 0;
         continue;

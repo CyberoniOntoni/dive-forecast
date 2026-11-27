@@ -2,11 +2,33 @@ import { atollRing } from "./atoll-ring";
 import { lagoonSinkCells, lagoonVelocity, sinkAt, type LagoonSink, type LagoonSource } from "./lagoon-flow";
 import { lagoonSources } from "./load-site";
 import type { FetchOptions } from "./marine";
-import { KM_PER_DEG_LAT, KM_PER_DEG_LON, rimForAtoll, rimWayId, ringBox, type RimRing } from "./rim";
+import { allRims, KM_PER_DEG_LAT, KM_PER_DEG_LON, pointInRing, rimForAtoll, rimWayId, ringBox, type RimRing } from "./rim";
 import { crossesRim, flowsAlongReef } from "./site-type";
 import { readCatalog } from "./store";
+import { gapFlows, reefFlows } from "./flow-gaps";
+import { readOpenings } from "./openings";
+import { readIslands } from "./islands";
 import { encodeVectors, KNOTS_PER_MS, lagoonKnots, type FlowAtoll, type FlowFieldView } from "./flow-wire";
 import type { Atoll, MarineHour, Site } from "./types";
+
+let seaLand: NonNullable<FlowFieldView["land"]> | null = null;
+
+/**
+ * The islands outside every atoll outline, as boxes (four decimals): the open sea's raster stops water there. Islands
+ * inside an outline are the atoll raster's business. Made once.
+ */
+export function openSeaLand(): NonNullable<FlowFieldView["land"]> {
+  if (seaLand) return seaLand;
+  const rims = [...allRims().values()];
+  const round = (value: number) => Math.round(value * 1e4) / 1e4;
+  seaLand = readIslands()
+    .filter((island) => !rims.some((rim) => pointInRing(island.ring[0][0], island.ring[0][1], rim)))
+    .map((island) => {
+      const box = ringBox(island.ring);
+      return { south: round(box.south), north: round(box.north), west: round(box.west), east: round(box.east) };
+    });
+  return seaLand;
+}
 
 /**
  * At most about this many cells on an atoll's lagoon grid. The lagoon flow is smooth away from its openings, and the
@@ -138,6 +160,14 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
   const ocean = oceanPoints(ring.samples, ring.series, time);
   const lagoon = own.length > 0 ? lagoonFlowGrid(lagoonGrid(rim, wayId), sources, time) : null;
   if (!lagoon && ocean.length === 0) return null;
+  const channelIds = new Set(roles.flatMap((role) => role.channels.map((channel) => channel.id)));
+  const gaps = gapFlows(
+    readOpenings().filter((opening) => opening.wayId === wayId),
+    rim,
+    ring,
+    sites.filter((site) => channelIds.has(site.id)),
+    time,
+  );
   return {
     wayId,
     atollId: first.id,
@@ -146,6 +176,8 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
     ocean,
     channels: roles.flatMap((role) => role.channels),
     walls: roles.flatMap((role) => role.walls),
+    gaps,
+    reef: reefFlows(ring, time),
   };
 }
 
@@ -167,5 +199,5 @@ export async function flowField(time: string, options: FetchOptions = { wait: fa
     [...byOutline.values()].map((group) => outlineFlow(group, catalog.sites, time, options).catch(() => null)),
   );
   const found = atolls.filter((item) => item != null);
-  return { time, atolls: found, missing: atolls.length - found.length };
+  return { time, atolls: found, missing: atolls.length - found.length, land: openSeaLand() };
 }

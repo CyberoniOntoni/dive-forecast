@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { atollRoles, lagoonFlowGrid, lagoonGrid, oceanPoints } from "./flow-field";
+import { atollRoles, lagoonFlowGrid, lagoonGrid, oceanPoints, openSeaLand } from "./flow-field";
 import { decodeVectors } from "./flow-wire";
 import { lagoonSink, lagoonSinkCells, sinkAt, type LagoonSource } from "./lagoon-flow";
-import type { RimRing } from "./rim";
+import { allRims, pointInRing, type RimRing } from "./rim";
 import type { Atoll, MarineHour, Site } from "./types";
 
 const RIM: RimRing = [
@@ -94,5 +94,20 @@ describe("atollRoles", () => {
       ],
       walls: ["wall", "strait"],
     });
+  });
+});
+
+describe("openSeaLand", () => {
+  it("lists the islands outside every outline as boxes, none inside one", () => {
+    const land = openSeaLand();
+    const rims = [...allRims().values()];
+    expect(land.length).toBeGreaterThan(0);
+    for (const box of land) {
+      expect(box.south).toBeLessThanOrEqual(box.north);
+      expect(box.west).toBeLessThanOrEqual(box.east);
+    }
+    // No island inside an outline: the middle of each box is outside them all (islands are small against an atoll).
+    const inside = land.filter((box) => rims.some((rim) => pointInRing((box.south + box.north) / 2, (box.west + box.east) / 2, rim)));
+    expect(inside.length).toBeLessThan(land.length / 20);
   });
 });
