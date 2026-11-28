@@ -32,6 +32,7 @@
     "wave-exposure": "tsx scripts/wave-exposure.ts",
     "islands": "tsx scripts/islands.ts",
     "shoals": "tsx scripts/shoals.ts",
+    "rim-reefs": "tsx scripts/rim-reefs.ts",
     "shelter-grid": "tsx scripts/shelter-grid.ts",
     "throughflow-calibrate": "tsx scripts/throughflow-calibrate.ts",
     "along-reef-calibrate": "tsx scripts/along-reef-calibrate.ts",

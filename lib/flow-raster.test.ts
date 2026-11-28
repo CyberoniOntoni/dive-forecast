@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { encodeRing } from "./atlas-overlays";
 import {
   buildFlowRaster,
   buildSeaRaster,
@@ -213,6 +214,53 @@ describe("buildFlowRaster", () => {
     expect(west(alone).north).toBeCloseTo(0, 2);
     expect(west(shared).north).toBeGreaterThan(0.1);
     expect(west(shared).east).toBeGreaterThan(0.3);
+  });
+});
+
+/** A reef top as an encoded ring: a thin box from (south, west) to (north, east). */
+function reefTop(south: number, west: number, north: number, east: number): number[] {
+  return encodeRing([
+    [west, south],
+    [east, south],
+    [east, north],
+    [west, north],
+    [west, south],
+  ]);
+}
+
+describe("reef tops as the walls", () => {
+  // Reef along the east rim, but for 6 km of open water in its middle with no listed channel.
+  const reefs = [reefTop(3.9, 73.598, 3.97, 73.602), reefTop(4.03, 73.598, 4.1, 73.602)];
+
+  it("lets the lagoon run out through open water between reefs, never over a reef top", () => {
+    const raster = buildFlowRaster(atoll(uniformLagoon(2, 0)), { outline: RIM, islands: [], reefs }, []);
+    expect(raster.kind[cellAt(raster, 3.95, 73.6)]).toBe(KIND_LAND);
+    expect(raster.kind[cellAt(raster, 4.0, 73.6)]).not.toBe(KIND_LAND);
+    const flock = new FlowParticles(400, 4, seeded(17));
+    let out = 0;
+    for (let step = 0; step < 400; step += 1) {
+      const sides = Array.from(flock.lat, (lat, index) => (flock.rasterOf_(index) < 0 ? -1 : raster.kind[cellAt(raster, lat, flock.lon[index])]));
+      flock.step(0.05, [raster], view, 0.001, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        if (flock.rasterOf_(index) < 0) continue;
+        const cell = cellAt(raster, flock.lat[index], flock.lon[index]);
+        expect(raster.kind[cell]).not.toBe(KIND_LAND);
+        if (sides[index] === KIND_LAGOON && raster.kind[cell] === KIND_SEA && flock.filled[index] >= 2) {
+          out += 1;
+          // Out through the open stretch only.
+          expect(flock.lat[index]).toBeGreaterThan(3.96);
+          expect(flock.lat[index]).toBeLessThan(4.04);
+        }
+      }
+    }
+    expect(out).toBeGreaterThan(0);
+  });
+
+  it("keeps a channel's gate open through a reef top along the whole rim", () => {
+    const solid = [reefTop(3.9, 73.598, 4.1, 73.602)];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: solid }, [EAST_PASS]);
+    expect(raster.kind[cellAt(raster, 4.0, 73.6)]).not.toBe(KIND_LAND);
+    expect(raster.kind[cellAt(raster, 3.95, 73.6)]).toBe(KIND_LAND);
   });
 });
 

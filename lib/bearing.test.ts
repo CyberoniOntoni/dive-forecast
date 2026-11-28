@@ -115,11 +115,16 @@ describe("atollForPin", () => {
     expect(atollForPin(0.22, 73.15, atolls)?.id).toBe("gaafu-dhaalu");
   });
 
-  it("returns null for a pin in an unseeded atoll instead of handing it to a far one", () => {
-    // Haa Alif Atoll, over 100 km north of Raa, the nearest seeded outline.
-    expect(atollForPin(6.95, 72.95, atolls)).toBeNull();
-    // Haa Dhaalu Atoll, over 60 km north of Raa.
-    expect(atollForPin(6.55, 73.0, atolls)).toBeNull();
+  it("returns null for a pin far from every seeded atoll instead of handing it to a far one", () => {
+    // Out past Ihavandhippolhu, the northernmost outline, about 100 km off.
+    expect(atollForPin(7.95, 72.95, atolls)).toBeNull();
+    // In the sea west of Maamakunudhoo, about 60 km off.
+    expect(atollForPin(6.3, 72.0, atolls)).toBeNull();
+  });
+
+  it("hands a pin in the northern atolls to their own outline", () => {
+    expect(atollForPin(6.95, 72.95, atolls)?.id).toBe("ihavandhippolhu");
+    expect(atollForPin(6.55, 73.0, atolls)?.id).toBe("thiladhunmathi");
   });
 
   it("returns null with no atolls", () => {

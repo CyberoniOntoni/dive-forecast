@@ -35,8 +35,8 @@ describe("withCurrentPlace: an app-added pin's forecast type", () => {
   });
 
   it("gives no type in an unseeded atoll, and leaves catalog sites as they are", () => {
-    const haa = { id: "haa-1a2b3c4d", name: "Haa spot", atollId: "", lat: 6.95, lon: 72.95, sourceUrl: "user", diverSiteType: "pass" as const };
-    const placed = withCurrentPlace(haa, catalog);
+    const far = { id: "north-1a2b3c4d", name: "Far north spot", atollId: "", lat: 8.0, lon: 73.0, sourceUrl: "user", diverSiteType: "pass" as const };
+    const placed = withCurrentPlace(far, catalog);
     expect(placed.siteType).toBeUndefined();
     expect(placed.atollId).toBe("unseeded");
     const published = catalog.sites[0];

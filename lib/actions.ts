@@ -20,6 +20,7 @@ import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { blockedIds, requireTermsAccepted } from "./moderation";
 import { ready, readyWith } from "./ready";
+import { readRimReefs } from "./rim-reefs";
 import { runInBackground } from "./cloudflare";
 import { currentSession, requireSession } from "./auth";
 import { requireReviewText, requireSiteDetails, type SiteDetailsInput } from "./site-details";
@@ -782,6 +783,19 @@ export async function getShelterShapes(wayId: string): Promise<{ outline: RimRin
   await ready();
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
   return shelterShapes(wayId);
+}
+
+/**
+ * An atoll's outline, the islands in and round it, and the reef tops along its rim (encoded rings, lib/rim-reefs.ts),
+ * for the current-flow layer: water crosses the rim wherever neither stops it.
+ */
+export async function getFlowShapes(
+  wayId: string,
+): Promise<{ outline: RimRing; islands: RimRing[]; reefs: number[][] } | null> {
+  await readyWith("rim-reefs.json");
+  if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
+  const shapes = shelterShapes(wayId);
+  return shapes ? { ...shapes, reefs: readRimReefs().get(wayId) ?? [] } : null;
 }
 
 /** The sea state at one tapped spot of the layer. */
