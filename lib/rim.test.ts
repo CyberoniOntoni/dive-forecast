@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { inwardBearingDeg, resolveBearing } from "./bearing";
-import { nearestRimWithin, parseRims, pointInRing, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
+import { allRims, nearestRimWithin, parseRims, pointInRing, rimFilePresent, rimForAtoll, rimInwardBearing, type RimRing } from "./rim";
 import type { Catalog, Site } from "./types";
 
 // A 0.2 degree square centered on the origin, closed.
@@ -89,6 +89,20 @@ describe("parseRims", () => {
     expect(() => parseRims(ring([[0, 0], [0, "1"], [1, 1], [0, 0]]))).toThrow(/point 1/);
     expect(() => parseRims(ring([[0, 0], [0, 200], [1, 1], [0, 0]]))).toThrow(/point 1/);
     expect(() => parseRims(JSON.stringify({ rims: [] }))).toThrow(/not an object/);
+  });
+});
+
+describe("flow-only outlines", () => {
+  it("are read apart, found for their atoll and left out of allRims", () => {
+    const text = JSON.stringify({ rims: { "1": SQUARE }, flowRims: { "2": SQUARE } });
+    expect([...parseRims(text).keys()]).toEqual(["1"]);
+    expect([...parseRims(text, "flowRims").keys()]).toEqual(["2"]);
+    // Thiladhunmathi is flow-only: its outline is there for the flow layer, not for the sea state or the boat route.
+    const catalog = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "sites.json"), "utf8")) as Catalog;
+    const north = catalog.atolls.find((atoll) => atoll.id === "thiladhunmathi")!;
+    expect(north.flowOnly).toBe(true);
+    expect(rimForAtoll(north)).not.toBeNull();
+    expect(allRims().has("671807028")).toBe(false);
   });
 });
 

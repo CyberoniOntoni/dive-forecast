@@ -4,6 +4,7 @@ import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import {
   allRims,
+  anyRim,
   boxesOverlap,
   KM_PER_DEG_LAT,
   padBox,
@@ -466,7 +467,7 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
 
 /** An atoll's outline and the islands in and round it, for the map to cut the shading to water. */
 export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
-  const outline = allRims().get(wayId);
+  const outline = anyRim(wayId);
   if (!outline) return null;
   const box = padBox(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
   const islands = readIslands()

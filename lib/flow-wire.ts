@@ -7,7 +7,7 @@ import type { Strength } from "./types";
 
 /** One atoll's ingredients for the flow animation at one hour. Speeds are knots, as east and north components. */
 export type FlowAtoll = {
-  /** The outline's OSM way id: the key getShelterShapes takes for the outline and islands. */
+  /** The outline's OSM way id: the key getFlowShapes takes for the outline, islands and reef tops. */
   wayId: string;
   atollId: string;
   /** The outline's box, so the map builds only atolls near the view. Absent in fields saved before it was added. */

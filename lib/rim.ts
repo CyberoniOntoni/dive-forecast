@@ -16,13 +16,17 @@ const PROBE_KM = 1;
 const RIM_ATOLL_MAX_KM = 150;
 
 /** The parsed rim file. `present` is false only when data/rims.json does not exist. */
-let loaded: { present: boolean; rims: Map<string, RimRing> } | null = null;
+let loaded: { present: boolean; rims: Map<string, RimRing>; flowRims: Map<string, RimRing> } | null = null;
 
-/** OSM outline for an atoll, or null when none is stored. Keyed by the way id in rimSourceUrl. */
+/**
+ * OSM outline for an atoll, or null when none is stored. Keyed by the way id in rimSourceUrl. A flow-only atoll's
+ * outline (data/rims.json `flowRims`) is found too.
+ */
 export function rimForAtoll(atoll: Atoll | undefined): RimRing | null {
   if (!atoll) return null;
   const wayId = rimWayId(atoll);
-  const ring = readRims().rims.get(wayId) ?? null;
+  const { rims, flowRims } = readRims();
+  const ring = rims.get(wayId) ?? flowRims.get(wayId) ?? null;
   if (ring) {
     const [lat, lon] = ringMiddle(ring);
     const km = Math.hypot((lat - atoll.oceanLat) * KM_PER_DEG_LAT, (lon - atoll.oceanLon) * KM_PER_DEG_LON);
@@ -38,9 +42,25 @@ export function rimWayId(atoll: Atoll): string {
   return atoll.rimSourceUrl.split("/").pop() ?? "";
 }
 
-/** Every stored outline, keyed by OSM way id. Empty when data/rims.json is absent. */
+/**
+ * Every stored outline the forecast, sea state and boat route use, keyed by OSM way id. Empty when data/rims.json is
+ * absent. Flow-only outlines (`flowRims`) are not among them: their open coasts are no reef, which these read every
+ * outline as away from a listed gap.
+ */
 export function allRims(): ReadonlyMap<string, RimRing> {
   return readRims().rims;
+}
+
+/** An outline by way id, flow-only ones included: the map's current-flow layer draws both. */
+export function anyRim(wayId: string): RimRing | undefined {
+  const { rims, flowRims } = readRims();
+  return rims.get(wayId) ?? flowRims.get(wayId);
+}
+
+/** Every outline, flow-only ones included, keyed by way id: for building the flow layer's data (npm run rim-reefs). */
+export function flowLayerRims(): ReadonlyMap<string, RimRing> {
+  const { rims, flowRims } = readRims();
+  return new Map([...rims, ...flowRims]);
 }
 
 /** True unless data/rims.json is absent. With no file every pin keeps the heuristic. */
@@ -52,14 +72,14 @@ export function rimFilePresent(): boolean {
  * A missing rim file is no rims: every pin keeps the heuristic. Any other read or parse error, or a ring of the
  * wrong shape, throws and is read again on the next call, so a corrupt file never passes for a missing one.
  */
-function readRims(): { present: boolean; rims: Map<string, RimRing> } {
+function readRims(): { present: boolean; rims: Map<string, RimRing>; flowRims: Map<string, RimRing> } {
   if (loaded) return loaded;
   const text = readDataFileIfPresent("rims.json");
   if (text === null) {
-    loaded = { present: false, rims: new Map() };
+    loaded = { present: false, rims: new Map(), flowRims: new Map() };
     return loaded;
   }
-  loaded = { present: true, rims: parseRims(text) };
+  loaded = { present: true, rims: parseRims(text), flowRims: parseRims(text, "flowRims") };
   return loaded;
 }
 
@@ -67,11 +87,11 @@ function readRims(): { present: boolean; rims: Map<string, RimRing> } {
  * The rings in a rim file's text, keyed by OSM way id. Each must be a closed list of at least four finite
  * [lat, lon] pairs; anything else (GeoJSON nesting, objects, open rings, out-of-range numbers) throws.
  */
-export function parseRims(text: string): Map<string, RimRing> {
+export function parseRims(text: string, key: "rims" | "flowRims" = "rims"): Map<string, RimRing> {
   const parsed: unknown = JSON.parse(text);
   if (!isRecord(parsed)) throw new Error("rims.json: not an object");
-  const body = parsed.rims ?? {};
-  if (!isRecord(body)) throw new Error("rims.json: rims is not an object");
+  const body = parsed[key] ?? {};
+  if (!isRecord(body)) throw new Error(`rims.json: ${key} is not an object`);
   const rims = new Map<string, RimRing>();
   for (const [wayId, ring] of Object.entries(body)) {
     const problem = ringProblem(ring);

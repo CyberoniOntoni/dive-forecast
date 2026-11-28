@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ATLAS_OVERLAYS, decodeRing, encodeRing, ringAreaM2, simplifyRing } from "../lib/atlas-overlays";
-import { allRims, padBox, rimEdgeKm, ringBox } from "../lib/rim";
+import { flowLayerRims, padBox, rimEdgeKm, ringBox } from "../lib/rim";
 
 /**
  * Builds data/rim-reefs.json for the map's current-flow layer: the reef tops along each atoll's rim, from the Allen
@@ -11,7 +11,7 @@ import { allRims, padBox, rimEdgeKm, ringBox } from "../lib/rim";
  *
  * Reef Crest and Outer and Inner Reef Flat are awash or a metre or two down at low tide: the flow layer stops water
  * there, and lets it through the rim everywhere else (lib/flow-raster.ts). A shape is kept when some point of it lies
- * within RIM_KM of an outline, inside or out, and goes with the nearest outline. Rerun after the overlays or rims
+ * within RIM_KM of an outline, inside or out, and goes with every such outline. Rerun after the overlays or rims
  * change. Where the Atlas has not mapped a rim (parts of the north), only the islands stop the water there.
  *
  * Each outline's reef tops are shapes, each its outer ring then any pools in it (holes), as rings in the map tiles'
@@ -32,7 +32,7 @@ const MIN_HOLE_M2 = 20000;
 function main(): void {
   const overlay = ATLAS_OVERLAYS.reefZones;
   const dir = path.join(process.cwd(), "public", overlay.path);
-  const rims = [...allRims()].map(([wayId, ring]) => ({ wayId, ring, box: padBox(ringBox(ring), RIM_KM / 100) }));
+  const rims = [...flowLayerRims()].map(([wayId, ring]) => ({ wayId, ring, box: padBox(ringBox(ring), RIM_KM / 100) }));
   const byWay = new Map<string, number[][][]>();
   let points = 0;
   for (const file of fs.readdirSync(dir)) {
@@ -42,15 +42,13 @@ function main(): void {
       if (!KINDS.has(overlay.classes[classIndex].name)) continue;
       const ring = decodeRing(outer);
       if (ring.length < 4 || ringAreaM2(ring.map(([lat, lon]) => [lon, lat])) < MIN_AREA_M2) continue;
-      let best: { wayId: string; km: number } | null = null;
-      for (const rim of rims) {
-        if (!ring.some(([lat, lon]) => lat >= rim.box.south && lat <= rim.box.north && lon >= rim.box.west && lon <= rim.box.east)) continue;
-        for (const [lat, lon] of ring) {
-          const km = rimEdgeKm({ lat, lon }, rim.ring);
-          if (km <= RIM_KM && (!best || km < best.km)) best = { wayId: rim.wayId, km };
-        }
-      }
-      if (!best) continue;
+      // Every outline it lies near: where two atolls' outlines run close, the reef walls both.
+      const near = rims.filter(
+        (rim) =>
+          ring.some(([lat, lon]) => lat >= rim.box.south && lat <= rim.box.north && lon >= rim.box.west && lon <= rim.box.east) &&
+          ring.some(([lat, lon]) => rimEdgeKm({ lat, lon }, rim.ring) <= RIM_KM),
+      );
+      if (near.length === 0) continue;
       const simple = simplifyRing(
         ring.map(([lat, lon]) => [lon, lat]),
         TOLERANCE_DEG,
@@ -63,7 +61,8 @@ function main(): void {
         return kept.length < 4 ? [] : [kept];
       });
       points += simple.length + pools.reduce((sum, hole) => sum + hole.length, 0);
-      byWay.set(best.wayId, [...(byWay.get(best.wayId) ?? []), [encodeRing(simple), ...pools.map(encodeRing)]]);
+      const shape = [encodeRing(simple), ...pools.map(encodeRing)];
+      for (const rim of near) byWay.set(rim.wayId, [...(byWay.get(rim.wayId) ?? []), shape]);
     }
   }
   const reefs = Object.fromEntries([...byWay].sort(([a], [b]) => a.localeCompare(b)));

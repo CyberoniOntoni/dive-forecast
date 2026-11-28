@@ -8,6 +8,7 @@ import {
   KIND_LAGOON,
   KIND_LAND,
   KIND_SEA,
+  stopsBetween,
   velocityAt,
   type FlowChannel,
   type FlowRaster,
@@ -279,6 +280,22 @@ describe("reef tops as the walls", () => {
     // A reef flat 2.2 km thick: still open right through, and the water beyond it is reached.
     const wide = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: [reefTop(3.9, 73.59, 4.1, 73.61)] }, [EAST_PASS]);
     for (const lon of [73.5905, 73.6, 73.6095]) expect(wide.kind[cellAt(wide, 4.0, lon)], `wide at ${lon}`).not.toBe(KIND_LAND);
+  });
+
+  it("cuts no passage through a reef inside the lagoon behind a gap that is already open", () => {
+    // No reef at the gap itself; an inner reef flat 0.8 km inside, on its axis.
+    const inner = [...reefs, reefTop(3.95, 73.592, 4.05, 73.5935)];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: inner }, [EAST_PASS]);
+    expect(raster.kind[cellAt(raster, 4.0, 73.5928)]).toBe(KIND_LAND);
+  });
+
+  it("stops a diagonal step between two reef cells that touch only at their corners", () => {
+    // Reef drawn corner to corner: (0,2), (1,1), (2,0) on a 3 × 3 raster; the step (0,1) → (1,2) passes between.
+    const kind = new Uint8Array(9).fill(KIND_SEA);
+    for (const cell of [2, 4, 6]) kind[cell] = KIND_LAND;
+    const raster = { columns: 3, rows: 3, kind, gate: new Uint8Array(9), openRim: true } as unknown as FlowRaster;
+    expect(stopsBetween(raster, 1, 5)).toBe(true);
+    expect(stopsBetween(raster, 1, 0)).toBe(false);
   });
 
   it("leaves a pool inside a reef top as water", () => {

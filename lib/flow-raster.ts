@@ -559,15 +559,18 @@ function wallNear(raster: FlowRaster, reefTops: Uint8Array, lat: number, lon: nu
   return false;
 }
 
-/** A gap's passage starts within this far of its point along its axis (open water before the reef is skipped), km. */
-const PASSAGE_START_KM = 1;
+/**
+ * A gap's passage starts within this far of its point along its axis, or half its width if more (open water before
+ * the reef is skipped), km: no farther, so a gap already open does not cut an unrelated reef inside the lagoon.
+ */
+const PASSAGE_START_KM = 0.4;
 /** And runs through at most this much reef, km: the widest bridged gaps cross reef flats 2 to 3 km across. */
 const PASSAGE_MAX_KM = 3;
 
 /**
  * Opens each channel's passage through the reef tops: lines along its axis, both ways from its point and spaced half a
  * cell across its width (at least 0.3 km, so a gap narrower than a cell stays a cell wide). Each line skips up to
- * PASSAGE_START_KM of open water, then opens every reef cell until it is through to open water again (or meets an
+ * PASSAGE_START_KM (or half the gap's width) of open water, then opens every reef cell until it is through to open water again (or meets an
  * island), at most PASSAGE_MAX_KM. Both ways, so a gap is as open on the ebb as on the flood, and a reef flat bridging
  * it, however thick, does not shut it.
  */
@@ -580,12 +583,13 @@ function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonl
     const he = Math.sin(radians);
     const hn = Math.cos(radians);
     const lanes = Math.ceil(half / stepKm);
+    const startKm = Math.max(PASSAGE_START_KM, half);
     for (let lane = -lanes; lane <= lanes; lane += 1) {
       const across = Math.max(-half, Math.min(half, lane * stepKm));
       for (const way of [1, -1]) {
         let inReef = false;
         let reefKm = 0;
-        for (let along = 0; along <= PASSAGE_START_KM + PASSAGE_MAX_KM; along += stepKm) {
+        for (let along = 0; along <= startKm + PASSAGE_MAX_KM; along += stepKm) {
           const east = way * along * he + across * hn;
           const north = way * along * hn - across * he;
           const cell = cellAt(raster, site.lat + north / KM_PER_DEG_LAT, site.lon + east / frame.kmLon);
@@ -595,7 +599,7 @@ function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonl
             raster.gate[cell] = 1;
             reefKm += stepKm;
             if (reefKm > PASSAGE_MAX_KM) break;
-          } else if (inReef || along > PASSAGE_START_KM) {
+          } else if (inReef || along > startKm) {
             break;
           }
         }
@@ -851,11 +855,19 @@ function landBetween(raster: FlowRaster, from: number, to: number): boolean {
   const row2 = Math.floor(to / columns);
   const column2 = to - row2 * columns;
   const steps = 2 * Math.max(Math.abs(row2 - row1), Math.abs(column2 - column1));
-  for (let step = 1; step < steps; step += 1) {
+  let lastRow = row1;
+  let lastColumn = column1;
+  for (let step = 1; step <= steps; step += 1) {
     const t = step / steps;
     const row = Math.round(row1 + (row2 - row1) * t);
     const column = Math.round(column1 + (column2 - column1) * t);
     if (kind[row * columns + column] === KIND_LAND) return true;
+    // A diagonal move passes between two corner cells: land on either is a wall (a reef line drawn corner to corner).
+    if (row !== lastRow && column !== lastColumn) {
+      if (kind[lastRow * columns + column] === KIND_LAND || kind[row * columns + lastColumn] === KIND_LAND) return true;
+    }
+    lastRow = row;
+    lastColumn = column;
   }
   return false;
 }
