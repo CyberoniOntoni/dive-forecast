@@ -480,17 +480,22 @@ export function buildFlowRaster(
 const WALLED_KM = 0.4;
 
 /**
- * The cells the reef tops cover: every cell whose centre a shape encloses (not its pools) and every cell its outer edge passes through, so a
- * thin crest stays unbroken; then a one-cell gap with reef on both sides is closed (the Atlas leaves slivers between
- * its shapes; a real gap that narrow is a listed channel, whose gate opens it again).
+ * The cells the reef tops cover: every cell whose centre a shape encloses (not its pools) and every cell its outer
+ * edge passes through, so a thin crest stays unbroken; then a one-cell gap with reef on both sides is closed (the Atlas
+ * leaves slivers between its shapes; a real gap that narrow is a listed channel, whose gate opens it again), but never
+ * a pool's cell: a pool shows wherever it holds a cell's centre.
  */
 function reefMask(raster: FlowRaster, shapes: readonly (readonly RimRing[])[], frame: Frame): Uint8Array {
   const { south, west, stepLat, stepLon, rows, columns } = raster;
   const mask = new Uint8Array(rows * columns);
   const scratch: FlowRaster = { ...raster, kind: mask };
+  // Cells inside a shape's outer ring: with the mask, which of them are its pools (left open by the closing below).
+  const outer = new Uint8Array(rows * columns);
+  const outerScratch: FlowRaster = { ...raster, kind: outer };
   for (const shape of shapes) {
     // The pools inside a reef top stay water; only the outer edge is walked, so a thin crest stays unbroken.
     fillRings(scratch, shape, 1);
+    if (shape.length > 1) fillRings(outerScratch, [shape[0]], 1);
     const ring = shape[0];
     for (let index = 0; index + 1 < ring.length; index += 1) {
       const [lat1, lon1] = ring[index];
@@ -509,7 +514,7 @@ function reefMask(raster: FlowRaster, shapes: readonly (readonly RimRing[])[], f
   for (let row = 1; row + 1 < rows; row += 1) {
     for (let column = 1; column + 1 < columns; column += 1) {
       const cell = row * columns + column;
-      if (mask[cell]) continue;
+      if (mask[cell] || outer[cell]) continue;
       const at = (dr: number, dc: number) => mask[cell + dr * columns + dc];
       if ((at(-1, 0) && at(1, 0)) || (at(0, -1) && at(0, 1)) || (at(-1, -1) && at(1, 1)) || (at(-1, 1) && at(1, -1))) closed[cell] = 1;
     }

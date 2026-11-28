@@ -68,7 +68,7 @@ export async function warmCaches(now = Date.now()): Promise<WarmResult> {
     hour: target.slice(0, 13),
     saved,
     sites: sites.length,
-    atolls: atolls.length,
+    atolls: waved.length,
     offshoreFailed,
     ms: Date.now() - started,
   };

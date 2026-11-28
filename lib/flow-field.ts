@@ -167,6 +167,7 @@ async function outlineFlow(atolls: readonly Atoll[], sites: readonly Site[], tim
     ring,
     sites.filter((site) => channelIds.has(site.id)),
     time,
+    !first.flowOnly,
   );
   return {
     wayId,

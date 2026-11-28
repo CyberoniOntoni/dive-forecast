@@ -305,6 +305,17 @@ describe("reef tops as the walls", () => {
     expect(stopsBetween(raster, 1, 0)).toBe(false);
   });
 
+  it("keeps a pool one cell across as water, never closed as a sliver", () => {
+    // A pool about 280 m by 220 m: it holds one or two cell centres, with reef all round them.
+    const pooled = [reefTop(3.9, 73.59, 4.1, 73.6, boxRing(3.999, 73.594, 4.001, 73.5965))];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: pooled }, []);
+    let water = 0;
+    for (let lat = 3.998; lat <= 4.002; lat += 0.0005) {
+      for (let lon = 73.593; lon <= 73.5975; lon += 0.0005) if (raster.kind[cellAt(raster, lat, lon)] !== KIND_LAND) water += 1;
+    }
+    expect(water).toBeGreaterThan(0);
+  });
+
   it("leaves a pool inside a reef top as water", () => {
     const pooled = [reefTop(3.9, 73.59, 4.1, 73.6, boxRing(3.98, 73.592, 4.02, 73.598))];
     const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: pooled }, []);

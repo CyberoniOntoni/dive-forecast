@@ -23,18 +23,23 @@ describe("parseRimReefs", () => {
     expect(() => parseRimReefs(JSON.stringify({ reefs: { "1": [[RING.slice(0, 9)]] } }))).toThrow(/shape 0/);
     expect(() => parseRimReefs(JSON.stringify({ reefs: { "1": [[[...RING.slice(0, 9), 0.5]]] } }))).toThrow(/shape 0/);
     expect(() => parseRimReefs(JSON.stringify({ reefs: { "1": [[]] } }))).toThrow(/shape 0/);
+    // A ring that does not come back to its first point.
+    expect(() => parseRimReefs(JSON.stringify({ reefs: { "1": [[[...RING.slice(0, 8), 0, -99]]] } }))).toThrow(/shape 0/);
   });
 });
 
 describe("readRimReefs", () => {
   const cwd = process.cwd();
+  let dir = "";
   afterEach(() => {
     process.chdir(cwd);
+    if (dir) fs.rmSync(dir, { recursive: true, force: true });
     vi.resetModules();
   });
 
   it("reads no reefs from a missing file, so the flow layer walls every outline as before", async () => {
-    process.chdir(fs.mkdtempSync(path.join(os.tmpdir(), "rim-reefs-")));
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), "rim-reefs-"));
+    process.chdir(dir);
     vi.resetModules();
     const { readRimReefs } = await import("./rim-reefs");
     expect(readRimReefs().size).toBe(0);

@@ -11,7 +11,7 @@ import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, flowSite, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
-import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
+import { flowOutlineShapes, shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
 import { flowHourInWindow, mapFlowField } from "./flow-field-cache";
 import type { FlowFieldView } from "./flow-wire";
@@ -797,7 +797,7 @@ export async function getFlowShapes(
   await readyWith("rim-reefs.json");
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
   // Islands over the flow raster's whole sea margin (and a little more, for the box's longitude scale).
-  const shapes = shelterShapes(wayId, SEA_MARGIN_KM + 1);
+  const shapes = flowOutlineShapes(wayId, SEA_MARGIN_KM + 1);
   if (!shapes) return null;
   const reefs = readRimReefs().get(wayId);
   return reefs && reefs.length > 0 ? { ...shapes, reefs } : shapes;

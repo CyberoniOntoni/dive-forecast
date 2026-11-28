@@ -25,8 +25,14 @@ export function parseRimReefs(text: string): Map<string, number[][][]> {
   for (const [wayId, list] of Object.entries(reefs)) {
     if (!Array.isArray(list)) throw new Error(`rim-reefs.json: ${wayId} is not a list`);
     list.forEach((shape, index) => {
+      // Whole steps, at least four points, closed: after the first point the steps sum to nothing.
       const ring = (value: unknown) =>
-        Array.isArray(value) && value.length >= 8 && value.length % 2 === 0 && value.every((step) => Number.isInteger(step));
+        Array.isArray(value) &&
+        value.length >= 8 &&
+        value.length % 2 === 0 &&
+        value.every((step) => Number.isInteger(step)) &&
+        value.slice(2).reduce((sum: number, step: number, index) => (index % 2 === 0 ? sum + step : sum), 0) === 0 &&
+        value.slice(2).reduce((sum: number, step: number, index) => (index % 2 === 1 ? sum + step : sum), 0) === 0;
       if (!Array.isArray(shape) || shape.length === 0 || !shape.every(ring)) {
         throw new Error(`rim-reefs.json: ${wayId} shape ${index} is not a list of encoded rings`);
       }

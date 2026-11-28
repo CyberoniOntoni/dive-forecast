@@ -77,7 +77,8 @@ function seriesNear(point: { lat: number; lon: number }, ring: AtollRing): Marin
  * Every gap of the outline at `time`: where the water heads (along the inward normal, or out along it) and how fast,
  * from the channel model at the gap's width. Catalog channel sites within GAP_SITE_KM are listed with it, so the map
  * shows their own forecast there instead. A gap with no series near it, no inward normal or no forecast hour is left
- * out (the map then has no gate there).
+ * out (the map then has no gate there). With `head` false (a flow-only outline: its ring spans several natural atolls,
+ * so the ring mean is no lagoon level) the model runs without the head across the atoll.
  */
 export function gapFlows(
   openings: readonly ReefOpening[],
@@ -85,6 +86,7 @@ export function gapFlows(
   ring: AtollRing,
   channelSites: readonly Site[],
   time: string,
+  head = true,
 ): FlowGap[] {
   const gaps: FlowGap[] = [];
   for (const opening of openings) {
@@ -92,7 +94,7 @@ export function gapFlows(
     if (inward == null) continue;
     const hours = seriesNear(opening, ring);
     if (!hours) continue;
-    const hour = forecastHours({ hours, inwardBearingDeg: inward, ringLevel: ring.level, channelWidthM: opening.widthM }).find(
+    const hour = forecastHours({ hours, inwardBearingDeg: inward, ringLevel: head ? ring.level : undefined, channelWidthM: opening.widthM }).find(
       (item) => item.time === time,
     );
     if (!hour) continue;

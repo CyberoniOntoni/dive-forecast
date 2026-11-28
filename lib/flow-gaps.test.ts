@@ -72,6 +72,19 @@ describe("gapFlows", () => {
     expect(bridged.knots).toBeLessThan(open.knots);
   });
 
+  it("runs with no head across the atoll when told to, as on a flow-only outline", () => {
+    const series = week(0, 0);
+    // A lagoon level lagging the sea by about a quarter tide: a strong head through the gap.
+    const lagged: AtollRing = {
+      ...ring(series),
+      level: series.map((hour, index) => ({ time: hour.time, levelM: 0.4 * Math.sin((2 * Math.PI * (index - 3)) / 12.42) })),
+    };
+    const times = series.slice(24, 72).map((hour) => hour.time);
+    const flows = (from: AtollRing, head: boolean) => times.map((time) => gapFlows([EAST_GAP], RIM, from, [], time, head)[0]);
+    expect(flows(lagged, false)).toEqual(flows(ring(series), true));
+    expect(flows(lagged, true)).not.toEqual(flows(lagged, false));
+  });
+
   it("leaves out a gap with no series near it", () => {
     const samples = ringSamples(RIM);
     const empty: AtollRing = { samples, series: samples.map(() => null), level: [] };

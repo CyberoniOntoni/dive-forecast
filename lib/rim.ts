@@ -60,7 +60,8 @@ export function anyRim(wayId: string): RimRing | undefined {
 /** Every outline, flow-only ones included, keyed by way id: for building the flow layer's data (npm run rim-reefs). */
 export function flowLayerRims(): ReadonlyMap<string, RimRing> {
   const { rims, flowRims } = readRims();
-  return new Map([...rims, ...flowRims]);
+  // A forecast outline wins a shared way id, as in rimForAtoll and anyRim.
+  return new Map([...flowRims, ...rims]);
 }
 
 /** True unless data/rims.json is absent. With no file every pin keeps the heuristic. */
