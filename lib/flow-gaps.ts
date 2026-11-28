@@ -75,7 +75,8 @@ function seriesNear(point: { lat: number; lon: number }, ring: AtollRing): Marin
 
 /**
  * Every gap of the outline at `time`: where the water heads (along the inward normal, or out along it) and how fast,
- * from the channel model at the gap's width. Catalog channel sites within GAP_SITE_KM are listed with it, so the map
+ * from the channel model at the gap's width. Catalog channel sites within GAP_SITE_KM of the gap's edge (half its width
+ * out from its point), each with its nearest gap only, are listed with it, so the map
  * shows their own forecast there instead. A gap with no series near it, no inward normal or no forecast hour is left
  * out (the map then has no gate there). With `head` false (a flow-only outline: its ring spans several natural atolls,
  * so the ring mean is no lagoon level) the model runs without the head across the atoll.
@@ -89,6 +90,15 @@ export function gapFlows(
   head = true,
 ): FlowGap[] {
   const gaps: FlowGap[] = [];
+  // Each channel site goes with its nearest gap, when it lies within GAP_SITE_KM of that gap's edge: a pin on the side
+  // of a wide gap is that gap, and must not open a second gate beside it.
+  const edgeKm = (site: Site, opening: ReefOpening) => kmBetween(site, opening) - opening.widthM / 2000;
+  const gapOf = new Map<string, ReefOpening>();
+  for (const site of channelSites) {
+    let best: ReefOpening | null = null;
+    for (const opening of openings) if (!best || edgeKm(site, opening) < edgeKm(site, best)) best = opening;
+    if (best && edgeKm(site, best) <= GAP_SITE_KM) gapOf.set(site.id, best);
+  }
   for (const opening of openings) {
     const inward = rimInwardBearing(opening, rim, NORMAL_REACH_KM);
     if (inward == null) continue;
@@ -105,7 +115,7 @@ export function gapFlows(
       widthM: Math.round(opening.widthM),
       headingDeg: Math.round(hour.direction === "incoming" ? inward : (inward + 180) % 360),
       knots: round(knots, 2),
-      siteIds: channelSites.filter((site) => kmBetween(site, opening) <= GAP_SITE_KM).map((site) => site.id),
+      siteIds: channelSites.filter((site) => gapOf.get(site.id) === opening).map((site) => site.id),
     });
   }
   return gaps;

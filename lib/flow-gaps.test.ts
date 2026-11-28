@@ -63,6 +63,18 @@ describe("gapFlows", () => {
     expect([...headings].sort((a, b) => a - b)).toEqual([90, 270]);
   });
 
+  it("names a pin on the side of a wide gap with that gap, and each pin with its nearest gap only", () => {
+    const series = week(0, 0);
+    const time = series[40].time;
+    const wide = { ...EAST_GAP, widthM: 2000 };
+    const north = { ...EAST_GAP, lat: 4.05, widthM: 200 };
+    // 1.3 km from the wide gap's point, 0.3 km past its edge; 4.2 km from the narrow one.
+    const side = { id: "side", lat: 4.0 + 1.3 / 110.57, lon: 73.601 } as Site;
+    const [first, second] = gapFlows([wide, north], RIM, ring(series), [side], time);
+    expect(first.siteIds).toEqual(["side"]);
+    expect(second.siteIds).toEqual([]);
+  });
+
   it("gives a gap a reef flat bridges less than an open one", () => {
     const series = week(270, 0.6);
     const time = series[40].time;
