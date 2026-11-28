@@ -58,9 +58,12 @@ const SCALE_AT_KM = 2;
 /** The lagoon scale when no channel is running to set it, and the range it is held to. */
 const DEFAULT_LAGOON_SCALE = 0.3;
 const LAGOON_SCALE_RANGE: readonly [number, number] = [0.05, 1];
-/** Channels slower than this feed no particles of their own: slack water has no stream to show. */
-const FEED_MIN_KNOTS = 0.4;
-/** The share of new particles fed into a channel's stream when one is in view. */
+/**
+ * Channels slower than this feed no particles of their own: slack water has no stream to show. Below a mild gap's
+ * reef-flat share (0.8 × 0.4 = 0.32 knots), so a bridged gap that is running feeds its stream as an open one does.
+ */
+const FEED_MIN_KNOTS = 0.3;
+/** The share of new particles fed into a channel's stream when one is in view, shared by width (wider, more water). */
 export const FEED_SHARE = 0.25;
 /** A fed particle starts at most this far out in the channel's upstream fan, km. */
 const FEED_KM = 0.6;
@@ -976,12 +979,15 @@ export class FlowParticles {
     const inView = (jet: { lat: number; lon: number }) =>
       jet.lat >= view.south && jet.lat <= view.north && jet.lon >= view.west && jet.lon <= view.east;
     let total = 0;
-    for (const raster of rasters) for (const jet of raster.jets) if (inView(jet)) total += 1;
-    if (total === 0) return false;
-    let pick = Math.floor(this.random() * total);
+    for (const raster of rasters) for (const jet of raster.jets) if (inView(jet)) total += jet.widthKm;
+    if (!(total > 0)) return false;
+    // A gap is picked by its width, whatever named it: a pinned channel gets no more than a gap of its size.
+    let pick = this.random() * total;
     for (let at = 0; at < rasters.length; at += 1) {
       for (const jet of rasters[at].jets) {
-        if (!inView(jet) || pick-- > 0) continue;
+        if (!inView(jet)) continue;
+        pick -= jet.widthKm;
+        if (pick > 0) continue;
         // In the upstream fan: within 60° either side of straight upstream, from the mouth's edge out to FEED_KM.
         const angle = Math.PI + (this.random() - 0.5) * ((2 * Math.PI) / 3);
         const distance = jet.widthKm / 2 + this.random() * FEED_KM;

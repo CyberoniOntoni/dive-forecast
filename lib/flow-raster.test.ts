@@ -289,6 +289,13 @@ describe("reef tops as the walls", () => {
     for (const lon of [73.591, 73.6035, 73.607]) expect(raster.kind[cellAt(raster, 4.0, lon)], `at ${lon}`).not.toBe(KIND_LAND);
   });
 
+  it("feeds particles into a reef-flat gap running on a mild stream, not into slack water", () => {
+    const bridgedMild = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [{ ...EAST_PASS, knots: 0.32 }]);
+    const slack = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [{ ...EAST_PASS, knots: 0.1 }]);
+    expect(bridgedMild.jets).toHaveLength(1);
+    expect(slack.jets).toHaveLength(0);
+  });
+
   it("cuts no passage through a reef inside the lagoon behind a gap that is already open", () => {
     // No reef at the gap itself; an inner reef flat 0.8 km inside, on its axis.
     const inner = [...reefs, reefTop(3.95, 73.592, 4.05, 73.5935)];
@@ -532,6 +539,18 @@ describe("FlowParticles", () => {
       }
     }
     expect(handed).toBeGreaterThan(0);
+  });
+
+  it("feeds each running gate by its width, whatever named it", () => {
+    // A 200 m gap and a 1.8 km gap on the east rim, both flooding at the same speed.
+    const narrow = { ...EAST_PASS, lat: 3.95, widthKm: 0.2 };
+    const wide = { ...EAST_PASS, lat: 4.05, widthKm: 1.8 };
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [] }, [narrow, wide]);
+    const flock = new FlowParticles(4000, 4, seeded(29));
+    flock.step(0.05, [raster], view, 0.001, false);
+    const near = (gate: FlowChannel) =>
+      Array.from(flock.lat).filter((lat, index) => Math.abs(lat - gate.lat) < 0.012 && flock.lon[index] > 73.6 && flock.lon[index] < 73.615).length;
+    expect(near(wide)).toBeGreaterThan(3 * near(narrow));
   });
 
   it("never places a particle on an island", () => {
