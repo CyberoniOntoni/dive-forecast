@@ -11,15 +11,17 @@ import { forecastAtReport } from "./forecast-log";
 import { alongHeadingFor, flowSite, loadSite, reportTideForSite, type ReportTide, type SiteLoad } from "./load-site";
 import { loadOffshore, siteSeaState, type Offshore } from "./sea-state";
 import { MARINE_CACHE_TTL_MS, type FetchOptions } from "./marine";
-import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
+import { flowOutlineShapes, shelterPoint, shelterShapes, shelterView, type ShelterView } from "./shelter-grid";
 import { WALL_HOUR } from "./shelter-limits";
 import { flowHourInWindow, mapFlowField } from "./flow-field-cache";
 import type { FlowFieldView } from "./flow-wire";
+import { SEA_MARGIN_KM } from "./flow-raster";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
 import { blockedIds, requireTermsAccepted } from "./moderation";
 import { ready, readyWith } from "./ready";
+import { readRimReefs } from "./rim-reefs";
 import { runInBackground } from "./cloudflare";
 import { currentSession, requireSession } from "./auth";
 import { requireReviewText, requireSiteDetails, type SiteDetailsInput } from "./site-details";
@@ -782,6 +784,23 @@ export async function getShelterShapes(wayId: string): Promise<{ outline: RimRin
   await ready();
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
   return shelterShapes(wayId);
+}
+
+/**
+ * An atoll's outline, the islands in and round it, and the reef tops along its rim (encoded rings, lib/rim-reefs.ts),
+ * for the current-flow layer: water crosses the rim wherever neither stops it. An outline with no reef tops on file
+ * gets none (`reefs` left out), so the layer walls its whole outline but for the gaps, as before there were any.
+ */
+export async function getFlowShapes(
+  wayId: string,
+): Promise<{ outline: RimRing; islands: RimRing[]; reefs?: number[][][] } | null> {
+  await readyWith("rim-reefs.json");
+  if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
+  // Islands over the flow raster's whole sea margin (and a little more, for the box's longitude scale).
+  const shapes = flowOutlineShapes(wayId, SEA_MARGIN_KM + 1);
+  if (!shapes) return null;
+  const reefs = readRimReefs().get(wayId);
+  return reefs && reefs.length > 0 ? { ...shapes, reefs } : shapes;
 }
 
 /** The sea state at one tapped spot of the layer. */

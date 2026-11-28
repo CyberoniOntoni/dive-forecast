@@ -165,7 +165,8 @@ export async function lagoonSources(atoll: Atoll, mates: readonly Site[], option
     // the pins that loaded, so a pin still fetching does not take part of its channel's weight with it.
     const weights = channelWeights(loadedChannels.map((item) => item.channel));
     // The rim leaks over reef flats and through gaps, not through islands (openRimSources).
-    const porous = rimSources(ring);
+    // A flow-only outline's ring spans several natural atolls: its mean is no lagoon level, so no head across it.
+    const porous = rimSources(ring, atoll.flowOnly ? Infinity : undefined);
     const sources = [
       ...(rim ? openRim(atoll.id, porous, rim) : porous),
       ...loadedChannels.map((item, index) => ({

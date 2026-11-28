@@ -86,7 +86,8 @@ ${walls.length} walls running along the reef.`);
 async function loadChannels(): Promise<Channel[]> {
   const catalog = readCatalog();
   const channels: Channel[] = [];
-  for (const atoll of catalog.atolls) {
+  // Flow-only outlines have no sites to calibrate against.
+  for (const atoll of catalog.atolls.filter((item) => !item.flowOnly)) {
     const rim = rimForAtoll(atoll);
     if (!rim) continue;
     const ringSeries = await limited(ringPoints(rim).map((point) => () => longSeries(point.lat, point.lon)));

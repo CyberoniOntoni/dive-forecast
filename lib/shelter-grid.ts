@@ -4,6 +4,7 @@ import { readIslands } from "./islands";
 import { readOpenings } from "./openings";
 import {
   allRims,
+  anyRim,
   boxesOverlap,
   KM_PER_DEG_LAT,
   padBox,
@@ -467,8 +468,20 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
 /** An atoll's outline and the islands in and round it, for the map to cut the shading to water. */
 export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
   const outline = allRims().get(wayId);
-  if (!outline) return null;
-  const box = padBox(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
+  return outline ? islandsAround(outline, SHELTER_BAND_KM) : null;
+}
+
+/**
+ * An outline, flow-only ones included, and the islands out to `padKm` past its box: the current-flow layer's walls
+ * over its raster's whole sea margin.
+ */
+export function flowOutlineShapes(wayId: string, padKm: number): { outline: RimRing; islands: RimRing[] } | null {
+  const outline = anyRim(wayId);
+  return outline ? islandsAround(outline, padKm) : null;
+}
+
+function islandsAround(outline: RimRing, padKm: number): { outline: RimRing; islands: RimRing[] } {
+  const box = padBox(ringBox(outline), padKm / KM_PER_DEG_LAT);
   const islands = readIslands()
     .map((island) => island.ring)
     .filter((ring) => boxesOverlap(ringBox(ring), box));

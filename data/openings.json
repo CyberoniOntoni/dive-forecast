@@ -7549,6 +7549,760 @@
       "reefFlatBridges": true,
       "sites": [],
       "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "vattaru"
+      ],
+      "wayId": "671807109",
+      "lat": 3.22116,
+      "lon": 73.41799,
+      "widthM": 1108,
+      "alongM": 1794,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "vattaru"
+      ],
+      "wayId": "671807109",
+      "lat": 3.22138,
+      "lon": 73.42477,
+      "widthM": 227,
+      "alongM": 357,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "vattaru"
+      ],
+      "wayId": "671807109",
+      "lat": 3.22437,
+      "lon": 73.4388,
+      "widthM": 2316,
+      "alongM": 2966,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "vattaru"
+      ],
+      "wayId": "671807109",
+      "lat": 3.2281,
+      "lon": 73.45256,
+      "widthM": 268,
+      "alongM": 276,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.28008,
+      "lon": 73.24513,
+      "widthM": 682,
+      "alongM": 1950,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.28381,
+      "lon": 73.24196,
+      "widthM": 231,
+      "alongM": 310,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.34575,
+      "lon": 73.21204,
+      "widthM": 640,
+      "alongM": 355,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.35005,
+      "lon": 73.20479,
+      "widthM": 213,
+      "alongM": 677,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.91995,
+      "lon": 73.22792,
+      "widthM": 527,
+      "alongM": 554,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.96073,
+      "lon": 73.20331,
+      "widthM": 1451,
+      "alongM": 935,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.87039,
+      "lon": 73.09807,
+      "widthM": 1897,
+      "alongM": 500,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.75398,
+      "lon": 72.93263,
+      "widthM": 898,
+      "alongM": 607,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.72281,
+      "lon": 72.9119,
+      "widthM": 2099,
+      "alongM": 680,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.59741,
+      "lon": 72.87368,
+      "widthM": 566,
+      "alongM": 442,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.54362,
+      "lon": 72.88362,
+      "widthM": 1157,
+      "alongM": 471,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.47351,
+      "lon": 72.86341,
+      "widthM": 1491,
+      "alongM": 843,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.33328,
+      "lon": 72.97112,
+      "widthM": 478,
+      "alongM": 868,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.32841,
+      "lon": 72.96339,
+      "widthM": 1075,
+      "alongM": 1870,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.28749,
+      "lon": 73.0133,
+      "widthM": 505,
+      "alongM": 1422,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.27824,
+      "lon": 73.0024,
+      "widthM": 2672,
+      "alongM": 2380,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.27157,
+      "lon": 72.99299,
+      "widthM": 450,
+      "alongM": 807,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.20657,
+      "lon": 72.99243,
+      "widthM": 730,
+      "alongM": 1527,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.20247,
+      "lon": 72.99701,
+      "widthM": 998,
+      "alongM": 315,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.19631,
+      "lon": 72.99872,
+      "widthM": 1524,
+      "alongM": 383,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.18629,
+      "lon": 72.99771,
+      "widthM": 2852,
+      "alongM": 2173,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.06295,
+      "lon": 73.03955,
+      "widthM": 936,
+      "alongM": 1373,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.05788,
+      "lon": 73.04429,
+      "widthM": 1034,
+      "alongM": 755,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.02361,
+      "lon": 73.07952,
+      "widthM": 1215,
+      "alongM": 1831,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.01939,
+      "lon": 73.08704,
+      "widthM": 455,
+      "alongM": 658,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.00858,
+      "lon": 73.0958,
+      "widthM": 2357,
+      "alongM": 2042,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.99006,
+      "lon": 73.10209,
+      "widthM": 1518,
+      "alongM": 550,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.99277,
+      "lon": 73.11083,
+      "widthM": 2845,
+      "alongM": 484,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.80759,
+      "lon": 73.16958,
+      "widthM": 612,
+      "alongM": 432,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.68993,
+      "lon": 73.40795,
+      "widthM": 471,
+      "alongM": 178,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.81588,
+      "lon": 73.46755,
+      "widthM": 521,
+      "alongM": 537,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.82158,
+      "lon": 73.47556,
+      "widthM": 886,
+      "alongM": 628,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.83083,
+      "lon": 73.48477,
+      "widthM": 450,
+      "alongM": 266,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.89538,
+      "lon": 73.46346,
+      "widthM": 2017,
+      "alongM": 153,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.14304,
+      "lon": 73.29123,
+      "widthM": 343,
+      "alongM": 651,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.26218,
+      "lon": 73.22108,
+      "widthM": 189,
+      "alongM": 920,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.39699,
+      "lon": 72.69879,
+      "widthM": 560,
+      "alongM": 237,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.39841,
+      "lon": 72.69509,
+      "widthM": 433,
+      "alongM": 414,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.35082,
+      "lon": 72.60975,
+      "widthM": 570,
+      "alongM": 1639,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.20639,
+      "lon": 72.59349,
+      "widthM": 1381,
+      "alongM": 725,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.02988,
+      "lon": 72.98915,
+      "widthM": 343,
+      "alongM": 280,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.08131,
+      "lon": 72.92775,
+      "widthM": 1240,
+      "alongM": 1505,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.09622,
+      "lon": 72.8759,
+      "widthM": 247,
+      "alongM": 210,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.05326,
+      "lon": 72.79444,
+      "widthM": 358,
+      "alongM": 242,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.00945,
+      "lon": 72.84346,
+      "widthM": 1312,
+      "alongM": 1221,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.98598,
+      "lon": 72.88645,
+      "widthM": 1432,
+      "alongM": 2972,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.97884,
+      "lon": 72.89318,
+      "widthM": 581,
+      "alongM": 838,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.97955,
+      "lon": 72.89694,
+      "widthM": 734,
+      "alongM": 202,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.9696,
+      "lon": 72.89867,
+      "widthM": 2898,
+      "alongM": 356,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.94277,
+      "lon": 72.91356,
+      "widthM": 2110,
+      "alongM": 1077,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.92642,
+      "lon": 72.9536,
+      "widthM": 397,
+      "alongM": 228,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.92651,
+      "lon": 72.95883,
+      "widthM": 329,
+      "alongM": 222,
+      "reefFlatBridges": true,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.01331,
+      "lon": 72.92584,
+      "widthM": 1535,
+      "alongM": 231,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.02108,
+      "lon": 72.99117,
+      "widthM": 1166,
+      "alongM": 1019,
+      "reefFlatBridges": false,
+      "sites": [],
+      "fromTiles": true
     }
   ],
   "openCoast": [
@@ -7946,6 +8700,787 @@
       "lon": 72.94824,
       "widthM": 3021,
       "alongM": 1231,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "vattaru"
+      ],
+      "wayId": "671807109",
+      "lat": 3.2444,
+      "lon": 73.43865,
+      "widthM": 7559,
+      "alongM": 19730,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.29115,
+      "lon": 73.24174,
+      "widthM": 978,
+      "alongM": 3609,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.30779,
+      "lon": 73.23556,
+      "widthM": 2493,
+      "alongM": 10294,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.33865,
+      "lon": 73.22015,
+      "widthM": 2246,
+      "alongM": 9057,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.6171,
+      "lon": 73.22024,
+      "widthM": 58347,
+      "alongM": 22222,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.94034,
+      "lon": 73.22289,
+      "widthM": 4356,
+      "alongM": 573,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.90073,
+      "lon": 73.18099,
+      "widthM": 13260,
+      "alongM": 1491,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.91883,
+      "lon": 73.15934,
+      "widthM": 5068,
+      "alongM": 910,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.91036,
+      "lon": 73.14146,
+      "widthM": 3830,
+      "alongM": 1349,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.89356,
+      "lon": 73.11552,
+      "widthM": 7260,
+      "alongM": 1888,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.8239,
+      "lon": 73.08788,
+      "widthM": 11293,
+      "alongM": 1066,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.80562,
+      "lon": 73.07321,
+      "widthM": 7803,
+      "alongM": 1301,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.73638,
+      "lon": 73.06053,
+      "widthM": 22448,
+      "alongM": 2870,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.68511,
+      "lon": 73.0499,
+      "widthM": 11500,
+      "alongM": 240,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.6984,
+      "lon": 73.0309,
+      "widthM": 7958,
+      "alongM": 2252,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.61717,
+      "lon": 73.03869,
+      "widthM": 8802,
+      "alongM": 370,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.59341,
+      "lon": 73.02699,
+      "widthM": 5432,
+      "alongM": 3130,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.59703,
+      "lon": 72.9929,
+      "widthM": 35162,
+      "alongM": 161,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.58225,
+      "lon": 72.99192,
+      "widthM": 32323,
+      "alongM": 754,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.7002,
+      "lon": 72.90714,
+      "widthM": 6033,
+      "alongM": 1870,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.61147,
+      "lon": 72.93539,
+      "widthM": 14576,
+      "alongM": 2190,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.59572,
+      "lon": 72.92627,
+      "widthM": 12601,
+      "alongM": 523,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.62014,
+      "lon": 72.88382,
+      "widthM": 4724,
+      "alongM": 3462,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.56444,
+      "lon": 72.8741,
+      "widthM": 3587,
+      "alongM": 695,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.50924,
+      "lon": 72.89357,
+      "widthM": 6507,
+      "alongM": 3913,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.41689,
+      "lon": 72.97468,
+      "widthM": 20364,
+      "alongM": 410,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.40762,
+      "lon": 72.97049,
+      "widthM": 19846,
+      "alongM": 1416,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.4707,
+      "lon": 72.87906,
+      "widthM": 4458,
+      "alongM": 223,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.41999,
+      "lon": 72.88539,
+      "widthM": 3116,
+      "alongM": 1197,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.35132,
+      "lon": 72.94448,
+      "widthM": 7388,
+      "alongM": 1913,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.30752,
+      "lon": 72.98635,
+      "widthM": 6325,
+      "alongM": 5823,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.24428,
+      "lon": 72.99724,
+      "widthM": 5466,
+      "alongM": 13767,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.18245,
+      "lon": 73.01367,
+      "widthM": 5671,
+      "alongM": 1297,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.18511,
+      "lon": 73.03115,
+      "widthM": 9302,
+      "alongM": 609,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.17534,
+      "lon": 73.05352,
+      "widthM": 7932,
+      "alongM": 7280,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.10525,
+      "lon": 73.03376,
+      "widthM": 7548,
+      "alongM": 7272,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.04095,
+      "lon": 73.06063,
+      "widthM": 4331,
+      "alongM": 6019,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.9882,
+      "lon": 73.11945,
+      "widthM": 3787,
+      "alongM": 1424,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.92102,
+      "lon": 73.13423,
+      "widthM": 11180,
+      "alongM": 3114,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.8331,
+      "lon": 73.15626,
+      "widthM": 5751,
+      "alongM": 1625,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.75818,
+      "lon": 73.20661,
+      "widthM": 12768,
+      "alongM": 4414,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.85399,
+      "lon": 73.2268,
+      "widthM": 31915,
+      "alongM": 3320,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.82353,
+      "lon": 73.27331,
+      "widthM": 40513,
+      "alongM": 1211,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.69736,
+      "lon": 73.32753,
+      "widthM": 10681,
+      "alongM": 1596,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.67563,
+      "lon": 73.35852,
+      "widthM": 4716,
+      "alongM": 725,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.67399,
+      "lon": 73.39286,
+      "widthM": 3558,
+      "alongM": 2012,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.73285,
+      "lon": 73.41491,
+      "widthM": 6283,
+      "alongM": 1968,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.89176,
+      "lon": 73.35562,
+      "widthM": 30771,
+      "alongM": 1169,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.0016,
+      "lon": 73.30773,
+      "widthM": 4445,
+      "alongM": 923,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.89803,
+      "lon": 73.39611,
+      "widthM": 23974,
+      "alongM": 2047,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 5.85756,
+      "lon": 73.47846,
+      "widthM": 5224,
+      "alongM": 1381,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.03466,
+      "lon": 73.35526,
+      "widthM": 36073,
+      "alongM": 2936,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.15209,
+      "lon": 73.27181,
+      "widthM": 4509,
+      "alongM": 1424,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.21668,
+      "lon": 73.28254,
+      "widthM": 4093,
+      "alongM": 3838,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.25075,
+      "lon": 73.24393,
+      "widthM": 5627,
+      "alongM": 3685,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "thiladhunmathi"
+      ],
+      "wayId": "671807028",
+      "lat": 6.27155,
+      "lon": 73.23428,
+      "widthM": 3157,
+      "alongM": 6451,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.40447,
+      "lon": 72.67784,
+      "widthM": 3503,
+      "alongM": 3838,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.38166,
+      "lon": 72.63656,
+      "widthM": 7902,
+      "alongM": 10235,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.31817,
+      "lon": 72.59458,
+      "widthM": 6995,
+      "alongM": 18798,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.26831,
+      "lon": 72.5671,
+      "widthM": 4960,
+      "alongM": 1537,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.26777,
+      "lon": 72.62226,
+      "widthM": 12369,
+      "alongM": 18110,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "maamakunudhoo"
+      ],
+      "wayId": "671807032",
+      "lat": 6.35931,
+      "lon": 72.67115,
+      "widthM": 10800,
+      "alongM": 13002,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.04223,
+      "lon": 72.97121,
+      "widthM": 4342,
+      "alongM": 3614,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.06381,
+      "lon": 72.94248,
+      "widthM": 3483,
+      "alongM": 4468,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.09287,
+      "lon": 72.90154,
+      "widthM": 4789,
+      "alongM": 5091,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.07653,
+      "lon": 72.83401,
+      "widthM": 9702,
+      "alongM": 7846,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.0284,
+      "lon": 72.81854,
+      "widthM": 5107,
+      "alongM": 2724,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.99812,
+      "lon": 72.86631,
+      "widthM": 3738,
+      "alongM": 6222,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.92566,
+      "lon": 72.93891,
+      "widthM": 3759,
+      "alongM": 859,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 6.9703,
+      "lon": 72.93997,
+      "widthM": 10580,
+      "alongM": 6078,
+      "fromTiles": true
+    },
+    {
+      "atollIds": [
+        "ihavandhippolhu"
+      ],
+      "wayId": "671807036",
+      "lat": 7.01436,
+      "lon": 72.96436,
+      "widthM": 6151,
+      "alongM": 851,
       "fromTiles": true
     }
   ],

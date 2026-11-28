@@ -324,7 +324,8 @@ export function apiSites(
 ): ApiSites {
   return {
     apiVersion: API_VERSION,
-    atolls: atolls.map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),
+    // Flow-only outlines (the map's current-flow layer) never hold a site, so the app never lists them.
+    atolls: atolls.filter((atoll) => !atoll.flowOnly).map((atoll) => ({ id: atoll.id, name: atoll.name, bounds: boundsOf(outline(atoll)) })),
     sites: sites.filter((site) => !site.hidden).map((site) => apiSite(site, atollNameOf(atolls, site.atollId), adder(site), wiki?.(site))),
   };
 }

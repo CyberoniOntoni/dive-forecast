@@ -57,16 +57,18 @@ export async function warmCaches(now = Date.now()): Promise<WarmResult> {
   // The flow animation's field for the same hour, from the series and lagoon openings the map build just loaded. A
   // failure here does not fail the run: the map builds its own field on the first visit.
   await buildFlowField(`${target.slice(0, 13)}:00`, options).catch((error: unknown) => console.warn("Flow field warm-up failed", error));
-  const offshore = await Promise.all(atolls.map((atoll) => loadOffshore(atoll, options).catch(() => null)));
+  // Waves only for atolls with a forecast: a flow-only outline (no sites) has no sea state to show.
+  const waved = atolls.filter((atoll) => !atoll.flowOnly);
+  const offshore = await Promise.all(waved.map((atoll) => loadOffshore(atoll, options).catch(() => null)));
   // An atoll with an outline that got no wave side or no wind (no outline means no offshore samples at all).
   const offshoreFailed = offshore.filter(
-    (item, index) => rimForAtoll(atolls[index]) != null && (item == null || item.sides.length === 0 || item.wind == null),
+    (item, index) => rimForAtoll(waved[index]) != null && (item == null || item.sides.length === 0 || item.wind == null),
   ).length;
   return {
     hour: target.slice(0, 13),
     saved,
     sites: sites.length,
-    atolls: atolls.length,
+    atolls: waved.length,
     offshoreFailed,
     ms: Date.now() - started,
   };

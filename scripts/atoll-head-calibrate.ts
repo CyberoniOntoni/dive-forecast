@@ -115,7 +115,8 @@ async function loadChannels(): Promise<{ channels: Channel[]; atolls: number }> 
   const catalog = readCatalog();
   const channels: Channel[] = [];
   let atolls = 0;
-  for (const atoll of catalog.atolls) {
+  // Flow-only outlines have no sites to calibrate against.
+  for (const atoll of catalog.atolls.filter((item) => !item.flowOnly)) {
     const ring = rimForAtoll(atoll);
     if (!ring) continue;
     const fetched = await Promise.all(ringPoints(ring).map((point) => fetchMarine(point.lat, point.lon)));

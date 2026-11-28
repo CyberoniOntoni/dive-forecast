@@ -76,9 +76,11 @@ export const ATOLL_MATCH_KM = 5;
  * The seeded atoll a new pin belongs to, or null when it is not in or near one.
  * Matches by distance to the stored outline, so a pin in an unseeded atoll is not handed to a far one.
  * Atolls that share an outline (North and South Ari) are split by the nearer ocean point.
- * Only with no rim file at all does it fall back to the nearest ocean point.
+ * Only with no rim file at all does it fall back to the nearest ocean point. Flow-only outlines (Atoll.flowOnly) never match.
  */
-export function atollForPin(lat: number, lon: number, atolls: Atoll[]): Atoll | null {
+export function atollForPin(lat: number, lon: number, all: Atoll[]): Atoll | null {
+  // An outline kept for the map's flow layer only takes no pins: they stay unseeded, with no forecast.
+  const atolls = all.filter((atoll) => !atoll.flowOnly);
   const withRim = atolls.flatMap((atoll) => {
     const ring = rimForAtoll(atoll);
     return ring ? [{ atoll, km: rimDistanceKm({ lat, lon }, ring) }] : [];

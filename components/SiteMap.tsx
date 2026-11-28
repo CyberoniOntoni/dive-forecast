@@ -14,7 +14,7 @@ import { MAP_STYLE } from "@/components/map-style";
 import { CurrentOverlay, hasForecast, type SiteGlance } from "@/components/CurrentOverlay";
 import { NavigatePanel, useNavigateTab } from "@/components/NavigatePanel";
 import { ARROW_LENGTH, ARROW_WIDTH, arrowSvgBody } from "@/lib/arrow-shape";
-import { getFlowField, getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
+import { getFlowField, getFlowShapes, getShelter, getShelterPoint, getShelterShapes } from "@/lib/actions";
 import type { FlowArrows } from "@/lib/flow-layer";
 import type { FlowVector } from "@/lib/flow-raster";
 import { FLOW_KNOTS, nearestWallHour } from "@/lib/flow-wire";
@@ -160,7 +160,7 @@ function mountDiveMap(
   L.control.zoom({ position: "topright" }).addTo(map);
   const { readSea, setFlowArrows } = addMapLayers(L, map, {
     shelter: { load: getShelter, shapes: getShelterShapes, point: getShelterPoint },
-    flow: { load: getFlowField, shapes: getShelterShapes },
+    flow: { load: getFlowField, shapes: getFlowShapes },
   });
   const pins = L.markerClusterGroup({
     disableClusteringAtZoom: CLUSTER_UNTIL_ZOOM,

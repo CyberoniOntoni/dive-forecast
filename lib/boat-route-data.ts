@@ -54,7 +54,8 @@ function routeShapes(sites: readonly Site[]): RouteShapes {
     shapeCache = {
       blockers: [...readIslands().map((island) => island.ring), ...readShoals().map((shoal) => shoal.ring)],
       rims: [...allRims().values()],
-      gaps: readOpenings().map(({ lat, lon, widthM, reefFlatBridges }) => ({
+      // Only the gaps of the outlines the route reads: a flow-only outline's gaps open nothing here.
+      gaps: readOpenings().filter((opening) => allRims().has(opening.wayId)).map(({ lat, lon, widthM, reefFlatBridges }) => ({
         lat,
         lon,
         widthM,

@@ -51,7 +51,8 @@ const km = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =>
 async function loadAtolls(): Promise<Atoll[]> {
   const catalog = readCatalog();
   const atolls: Atoll[] = [];
-  for (const atoll of catalog.atolls) {
+  // Flow-only outlines have no sites to calibrate against.
+  for (const atoll of catalog.atolls.filter((item) => !item.flowOnly)) {
     const rim = rimForAtoll(atoll);
     if (!rim) continue;
     const lagoon = catalog.sites.filter((site) => site.atollId === atoll.id && site.siteType === "lagoon");

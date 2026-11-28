@@ -12,6 +12,7 @@ export const DATA_FILES = [
   "openings.json",
   "islands.json",
   "shoals.json",
+  "rim-reefs.json",
   "shelter-grid.json",
   "seaward-floor.json",
   "replay.json",
@@ -22,9 +23,9 @@ export type DataFile = (typeof DATA_FILES)[number];
 /**
  * Files the app reads only for one feature, fetched by the actions that need them (ready(...)) instead of by every
  * request on a fresh isolate. The shelter grid is 8.5 MB, more than all the other files together, and only the
- * map's sheltered-water layer reads it.
+ * map's sheltered-water layer reads it. The rim reef tops (about 1 MB) are read only by the current-flow layer.
  */
-export const ON_DEMAND_DATA_FILES: readonly DataFile[] = ["shelter-grid.json"];
+export const ON_DEMAND_DATA_FILES: readonly DataFile[] = ["shelter-grid.json", "rim-reefs.json"];
 
 /** The files every server action needs before its synchronous readers run. */
 export const CORE_DATA_FILES: readonly DataFile[] = DATA_FILES.filter((name) => !ON_DEMAND_DATA_FILES.includes(name));
