@@ -217,8 +217,8 @@ describe("buildFlowRaster", () => {
   });
 });
 
-/** A reef top as an encoded ring: a thin box from (south, west) to (north, east). */
-function reefTop(south: number, west: number, north: number, east: number): number[] {
+/** A box from (south, west) to (north, east) as an encoded ring. */
+function boxRing(south: number, west: number, north: number, east: number): number[] {
   return encodeRing([
     [west, south],
     [east, south],
@@ -226,6 +226,11 @@ function reefTop(south: number, west: number, north: number, east: number): numb
     [west, north],
     [west, south],
   ]);
+}
+
+/** A reef top: a box, with any pools in it. */
+function reefTop(south: number, west: number, north: number, east: number, ...pools: number[][]): number[][] {
+  return [boxRing(south, west, north, east), ...pools];
 }
 
 describe("reef tops as the walls", () => {
@@ -261,6 +266,39 @@ describe("reef tops as the walls", () => {
     const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: solid }, [EAST_PASS]);
     expect(raster.kind[cellAt(raster, 4.0, 73.6)]).not.toBe(KIND_LAND);
     expect(raster.kind[cellAt(raster, 3.95, 73.6)]).toBe(KIND_LAND);
+  });
+
+  it("opens a gap's whole passage through a thick reef flat, on the ebb as on the flood", () => {
+    // A reef flat about 670 m thick across the axis of a 400 m gap: the passage runs through all of it.
+    const thick = [reefTop(3.9, 73.597, 4.1, 73.603)];
+    for (const headingDeg of [270, 90]) {
+      const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: thick }, [{ ...EAST_PASS, headingDeg }]);
+      for (const lon of [73.5975, 73.6, 73.6025]) expect(raster.kind[cellAt(raster, 4.0, lon)], `${headingDeg} at ${lon}`).not.toBe(KIND_LAND);
+      expect(raster.kind[cellAt(raster, 3.97, 73.6)]).toBe(KIND_LAND);
+    }
+    // A reef flat 2.2 km thick: still open right through, and the water beyond it is reached.
+    const wide = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: [reefTop(3.9, 73.59, 4.1, 73.61)] }, [EAST_PASS]);
+    for (const lon of [73.5905, 73.6, 73.6095]) expect(wide.kind[cellAt(wide, 4.0, lon)], `wide at ${lon}`).not.toBe(KIND_LAND);
+  });
+
+  it("leaves a pool inside a reef top as water", () => {
+    const pooled = [reefTop(3.9, 73.59, 4.1, 73.6, boxRing(3.98, 73.592, 4.02, 73.598))];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: pooled }, []);
+    expect(raster.kind[cellAt(raster, 4.0, 73.595)]).not.toBe(KIND_LAND);
+    expect(raster.kind[cellAt(raster, 3.95, 73.595)]).toBe(KIND_LAND);
+  });
+
+  it("walls the whole outline as before when no reef tops are given", () => {
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: [] }, []);
+    expect(raster.openRim).toBeFalsy();
+  });
+
+  it("lets the ocean run straight in across an open stretch, not turned along the outline", () => {
+    // 1 knot west, straight at the east rim; 330 m outside it, 1.3 km along from where the reef ends.
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0), ringOf(4.0, 73.5, 14, -1, 0)), { outline: RIM, islands: [], reefs }, []);
+    expect(speedAt(raster, 3.985, 73.603).east).toBeLessThan(-0.93);
+    // Off the reef itself it still turns.
+    expect(Math.abs(speedAt(raster, 3.93, 73.603).east)).toBeLessThan(0.2);
   });
 });
 
@@ -414,6 +452,48 @@ describe("FlowParticles", () => {
           if (cell >= 0) expect(b.kind[cell]).toBe(KIND_SEA);
         }
         if (before[index] === 0 && flock.rasterOf_(index) === 1 && flock.age[index] >= ages[index]) handed += 1;
+      }
+    }
+    expect(handed).toBeGreaterThan(0);
+  });
+
+  it("never steps a particle over a thin reef top, however long its step", () => {
+    // A reef crest about 110 m thick across the lagoon, 2 km in from the east rim, with the lagoon running east at it
+    // (0.6 knots once scaled to the channels); each step is about 6 cells.
+    const thin = [reefTop(3.9, 73.5795, 4.1, 73.5805)];
+    const raster = buildFlowRaster(atoll(uniformLagoon(2, 0)), { outline: RIM, islands: [], reefs: thin }, []);
+    const flock = new FlowParticles(300, 4, seeded(21));
+    for (let step = 0; step < 200; step += 1) {
+      const before = Float64Array.from(flock.lon);
+      flock.step(0.05, [raster], view, 0.3, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        if (flock.rasterOf_(index) < 0 || flock.filled[index] < 2) continue;
+        expect(before[index] < 73.579 && flock.lon[index] > 73.581).toBe(false);
+      }
+    }
+  });
+
+  it("hands a particle from one atoll's margin into its neighbour's lagoon across an open rim", () => {
+    // The neighbour 3 km east has reef tops only at its far east side, so its west rim is open water.
+    const shift = 0.23;
+    const east: RimRing = RIM.map(([lat, lon]) => [lat, lon + shift]);
+    const points = [...ringOf(4.0, 73.5, 14, 2, 0), ...ringOf(4.0, 73.5 + shift, 14, 2, 0)];
+    const a = buildFlowRaster(atoll(uniformLagoon(0, 0), points), { outline: RIM, islands: [] }, []);
+    const b = buildFlowRaster(
+      { ...atoll(uniformLagoon(0, 0), points), wayId: "2" },
+      { outline: east, islands: [], reefs: [reefTop(3.9, 73.828, 4.1, 73.832)] },
+      [],
+    );
+    const strip = { south: 3.95, west: 73.6, north: 4.05, east: 73.68 };
+    const flock = new FlowParticles(300, 4, seeded(23));
+    let handed = 0;
+    for (let step = 0; step < 300; step += 1) {
+      const before = Array.from({ length: flock.count }, (_, index) => flock.rasterOf_(index));
+      const ages = Float32Array.from(flock.age);
+      flock.step(0.1, [a, b], strip, 0.001, true);
+      for (let index = 0; index < flock.count; index += 1) {
+        if (before[index] !== 0 || flock.rasterOf_(index) !== 1 || flock.age[index] < ages[index]) continue;
+        if (b.kind[cellAt(b, flock.lat[index], flock.lon[index])] === KIND_LAGOON) handed += 1;
       }
     }
     expect(handed).toBeGreaterThan(0);

@@ -787,15 +787,18 @@ export async function getShelterShapes(wayId: string): Promise<{ outline: RimRin
 
 /**
  * An atoll's outline, the islands in and round it, and the reef tops along its rim (encoded rings, lib/rim-reefs.ts),
- * for the current-flow layer: water crosses the rim wherever neither stops it.
+ * for the current-flow layer: water crosses the rim wherever neither stops it. An outline with no reef tops on file
+ * gets none (`reefs` left out), so the layer walls its whole outline but for the gaps, as before there were any.
  */
 export async function getFlowShapes(
   wayId: string,
-): Promise<{ outline: RimRing; islands: RimRing[]; reefs: number[][] } | null> {
+): Promise<{ outline: RimRing; islands: RimRing[]; reefs?: number[][][] } | null> {
   await readyWith("rim-reefs.json");
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
   const shapes = shelterShapes(wayId);
-  return shapes ? { ...shapes, reefs: readRimReefs().get(wayId) ?? [] } : null;
+  if (!shapes) return null;
+  const reefs = readRimReefs().get(wayId);
+  return reefs && reefs.length > 0 ? { ...shapes, reefs } : shapes;
 }
 
 /** The sea state at one tapped spot of the layer. */

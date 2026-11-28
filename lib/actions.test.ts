@@ -121,8 +121,8 @@ describe("addSite atoll matching", () => {
   });
 
   it("marks a pin in an unseeded atoll instead of assigning a far atoll", async () => {
-    // Open sea north of Ihavandhippolhu: over 5 km from every seeded outline.
-    const site = await addSite({ name: "Far North Test", lat: 8.0, lon: 73.0 });
+    // Haa Alif Atoll: over 100 km from Raa, the nearest seeded atoll.
+    const site = await addSite({ name: "Haa Alif Test", lat: 6.95, lon: 72.95 });
     expect(site.atollId).toBe(UNSEEDED_ATOLL_ID);
   });
 });

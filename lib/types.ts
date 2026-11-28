@@ -31,6 +31,11 @@ export type Atoll = {
   lagoonMeanDepthM?: number;
   /** Source for the published lagoon mean depth. */
   lagoonDepthSourceUrl?: string;
+  /**
+   * Outline for the map's current-flow and sheltered-water layers only: no pin is placed in it (atollForPin skips it),
+   * so it has no forecast. Thiladhunmathi's outline spans four natural atolls, too wide a ring for the head term.
+   */
+  flowOnly?: boolean;
 };
 
 /**

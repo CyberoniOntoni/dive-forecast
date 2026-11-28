@@ -151,28 +151,32 @@
       "name": "Thiladhunmathi and Miladhunmadulu (Haa Alif to Noonu)",
       "oceanLat": 6.3,
       "oceanLon": 73.65,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807028"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807028",
+      "flowOnly": true
     },
     {
       "id": "ihavandhippolhu",
       "name": "Ihavandhippolhu",
       "oceanLat": 7.0,
       "oceanLon": 73.15,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807036"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807036",
+      "flowOnly": true
     },
     {
       "id": "maamakunudhoo",
       "name": "Maamakunudhoo",
       "oceanLat": 6.3,
       "oceanLon": 72.4,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807032"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807032",
+      "flowOnly": true
     },
     {
       "id": "vattaru",
       "name": "Vattaru",
       "oceanLat": 3.2,
       "oceanLon": 73.75,
-      "rimSourceUrl": "https://www.openstreetmap.org/way/671807109"
+      "rimSourceUrl": "https://www.openstreetmap.org/way/671807109",
+      "flowOnly": true
     }
   ],
   "sites": [

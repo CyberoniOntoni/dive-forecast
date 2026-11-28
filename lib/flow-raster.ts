@@ -79,10 +79,10 @@ export type FlowVector = { lat: number; lon: number; headingDeg: number; knots: 
 export type FlowChannel = FlowVector & { widthKm: number };
 /**
  * An atoll's outline, its islands, and the reef tops along its rim (rings in the map tiles' encoding,
- * lib/rim-reefs.ts). With `reefs`, the reef tops and islands are the walls and water crosses the outline anywhere
+ * lib/rim-reefs.ts: each shape its outer ring, then the pools in it). With `reefs`, the reef tops and islands are the walls and water crosses the outline anywhere
  * else; without (shapes from before they were sent), the whole outline is a wall but for the channels' gates.
  */
-export type FlowShapes = { outline: RimRing; islands: readonly RimRing[]; reefs?: readonly (readonly number[])[] };
+export type FlowShapes = { outline: RimRing; islands: readonly RimRing[]; reefs?: readonly (readonly (readonly number[])[])[] };
 
 export type FlowRaster = {
   wayId: string;
@@ -139,12 +139,19 @@ function bilinear(grid: LagoonGrid, values: Float32Array, lat: number, lon: numb
 
 /** Marks the cells whose centres a ring encloses, row by row (even-odd crossings). */
 function fillRing(raster: FlowRaster, ring: RimRing, value: number): void {
+  fillRings(raster, [ring], value);
+}
+
+/** Marks the cells whose centres a shape encloses: even-odd over all its rings, so its holes stay unmarked. */
+function fillRings(raster: FlowRaster, rings: readonly RimRing[], value: number): void {
   const { south, west, stepLat, stepLon, rows, columns, kind } = raster;
   let minLat = Infinity;
   let maxLat = -Infinity;
-  for (const [lat] of ring) {
-    minLat = Math.min(minLat, lat);
-    maxLat = Math.max(maxLat, lat);
+  for (const ring of rings) {
+    for (const [lat] of ring) {
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+    }
   }
   const firstRow = Math.max(0, Math.floor((minLat - south) / stepLat - 0.5));
   const lastRow = Math.min(rows - 1, Math.ceil((maxLat - south) / stepLat - 0.5));
@@ -152,10 +159,12 @@ function fillRing(raster: FlowRaster, ring: RimRing, value: number): void {
   for (let row = firstRow; row <= lastRow; row += 1) {
     const lat = south + (row + 0.5) * stepLat;
     crossings.length = 0;
-    for (let index = 0; index + 1 < ring.length; index += 1) {
-      const [lat1, lon1] = ring[index];
-      const [lat2, lon2] = ring[index + 1];
-      if (lat1 > lat !== lat2 > lat) crossings.push(lon1 + ((lon2 - lon1) * (lat - lat1)) / (lat2 - lat1));
+    for (const ring of rings) {
+      for (let index = 0; index + 1 < ring.length; index += 1) {
+        const [lat1, lon1] = ring[index];
+        const [lat2, lon2] = ring[index + 1];
+        if (lat1 > lat !== lat2 > lat) crossings.push(lon1 + ((lon2 - lon1) * (lat - lat1)) / (lat2 - lat1));
+      }
     }
     crossings.sort((a, b) => a - b);
     for (let pair = 0; pair + 1 < crossings.length; pair += 2) {
@@ -171,7 +180,8 @@ const PIECE_KM = 0.25;
 
 /**
  * Distance (km) from each cell within `bandKm` of the ring to its nearest segment, and that segment's direction as a
- * unit east/north vector. Cells farther away keep Infinity.
+ * unit east/north vector. Cells farther away keep Infinity. With `walled`, the ring is cut in PIECE_KM pieces and only
+ * walled pieces count for those; `open` is then the distance to the nearest open piece (Infinity without `walled`).
  */
 function reefBand(
   raster: FlowRaster,
@@ -185,6 +195,7 @@ function reefBand(
   const distance = new Float32Array(size).fill(Infinity);
   const tangentEast = new Float32Array(size);
   const tangentNorth = new Float32Array(size);
+  const open = new Float32Array(size).fill(Infinity);
   const padLat = bandKm / KM_PER_DEG_LAT;
   const padLon = bandKm / frame.kmLon;
   for (let index = 0; index + 1 < ring.length; index += 1) {
@@ -199,7 +210,7 @@ function reefBand(
       const lon1 = startLon + ((endLon - startLon) * piece) / pieces;
       const lat2 = startLat + ((endLat - startLat) * (piece + 1)) / pieces;
       const lon2 = startLon + ((endLon - startLon) * (piece + 1)) / pieces;
-      if (walled && !walled((lat1 + lat2) / 2, (lon1 + lon2) / 2)) continue;
+      const isOpen = walled != null && !walled((lat1 + lat2) / 2, (lon1 + lon2) / 2);
       const ax = (lon2 - lon1) * frame.kmLon;
       const ay = (lat2 - lat1) * KM_PER_DEG_LAT;
       const length2 = ax * ax + ay * ay;
@@ -215,6 +226,10 @@ function reefBand(
           const share = Math.max(0, Math.min(1, (px * ax + py * ay) / length2));
           const d = Math.hypot(px - share * ax, py - share * ay);
           const cell = row * columns + column;
+          if (isOpen) {
+            if (d < open[cell]) open[cell] = d;
+            continue;
+          }
           if (d >= distance[cell] || d > bandKm) continue;
           distance[cell] = d;
           tangentEast[cell] = ax / length;
@@ -223,7 +238,7 @@ function reefBand(
       }
     }
   }
-  return { distance, tangentEast, tangentNorth };
+  return { distance, tangentEast, tangentNorth, open };
 }
 
 const smooth = (t: number) => {
@@ -390,7 +405,10 @@ export function buildFlowRaster(
   ({ south, west, north, east } = raster);
   fillRing(raster, outline, KIND_LAGOON);
   for (const island of shapes.islands) fillRing(raster, island, KIND_LAND);
-  const reefTops = shapes.reefs ? reefMask(raster, shapes.reefs.map((flat) => decodeRing(flat)), frame) : null;
+  const reefTops =
+    shapes.reefs && shapes.reefs.length > 0
+      ? reefMask(raster, shapes.reefs.map((shape) => shape.map((flat) => decodeRing(flat))), frame)
+      : null;
   if (reefTops) fringeIslands(raster, reefTops, outline, frame);
   // Only where reef or an island backs the outline does the water there turn along it: across open water it goes on.
   const walled = reefTops ? (lat: number, lon: number) => wallNear(raster, reefTops, lat, lon, WALLED_KM, frame) : null;
@@ -430,7 +448,9 @@ export function buildFlowRaster(
         const tn = band.tangentNorth[cell];
         const modelled = kind === KIND_LAGOON ? null : reefAlong(reef, lat, lon, frame);
         const along = modelled != null ? modelled * turn : (ve * te + vn * tn) * (kind === KIND_LAGOON ? 1 : WALL_GAIN);
-        const share = 1 - smooth(d / reach);
+        // Where an open stretch of the outline is nearer than the reef, the water there goes straight on: the turn
+        // hands over across about one piece where reef gives way to open water.
+        const share = (1 - smooth(d / reach)) * smooth(0.5 + (band.open[cell] - d) / (2 * PIECE_KM));
         ve = ve * (1 - share) + along * te * share;
         vn = vn * (1 - share) + along * tn * share;
       }
@@ -443,7 +463,8 @@ export function buildFlowRaster(
   addFans(raster, channels, frame);
   applyBlend(raster, jetBlend(raster, channels, frame));
   if (reefTops) {
-    // The reef tops become walls, but for each channel's own gate (a gap narrower than a cell is drawn shut).
+    // The reef tops become walls, but for each channel's own gate and the passage through the reef along its axis.
+    cutPassages(raster, reefTops, channels, frame);
     for (let cell = 0; cell < rows * columns; cell += 1) {
       if (!reefTops[cell] || raster.gate[cell]) continue;
       raster.kind[cell] = KIND_LAND;
@@ -459,16 +480,18 @@ export function buildFlowRaster(
 const WALLED_KM = 0.4;
 
 /**
- * The cells the reef tops cover: every cell whose centre a ring encloses and every cell an edge passes through, so a
+ * The cells the reef tops cover: every cell whose centre a shape encloses (not its pools) and every cell its outer edge passes through, so a
  * thin crest stays unbroken; then a one-cell gap with reef on both sides is closed (the Atlas leaves slivers between
  * its shapes; a real gap that narrow is a listed channel, whose gate opens it again).
  */
-function reefMask(raster: FlowRaster, rings: readonly RimRing[], frame: Frame): Uint8Array {
+function reefMask(raster: FlowRaster, shapes: readonly (readonly RimRing[])[], frame: Frame): Uint8Array {
   const { south, west, stepLat, stepLon, rows, columns } = raster;
   const mask = new Uint8Array(rows * columns);
   const scratch: FlowRaster = { ...raster, kind: mask };
-  for (const ring of rings) {
-    fillRing(scratch, ring, 1);
+  for (const shape of shapes) {
+    // The pools inside a reef top stay water; only the outer edge is walked, so a thin crest stays unbroken.
+    fillRings(scratch, shape, 1);
+    const ring = shape[0];
     for (let index = 0; index + 1 < ring.length; index += 1) {
       const [lat1, lon1] = ring[index];
       const [lat2, lon2] = ring[index + 1];
@@ -534,6 +557,51 @@ function wallNear(raster: FlowRaster, reefTops: Uint8Array, lat: number, lon: nu
     }
   }
   return false;
+}
+
+/** A gap's passage starts within this far of its point along its axis (open water before the reef is skipped), km. */
+const PASSAGE_START_KM = 1;
+/** And runs through at most this much reef, km: the widest bridged gaps cross reef flats 2 to 3 km across. */
+const PASSAGE_MAX_KM = 3;
+
+/**
+ * Opens each channel's passage through the reef tops: lines along its axis, both ways from its point and spaced half a
+ * cell across its width (at least 0.3 km, so a gap narrower than a cell stays a cell wide). Each line skips up to
+ * PASSAGE_START_KM of open water, then opens every reef cell until it is through to open water again (or meets an
+ * island), at most PASSAGE_MAX_KM. Both ways, so a gap is as open on the ebb as on the flood, and a reef flat bridging
+ * it, however thick, does not shut it.
+ */
+function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonly FlowChannel[], frame: Frame): void {
+  const stepKm = CELL_KM / 2;
+  for (const site of channels) {
+    if (!inRaster(raster, site)) continue;
+    const half = Math.max(widthOf(site) / 2, 0.15);
+    const radians = (site.headingDeg * Math.PI) / 180;
+    const he = Math.sin(radians);
+    const hn = Math.cos(radians);
+    const lanes = Math.ceil(half / stepKm);
+    for (let lane = -lanes; lane <= lanes; lane += 1) {
+      const across = Math.max(-half, Math.min(half, lane * stepKm));
+      for (const way of [1, -1]) {
+        let inReef = false;
+        let reefKm = 0;
+        for (let along = 0; along <= PASSAGE_START_KM + PASSAGE_MAX_KM; along += stepKm) {
+          const east = way * along * he + across * hn;
+          const north = way * along * hn - across * he;
+          const cell = cellAt(raster, site.lat + north / KM_PER_DEG_LAT, site.lon + east / frame.kmLon);
+          if (cell < 0 || raster.kind[cell] === KIND_LAND) break;
+          if (reefTops[cell]) {
+            inReef = true;
+            raster.gate[cell] = 1;
+            reefKm += stepKm;
+            if (reefKm > PASSAGE_MAX_KM) break;
+          } else if (inReef || along > PASSAGE_START_KM) {
+            break;
+          }
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -725,6 +793,28 @@ function otherAtollSaysNotSea(rasters: readonly FlowRaster[], at: number, lat: n
   return false;
 }
 
+/**
+ * Another atoll's raster than `at` with its lagoon at the point behind an open rim (reef tops drawn, so its outline is
+ * no wall there): water running in from this raster's sea goes on into that lagoon on that raster. -1 when none.
+ */
+function openLagoonOf(
+  rasters: readonly FlowRaster[],
+  at: number,
+  from: { lat: number; lon: number },
+  lat: number,
+  lon: number,
+): number {
+  for (let other = 0; other < rasters.length; other += 1) {
+    const raster = rasters[other];
+    if (other === at || raster.regional || !raster.openRim) continue;
+    const cell = cellAt(raster, lat, lon);
+    if (cell < 0 || raster.kind[cell] !== KIND_LAGOON) continue;
+    // Not over that atoll's own reef top on the way in.
+    if (!stopsBetween(raster, cellAt(raster, from.lat, from.lon), cell)) return other;
+  }
+  return -1;
+}
+
 /** The cell index at a point, or -1 off the raster. */
 export function cellAt(raster: FlowRaster, lat: number, lon: number): number {
   const row = Math.floor((lat - raster.south) / raster.stepLat);
@@ -738,14 +828,36 @@ export const screenFactor = (speed: number) => (speed > 1e-6 ? speed ** (SCREEN_
 
 /**
  * Whether water moving from cell `from` to cell `to` must stop: off the raster, on land (an island or a reef top), or,
- * on a raster with no reef tops (openRim unset), across the outline anywhere but a channel's gate. Particles and the reduced-motion streamlines share it.
+ * on a raster with no reef tops (openRim unset), across the outline anywhere but a channel's gate; on one with them, over
+ * land anywhere on the way (a long step at low zoom). Particles and the reduced-motion streamlines share it.
  */
 export function stopsBetween(raster: FlowRaster, from: number, to: number): boolean {
   return (
     to < 0 ||
     raster.kind[to] === KIND_LAND ||
-    (!raster.openRim && from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to])
+    (!raster.openRim && from >= 0 && raster.kind[from] !== raster.kind[to] && !raster.gate[from] && !raster.gate[to]) ||
+    (raster.openRim === true && from >= 0 && landBetween(raster, from, to))
   );
+}
+
+/**
+ * Whether land lies on the straight line from cell `from` to cell `to`: at low zoom a step spans several cells, and a
+ * reef top one or two cells thick must not be stepped over.
+ */
+function landBetween(raster: FlowRaster, from: number, to: number): boolean {
+  const { columns, kind } = raster;
+  const row1 = Math.floor(from / columns);
+  const column1 = from - row1 * columns;
+  const row2 = Math.floor(to / columns);
+  const column2 = to - row2 * columns;
+  const steps = 2 * Math.max(Math.abs(row2 - row1), Math.abs(column2 - column1));
+  for (let step = 1; step < steps; step += 1) {
+    const t = step / steps;
+    const row = Math.round(row1 + (row2 - row1) * t);
+    const column = Math.round(column1 + (column2 - column1) * t);
+    if (kind[row * columns + column] === KIND_LAND) return true;
+  }
+  return false;
 }
 
 /** Bilinear velocity (knots) at a point into `out` [east, north]; false off the raster. */
@@ -956,7 +1068,13 @@ export class FlowParticles {
       const to = cellAt(raster, nextLat, nextLon);
       // Between rasters: from the open sea onto an atoll's raster where one covers the point, and off the edge of an
       // atoll's raster onto the open sea. Only onto water of the same kind it is on (sea), so no reef is crossed.
-      const handed = raster.regional || to < 0 ? this.handOff(rasters, at, nextLat, nextLon) : -1;
+      // Into a neighbour's lagoon across its open rim, where this raster still has sea: onto the neighbour's raster.
+      const handed =
+        raster.regional || to < 0
+          ? this.handOff(rasters, at, nextLat, nextLon)
+          : raster.kind[to] === KIND_SEA && !stopsBetween(raster, from, to)
+            ? openLagoonOf(rasters, at, { lat, lon }, nextLat, nextLon)
+            : -1;
       if (handed >= 0) {
         this.rasterOf[index] = handed;
         this.lat[index] = nextLat;
