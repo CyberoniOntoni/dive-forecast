@@ -566,12 +566,15 @@ function wallNear(raster: FlowRaster, reefTops: Uint8Array, lat: number, lon: nu
 const PASSAGE_START_KM = 0.4;
 /** And runs through at most this much reef, km: the widest bridged gaps cross reef flats 2 to 3 km across. */
 const PASSAGE_MAX_KM = 3;
+/** A pool in a reef flat (open water with reef again beyond it) up to this long along the axis does not end the passage, km. */
+const PASSAGE_POOL_KM = 0.4;
 
 /**
  * Opens each channel's passage through the reef tops: lines along its axis, both ways from its point and spaced half a
  * cell across its width (at least 0.3 km, so a gap narrower than a cell stays a cell wide). Each line skips up to
- * PASSAGE_START_KM (or half the gap's width) of open water, then opens every reef cell until it is through to open water again (or meets an
- * island), at most PASSAGE_MAX_KM. Both ways, so a gap is as open on the ebb as on the flood, and a reef flat bridging
+ * PASSAGE_START_KM (or half the gap's width) of open water, then opens every reef cell until it is through to open
+ * water again (a pool of up to PASSAGE_POOL_KM with reef beyond does not end it) or meets an island, at most
+ * PASSAGE_MAX_KM of reef. Both ways, so a gap is as open on the ebb as on the flood, and a reef flat bridging
  * it, however thick, does not shut it.
  */
 function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonly FlowChannel[], frame: Frame): void {
@@ -589,6 +592,7 @@ function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonl
       for (const way of [1, -1]) {
         let inReef = false;
         let reefKm = 0;
+        let waterKm = 0;
         for (let along = 0; along <= startKm + PASSAGE_MAX_KM; along += stepKm) {
           const east = way * along * he + across * hn;
           const north = way * along * hn - across * he;
@@ -596,10 +600,15 @@ function cutPassages(raster: FlowRaster, reefTops: Uint8Array, channels: readonl
           if (cell < 0 || raster.kind[cell] === KIND_LAND) break;
           if (reefTops[cell]) {
             inReef = true;
+            waterKm = 0;
             raster.gate[cell] = 1;
             reefKm += stepKm;
             if (reefKm > PASSAGE_MAX_KM) break;
-          } else if (inReef || along > startKm) {
+          } else if (inReef) {
+            // Through to open water, unless it is a pool with more reef beyond.
+            waterKm += stepKm;
+            if (waterKm > PASSAGE_POOL_KM) break;
+          } else if (along > startKm) {
             break;
           }
         }

@@ -15,6 +15,7 @@ import { shelterPoint, shelterShapes, shelterView, type ShelterView } from "./sh
 import { WALL_HOUR } from "./shelter-limits";
 import { flowHourInWindow, mapFlowField } from "./flow-field-cache";
 import type { FlowFieldView } from "./flow-wire";
+import { SEA_MARGIN_KM } from "./flow-raster";
 import type { RimRing } from "./rim";
 import { recentReportRows, type RecentReportRow } from "./recent-reports";
 import { currentWallTime, timeZoneForSite, zoneLabel, type SiteTimeZone } from "./site-time";
@@ -795,7 +796,8 @@ export async function getFlowShapes(
 ): Promise<{ outline: RimRing; islands: RimRing[]; reefs?: number[][][] } | null> {
   await readyWith("rim-reefs.json");
   if (typeof wayId !== "string" || !/^\d+$/.test(wayId)) throw new Error("Bad outline");
-  const shapes = shelterShapes(wayId);
+  // Islands over the flow raster's whole sea margin (and a little more, for the box's longitude scale).
+  const shapes = shelterShapes(wayId, SEA_MARGIN_KM + 1);
   if (!shapes) return null;
   const reefs = readRimReefs().get(wayId);
   return reefs && reefs.length > 0 ? { ...shapes, reefs } : shapes;

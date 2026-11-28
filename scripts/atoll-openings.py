@@ -33,7 +33,9 @@ def main() -> None:
     if not tiles and not GPKG.exists():
         raise SystemExit(f"No geomorphic map at {GPKG}")
     catalog = json.loads(SITES.read_text(encoding="utf-8"))
-    rims = json.loads(RIMS.read_text(encoding="utf-8"))["rims"]
+    stored = json.loads(RIMS.read_text(encoding="utf-8"))
+    # Flow-only outlines (the north, Vattaru) have gaps too: the current-flow layer runs its jets through them.
+    rims = {**stored["rims"], **stored.get("flowRims", {})}
     only = {way for way in os.environ.get("OPENINGS_WAYS", "").split(",") if way}
     ways: dict[str, list[str]] = {}
     for atoll in catalog["atolls"]:

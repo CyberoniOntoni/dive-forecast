@@ -465,11 +465,14 @@ export async function shelterView(view: ShelterBox, time?: string): Promise<Shel
   return { time: hour, hours, atolls: fields, stale: ready.some(({ offshore }) => offshore.stale) };
 }
 
-/** An atoll's outline and the islands in and round it, for the map to cut the shading to water. */
-export function shelterShapes(wayId: string): { outline: RimRing; islands: RimRing[] } | null {
+/**
+ * An atoll's outline and the islands in and round it, out to `padKm` past its box: for the map to cut the shading to
+ * water, and (with a wider pad, the flow raster's whole sea margin) for the current-flow layer's walls.
+ */
+export function shelterShapes(wayId: string, padKm = SHELTER_BAND_KM): { outline: RimRing; islands: RimRing[] } | null {
   const outline = anyRim(wayId);
   if (!outline) return null;
-  const box = padBox(ringBox(outline), SHELTER_BAND_KM / KM_PER_DEG_LAT);
+  const box = padBox(ringBox(outline), padKm / KM_PER_DEG_LAT);
   const islands = readIslands()
     .map((island) => island.ring)
     .filter((ring) => boxesOverlap(ringBox(ring), box));

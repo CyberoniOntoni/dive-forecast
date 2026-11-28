@@ -282,6 +282,13 @@ describe("reef tops as the walls", () => {
     for (const lon of [73.5905, 73.6, 73.6095]) expect(wide.kind[cellAt(wide, 4.0, lon)], `wide at ${lon}`).not.toBe(KIND_LAND);
   });
 
+  it("carries a gap's passage on past a pool in its reef flat", () => {
+    // A reef flat 2.4 km thick with a pool about 330 m long on the gap's axis, just seaward of its point.
+    const pooled = [reefTop(3.9, 73.588, 4.1, 73.61, boxRing(3.98, 73.602, 4.02, 73.605))];
+    const raster = buildFlowRaster(atoll(uniformLagoon(0, 0)), { outline: RIM, islands: [], reefs: pooled }, [EAST_PASS]);
+    for (const lon of [73.591, 73.6035, 73.607]) expect(raster.kind[cellAt(raster, 4.0, lon)], `at ${lon}`).not.toBe(KIND_LAND);
+  });
+
   it("cuts no passage through a reef inside the lagoon behind a gap that is already open", () => {
     // No reef at the gap itself; an inner reef flat 0.8 km inside, on its axis.
     const inner = [...reefs, reefTop(3.95, 73.592, 4.05, 73.5935)];
